@@ -1,0 +1,26 @@
+{
+  "name": "website-scrap-engine",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "eslint --fix --ext .ts"
+  },
+  "dependencies": {
+    "urijs": "^1.19.2"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.18",
+    "@types/node": "^12.12.47",
+    "@types/urijs": "^1.19.9",
+    "@typescript-eslint/eslint-plugin": "^3.2.0",
+    "@typescript-eslint/parser": "^3.2.0",
+    "cheerio": "^1.0.0-rc.3",
+    "eslint": "^7.2.0",
+    "typescript": "^3.0.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
