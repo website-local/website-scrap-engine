@@ -20,3 +20,4 @@ eslint.cmd
 # typescript
 lib/*.js
 lib/*.map
+lib/*.d.ts

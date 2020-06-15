@@ -4,7 +4,8 @@
     "target": "es2018",
     "sourceMap": true,
     "charset": "utf8",
-    "newLine": "lf"
+    "newLine": "lf",
+    "declaration": true
   },
   "exclude": [
     "node_modules"
