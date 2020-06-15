@@ -17,6 +17,8 @@ export type ResourceEncoding =
   | 'base64'
   | 'gbk';
 
+export type ResourceBody = Buffer | ArrayBuffer | ArrayBufferView | string;
+
 export interface RawResource {
   /**
    * The type of this resource
@@ -102,14 +104,14 @@ export interface RawResource {
   /**
    * Downloaded content, if downloaded
    */
-  body?: Buffer | ArrayBuffer | ArrayBufferView | string;
+  body?: ResourceBody;
 
   /**
    * Redirected url after downloaded
    */
   redirectedUrl?: string;
 
-  props: {
+  meta: {
     doc?: Cheerio;
     /**
      * Css urls
@@ -149,7 +151,7 @@ export function prepareResourceForClone(res: Resource): RawResource {
   for (const key of Object.keys(res)) {
     const value: unknown = res[key];
     if (typeof value === 'object') {
-      if (key === 'props') {
+      if (key === 'meta') {
         const props: Record<string, unknown> = clone[key] = {};
         for (const prop of Object.keys(value)) {
           if (typeof value[prop] !== 'object') {
@@ -242,7 +244,7 @@ export function createResource(
     replacePath,
     createTimestamp: Date.now(),
     body: null,
-    props: {},
+    meta: {},
     uri,
     refUri,
     replaceUri,
@@ -250,7 +252,7 @@ export function createResource(
   };
 }
 
-export function normalizeClonedResource(res: RawResource): Resource {
+export function normalizeResource(res: RawResource): Resource {
   const resource = res as RawResource & Partial<Resource>;
   if (!resource.uri) {
     resource.uri = URI(resource.url);
@@ -263,6 +265,12 @@ export function normalizeClonedResource(res: RawResource): Resource {
   }
   if (!resource.host) {
     resource.host = resource.uri?.hostname();
+  }
+  if (!resource.waitTime && resource.downloadStartTimestamp) {
+    resource.waitTime = resource.downloadStartTimestamp - resource.createTimestamp;
+  }
+  if (!resource.downloadTime && resource.finishTimestamp) {
+    resource.downloadTime = resource.finishTimestamp - resource.downloadStartTimestamp;
   }
   return resource;
 }

@@ -29,6 +29,8 @@ Configurable website scraper in typescript.
     * save resources to disk
 
 ## Pipeline life cycle
+* redirect link
+* detect resource type
 * create
 * process before download
 * download
