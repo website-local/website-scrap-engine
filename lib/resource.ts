@@ -15,7 +15,8 @@ export type ResourceEncoding =
   | 'utf-8'
   | 'hex'
   | 'base64'
-  | 'gbk';
+  | 'gbk'
+  | string;
 
 export type ResourceBody = Buffer | ArrayBuffer | ArrayBufferView | string;
 

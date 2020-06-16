@@ -27,7 +27,7 @@ export interface StaticDownloadOptions {
    * Encoding of a resource can be changed at
    * {@link ProcessingLifeCycle.processBeforeDownload}
    */
-  encoding: Record<ResourceType, ResourceEncoding | string>;
+  encoding: Record<ResourceType, ResourceEncoding>;
 
   meta: Record<string, string | number | boolean> & {
     detectIncompleteHtml?: '</html>' | '</body>' | string;

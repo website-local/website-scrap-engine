@@ -3,7 +3,7 @@ Configurable website scraper in typescript.
 
 ## Features
 -[x]  Resource types
--[ ]  Configurable process pipeline
+-[x]  Configurable process pipeline
 -[ ]  Options
 -[x]  Logger
 -[ ]  Concurrent downloader
