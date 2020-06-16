@@ -6,6 +6,7 @@ export enum ResourceType {
   Binary = 1,
   Html,
   Css,
+  CssInline,
   SiteMap
 }
 

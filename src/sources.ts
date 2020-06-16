@@ -1,13 +1,15 @@
+import {ResourceType} from "./resource";
+
 export interface SourceDefinition {
   selector: string;
   attr?: string;
-  type?: string;
+  type: ResourceType;
 }
 
 // https://github.com/website-scraper/node-website-scraper
 // /blob/a6f989a59e3a665b562f0f38a691aa1cc40557f9/lib/config/defaults.js
 export const sources: SourceDefinition[] = [
-  {selector: 'style', type: 'css-inline'},
+  {selector: 'style', type: ResourceType.CssInline},
   // {selector: '[style]', attr: 'style', type: 'css'},
   {selector: 'img', attr: 'src'},
   {selector: 'img', attr: 'srcset'},
@@ -16,7 +18,7 @@ export const sources: SourceDefinition[] = [
   {selector: 'embed', attr: 'src'},
   {selector: 'param[name="movie"]', attr: 'value'},
   {selector: 'script', attr: 'src'},
-  {selector: 'link[rel="stylesheet"]', attr: 'href', type: 'css'},
+  {selector: 'link[rel="stylesheet"]', attr: 'href', type: ResourceType.Css},
   {selector: 'link[rel*="icon"]', attr: 'href'},
   {selector: 'link[rel*="preload"]', attr: 'href'},
   {selector: 'svg *[xlink\\:href]', attr: 'xlink:href'},
@@ -37,12 +39,16 @@ export const sources: SourceDefinition[] = [
   {selector: 'audio', attr: 'src'},
   {selector: 'audio source', attr: 'src'},
   {selector: 'audio track', attr: 'src'},
-  {selector: 'frame', attr: 'src', type: 'html'},
-  {selector: 'iframe', attr: 'src', type: 'html'},
-  {selector: 'a', attr: 'href', type: 'html'}
-].map(obj => {
-  if (!obj.selector.startsWith('svg') && obj.attr)
+  {selector: 'frame', attr: 'src', type: ResourceType.Html},
+  {selector: 'iframe', attr: 'src', type: ResourceType.Html},
+  {selector: 'a', attr: 'href', type: ResourceType.Html}
+].map((obj: Partial<SourceDefinition>) => {
+  if (obj.selector && !obj.selector.startsWith('svg') && obj.attr) {
     obj.selector += `[${obj.attr}]`;
-  return obj;
+  }
+  if (!obj.type) {
+    obj.type = ResourceType.Binary;
+  }
+  return obj as SourceDefinition;
 });
 

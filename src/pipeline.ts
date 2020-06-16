@@ -180,10 +180,32 @@ export class PipelineExecutor {
     url: string,
     refUrl: string,
     localRoot?: string,
-    encoding?: ResourceEncoding): Resource {
+    encoding?: ResourceEncoding
+  ): Resource {
     return this.lifeCycle.createResource(type, depth, url, refUrl,
       localRoot ?? this.options.localRoot,
       encoding ?? this.options.encoding[type] ?? 'utf8');
+  }
+
+  async processBeforeDownload(
+    res: Resource,
+    element: Cheerio | null,
+    parent: Resource,
+    options?: StaticDownloadOptions
+  ): Promise<Resource | void> {
+    if (!options) {
+      options = this.options;
+    }
+    let processedResource: Resource | void = res;
+    for (let processBeforeDownload of this.lifeCycle.processBeforeDownload) {
+      if ((processedResource =
+          await processBeforeDownload(processedResource as DownloadResource,
+            element, parent, options))
+        === undefined) {
+        return undefined;
+      }
+    }
+    return processedResource;
   }
 
   async download(

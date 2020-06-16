@@ -5,3 +5,6 @@ export const sleep = (ms: number): Promise<void> =>
 
 export const escapePath = (str: string) : string =>
   str && str.replace(forbiddenChar, '_');
+
+export const isSiteMap = (url?: string) => url && url.includes('/sitemaps/') &&
+  (url.endsWith('sitemap.xml') || url.endsWith('sitemap_other.xml'));
