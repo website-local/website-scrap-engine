@@ -1,4 +1,4 @@
-import * as URI from 'urijs';
+import URI from 'urijs';
 import {escapePath} from './util';
 import * as path from 'path';
 
@@ -150,7 +150,7 @@ export interface Resource extends RawResource {
 export function prepareResourceForClone(res: Resource): RawResource {
   const clone: Partial<RawResource> = {};
   for (const key of Object.keys(res)) {
-    const value: unknown = res[key];
+    const value = Reflect.get(res, key);
     if (typeof value === 'object') {
       if (key === 'meta') {
         const props: Record<string, unknown> = clone[key] = {};
@@ -167,7 +167,7 @@ export function prepareResourceForClone(res: Resource): RawResource {
         clone[key] = value;
       }
     } else {
-      clone[key] = value;
+      Reflect.set(clone, key, value);
     }
   }
   return clone as RawResource;
@@ -218,7 +218,7 @@ export function createResource(
 
   // make html resource ends with .html
   if (type === ResourceType.Html && !savePath.endsWith('.html')) {
-    let appendSuffix: string;
+    let appendSuffix: string | void;
     if (savePath.endsWith('/') || savePath.endsWith('\\')) {
       appendSuffix = ('index.html');
     } else if (savePath.endsWith('.htm')) {
@@ -244,7 +244,7 @@ export function createResource(
     localRoot,
     replacePath,
     createTimestamp: Date.now(),
-    body: null,
+    body: undefined,
     meta: {},
     uri,
     refUri,
@@ -270,7 +270,9 @@ export function normalizeResource(res: RawResource): Resource {
   if (!resource.waitTime && resource.downloadStartTimestamp) {
     resource.waitTime = resource.downloadStartTimestamp - resource.createTimestamp;
   }
-  if (!resource.downloadTime && resource.finishTimestamp) {
+  if (!resource.downloadTime &&
+    resource.finishTimestamp &&
+    resource.downloadStartTimestamp) {
     resource.downloadTime = resource.finishTimestamp - resource.downloadStartTimestamp;
   }
   return resource;

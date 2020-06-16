@@ -5,8 +5,15 @@
     "sourceMap": true,
     "charset": "utf8",
     "newLine": "lf",
-    "declaration": true
+    "outDir": "lib",
+    "declaration": true,
+    "esModuleInterop": true,
+    "removeComments": false,
+    "strict": true
   },
+  "include": [
+    "src"
+  ],
   "exclude": [
     "node_modules"
   ]
