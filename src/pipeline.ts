@@ -17,11 +17,13 @@ export interface LinkRedirectFunc {
    * @param element source element
    * @param parent source resource
    * @param options
+   * @param pipeline
    * @return redirected url,
    * or void to skip processing and replacing to relative path
    */
   (url: string, element: Cheerio | null, parent: Resource,
-   options: StaticDownloadOptions): AsyncResult<string | void>;
+   options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): AsyncResult<string | void>;
 }
 
 export interface DetectResourceTypeFunc {
@@ -32,11 +34,12 @@ export interface DetectResourceTypeFunc {
    * @param element source element
    * @param parent source resource
    * @param options
+   * @param pipeline
    * @return resource type, or void to discard resource
    */
   (url: string, type: ResourceType, element: Cheerio | null, parent: Resource,
-   options: StaticDownloadOptions):
-    AsyncResult<ResourceType | void>;
+   options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): AsyncResult<ResourceType | void>;
 }
 
 export interface ProcessResourceBeforeDownloadFunc {
@@ -46,11 +49,12 @@ export interface ProcessResourceBeforeDownloadFunc {
    * @param element source element
    * @param parent source resource
    * @param options
+   * @param pipeline
    * @return processed resource, or void to discard resource
    */
   (res: Resource, element: Cheerio | null, parent: Resource,
-   options: StaticDownloadOptions):
-    AsyncResult<Resource | void>;
+   options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): AsyncResult<Resource | void>;
 }
 
 export type RequestOptions = GotOptions
@@ -72,11 +76,12 @@ export interface DownloadResourceFunc {
    * @param res target resource
    * @param requestOptions passed to got
    * @param options
+   * @param pipeline
    * @return processed resource, or void to discard resource
    * @throws Error on download failures
    */
-  (res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions):
-    AsyncResult<DownloadResource | Resource | void>;
+  (res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): AsyncResult<DownloadResource | Resource | void>;
 }
 
 export interface SubmitResourceFunc {
@@ -98,9 +103,11 @@ export interface ProcessResourceAfterDownloadFunc {
    * @param res resource received from main thread
    * @param submit function to submit resource to pipeline
    * @param options
+   * @param pipeline
    */
-  (res: DownloadResource, submit: SubmitResourceFunc
-    , options: StaticDownloadOptions): AsyncResult<DownloadResource | void>;
+  (res: DownloadResource, submit: SubmitResourceFunc,
+   options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): AsyncResult<DownloadResource | void>;
 }
 
 export interface SaveToDiskFunc {
@@ -108,10 +115,11 @@ export interface SaveToDiskFunc {
    * Save to disk
    * @param res
    * @param options
+   * @param pipeline
    * @return void for saved to disk, Resource for not saved.
    */
-  (res: DownloadResource, options: StaticDownloadOptions):
-    AsyncResult<DownloadResource | void>;
+  (res: DownloadResource, options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): AsyncResult<DownloadResource | void>;
 }
 
 export interface ProcessingLifeCycle {
@@ -146,7 +154,7 @@ export class PipelineExecutor {
     for (const linkRedirectFunc of this.lifeCycle.linkRedirect) {
       if ((redirectedUrl =
         await linkRedirectFunc(redirectedUrl as string,
-          element, parent, this.options)) === undefined) {
+          element, parent, this.options, this)) === undefined) {
         return undefined;
       }
     }
@@ -164,7 +172,7 @@ export class PipelineExecutor {
     for (const detectResourceTypeFunc of this.lifeCycle.detectResourceType) {
       if ((detectedType =
           await detectResourceTypeFunc(url, detectedType as ResourceType,
-            element, parent, this.options))
+            element, parent, this.options, this))
         === undefined) {
         return undefined;
       }
@@ -198,7 +206,7 @@ export class PipelineExecutor {
     for (const processBeforeDownload of this.lifeCycle.processBeforeDownload) {
       if ((processedResource =
           await processBeforeDownload(processedResource as DownloadResource,
-            element, parent, options))
+            element, parent, options, this))
         === undefined) {
         return undefined;
       }
@@ -219,8 +227,8 @@ export class PipelineExecutor {
     }
     let downloadedResource: DownloadResource | Resource | void = res;
     for (const download of this.lifeCycle.download) {
-      if ((downloadedResource =
-          await download(downloadedResource as Resource, requestOptions, options))
+      if ((downloadedResource = await download(
+        downloadedResource as Resource, requestOptions, options, this))
         === undefined) {
         return undefined;
       }
@@ -249,9 +257,8 @@ export class PipelineExecutor {
     }
     let downloadedResource: DownloadResource | void = res;
     for (const processAfterDownload of this.lifeCycle.processAfterDownload) {
-      if ((downloadedResource =
-          await processAfterDownload(downloadedResource as DownloadResource,
-            submit, options))
+      if ((downloadedResource = await processAfterDownload(
+        downloadedResource as DownloadResource, submit, options, this))
         === undefined) {
         return undefined;
       }
@@ -268,8 +275,8 @@ export class PipelineExecutor {
     }
     let downloadedResource: DownloadResource | void = res;
     for (const saveToDisk of this.lifeCycle.saveToDisk) {
-      if ((downloadedResource =
-          await saveToDisk(downloadedResource as DownloadResource, options))
+      if ((downloadedResource = await saveToDisk(
+        downloadedResource as DownloadResource, options, this))
         === undefined) {
         // already downloaded
         return undefined;
