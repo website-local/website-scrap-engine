@@ -18,6 +18,6 @@ eslint.cmd
 *.log
 
 # typescript
-lib/*.js
-lib/*.map
-lib/*.d.ts
+lib/**/*.js
+lib/**/*.map
+lib/**/*.d.ts
