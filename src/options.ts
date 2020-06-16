@@ -1,5 +1,5 @@
-import {ResourceEncoding, ResourceType} from "./resource";
-import {ProcessingLifeCycle, RequestOptions} from "./pipeline";
+import {ResourceEncoding, ResourceType} from './resource';
+import {ProcessingLifeCycle, RequestOptions} from './pipeline';
 
 /**
  * Options which should not be changed at runtime, and safe for cloning

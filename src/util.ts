@@ -6,5 +6,15 @@ export const sleep = (ms: number): Promise<void> =>
 export const escapePath = (str: string) : string =>
   str && str.replace(forbiddenChar, '_');
 
-export const isSiteMap = (url?: string) => url && url.includes('/sitemaps/') &&
+export const isSiteMap = (url?: string) : boolean | '' | void => url &&
+  url.includes('/sitemaps/') &&
   (url.endsWith('sitemap.xml') || url.endsWith('sitemap_other.xml'));
+
+export const arrayToMap = (array: (string | number)[]):
+  Record<string | number, number> => {
+  const obj: Record<string | number, number> = {};
+  for (const item of array) {
+    obj[item] = 1;
+  }
+  return obj;
+};

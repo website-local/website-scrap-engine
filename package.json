@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint --fix --ext .ts"
+    "lint": "eslint --fix src"
   },
   "dependencies": {
     "got": "^11.3.0",

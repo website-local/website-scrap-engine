@@ -4,9 +4,9 @@ import {
   ResourceBody,
   ResourceEncoding,
   ResourceType
-} from "./resource";
-import {Options as GotOptions} from "got/dist/source/core";
-import {StaticDownloadOptions} from "./options";
+} from './resource';
+import {Options as GotOptions} from 'got/dist/source/core';
+import {StaticDownloadOptions} from './options';
 
 declare type AsyncResult<T> = T | Promise<T>;
 
@@ -53,9 +53,7 @@ export interface ProcessResourceBeforeDownloadFunc {
     AsyncResult<Resource | void>;
 }
 
-export interface RequestOptions extends GotOptions {
-
-}
+export type RequestOptions = GotOptions
 
 /**
  * Process and filter resource,
@@ -142,10 +140,10 @@ export class PipelineExecutor {
   }
 
   async linkRedirect(url: string,
-                     element: Cheerio | null,
-                     parent: Resource): Promise<string | void> {
+    element: Cheerio | null,
+    parent: Resource): Promise<string | void> {
     let redirectedUrl: string | void = url;
-    for (let linkRedirectFunc of this.lifeCycle.linkRedirect) {
+    for (const linkRedirectFunc of this.lifeCycle.linkRedirect) {
       if ((redirectedUrl =
         await linkRedirectFunc(redirectedUrl as string,
           element, parent, this.options)) === undefined) {
@@ -155,23 +153,23 @@ export class PipelineExecutor {
     return redirectedUrl;
   }
 
-  async detectLinkType(
+  async detectResourceType(
     url: string,
     type: ResourceType,
     element: Cheerio | null,
     parent: Resource
   ): Promise<ResourceType | void> {
 
-    let detectedLinkType: ResourceType | void = type;
-    for (let detectResourceTypeFunc of this.lifeCycle.detectResourceType) {
-      if ((detectedLinkType =
-          await detectResourceTypeFunc(url, detectedLinkType as ResourceType,
+    let detectedType: ResourceType | void = type;
+    for (const detectResourceTypeFunc of this.lifeCycle.detectResourceType) {
+      if ((detectedType =
+          await detectResourceTypeFunc(url, detectedType as ResourceType,
             element, parent, this.options))
         === undefined) {
         return undefined;
       }
     }
-    return detectedLinkType;
+    return detectedType;
   }
 
   createResource(
@@ -197,7 +195,7 @@ export class PipelineExecutor {
       options = this.options;
     }
     let processedResource: Resource | void = res;
-    for (let processBeforeDownload of this.lifeCycle.processBeforeDownload) {
+    for (const processBeforeDownload of this.lifeCycle.processBeforeDownload) {
       if ((processedResource =
           await processBeforeDownload(processedResource as DownloadResource,
             element, parent, options))
@@ -220,7 +218,7 @@ export class PipelineExecutor {
       options = this.options;
     }
     let downloadedResource: DownloadResource | Resource | void = res;
-    for (let download of this.lifeCycle.download) {
+    for (const download of this.lifeCycle.download) {
       if ((downloadedResource =
           await download(downloadedResource as Resource, requestOptions, options))
         === undefined) {
@@ -250,7 +248,7 @@ export class PipelineExecutor {
       options = this.options;
     }
     let downloadedResource: DownloadResource | void = res;
-    for (let processAfterDownload of this.lifeCycle.processAfterDownload) {
+    for (const processAfterDownload of this.lifeCycle.processAfterDownload) {
       if ((downloadedResource =
           await processAfterDownload(downloadedResource as DownloadResource,
             submit, options))
@@ -269,7 +267,7 @@ export class PipelineExecutor {
       options = this.options;
     }
     let downloadedResource: DownloadResource | void = res;
-    for (let saveToDisk of this.lifeCycle.saveToDisk) {
+    for (const saveToDisk of this.lifeCycle.saveToDisk) {
       if ((downloadedResource =
           await saveToDisk(downloadedResource as DownloadResource, options))
         === undefined) {
