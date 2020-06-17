@@ -10,10 +10,12 @@
   "dependencies": {
     "got": "^11.3.0",
     "log4js": "^6.3.0",
+    "mkdirp": "^1.0.4",
     "urijs": "^1.19.2"
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.18",
+    "@types/mkdirp": "^1.0.1",
     "@types/node": "^12.12.47",
     "@types/urijs": "^1.19.9",
     "@typescript-eslint/eslint-plugin": "^3.2.0",
