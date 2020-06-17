@@ -10,14 +10,7 @@ export enum ResourceType {
   SiteMap
 }
 
-export type ResourceEncoding =
-  null
-  | 'utf8'
-  | 'utf-8'
-  | 'hex'
-  | 'base64'
-  | 'gbk'
-  | string;
+export type ResourceEncoding = null | BufferEncoding;
 
 export type ResourceBody = Buffer | ArrayBuffer | ArrayBufferView | string;
 
@@ -37,7 +30,7 @@ export interface RawResource {
    *
    * For {@link ResourceType.Binary} type, this property should be null
    */
-  encoding: ResourceEncoding | string;
+  encoding: ResourceEncoding;
 
   /**
    * URL of resource

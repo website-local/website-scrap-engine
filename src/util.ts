@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from 'fs';
 import mkdirP from 'mkdirp';
 import * as logger from './logger';
 

@@ -1,5 +1,8 @@
 import {LinkRedirectFunc} from '../pipeline';
 
+/**
+ * Skip unprocessable links
+ */
 export const skipLinks: LinkRedirectFunc = (url: string) : string | void=> {
   if (url.startsWith('#') ||
     url.startsWith('data:') ||
