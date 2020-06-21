@@ -1,6 +1,7 @@
 import fs from 'fs';
 import mkdirP from 'mkdirp';
 import * as logger from './logger';
+import {ResourceBody, ResourceEncoding} from './resource';
 
 const forbiddenChar = /([:*?"<>|]|%3A|%2A|%3F|%22|%3C|%3E|%7C)+/ig;
 
@@ -66,5 +67,21 @@ export const mkdirRetry = async (dir: string): Promise<string | void> => {
       }
     }
   }
+};
+
+export const toString = (body: ResourceBody, encoding: ResourceEncoding): string => {
+  let stringValue: string;
+  if (Buffer.isBuffer(body)) {
+    stringValue = body.toString(encoding || 'utf8');
+  } else if (ArrayBuffer.isView(body)) {
+    // note: this would not copy the buffer
+    stringValue = Buffer.from(body.buffer).toString(encoding || 'utf8');
+  } else if (body instanceof ArrayBuffer) {
+    // note: this would not copy the buffer
+    stringValue = Buffer.from(body).toString(encoding || 'utf8');
+  } else {
+    stringValue = body;
+  }
+  return stringValue;
 };
 
