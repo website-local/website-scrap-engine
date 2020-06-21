@@ -8,9 +8,9 @@ Configurable website scraper in typescript.
 -[x]  Logger
 -[ ]  Concurrent downloader
 -[ ]  Multi-thread processing (with native worker_thread)
--[ ]  Process CSS
--[ ]  Process HTML
--[ ]  Process SiteMap (but not replace path in it)
+-[x]  Process CSS
+-[x]  Process HTML
+-[x]  Process SiteMap (but not replace path in it)
 
 ## Multi-thread processing
 * Main thread
