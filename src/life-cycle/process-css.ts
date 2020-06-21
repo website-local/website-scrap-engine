@@ -1,3 +1,4 @@
+import parseCssUrls from 'css-url-parser';
 import {
   DownloadResource,
   PipelineExecutor,
@@ -7,7 +8,6 @@ import {
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
-import parseCssUrls from 'css-url-parser';
 
 export async function processCssText(
   cssText: string,
@@ -19,6 +19,7 @@ export async function processCssText(
   const cssUrls: string[] = parseCssUrls(cssText);
   let url: string | void, rawUrl: string, r: Resource | void,
     type: ResourceType | void;
+  // noinspection DuplicatedCode
   for (let i = 0, l = cssUrls.length; i < l; i++) {
     rawUrl = cssUrls[i];
     url = await pipeline.linkRedirect(rawUrl, null, res);
