@@ -96,12 +96,7 @@ export const requestForResource = async (
 ): Promise<DownloadResource | Resource | void> => {
   const downloadLink: string = encodeURI(decodeURI(res.downloadLink));
   const reqOptions: Options = Object.assign({}, requestOptions);
-  if (res.encoding) {
-    reqOptions.encoding = res.encoding;
-    reqOptions.responseType = 'text';
-  } else {
-    reqOptions.responseType = 'buffer';
-  }
+  reqOptions.responseType = 'buffer';
   if (res.refUrl && res.refUrl !== downloadLink) {
     const headers = Object.assign({}, reqOptions.headers);
     headers.referer = res.refUrl;
@@ -150,7 +145,8 @@ export const downloadResource: DownloadResourceFunc = async (
     }
     if (downloadedResource.type === ResourceType.Html) {
       if (options.meta.detectIncompleteHtml &&
-        typeof downloadedResource.body === 'string') {
+        (typeof downloadedResource.body === 'string' ||
+          Buffer.isBuffer(downloadedResource.body))) {
         if (!downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
           logger.error.info('Detected incomplete html, try again',
             downloadedResource.downloadLink);
