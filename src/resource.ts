@@ -108,10 +108,6 @@ export interface RawResource {
 
   meta: {
     doc?: Cheerio;
-    /**
-     * Css urls
-     */
-    urls?: string[];
     [key: string]: unknown;
   }
 }
