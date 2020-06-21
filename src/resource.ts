@@ -107,7 +107,7 @@ export interface RawResource {
   redirectedUrl?: string;
 
   meta: {
-    doc?: Cheerio;
+    doc?: CheerioStatic;
     [key: string]: unknown;
   }
 }
