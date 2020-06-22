@@ -4,7 +4,6 @@ import {ResourceBody, ResourceType} from '../resource';
 import path from 'path';
 import {writeFile} from '../util';
 
-
 export const saveResourceToDisk: SaveToDiskFunc = async (
   res: DownloadResource,
   options: StaticDownloadOptions,
