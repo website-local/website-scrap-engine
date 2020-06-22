@@ -203,7 +203,7 @@ export function createResource(
     replaceUri.path(replacePath = escapePath(replacePath));
   }
   const host: string = uri.hostname();
-  let savePath: string = path.join(localRoot, host, escapePath(uri.path()));
+  let savePath: string = path.join(host, escapePath(uri.path()));
   const downloadLink: string = uri.clone().hash('').toString();
 
   // make html resource ends with .html
