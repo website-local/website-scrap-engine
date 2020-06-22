@@ -16,7 +16,7 @@ export interface WorkerMessage<T = unknown> {
   error?: Error | void;
 }
 
-export class WorkerPool<T = unknown, R = WorkerMessage> {
+export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly pool: Worker[] = [];
   readonly workingWorker: Set<Worker> = new Set<Worker>();
   readonly working: Map<Worker, PendingPromise> = new Map<Worker, PendingPromise>();
@@ -52,7 +52,7 @@ export class WorkerPool<T = unknown, R = WorkerMessage> {
         transferList
       };
       this.queued.push(task);
-      this.nextTask();
+      setImmediate(() => this.nextTask());
     });
   }
 
