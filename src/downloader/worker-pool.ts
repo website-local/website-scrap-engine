@@ -1,4 +1,4 @@
-import {Worker, MessagePort} from 'worker_threads';
+import {MessagePort, Worker} from 'worker_threads';
 
 export interface PendingPromise<T = unknown, E = unknown> {
   resolve: (value?: T | PromiseLike<T>) => void;
@@ -11,17 +11,12 @@ export interface PendingPromiseWithBody<R = unknown, E = unknown, B = unknown>
   transferList?: Array<ArrayBuffer | MessagePort>;
 }
 
-export enum WorkerMessageType {
-  Complete,
-  Error
-}
-
 export interface WorkerMessage<T = unknown> {
-  type: WorkerMessageType;
-  body: T | Error;
+  body: T;
+  error?: Error | void;
 }
 
-export class WorkerPool<T = unknown, R = unknown> {
+export class WorkerPool<T = unknown, R = WorkerMessage> {
   readonly pool: Worker[] = [];
   readonly workingWorker: Set<Worker> = new Set<Worker>();
   readonly working: Map<Worker, PendingPromise> = new Map<Worker, PendingPromise>();
@@ -43,11 +38,7 @@ export class WorkerPool<T = unknown, R = unknown> {
     setImmediate(() => this.nextTask());
     const pending: PendingPromise | undefined = this.working.get(worker);
     if (!pending) return;
-    if (message.type === WorkerMessageType.Complete) {
-      pending.resolve(message.body);
-    } else {
-      pending.reject(message.body);
-    }
+    pending.resolve(message);
   }
 
   submitTask(
