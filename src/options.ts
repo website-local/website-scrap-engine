@@ -1,5 +1,6 @@
 import {ResourceEncoding, ResourceType} from './resource';
 import {ProcessingLifeCycle, RequestOptions} from './pipeline';
+import {DownloaderWithMeta} from './downloader/main';
 
 /**
  * Options which should not be changed at runtime, and safe for cloning
@@ -37,5 +38,9 @@ export interface StaticDownloadOptions {
 
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
   req: RequestOptions;
+  concurrency: number;
+  minConcurrency?: number;
+  adjustConcurrencyPeriod: number;
+  adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;
 }
 
