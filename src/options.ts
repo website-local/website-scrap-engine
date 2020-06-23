@@ -39,6 +39,14 @@ export interface StaticDownloadOptions {
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
   req: RequestOptions;
   concurrency: number;
+  /**
+   * WorkerPool.coreSize = Math.min(
+   * require('os').cpus().length - 2,
+   * {@link concurrency},
+   * {@link workerCount}
+   * )
+   */
+  workerCount: number;
   minConcurrency?: number;
   adjustConcurrencyPeriod: number;
   adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;

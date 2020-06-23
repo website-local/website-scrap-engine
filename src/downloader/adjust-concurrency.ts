@@ -1,7 +1,7 @@
 import {adjustConcurrency as logger} from '../logger';
 import {DownloaderWithMeta} from './main';
 
-const adjust = (downloader: DownloaderWithMeta) => {
+export const adjust = (downloader: DownloaderWithMeta): void => {
   const {meta} = downloader;
   if (!meta.firstPeriodCount) {
     meta.firstPeriodCount = downloader.getDownloadedCount();
@@ -41,5 +41,3 @@ const adjust = (downloader: DownloaderWithMeta) => {
   logger.info('concurrency', downloader.queue.concurrency,
     'queue size:', downloader.queue.size);
 };
-
-module.exports = adjust;

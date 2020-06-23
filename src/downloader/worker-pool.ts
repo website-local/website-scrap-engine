@@ -77,7 +77,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     }
   }
 
-  dispose() : Promise<number[]> {
+  dispose(): Promise<number[]> {
     return Promise.all(this.pool.map(w => w.terminate())).then((numbers: number[]) => {
       this.working.forEach((pending) => {
         pending.reject(new Error('disposed'));

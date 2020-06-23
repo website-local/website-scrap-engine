@@ -9,10 +9,10 @@ const forbiddenChar = /([:*?"<>|]|%3A|%2A|%3F|%22|%3C|%3E|%7C)+/ig;
 export const sleep = (ms: number): Promise<void> =>
   new Promise(r => setTimeout(r, ms | 0));
 
-export const escapePath = (str: string) : string =>
+export const escapePath = (str: string): string =>
   str && str.replace(forbiddenChar, '_');
 
-export const isSiteMap = (url?: string) : boolean | '' | void => url &&
+export const isSiteMap = (url?: string): boolean | '' | void => url &&
   url.includes('/sitemaps/') &&
   (url.endsWith('sitemap.xml') || url.endsWith('sitemap_other.xml'));
 
@@ -88,7 +88,7 @@ export const toString = (body: ResourceBody, encoding: ResourceEncoding): string
 export const writeFile = async (
   filePath: string,
   data: ResourceBody,
-  encoding: ResourceEncoding) : Promise<void> => {
+  encoding: ResourceEncoding): Promise<void> => {
   const dir: string = dirname(filePath);
   if (!fs.existsSync(dir)) {
     await mkdirRetry(dir);

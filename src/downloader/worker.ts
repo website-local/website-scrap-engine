@@ -16,9 +16,9 @@ import {WorkerMessage} from './worker-pool';
 
 export type DownloadWorkerMessage = WorkerMessage<RawResource[]>;
 
-const {configPath}: { configPath: string } = workerData;
+const {pathToOptions}: { pathToOptions: string } = workerData;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const options: DownloadOptions = require(configPath);
+const options: DownloadOptions = require(pathToOptions);
 
 const pipeline: PipelineExecutor =
   new PipelineExecutor(options, options.req, options);

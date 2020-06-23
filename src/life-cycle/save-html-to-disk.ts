@@ -36,5 +36,5 @@ export const saveHtmlToDisk: SaveToDiskFunc = async (
   const body: ResourceBody = res.meta.doc ? res.meta.doc.toString() : res.body;
   const filePath: string = path.join(localRoot, decodeURI(res.savePath));
   await writeFile(filePath, body, res.encoding);
-  return ;
+  return;
 };
