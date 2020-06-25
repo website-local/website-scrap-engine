@@ -41,6 +41,7 @@ export class DownloaderMain implements DownloaderWithMeta {
     lastPeriodCount: 0,
     lastPeriodTotalCount: 0
   };
+  adjustTimer: ReturnType<typeof setInterval> | void = undefined;
 
   constructor(public pathToOptions: string) {
     this.options = require(pathToOptions);
@@ -128,10 +129,17 @@ export class DownloaderMain implements DownloaderWithMeta {
   }
 
   start(): void {
+    if (typeof this.options.adjustConcurrencyFunc === 'function') {
+      setInterval(() => this.options.adjustConcurrencyFunc?.(this),
+        this.options.adjustConcurrencyPeriod || 60000);
+    }
     this.queue.start();
   }
 
   stop(): void {
+    if (this.adjustTimer) {
+      clearInterval(this.adjustTimer);
+    }
     this.queue.pause();
   }
 
@@ -140,6 +148,9 @@ export class DownloaderMain implements DownloaderWithMeta {
   }
 
   async dispose(): Promise<void> {
+    if (this.adjustTimer) {
+      clearInterval(this.adjustTimer);
+    }
     this.queue.pause();
     this.queue.clear();
     await this.workers.dispose();
