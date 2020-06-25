@@ -15,13 +15,13 @@ export interface LinkRedirectFunc {
    * redirect link before processing, or before child-resource creation
    * @param url
    * @param element source element
-   * @param parent source resource
+   * @param parent source resource, null for initial resource
    * @param options
    * @param pipeline
    * @return redirected url,
    * or void to skip processing and replacing to relative path
    */
-  (url: string, element: Cheerio | null, parent: Resource,
+  (url: string, element: Cheerio | null, parent: Resource | null,
    options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<string | void>;
 }
@@ -32,12 +32,13 @@ export interface DetectResourceTypeFunc {
    * @param url
    * @param type last detected type
    * @param element source element
-   * @param parent source resource
+   * @param parent source resource, null for initial resource
    * @param options
    * @param pipeline
    * @return resource type, or void to discard resource
    */
-  (url: string, type: ResourceType, element: Cheerio | null, parent: Resource,
+  (url: string, type: ResourceType, element: Cheerio | null,
+   parent: Resource | null,
    options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<ResourceType | void>;
 }
@@ -47,12 +48,13 @@ export interface ProcessResourceBeforeDownloadFunc {
    * Process and filter resource
    * @param res target resource
    * @param element source element
-   * @param parent source resource
+   * @param parent source resource, null for initial resource
    * @param options
    * @param pipeline
    * @return processed resource, or void to discard resource
    */
-  (res: Resource, element: Cheerio | null, parent: Resource,
+  (res: Resource, element: Cheerio | null,
+   parent: Resource | null,
    options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<Resource | void>;
 }
@@ -149,7 +151,7 @@ export class PipelineExecutor {
 
   async linkRedirect(url: string,
     element: Cheerio | null,
-    parent: Resource): Promise<string | void> {
+    parent: Resource | null): Promise<string | void> {
     let redirectedUrl: string | void = url;
     for (const linkRedirectFunc of this.lifeCycle.linkRedirect) {
       if ((redirectedUrl =
@@ -165,7 +167,7 @@ export class PipelineExecutor {
     url: string,
     type: ResourceType,
     element: Cheerio | null,
-    parent: Resource
+    parent: Resource | null
   ): Promise<ResourceType | void> {
 
     let detectedType: ResourceType | void = type;
@@ -196,7 +198,7 @@ export class PipelineExecutor {
   async processBeforeDownload(
     res: Resource,
     element: Cheerio | null,
-    parent: Resource,
+    parent: Resource | null,
     options?: StaticDownloadOptions
   ): Promise<Resource | void> {
     if (!options) {
