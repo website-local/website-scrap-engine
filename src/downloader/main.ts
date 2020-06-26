@@ -33,12 +33,11 @@ export interface DownloaderWithMeta {
   getDownloadedCount(): number;
 }
 
-export class DownloaderMain implements DownloaderWithMeta {
+export abstract class AbstractDownloader implements DownloaderWithMeta {
+
   readonly queue: PQueue;
   readonly pipeline: PipelineExecutor;
   readonly options: DownloadOptions;
-  readonly workers: WorkerPool<RawResource, DownloadWorkerMessage>;
-  readonly queuedUrl: Set<string> = new Set<string>();
   readonly downloadedUrl: Set<string> = new Set<string>();
   readonly meta: DownloaderStats = {
     currentPeriodCount: 0,
@@ -48,28 +47,13 @@ export class DownloaderMain implements DownloaderWithMeta {
   };
   adjustTimer: ReturnType<typeof setInterval> | void = undefined;
 
-  constructor(public pathToOptions: string,
-    overrideOptions?: Partial<StaticDownloadOptions> & {pathToWorker?: string}) {
+  protected constructor(public pathToOptions: string,
+    overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     this.options = mergeOverrideOptions(require(pathToOptions), overrideOptions);
     this.queue = new PQueue({concurrency: this.options.concurrency});
     this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
-    let workerCount: number =
-      Math.min(cpus().length - 2, this.options.concurrency);
-    if (this.options.workerCount) {
-      workerCount = Math.min(this.options.workerCount, workerCount);
-    }
-    if (workerCount < 1) {
-      workerCount = 1;
-    }
-    this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
-      overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker'),
-      {pathToOptions, overrideOptions}
-    );
-    if (this.options.initialUrl) {
-      this.addInitialResource(this.options.initialUrl)
-        .catch(e => error.error('add initial url', e));
-    }
+
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {
@@ -89,7 +73,80 @@ export class DownloaderMain implements DownloaderWithMeta {
     }
   }
 
+  abstract async addProcessedResource(res: RawResource): Promise<boolean | void>;
+
+  handleError(err: Error | null, cause: string, resource: RawResource): void {
+    if (err && err.name === 'HTTPError' &&
+      (err as HTTPError)?.response?.statusCode === 404) {
+      notFound.error(resource.url, resource.rawUrl, resource.refUrl);
+    } else if (err) {
+      error.error(cause, resource.url, resource.rawUrl, resource.refUrl, err);
+    } else {
+      error.error(cause, resource.url, resource.rawUrl, resource.refUrl);
+    }
+  }
+
+
+  getDownloadedCount(): number {
+    return this.downloadedUrl.size;
+  }
+
+  start(): void {
+    if (typeof this.options.adjustConcurrencyFunc === 'function') {
+      setInterval(() => this.options.adjustConcurrencyFunc?.(this),
+        this.options.adjustConcurrencyPeriod || 60000);
+    }
+    this.queue.start();
+  }
+
+  stop(): void {
+    if (this.adjustTimer) {
+      clearInterval(this.adjustTimer);
+    }
+    this.queue.pause();
+  }
+
+  onIdle(): Promise<void> {
+    return this.queue.onIdle();
+  }
+
+  async dispose(): Promise<void> {
+    if (this.adjustTimer) {
+      clearInterval(this.adjustTimer);
+    }
+    this.queue.pause();
+    this.queue.clear();
+  }
+
+}
+
+export class DownloaderMain extends AbstractDownloader {
+  readonly workers: WorkerPool<RawResource, DownloadWorkerMessage>;
+  readonly queuedUrl: Set<string> = new Set<string>();
+
+  constructor(public pathToOptions: string,
+    overrideOptions?: Partial<StaticDownloadOptions> & {pathToWorker?: string}) {
+    super(pathToOptions, overrideOptions);
+    let workerCount: number =
+      Math.min(cpus().length - 2, this.options.concurrency);
+    if (this.options.workerCount) {
+      workerCount = Math.min(this.options.workerCount, workerCount);
+    }
+    if (workerCount < 1) {
+      workerCount = 1;
+    }
+    this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
+      overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker'),
+      {pathToOptions, overrideOptions}
+    );
+    if (this.options.initialUrl) {
+      this.addInitialResource(this.options.initialUrl)
+        .catch(e => error.error('add initial url', e));
+    }
+  }
+
   async addProcessedResource(res: RawResource): Promise<boolean | void> {
+    // noinspection DuplicatedCode
     if (res.depth > this.options.maxDepth) {
       skip.info('skipped max depth', res.url, res.refUrl, res.depth);
       return false;
@@ -137,48 +194,8 @@ export class DownloaderMain implements DownloaderWithMeta {
     }
   }
 
-
-  handleError(err: Error | null, cause: string, resource: RawResource): void {
-    if (err && err.name === 'HTTPError' &&
-      (err as HTTPError)?.response?.statusCode === 404) {
-      notFound.error(resource.url, resource.rawUrl, resource.refUrl);
-    } else if (err) {
-      error.error(cause, resource.url, resource.rawUrl, resource.refUrl, err);
-    } else {
-      error.error(cause, resource.url, resource.rawUrl, resource.refUrl);
-    }
-  }
-
-
-  getDownloadedCount(): number {
-    return this.downloadedUrl.size;
-  }
-
-  start(): void {
-    if (typeof this.options.adjustConcurrencyFunc === 'function') {
-      setInterval(() => this.options.adjustConcurrencyFunc?.(this),
-        this.options.adjustConcurrencyPeriod || 60000);
-    }
-    this.queue.start();
-  }
-
-  stop(): void {
-    if (this.adjustTimer) {
-      clearInterval(this.adjustTimer);
-    }
-    this.queue.pause();
-  }
-
-  onIdle(): Promise<void> {
-    return this.queue.onIdle();
-  }
-
   async dispose(): Promise<void> {
-    if (this.adjustTimer) {
-      clearInterval(this.adjustTimer);
-    }
-    this.queue.pause();
-    this.queue.clear();
+    await super.dispose();
     await this.workers.dispose();
   }
 }
