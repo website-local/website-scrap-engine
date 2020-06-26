@@ -1,8 +1,16 @@
 import {Resource, ResourceType} from '../resource';
 import {
+  LinkRedirectFunc,
   ProcessResourceAfterDownloadFunc,
   ProcessResourceBeforeDownloadFunc
 } from '../pipeline';
+
+export interface SkipProcessFunc {
+  (url: string, element: Cheerio | null, parent: Resource | null): boolean;
+}
+
+export const skipProcess = (fn: SkipProcessFunc): LinkRedirectFunc =>
+  (url, element, parent) => fn(url, element, parent) ? undefined : url;
 
 export interface DropResourceFunc {
   (res: Resource): boolean;
