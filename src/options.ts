@@ -53,16 +53,16 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
 }
 
 export function mergeOverrideOptions(
-  options: DownloadOptions,
+  options: DownloadOptions | (() => DownloadOptions),
   overrideOptions?: Partial<StaticDownloadOptions>): DownloadOptions {
+  const opt: DownloadOptions = typeof options === 'function' ? options() : options;
   if (!overrideOptions) {
-    return options;
+    return opt;
   }
-  const {meta} = options;
-  Object.assign(options, overrideOptions);
+  const {meta} = opt;
+  Object.assign(opt, overrideOptions);
   if (overrideOptions.meta) {
     Object.assign(meta, overrideOptions.meta);
   }
-  return options;
+  return opt;
 }
-
