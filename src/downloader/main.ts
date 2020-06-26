@@ -66,6 +66,10 @@ export class DownloaderMain implements DownloaderWithMeta {
       overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker'),
       {pathToOptions, overrideOptions}
     );
+    if (this.options.initialUrl) {
+      this.addInitialResource(this.options.initialUrl)
+        .catch(e => error.error('add initial url', e));
+    }
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {
