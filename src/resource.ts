@@ -1,6 +1,7 @@
 import URI from 'urijs';
 import {escapePath} from './util';
 import * as path from 'path';
+import {IncomingHttpHeaders} from 'http';
 
 export enum ResourceType {
   Binary = 1,
@@ -108,6 +109,7 @@ export interface RawResource {
 
   meta: {
     doc?: CheerioStatic;
+    headers?: IncomingHttpHeaders;
     [key: string]: unknown;
   }
 }
@@ -145,7 +147,8 @@ export function prepareResourceForClone(res: Resource): RawResource {
       if (key === 'meta') {
         const props: Record<string, unknown> = clone[key] = {};
         for (const prop of Object.keys(value)) {
-          if (typeof value[prop] !== 'object') {
+          // headers can be cloned safely
+          if (prop === 'headers' || typeof value[prop] !== 'object') {
             props[prop] = value[prop];
           }
         }

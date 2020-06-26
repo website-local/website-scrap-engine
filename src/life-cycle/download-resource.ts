@@ -115,6 +115,7 @@ export const requestForResource = async (
     logger.error.warn('Empty response body:', downloadLink, response);
     return res as Resource;
   }
+  res.meta.headers = response.headers;
 
   logger.response.info(response.statusCode, response.requestUrl, res.url,
     downloadLink, res.refUrl, res.encoding, res.type);
