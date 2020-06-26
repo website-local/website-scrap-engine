@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "css-url-parser": "^1.1.3",
+    "cheerio": "^1.0.0-rc.3",
     "got": "^11.3.0",
     "log4js": "^6.3.0",
     "mkdirp": "^1.0.4",
@@ -26,7 +27,6 @@
     "@types/urijs": "^1.19.9",
     "@typescript-eslint/eslint-plugin": "^3.3.0",
     "@typescript-eslint/parser": "^3.3.0",
-    "cheerio": "^1.0.0-rc.3",
     "eslint": "^7.3.0",
     "typescript": "^3.0.1"
   },
