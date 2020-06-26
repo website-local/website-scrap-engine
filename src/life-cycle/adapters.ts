@@ -17,7 +17,10 @@ export interface PreProcessResourceFunc {
 }
 
 export const preProcess = (fn: PreProcessResourceFunc): ProcessResourceBeforeDownloadFunc =>
-  (res, element, parent) => fn(res.url, element, res, parent);
+  (res, element, parent) => {
+    fn(res.url, element, res, parent);
+    return res;
+  };
 
 export interface RequestRedirectFunc {
   (url: string, res: Resource): string | void;
