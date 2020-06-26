@@ -1,4 +1,8 @@
-import {DownloadOptions} from '../options';
+import {
+  DownloadOptions,
+  mergeOverrideOptions,
+  StaticDownloadOptions
+} from '../options';
 import PQueue from 'p-queue';
 import {DownloadResource, PipelineExecutor} from '../pipeline';
 import {
@@ -44,17 +48,23 @@ export class DownloaderMain implements DownloaderWithMeta {
   };
   adjustTimer: ReturnType<typeof setInterval> | void = undefined;
 
-  constructor(public pathToOptions: string, pathToWorker?: string) {
-    this.options = require(pathToOptions);
+  constructor(public pathToOptions: string,
+    overrideOptions?: Partial<StaticDownloadOptions> & {pathToWorker?: string}) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    this.options = mergeOverrideOptions(require(pathToOptions), overrideOptions);
     this.queue = new PQueue({concurrency: this.options.concurrency});
     this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
-    this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(
-      Math.max(1,
-        Math.min(cpus().length - 2,
-          this.options.concurrency,
-          this.options.workerCount)),
-      pathToWorker || path.resolve(__dirname, 'worker'),
-      {pathToOptions}
+    let workerCount: number =
+      Math.min(cpus().length - 2, this.options.concurrency);
+    if (this.options.workerCount) {
+      workerCount = Math.min(this.options.workerCount, workerCount);
+    }
+    if (workerCount < 1) {
+      workerCount = 1;
+    }
+    this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
+      overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker'),
+      {pathToOptions, overrideOptions}
     );
   }
 

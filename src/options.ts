@@ -32,7 +32,6 @@ export interface StaticDownloadOptions {
 
   meta: Record<string, string | number | boolean> & {
     detectIncompleteHtml?: '</html>' | '</body>' | string;
-    adjustConcurrencyPeriod: number;
   }
 }
 
@@ -46,9 +45,23 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
    * {@link workerCount}
    * )
    */
-  workerCount: number;
+  workerCount?: number;
   minConcurrency?: number;
-  adjustConcurrencyPeriod: number;
+  adjustConcurrencyPeriod?: number;
   adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;
+}
+
+export function mergeOverrideOptions(
+  options: DownloadOptions,
+  overrideOptions?: Partial<StaticDownloadOptions>): DownloadOptions {
+  if (!overrideOptions) {
+    return options;
+  }
+  const {meta} = options;
+  Object.assign(options, overrideOptions);
+  if (overrideOptions.meta) {
+    Object.assign(meta, overrideOptions.meta);
+  }
+  return options;
 }
 

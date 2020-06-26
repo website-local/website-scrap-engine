@@ -4,10 +4,10 @@ Configurable website scraper in typescript.
 ## Features
 -[x]  Resource types
 -[x]  Configurable process pipeline
--[ ]  Options
+-[x]  Options
 -[x]  Logger
--[ ]  Concurrent downloader
--[ ]  Multi-thread processing (with native worker_thread)
+-[x]  Concurrent downloader
+-[x]  Multi-thread processing (with native worker_thread)
 -[x]  Process CSS
 -[x]  Process HTML
 -[x]  Process SiteMap (but not replace path in it)

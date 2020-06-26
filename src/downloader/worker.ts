@@ -1,5 +1,9 @@
 import {parentPort, workerData} from 'worker_threads';
-import {DownloadOptions} from '../options';
+import {
+  DownloadOptions,
+  mergeOverrideOptions,
+  StaticDownloadOptions
+} from '../options';
 import {
   DownloadResource,
   PipelineExecutor,
@@ -16,9 +20,14 @@ import {WorkerMessage} from './worker-pool';
 
 export type DownloadWorkerMessage = WorkerMessage<RawResource[]>;
 
-const {pathToOptions}: { pathToOptions: string } = workerData;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const options: DownloadOptions = require(pathToOptions);
+const {pathToOptions, overrideOptions}: {
+  pathToOptions: string,
+  overrideOptions?: Partial<StaticDownloadOptions>
+} = workerData;
+
+const options: DownloadOptions =
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  mergeOverrideOptions(require(pathToOptions), overrideOptions);
 
 const pipeline: PipelineExecutor =
   new PipelineExecutor(options, options.req, options);
