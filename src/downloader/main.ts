@@ -11,7 +11,8 @@ import {WorkerPool} from './worker-pool';
 import {cpus} from 'os';
 import {DownloadWorkerMessage} from './worker';
 import path from 'path';
-import {error, skip} from '../logger';
+import {error, notFound, skip} from '../logger';
+import {HTTPError} from 'got';
 
 export interface DownloaderStats {
   firstPeriodCount: number;
@@ -43,7 +44,7 @@ export class DownloaderMain implements DownloaderWithMeta {
   };
   adjustTimer: ReturnType<typeof setInterval> | void = undefined;
 
-  constructor(public pathToOptions: string) {
+  constructor(public pathToOptions: string, pathToWorker?: string) {
     this.options = require(pathToOptions);
     this.queue = new PQueue({concurrency: this.options.concurrency});
     this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
@@ -52,7 +53,7 @@ export class DownloaderMain implements DownloaderWithMeta {
         Math.min(cpus().length - 2,
           this.options.concurrency,
           this.options.workerCount)),
-      path.resolve(__dirname, 'worker'),
+      pathToWorker || path.resolve(__dirname, 'worker'),
       {pathToOptions}
     );
   }
@@ -92,7 +93,7 @@ export class DownloaderMain implements DownloaderWithMeta {
         return;
       }
     } catch (e) {
-      error.error('Error downloading resource', res.url, res.rawUrl, res.refUrl, e);
+      this.handleError(e, 'downloading resource', res);
       return false;
     }
     let msg: DownloadWorkerMessage | void;
@@ -103,8 +104,7 @@ export class DownloaderMain implements DownloaderWithMeta {
         msg = await this.workers.submitTask(r);
       }
     } catch (e) {
-      error.error('Error submitting resource to worker',
-        res.url, res.rawUrl, res.refUrl, e);
+      this.handleError(e, 'submitting resource to worker', res);
       return false;
     }
     this.downloadedUrl.add(res.url);
@@ -114,8 +114,7 @@ export class DownloaderMain implements DownloaderWithMeta {
       return;
     }
     if (msg.error) {
-      error.error('Error post-processing resource',
-        res.url, res.rawUrl, res.refUrl, msg.error);
+      this.handleError(msg.error, 'post-process', res);
     }
     if (msg.body?.length) {
       const body: RawResource[] = msg.body;
@@ -123,6 +122,19 @@ export class DownloaderMain implements DownloaderWithMeta {
       setImmediate(() => body.forEach(rawRes => this.addProcessedResource(rawRes)));
     }
   }
+
+
+  handleError(err: Error | null, cause: string, resource: RawResource): void {
+    if (err && err.name === 'HTTPError' &&
+      (err as HTTPError)?.response?.statusCode === 404) {
+      notFound.error(resource.url, resource.rawUrl, resource.refUrl);
+    } else if (err) {
+      error.error(cause, resource.url, resource.rawUrl, resource.refUrl, err);
+    } else {
+      error.error(cause, resource.url, resource.rawUrl, resource.refUrl);
+    }
+  }
+
 
   getDownloadedCount(): number {
     return this.downloadedUrl.size;
