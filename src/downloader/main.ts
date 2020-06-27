@@ -35,11 +35,11 @@ export interface DownloaderWithMeta {
 }
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
-
   readonly queue: PQueue;
   readonly pipeline: PipelineExecutor;
   readonly options: DownloadOptions;
   readonly downloadedUrl: Set<string> = new Set<string>();
+  readonly queuedUrl: Set<string> = new Set<string>();
   readonly meta: DownloaderStats = {
     currentPeriodCount: 0,
     firstPeriodCount: 0,
@@ -74,7 +74,32 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     }
   }
 
-  abstract async addProcessedResource(res: RawResource): Promise<boolean | void>;
+  protected _addProcessedResource(res: RawResource): Promise<boolean | void> | boolean {
+    // noinspection DuplicatedCode
+    if (res.depth > this.options.maxDepth) {
+      skip.info('skipped max depth', res.url, res.refUrl, res.depth);
+      return false;
+    }
+    if (this.queuedUrl.has(res.url)) {
+      return false;
+    }
+    this.queuedUrl.add(res.url);
+    const resource: Resource = normalizeResource(res);
+    // cut the call stack
+    return this.queue.add(() => new Promise(r => setImmediate(
+      () => r(this.downloadAndProcessResource(resource)))));
+  }
+
+  abstract async downloadAndProcessResource(res: RawResource): Promise<boolean | void>;
+
+  async addProcessedResource(res: RawResource): Promise<boolean | void> {
+    try {
+      return await this._addProcessedResource(res);
+    } catch (e) {
+      this.handleError(e, 'downloading or processing', res);
+      return false;
+    }
+  }
 
   handleError(err: Error | null, cause: string, resource: RawResource): void {
     if (err && err.name === 'HTTPError' &&
@@ -112,10 +137,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   async dispose(): Promise<void> {
-    if (this.adjustTimer) {
-      clearInterval(this.adjustTimer);
-    }
-    this.queue.pause();
+    this.stop();
     this.queue.clear();
   }
 
@@ -123,11 +145,10 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
 export class DownloaderMain extends AbstractDownloader {
   readonly workers: WorkerPool<RawResource, DownloadWorkerMessage>;
-  readonly queuedUrl: Set<string> = new Set<string>();
   readonly init: Promise<void>;
 
   constructor(public pathToOptions: string,
-    overrideOptions?: Partial<StaticDownloadOptions> & {pathToWorker?: string}) {
+    overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
     super(pathToOptions, overrideOptions);
     let workerCount: number =
       Math.min(cpus().length - 2, this.options.concurrency);
@@ -163,11 +184,10 @@ export class DownloaderMain extends AbstractDownloader {
     }
     let msg: DownloadWorkerMessage | void;
     try {
-      if (r.body instanceof ArrayBuffer) {
-        msg = await this.workers.submitTask(r, [r.body]);
-      } else if (Buffer.isBuffer(r.body)) {
+      // DOMException [DataCloneError]: An ArrayBuffer is neutered and could not be cloned.
+      if (Buffer.isBuffer(r.body)) {
         r.body = r.body.buffer;
-        msg = await this.workers.submitTask(r, [r.body]);
+        msg = await this.workers.submitTask(r);
       } else {
         msg = await this.workers.submitTask(r);
       }
@@ -186,30 +206,11 @@ export class DownloaderMain extends AbstractDownloader {
     }
     if (msg.body?.length) {
       const body: RawResource[] = msg.body;
-      // cut the call stack
-      setImmediate(() => body.forEach(rawRes => this.addProcessedResource(rawRes)));
+      body.forEach(rawRes => this._addProcessedResource(rawRes));
     }
 
   }
 
-  async addProcessedResource(res: RawResource): Promise<boolean | void> {
-    // noinspection DuplicatedCode
-    if (res.depth > this.options.maxDepth) {
-      skip.info('skipped max depth', res.url, res.refUrl, res.depth);
-      return false;
-    }
-    if (this.queuedUrl.has(res.url)) {
-      return false;
-    }
-    this.queuedUrl.add(res.url);
-    const resource: Resource = normalizeResource(res);
-    try {
-      return await this.queue.add(() => this.downloadAndProcessResource(resource));
-    } catch (e) {
-      this.handleError(e, 'downloading or processing', res);
-      return false;
-    }
-  }
 
   async dispose(): Promise<void> {
     await super.dispose();

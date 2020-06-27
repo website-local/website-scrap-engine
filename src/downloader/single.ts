@@ -1,5 +1,5 @@
 import {AbstractDownloader} from './main';
-import {normalizeResource, RawResource, Resource} from '../resource';
+import {RawResource, Resource} from '../resource';
 import {StaticDownloadOptions} from '../options';
 import {skip} from '../logger';
 import {DownloadResource, SubmitResourceFunc} from '../pipeline';
@@ -18,10 +18,10 @@ export class SingleThreadDownloader extends AbstractDownloader {
     }
   }
 
-  async downloadAndProcess(res: Resource): Promise<void> {
+  async downloadAndProcessResource(res: Resource): Promise<void> {
     let r: DownloadResource | void;
     try {
-      r = await this.queue.add(() => this.pipeline.download(res));
+      r = await this.pipeline.download(res);
       if (!r) {
         skip.debug('discarded after download', res.url, res.rawUrl, res.refUrl);
         return;
@@ -53,21 +53,8 @@ export class SingleThreadDownloader extends AbstractDownloader {
       this.handleError(e, 'post-process', res);
     }
     if (collectedResource.length) {
-      setImmediate(() => collectedResource.forEach(
-        resource => this.addProcessedResource(resource)));
+      collectedResource.forEach(rawRes => this._addProcessedResource(rawRes));
     }
-  }
-
-  async addProcessedResource(res: RawResource): Promise<boolean | void> {
-    if (res.depth > this.options.maxDepth) {
-      skip.info('skipped max depth', res.url, res.refUrl, res.depth);
-      return false;
-    }
-    if (this.queuedUrl.has(res.url)) {
-      return false;
-    }
-    this.queuedUrl.add(res.url);
-    return this.queue.add(() => this.downloadAndProcess(normalizeResource(res)));
   }
 
 }
