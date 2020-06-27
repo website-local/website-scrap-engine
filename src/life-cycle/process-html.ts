@@ -1,5 +1,6 @@
 import {sources} from '../sources';
 import srcset, {SrcSetDefinition} from 'srcset';
+import cheerio from 'cheerio';
 import {
   DownloadResource,
   PipelineExecutor,

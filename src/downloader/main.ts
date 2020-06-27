@@ -136,7 +136,8 @@ export class DownloaderMain extends AbstractDownloader {
       workerCount = 1;
     }
     this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
-      overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker'),
+      // worker script should be compiled to .js
+      overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker.js'),
       {pathToOptions, overrideOptions}
     );
     if (this.options.initialUrl) {
@@ -170,7 +171,10 @@ export class DownloaderMain extends AbstractDownloader {
     }
     let msg: DownloadWorkerMessage | void;
     try {
-      if (r.body instanceof ArrayBuffer || Buffer.isBuffer(r.body)) {
+      if (r.body instanceof ArrayBuffer) {
+        msg = await this.workers.submitTask(r, [r.body]);
+      } else if (Buffer.isBuffer(r.body)) {
+        r.body = r.body.buffer;
         msg = await this.workers.submitTask(r, [r.body]);
       } else {
         msg = await this.workers.submitTask(r);

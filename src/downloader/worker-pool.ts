@@ -27,7 +27,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     workerScript: string,
     workerData: Record<string, unknown>) {
     for (let i = 0; i < coreSize; i++) {
-      this.pool[i] = new Worker(workerScript, workerData);
+      this.pool[i] = new Worker(workerScript, {workerData});
       this.pool[i].addListener('message',
         msg => this.onMessage(this.pool[i], msg));
     }
@@ -70,6 +70,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         if (!task) break;
         worker.postMessage(task.body, task.transferList);
         this.workingWorker.add(worker);
+        // ok to cast here
+        this.working.set(worker, task as PendingPromise);
         if (!this.queued.length) {
           break;
         }

@@ -39,15 +39,6 @@ export interface StaticDownloadOptions {
    */
   encoding: Record<ResourceType, ResourceEncoding>;
 
-  meta: Record<string, string | number | boolean> & {
-    detectIncompleteHtml?: '</html>' | '</body>' | string;
-  }
-}
-
-export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
-  req: RequestOptions;
-  concurrency: number;
-  initialUrl?: string[];
   /**
    * WorkerPool.coreSize = Math.min(
    * require('os').cpus().length - 2,
@@ -56,7 +47,20 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
    * )
    */
   workerCount?: number;
+
+  /**
+   * Minimum concurrency, for {@link DownloadOptions.adjustConcurrencyFunc}
+   */
   minConcurrency?: number;
+
+  meta: Record<string, string | number | boolean> & {
+    detectIncompleteHtml?: '</html>' | '</body>' | string;
+  }
+}
+
+export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
+  req: RequestOptions;
+  initialUrl?: string[];
   adjustConcurrencyPeriod?: number;
   adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;
 }

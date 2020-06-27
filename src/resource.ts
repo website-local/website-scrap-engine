@@ -268,5 +268,8 @@ export function normalizeResource(res: RawResource): Resource {
     resource.downloadStartTimestamp) {
     resource.downloadTime = resource.finishTimestamp - resource.downloadStartTimestamp;
   }
+  if (resource.body instanceof ArrayBuffer || ArrayBuffer.isView(resource.body)) {
+    resource.body = Buffer.from(resource.body);
+  }
   return resource;
 }
