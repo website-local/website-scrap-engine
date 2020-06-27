@@ -17,6 +17,7 @@ import {DownloadWorkerMessage} from './worker';
 import path from 'path';
 import {error, notFound, skip} from '../logger';
 import {HTTPError} from 'got';
+import {importDefaultFromPath} from '../util';
 
 export interface DownloaderStats {
   firstPeriodCount: number;
@@ -49,8 +50,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
   protected constructor(public pathToOptions: string,
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    this.options = mergeOverrideOptions(require(pathToOptions), overrideOptions);
+    this.options = mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
     this.queue = new PQueue({concurrency: this.options.concurrency});
     this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
   }

@@ -17,6 +17,7 @@ import {
 } from '../resource';
 import {skip} from '../logger';
 import {WorkerMessage} from './worker-pool';
+import {importDefaultFromPath} from '../util';
 
 export type DownloadWorkerMessage = WorkerMessage<RawResource[]>;
 
@@ -27,7 +28,7 @@ const {pathToOptions, overrideOptions}: {
 
 const options: DownloadOptions =
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  mergeOverrideOptions(require(pathToOptions), overrideOptions);
+  mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
 
 const pipeline: PipelineExecutor =
   new PipelineExecutor(options, options.req, options);

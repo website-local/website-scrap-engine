@@ -102,3 +102,12 @@ export const writeFile = async (
   }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const importDefaultFromPath = (path: string): any => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires,@typescript-eslint/no-explicit-any
+  const mod: any = require(path);
+  if (mod && mod.__esModule && mod.default) {
+    return mod.default;
+  }
+  return mod;
+};
