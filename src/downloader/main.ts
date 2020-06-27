@@ -53,7 +53,6 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     this.options = mergeOverrideOptions(require(pathToOptions), overrideOptions);
     this.queue = new PQueue({concurrency: this.options.concurrency});
     this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
-
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {
@@ -123,6 +122,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 export class DownloaderMain extends AbstractDownloader {
   readonly workers: WorkerPool<RawResource, DownloadWorkerMessage>;
   readonly queuedUrl: Set<string> = new Set<string>();
+  readonly init: Promise<void>;
 
   constructor(public pathToOptions: string,
     overrideOptions?: Partial<StaticDownloadOptions> & {pathToWorker?: string}) {
@@ -140,8 +140,9 @@ export class DownloaderMain extends AbstractDownloader {
       {pathToOptions, overrideOptions}
     );
     if (this.options.initialUrl) {
-      this.addInitialResource(this.options.initialUrl)
-        .catch(e => error.error('add initial url', e));
+      this.init = this.addInitialResource(this.options.initialUrl);
+    } else {
+      this.init = Promise.resolve();
     }
   }
 

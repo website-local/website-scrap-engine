@@ -1,18 +1,20 @@
 import {AbstractDownloader} from './main';
 import {normalizeResource, RawResource, Resource} from '../resource';
 import {StaticDownloadOptions} from '../options';
-import {error, skip} from '../logger';
+import {skip} from '../logger';
 import {DownloadResource, SubmitResourceFunc} from '../pipeline';
 
 export class SingleThreadDownloader extends AbstractDownloader {
   readonly queuedUrl: Set<string> = new Set<string>();
+  readonly init: Promise<void>;
 
   constructor(public pathToOptions: string,
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
     super(pathToOptions, overrideOptions);
     if (this.options.initialUrl) {
-      this.addInitialResource(this.options.initialUrl)
-        .catch(e => error.error('add initial url', e));
+      this.init = this.addInitialResource(this.options.initialUrl);
+    } else {
+      this.init = Promise.resolve();
     }
   }
 
