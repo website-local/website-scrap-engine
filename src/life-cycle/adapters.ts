@@ -1,9 +1,13 @@
 import {Resource, ResourceType} from '../resource';
 import {
+  DownloadResource,
   LinkRedirectFunc,
   ProcessResourceAfterDownloadFunc,
-  ProcessResourceBeforeDownloadFunc
+  ProcessResourceBeforeDownloadFunc, SubmitResourceFunc
 } from '../pipeline';
+import cheerio from 'cheerio';
+import {toString} from '../util';
+import {StaticDownloadOptions} from '../options';
 
 export interface SkipProcessFunc {
   (url: string, element: Cheerio | null, parent: Resource | null): boolean;
@@ -17,7 +21,12 @@ export interface DropResourceFunc {
 }
 
 export const dropResource = (fn: DropResourceFunc): ProcessResourceBeforeDownloadFunc =>
-  res => fn(res) ? undefined : res;
+  res => {
+    if (fn(res)) {
+      res.shouldBeDiscardedFromDownload = true;
+    }
+    return res;
+  };
 
 
 export interface PreProcessResourceFunc {
@@ -60,8 +69,12 @@ export interface HtmlProcessFunc {
 }
 
 export const processHtml = (fn: HtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
-  res => {
-    if (res.type === ResourceType.Html && res.meta.doc) {
+  (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions) => {
+    if (res.type === ResourceType.Html) {
+      if (!res.meta.doc) {
+        res.meta.doc = cheerio.load(toString(res.body,
+          res.encoding || options.encoding[res.type] || 'utf8'));
+      }
       res.meta.doc = fn(res.meta.doc, res);
     }
     return res;

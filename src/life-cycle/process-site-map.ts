@@ -43,7 +43,9 @@ export const processSiteMap: ProcessResourceAfterDownloadFunc = async (
     if (!r) continue;
     r = await pipeline.processBeforeDownload(r, null, res, options);
     if (!r) continue;
-    resources.push(r);
+    if (!r.shouldBeDiscardedFromDownload) {
+      resources.push(r);
+    }
   }
   await submit(resources);
   return res;

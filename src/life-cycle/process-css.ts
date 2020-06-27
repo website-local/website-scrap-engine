@@ -31,7 +31,9 @@ export async function processCssText(
     if (!r) continue;
     r = await pipeline.processBeforeDownload(r, null, res, options);
     if (!r) continue;
-    resources.push(r);
+    if (!r.shouldBeDiscardedFromDownload) {
+      resources.push(r);
+    }
     cssText = cssText.split(rawUrl).join(r.replacePath);
   }
   return cssText;

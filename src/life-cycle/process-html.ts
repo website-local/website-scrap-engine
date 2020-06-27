@@ -87,10 +87,13 @@ export const processHtml: ProcessResourceAfterDownloadFunc = async (
           }
           continue;
         }
+        if (!resource.shouldBeDiscardedFromDownload) {
+          submit(resource);
+        }
         if (attr === 'srcset') {
-          (replaceValue as SrcSetDefinition[])[linkIndex].url = res.replacePath;
+          (replaceValue as SrcSetDefinition[])[linkIndex].url = resource.replacePath;
         } else {
-          replaceValue = res.replacePath;
+          replaceValue = resource.replacePath;
           // historical workaround here
           if (replaceValue === '.html' || replaceValue === '/.html') {
             replaceValue = '';

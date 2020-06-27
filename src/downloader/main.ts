@@ -68,7 +68,9 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       if (!r) continue;
       r = await this.pipeline.processBeforeDownload(r, null, null);
       if (!r) continue;
-      await this.addProcessedResource(r);
+      if (!r.shouldBeDiscardedFromDownload) {
+        await this.addProcessedResource(r);
+      }
     }
   }
 
@@ -147,20 +149,10 @@ export class DownloaderMain extends AbstractDownloader {
     }
   }
 
-  async addProcessedResource(res: RawResource): Promise<boolean | void> {
-    // noinspection DuplicatedCode
-    if (res.depth > this.options.maxDepth) {
-      skip.info('skipped max depth', res.url, res.refUrl, res.depth);
-      return false;
-    }
-    if (this.queuedUrl.has(res.url)) {
-      return false;
-    }
-    this.queuedUrl.add(res.url);
-    const resource = normalizeResource(res);
+  async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
     let r: DownloadResource | void;
     try {
-      r = await this.queue.add(() => this.pipeline.download(resource));
+      r = await this.pipeline.download(res);
       if (!r) {
         skip.debug('discarded after download', res.url, res.rawUrl, res.refUrl);
         return;
@@ -196,6 +188,26 @@ export class DownloaderMain extends AbstractDownloader {
       const body: RawResource[] = msg.body;
       // cut the call stack
       setImmediate(() => body.forEach(rawRes => this.addProcessedResource(rawRes)));
+    }
+
+  }
+
+  async addProcessedResource(res: RawResource): Promise<boolean | void> {
+    // noinspection DuplicatedCode
+    if (res.depth > this.options.maxDepth) {
+      skip.info('skipped max depth', res.url, res.refUrl, res.depth);
+      return false;
+    }
+    if (this.queuedUrl.has(res.url)) {
+      return false;
+    }
+    this.queuedUrl.add(res.url);
+    const resource: Resource = normalizeResource(res);
+    try {
+      return await this.queue.add(() => this.downloadAndProcessResource(resource));
+    } catch (e) {
+      this.handleError(e, 'downloading or processing', res);
+      return false;
     }
   }
 

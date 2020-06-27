@@ -137,6 +137,11 @@ export interface Resource extends RawResource {
    * {@link .uri}.hostname()
    */
   host?: string;
+
+  /**
+   * True if url of this resource should be replaced and not downloaded
+   */
+  shouldBeDiscardedFromDownload?: boolean;
 }
 
 export function prepareResourceForClone(res: Resource): RawResource {

@@ -37,6 +37,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     this.workingWorker.delete(worker);
     setImmediate(() => this.nextTask());
     const pending: PendingPromise | undefined = this.working.get(worker);
+    this.working.delete(worker);
     if (!pending) return;
     pending.resolve(message);
   }

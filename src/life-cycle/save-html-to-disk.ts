@@ -28,12 +28,12 @@ export const saveHtmlToDisk: SaveToDiskFunc = async (
       const redirectedResource = await pipeline.createResource(ResourceType.Html,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot, res.encoding);
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
-      const body: ResourceBody = res.meta.doc ? res.meta.doc.toString() : res.body;
+      const body: ResourceBody = res.meta.doc ? res.meta.doc.html() : res.body;
       await writeFile(path.join(localRoot, redirectedSavePath), body, res.encoding);
       return;
     }
   }
-  const body: ResourceBody = res.meta.doc ? res.meta.doc.toString() : res.body;
+  const body: ResourceBody = res.meta.doc ? res.meta.doc.html() : res.body;
   const filePath: string = path.join(localRoot, decodeURI(res.savePath));
   await writeFile(filePath, body, res.encoding);
   return;
