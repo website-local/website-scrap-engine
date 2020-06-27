@@ -5,7 +5,7 @@ import {
   ResourceEncoding,
   ResourceType
 } from './resource';
-import {Options as GotOptions} from 'got/dist/source/core';
+import {Options as GotOptions} from 'got/dist/source/as-promise';
 import {StaticDownloadOptions} from './options';
 
 declare type AsyncResult<T> = T | Promise<T>;
