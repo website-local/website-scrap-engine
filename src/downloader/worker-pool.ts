@@ -69,10 +69,16 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       if (!this.workingWorker.has(worker)) {
         const task: PendingPromiseWithBody<R> | undefined = this.queued.shift();
         if (!task) break;
-        worker.postMessage(task.body, task.transferList);
-        this.workingWorker.add(worker);
+        try {
+          worker.postMessage(task.body, task.transferList);
+          this.workingWorker.add(worker);
+          this.working.set(worker, task as PendingPromise);
+        } catch (e) {
+          this.workingWorker.delete(worker);
+          this.working.delete(worker);
+          task.reject(e);
+        }
         // ok to cast here
-        this.working.set(worker, task as PendingPromise);
         if (!this.queued.length) {
           break;
         }
