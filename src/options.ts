@@ -53,6 +53,8 @@ export interface StaticDownloadOptions {
    */
   minConcurrency?: number;
 
+  deduplicateStripSearch?: boolean;
+
   meta: Record<string, string | number | boolean> & {
     detectIncompleteHtml?: '</html>' | '</body>' | string;
   }
@@ -149,7 +151,7 @@ export function defaultDownloadOptions(
   if (!options.meta) {
     options.meta = {};
   }
-  if ('detectIncompleteHtml' in options.meta) {
+  if (!('detectIncompleteHtml' in options.meta)) {
     options.meta.detectIncompleteHtml = '</html>';
   }
   if (!options.encoding) {
@@ -214,6 +216,9 @@ export function defaultDownloadOptions(
   }
   if (!options.processAfterDownload) {
     options.processAfterDownload = [];
+  }
+  if (options.deduplicateStripSearch !== false) {
+    options.deduplicateStripSearch = true;
   }
   return options as DownloadOptions;
 }

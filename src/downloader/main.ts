@@ -18,6 +18,7 @@ import path from 'path';
 import {error, notFound, skip} from '../logger';
 import {HTTPError} from 'got';
 import {importDefaultFromPath} from '../util';
+import URI from 'urijs';
 
 export interface DownloaderStats {
   firstPeriodCount: number;
@@ -80,10 +81,17 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       skip.info('skipped max depth', res.url, res.refUrl, res.depth);
       return false;
     }
-    if (this.queuedUrl.has(res.url)) {
+    let url: string;
+    const uri: URI = ((res as Resource)?.uri?.clone() || URI(res.url)).hash('');
+    if (this.options.deduplicateStripSearch) {
+      url = uri.search('').toString();
+    } else {
+      url = uri.toString();
+    }
+    if (this.queuedUrl.has(url)) {
       return false;
     }
-    this.queuedUrl.add(res.url);
+    this.queuedUrl.add(url);
     const resource: Resource = normalizeResource(res);
     // cut the call stack
     return this.queue.add(() => new Promise(r => setImmediate(
