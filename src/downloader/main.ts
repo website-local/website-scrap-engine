@@ -15,7 +15,7 @@ import {WorkerPool} from './worker-pool';
 import {cpus} from 'os';
 import {DownloadWorkerMessage} from './worker';
 import path from 'path';
-import {error, notFound, skip} from '../logger';
+import {error, notFound, skip} from '../logger/logger';
 import {HTTPError} from 'got';
 import {importDefaultFromPath} from '../util';
 import URI from 'urijs';
@@ -54,6 +54,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     this.options = mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
     this.queue = new PQueue({concurrency: this.options.concurrency});
     this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
+    this.options.configureLogger(this.options.localRoot, this.options.logSubDir || '');
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {

@@ -7,9 +7,10 @@ import {
   RetryObject,
   TimeoutError
 } from 'got/dist/source/as-promise/types';
-import {error} from './logger';
+import {error} from './logger/logger';
 import {RequestError} from 'got/dist/source/core';
 import {adjust} from './downloader/adjust-concurrency';
+import {configureLogger} from './logger/config-logger';
 
 /**
  * Options which should not be changed at runtime, and safe for cloning
@@ -65,6 +66,8 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
   initialUrl?: string[];
   adjustConcurrencyPeriod?: number;
   adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;
+  configureLogger: typeof configureLogger;
+  logSubDir?: string;
 }
 
 const MAX_RETRY_DELAY = 5000;
@@ -219,6 +222,9 @@ export function defaultDownloadOptions(
   }
   if (options.deduplicateStripSearch !== false) {
     options.deduplicateStripSearch = true;
+  }
+  if (!options.configureLogger) {
+    options.configureLogger = configureLogger;
   }
   return options as DownloadOptions;
 }

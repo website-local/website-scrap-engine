@@ -1,6 +1,6 @@
 import fs from 'fs';
 import mkdirP from 'mkdirp';
-import * as logger from './logger';
+import * as logger from './logger/logger';
 import {ResourceBody, ResourceEncoding} from './resource';
 import {dirname} from 'path';
 

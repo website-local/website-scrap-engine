@@ -11,7 +11,7 @@ import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
 import {processCssText} from './process-css';
-import {error, skip} from '../logger';
+import {error, skip} from '../logger/logger';
 
 export const processHtml: ProcessResourceAfterDownloadFunc = async (
   res: DownloadResource,

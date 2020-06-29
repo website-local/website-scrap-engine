@@ -1,4 +1,6 @@
 import {MessagePort, Worker} from 'worker_threads';
+import * as logger from '../logger/logger';
+import {logLevels} from '../logger/logger-worker';
 
 export interface PendingPromise<T = unknown, E = unknown> {
   resolve: (value?: T | PromiseLike<T>) => void;
@@ -11,9 +13,25 @@ export interface PendingPromiseWithBody<R = unknown, E = unknown, B = unknown>
   transferList?: Array<ArrayBuffer | MessagePort>;
 }
 
+export enum WorkerMessageType {
+  Log,
+  Complete
+}
+
 export interface WorkerMessage<T = unknown> {
+  type: WorkerMessageType;
   body: T;
   error?: Error | void;
+}
+
+export interface WorkerLog<T = unknown> {
+  logger: keyof typeof logger;
+  level: typeof logLevels[number];
+  content: T[];
+}
+
+export interface LogWorkerMessage<T = unknown> extends WorkerMessage<WorkerLog<T>>{
+  type: WorkerMessageType.Log;
 }
 
 export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
@@ -34,6 +52,18 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   onMessage(worker: Worker, message: WorkerMessage): void {
+    if (message.type === WorkerMessageType.Complete) {
+      this.complete(worker, message);
+    }
+    this.takeLog(worker, message as LogWorkerMessage);
+  }
+
+  takeLog(worker: Worker, message: LogWorkerMessage): void {
+    logger?.[message.body.logger]?.[message.body.level]
+      ?.(worker.threadId, ...message?.body?.content);
+  }
+
+  complete(worker: Worker, message: WorkerMessage): void {
     this.workingWorker.delete(worker);
     setImmediate(() => this.nextTask());
     const pending: PendingPromise | undefined = this.working.get(worker);

@@ -1,7 +1,7 @@
 import {AbstractDownloader} from './main';
 import {RawResource, Resource} from '../resource';
 import {StaticDownloadOptions} from '../options';
-import {skip} from '../logger';
+import {skip} from '../logger/logger';
 import {DownloadResource, SubmitResourceFunc} from '../pipeline';
 
 export class SingleThreadDownloader extends AbstractDownloader {
@@ -30,6 +30,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
       this.handleError(e, 'downloading resource', res);
       return;
     }
+    this.downloadedUrl.add(res.url);
 
     const collectedResource: RawResource[] = [];
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {

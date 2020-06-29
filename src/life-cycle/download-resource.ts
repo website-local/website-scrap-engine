@@ -5,7 +5,7 @@ import {
 } from '../pipeline';
 import {prepareResourceForClone, Resource, ResourceType} from '../resource';
 import {StaticDownloadOptions} from '../options';
-import * as logger from '../logger';
+import * as logger from '../logger/logger';
 import {sleep} from '../util';
 import got, {
   BeforeRetryHook,

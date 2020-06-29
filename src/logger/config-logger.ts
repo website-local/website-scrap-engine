@@ -65,7 +65,7 @@ export const configureLogger = (localRoot: string, subDir: string): Log4js =>
         appenders: ['skip'],
         level: 'debug'
       },
-      '404-not-found': {
+      'notFound': {
         appenders: ['404'],
         level: 'debug'
       },
@@ -81,7 +81,7 @@ export const configureLogger = (localRoot: string, subDir: string): Log4js =>
         appenders: ['response'],
         level: 'debug'
       },
-      'adjust-concurrency': {
+      'adjustConcurrency': {
         appenders: ['stdout', 'complete'],
         level: 'debug'
       },

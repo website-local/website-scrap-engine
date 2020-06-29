@@ -1,4 +1,4 @@
-import {adjustConcurrency as logger} from '../logger';
+import {adjustConcurrency as logger} from '../logger/logger';
 import {DownloaderWithMeta} from './main';
 
 export const adjust = (downloader: DownloaderWithMeta): void => {

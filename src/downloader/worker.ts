@@ -15,8 +15,8 @@ import {
   RawResource,
   Resource
 } from '../resource';
-import {skip} from '../logger';
-import {WorkerMessage} from './worker-pool';
+import {skip} from '../logger/logger';
+import {WorkerMessage, WorkerMessageType} from './worker-pool';
 import {importDefaultFromPath} from '../util';
 
 export type DownloadWorkerMessage = WorkerMessage<RawResource[]>;
@@ -32,6 +32,8 @@ const options: DownloadOptions =
 
 const pipeline: PipelineExecutor =
   new PipelineExecutor(options, options.req, options);
+
+options.configureLogger(options.localRoot, options.logSubDir || '');
 
 parentPort?.addListener('message', async (msg: RawResource) => {
   const collectedResource: RawResource[] = [];
@@ -60,6 +62,7 @@ parentPort?.addListener('message', async (msg: RawResource) => {
     error = e;
   } finally {
     const msg: DownloadWorkerMessage = {
+      type: WorkerMessageType.Complete,
       body: collectedResource,
       error,
     };

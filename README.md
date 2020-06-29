@@ -11,6 +11,7 @@ Configurable website scraper in typescript.
 -[x]  Process CSS
 -[x]  Process HTML
 -[x]  Process SiteMap (but not replace path in it)
+-[x]  Configurable logging
 
 ## Multi-thread processing
 * Main thread
