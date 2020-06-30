@@ -7,8 +7,10 @@
     "node": ">=12.16.0"
   },
   "scripts": {
+    "clean": "rimraf lib/*",
     "tsc": "tsc",
-    "lint": "eslint --fix src"
+    "lint": "eslint --fix src test",
+    "test": "jest"
   },
   "dependencies": {
     "css-url-parser": "^1.1.3",
@@ -20,14 +22,20 @@
     "srcset": "^2.0.1",
     "urijs": "^1.19.2"
   },
+  "jest": {
+    "preset": "ts-jest"
+  },
   "devDependencies": {
     "@types/cheerio": "^0.22.18",
+    "@types/jest": "^26.0.3",
     "@types/mkdirp": "^1.0.1",
     "@types/node": "^12.12.47",
     "@types/urijs": "^1.19.9",
     "@typescript-eslint/eslint-plugin": "^3.4.0",
     "@typescript-eslint/parser": "^3.4.0",
     "eslint": "^7.3.1",
+    "jest": "^26.1.0",
+    "ts-jest": "^26.1.1",
     "typescript": "^3.9.5"
   },
   "keywords": [],
