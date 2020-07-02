@@ -205,7 +205,7 @@ export function createResource(
   } else {
     replaceUri = uri.relativeTo(refUrl);
   }
-  let replacePath: string = replaceUri.toString();
+  let replacePath: string = replaceUri.path();
   // empty path...
   if (replacePath) {
     replaceUri.path(replacePath = escapePath(replacePath));
@@ -218,15 +218,17 @@ export function createResource(
   if (type === ResourceType.Html && !savePath.endsWith('.html')) {
     let appendSuffix: string | void;
     if (savePath.endsWith('/') || savePath.endsWith('\\')) {
-      appendSuffix = ('index.html');
+      appendSuffix = 'index.html';
     } else if (savePath.endsWith('.htm')) {
-      appendSuffix = ('l');
-    } else if (replacePath) {
-      appendSuffix = ('.html');
+      appendSuffix = 'l';
+    } else {
+      appendSuffix = '.html';
     }
     if (appendSuffix) {
       savePath += appendSuffix;
-      replaceUri.path(replacePath += appendSuffix);
+      if (replacePath) {
+        replaceUri.path(replacePath + appendSuffix);
+      }
     }
   }
 
@@ -240,7 +242,7 @@ export function createResource(
     refUrl,
     savePath,
     localRoot,
-    replacePath,
+    replacePath: replaceUri.toString(),
     createTimestamp: Date.now(),
     body: undefined,
     meta: {},
