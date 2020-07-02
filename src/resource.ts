@@ -259,7 +259,7 @@ export function normalizeResource(res: RawResource): Resource {
     resource.uri = URI(resource.url);
   }
   if (!resource.refUri) {
-    resource.refUri = URI(resource.url);
+    resource.refUri = URI(resource.refUrl);
   }
   if (!resource.replaceUri) {
     resource.replaceUri = URI(resource.replacePath);

@@ -1,10 +1,13 @@
 import {
   createResource,
+  normalizeResource,
   prepareResourceForClone,
+  RawResource,
   Resource,
   ResourceType
 } from '../src/resource';
 import path from 'path';
+import URI = require('urijs');
 
 describe('resource', function () {
   test('html-to-html-resource', () => {
@@ -176,5 +179,44 @@ describe('resource', function () {
       testStr: ''
     };
     expect(prepareResourceForClone(resource)).toEqual(expected);
+  });
+  test('normalize-resource', () => {
+    const rawResource: RawResource = {
+      type: 2,
+      depth: 1,
+      encoding: 'utf8',
+      url: 'https://nodejs.com/#buffer_buffers_and_typedarrays',
+      rawUrl: '/#buffer_buffers_and_typedarrays',
+      downloadLink: 'https://nodejs.com/',
+      refUrl: 'https://nodejs.com/api/',
+      savePath: 'nodejs.com\\index.html',
+      localRoot: '/tmp/aaa',
+      replacePath: '../index.html#buffer_buffers_and_typedarrays',
+      createTimestamp: Date.now(),
+      body: undefined,
+      meta: {}
+    };
+    const normalized: Resource = normalizeResource(rawResource);
+    // this should not copy
+    expect(normalized).toBe(rawResource);
+    expect(normalized.uri).toStrictEqual(URI(normalized.url));
+    expect(normalized.refUri).toStrictEqual(URI(normalized.refUrl));
+    expect(normalized.replaceUri).toStrictEqual(URI(normalized.replacePath));
+    expect(normalized.host).toStrictEqual(URI(normalized.url).hostname());
+    rawResource.downloadStartTimestamp = Date.now();
+    normalizeResource(rawResource);
+    expect(normalized.waitTime).toBe(
+      rawResource.downloadStartTimestamp - rawResource.createTimestamp);
+    rawResource.finishTimestamp = Date.now();
+    normalizeResource(rawResource);
+    expect(normalized.downloadTime).toBe(
+      rawResource.finishTimestamp - rawResource.downloadStartTimestamp);
+    rawResource.body = Math.random().toString(36);
+    normalizeResource(rawResource);
+    expect(typeof normalized.body).toBe('string');
+    rawResource.body = new Uint8Array(1);
+    normalizeResource(rawResource);
+    expect(Buffer.isBuffer(normalized.body)).toBeTruthy();
+
   });
 });
