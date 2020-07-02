@@ -12,7 +12,6 @@ import {
   ResourceType
 } from '../resource';
 import {WorkerPool} from './worker-pool';
-import {cpus} from 'os';
 import path from 'path';
 import {error, notFound, skip} from '../logger/logger';
 import {HTTPError} from 'got';
@@ -159,8 +158,7 @@ export class DownloaderMain extends AbstractDownloader {
   constructor(public pathToOptions: string,
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
     super(pathToOptions, overrideOptions);
-    let workerCount: number =
-      Math.min(cpus().length - 2, this.options.concurrency);
+    let workerCount: number = this.options.concurrency;
     if (this.options.workerCount) {
       workerCount = Math.min(this.options.workerCount, workerCount);
     }

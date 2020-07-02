@@ -42,7 +42,6 @@ export interface StaticDownloadOptions {
 
   /**
    * WorkerPool.coreSize = Math.min(
-   * require('os').cpus().length - 2,
    * {@link concurrency},
    * {@link workerCount}
    * )
