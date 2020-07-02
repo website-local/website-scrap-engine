@@ -14,6 +14,9 @@ Configurable website scraper in typescript.
 -[x]  Configurable logging
 
 ## Multi-thread processing
+Note: use multi-thread processing
+only if your process is cpu sensitive.
+
 * Main thread
     * resource downloading in queue
     * process after download

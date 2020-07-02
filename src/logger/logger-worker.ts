@@ -4,7 +4,7 @@ import {
   LogWorkerMessage,
   WorkerLog,
   WorkerMessageType
-} from '../downloader/worker-pool';
+} from '../downloader/worker-type';
 
 export const logLevels = [
   'log', 'trace', 'debug', 'info', 'warn', 'error', 'fatal', 'mark'

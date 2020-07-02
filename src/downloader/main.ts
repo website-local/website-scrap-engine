@@ -13,12 +13,12 @@ import {
 } from '../resource';
 import {WorkerPool} from './worker-pool';
 import {cpus} from 'os';
-import {DownloadWorkerMessage} from './worker';
 import path from 'path';
 import {error, notFound, skip} from '../logger/logger';
 import {HTTPError} from 'got';
 import {importDefaultFromPath} from '../util';
 import URI from 'urijs';
+import {DownloadWorkerMessage} from './worker-type';
 
 export interface DownloaderStats {
   firstPeriodCount: number;

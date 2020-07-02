@@ -16,10 +16,8 @@ import {
   Resource
 } from '../resource';
 import {skip} from '../logger/logger';
-import {WorkerMessage, WorkerMessageType} from './worker-pool';
 import {importDefaultFromPath} from '../util';
-
-export type DownloadWorkerMessage = WorkerMessage<RawResource[]>;
+import {DownloadWorkerMessage, WorkerMessageType} from './worker-type';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,
