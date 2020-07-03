@@ -157,7 +157,7 @@ export class PipelineExecutor {
     parent: Resource
   ): Promise<Resource | void> {
     const url: string | void = await this.linkRedirect(rawUrl, element, parent);
-    if (!url) return ;
+    if (!url) return;
     const type = await this.detectResourceType(url, defaultType, element, parent);
     if (!type) return;
     const r = await this.createResource(type, depth || parent.depth + 1, url,
