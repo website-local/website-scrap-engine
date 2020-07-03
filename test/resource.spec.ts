@@ -145,6 +145,8 @@ describe('resource', function () {
       'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
       '/tmp/aaa');
     expect(resource.replacePath).toBe('../buffer.html?page=1#aaa');
+    expect(resource.url).toBe('http://nodejs.cn/api/buffer.html#aaa');
+    expect(resource.uri?.toString()).toBe(resource.url);
     expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
   });
   test('path-to-html-resource-with-search', () => {

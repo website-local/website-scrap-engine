@@ -53,6 +53,10 @@ export interface StaticDownloadOptions {
    */
   minConcurrency?: number;
 
+  /**
+   * If url search params should be stripped.
+   * If false, saved file name would contains search or hash of search
+   */
   deduplicateStripSearch?: boolean;
 
   meta: Record<string, string | number | boolean> & {

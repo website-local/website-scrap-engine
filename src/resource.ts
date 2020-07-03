@@ -253,6 +253,8 @@ export function createResource(
         .search('')
         .path(replaceUri.path() + search);
     }
+  } else {
+    url = uri.search('').toString();
   }
 
   return {

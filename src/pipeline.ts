@@ -209,7 +209,8 @@ export class PipelineExecutor {
   ): Resource {
     return this.lifeCycle.createResource(type, depth, url, refUrl,
       localRoot ?? this.options.localRoot,
-      encoding ?? this.options.encoding[type] ?? 'utf8');
+      encoding ?? this.options.encoding[type] ?? 'utf8',
+      this.options.deduplicateStripSearch);
   }
 
   async processBeforeDownload(
