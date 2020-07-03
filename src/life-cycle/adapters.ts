@@ -2,8 +2,10 @@ import {Resource, ResourceType} from '../resource';
 import {
   DownloadResource,
   LinkRedirectFunc,
+  PipelineExecutor,
   ProcessResourceAfterDownloadFunc,
-  ProcessResourceBeforeDownloadFunc, SubmitResourceFunc
+  ProcessResourceBeforeDownloadFunc,
+  SubmitResourceFunc
 } from '../pipeline';
 import cheerio from 'cheerio';
 import {toString} from '../util';
@@ -63,6 +65,21 @@ export const redirectFilter = (fn: RequestRedirectFunc): ProcessResourceAfterDow
     return res;
   };
 
+export const processRedirectedUrl: ProcessResourceAfterDownloadFunc = async (
+  res: DownloadResource,
+  submit: SubmitResourceFunc,
+  options: StaticDownloadOptions,
+  pipeline: PipelineExecutor
+) => {
+  if (res.redirectedUrl) {
+    const redirectedRes: Resource | void = await pipeline.createAndProcessResource(
+      res.redirectedUrl, res.type, res.depth, null, res);
+    if (redirectedRes) {
+      res.redirectedUrl = redirectedRes.url;
+    }
+  }
+  return res;
+};
 
 export interface HtmlProcessFunc {
   ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): CheerioStatic;
