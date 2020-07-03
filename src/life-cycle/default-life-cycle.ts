@@ -8,6 +8,7 @@ import {processCss} from './process-css';
 import {processSiteMap} from './process-site-map';
 import {saveHtmlToDisk} from './save-html-to-disk';
 import {saveResourceToDisk} from './save-resource-to-disk';
+import {processRedirectedUrl} from './adapters';
 
 /**
  * Get a copy of default life cycle
@@ -18,7 +19,12 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
   createResource,
   processBeforeDownload: [],
   download: [downloadResource],
-  processAfterDownload: [processHtml, processCss, processSiteMap],
+  processAfterDownload: [
+    processRedirectedUrl,
+    processHtml,
+    processCss,
+    processSiteMap
+  ],
   saveToDisk: [saveHtmlToDisk, saveResourceToDisk]
 });
 
