@@ -149,6 +149,23 @@ export class PipelineExecutor {
               public options: StaticDownloadOptions) {
   }
 
+  async createAndProcessResource(
+    rawUrl: string,
+    defaultType: ResourceType,
+    depth: number | void | null,
+    element: Cheerio | null,
+    parent: Resource
+  ): Promise<Resource | void> {
+    const url: string | void = await this.linkRedirect(rawUrl, element, parent);
+    if (!url) return ;
+    const type = await this.detectResourceType(url, defaultType, element, parent);
+    if (!type) return;
+    const r = await this.createResource(type, depth || parent.depth + 1, url,
+      parent.redirectedUrl || parent.url, parent.localRoot, this.options.encoding[type]);
+    if (!r) return;
+    return await this.processBeforeDownload(r, element, parent, this.options);
+  }
+
   async linkRedirect(url: string,
     element: Cheerio | null,
     parent: Resource | null): Promise<string | void> {

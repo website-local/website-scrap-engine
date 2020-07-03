@@ -30,18 +30,12 @@ export const processSiteMap: ProcessResourceAfterDownloadFunc = async (
   });
   const urls: string[] = Array.from(urlSet);
   const resources: Resource[] = [];
-  let url: string | void, r: Resource | void, type: ResourceType | void;
+  let url: string | void, r: Resource | void;
   // noinspection DuplicatedCode
   for (let i = 0, l = urls.length; i < l; i++) {
     url = urls[i];
-    url = await pipeline.linkRedirect(url, null, res);
-    if (!url) continue;
-    type = await pipeline.detectResourceType(url, ResourceType.Html, null, res);
-    if (!type) continue;
-    r = await pipeline.createResource(type, depth, url,
-      res.url, res.localRoot, options.encoding[type]);
-    if (!r) continue;
-    r = await pipeline.processBeforeDownload(r, null, res, options);
+    r = await pipeline.createAndProcessResource(
+      url, ResourceType.Html, depth, null, res);
     if (!r) continue;
     if (!r.shouldBeDiscardedFromDownload) {
       resources.push(r);

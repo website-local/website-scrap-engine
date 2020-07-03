@@ -17,19 +17,12 @@ export async function processCssText(
   depth: number,
   resources: Resource[]): Promise<string> {
   const cssUrls: string[] = parseCssUrls(cssText);
-  let url: string | void, rawUrl: string, r: Resource | void,
-    type: ResourceType | void;
+  let rawUrl: string, r: Resource | void;
   // noinspection DuplicatedCode
   for (let i = 0, l = cssUrls.length; i < l; i++) {
     rawUrl = cssUrls[i];
-    url = await pipeline.linkRedirect(rawUrl, null, res);
-    if (!url) continue;
-    type = await pipeline.detectResourceType(url, ResourceType.Binary, null, res);
-    if (!type) continue;
-    r = await pipeline.createResource(type, depth, url,
-      res.url, res.localRoot, options.encoding[type]);
-    if (!r) continue;
-    r = await pipeline.processBeforeDownload(r, null, res, options);
+    r = await pipeline.createAndProcessResource(
+      rawUrl, ResourceType.Html, depth, null, res);
     if (!r) continue;
     if (!r.shouldBeDiscardedFromDownload) {
       resources.push(r);
