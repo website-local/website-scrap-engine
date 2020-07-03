@@ -3,8 +3,9 @@ import mkdirP from 'mkdirp';
 import * as logger from './logger/logger';
 import {ResourceBody, ResourceEncoding} from './resource';
 import {dirname} from 'path';
+import {createHash} from 'crypto';
 
-const forbiddenChar = /([:*?"<>|]|%3A|%2A|%3F|%22|%3C|%3E|%7C)+/ig;
+const forbiddenChar = /([:*?"<>|&]|%3A|%2A|%3F|%22|%3C|%3E|%7C|%26)+/ig;
 
 export const sleep = (ms: number): Promise<void> =>
   new Promise(r => setTimeout(r, ms | 0));
@@ -111,3 +112,34 @@ export const importDefaultFromPath = (path: string): any => {
   }
   return mod;
 };
+
+export const orderUrlSearch = (search: string): string => {
+  const parts: string[] = (search[0] === '?' ? search.slice(1) : search)
+    .split('&');
+  const searchKeys: string[] = [],
+    searchMap: Record<string, string[]> = {};
+  let searchParam: string[] , searchKey: string;
+  for (let i = 0; i < parts.length; i++) {
+    searchParam= parts[i].split('=');
+    if (searchMap[searchKey = searchParam.shift() || parts[i]]) {
+      searchMap[searchKey].push(searchParam.join('='));
+    } else {
+      searchKeys.push(searchKey);
+      searchMap[searchKey] = [searchParam.join('=')];
+    }
+  }
+  return '?' + searchKeys
+    .sort()
+    .map(k => searchMap[k]?.map(v => k + '=' + v).join('&'))
+    .join('&');
+};
+
+export const simpleHashString = (str: string): string =>
+  createHash('sha256')
+    .update(str)
+    .digest()
+    .toString('base64')
+    // making it url-safe
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');

@@ -138,6 +138,75 @@ describe('resource', function () {
     expect(resource.replacePath).toBe('../index.html#buffer_buffers_and_typedarrays');
     expect(resource.savePath).toBe(path.normalize('nodejs.com/index.html'));
   });
+
+  test('path-to-html-resource-not-keeping-search', () => {
+    const resource: Resource = createResource(ResourceType.Html, 1,
+      'http://nodejs.cn/api/buffer.html?page=1#aaa',
+      'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
+      '/tmp/aaa');
+    expect(resource.replacePath).toBe('../buffer.html?page=1#aaa');
+    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+  });
+  test('path-to-html-resource-with-search', () => {
+    const resource: Resource = createResource(ResourceType.Html, 1,
+      'http://nodejs.cn/api/buffer.html?page=1#aaa',
+      'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
+      '/tmp/aaa', 'utf8', true);
+    expect(resource.replacePath).toBe('../buffer_page=1.html#aaa');
+    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer_page=1.html'));
+  });
+  test('path-to-html-resource-with-multi-search', () => {
+    const resource: Resource = createResource(ResourceType.Html, 1,
+      'http://nodejs.cn/api/buffer.html?page=1&a=b&page=2#aaa',
+      'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
+      '/tmp/aaa', 'utf8', true);
+    expect(resource.replacePath).toBe(
+      '../buffer_a=b_page=1_page=2.html#aaa');
+    expect(resource.savePath).toBe(path.normalize(
+      'nodejs.cn/api/buffer_a=b_page=1_page=2.html'));
+  });
+  test('path-to-index-resource-with-search', () => {
+    const resource: Resource = createResource(ResourceType.Html, 1,
+      'http://nodejs.cn/api/?page=1#aaa',
+      'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
+      '/tmp/aaa', 'utf8', true);
+    expect(resource.replacePath).toBe('../index_page=1.html#aaa');
+    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/index_page=1.html'));
+  });
+  test('css-resource-with-search', () => {
+    const resource: Resource = createResource(ResourceType.Css, 1,
+      'http://nodejs.cn/api/api.css?page=1#aaa',
+      'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
+      '/tmp/aaa', 'utf8', true);
+    expect(resource.replacePath).toBe('../api_page=1.css#aaa');
+    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/api_page=1.css'));
+  });
+  test('no-ext-resource-with-search', () => {
+    const resource: Resource = createResource(ResourceType.Binary, 1,
+      'http://nodejs.cn/api/api?page=1#aaa',
+      'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
+      '/tmp/aaa', 'utf8', true);
+    expect(resource.replacePath).toBe('../api_page=1#aaa');
+    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/api_page=1'));
+  });
+  test('path-to-index-resource-with-long-search', () => {
+    const resource: Resource = createResource(ResourceType.Html, 1,
+      'http://nodejs.cn/api/?page=1' + 'a'.repeat(1000) + '#aaa',
+      'http://nodejs.cn/api/buffer/buffers_and_typedarrays',
+      '/tmp/aaa', 'utf8', true);
+    expect(resource.replacePath).toBe(
+      '../index_g6rVCvz2dtFaE2fbrIJTGyzhYtGRYC-6EJAwoGeLm-Q.html#aaa');
+    expect(resource.savePath).toBe(path.normalize(
+      'nodejs.cn/api/index_g6rVCvz2dtFaE2fbrIJTGyzhYtGRYC-6EJAwoGeLm-Q.html'));
+  });
+  test('index-to-index-resource-with-search', () => {
+    const resource: Resource = createResource(ResourceType.Html, 1,
+      'http://nodejs.cn/api/?page=1#aaa',
+      'http://nodejs.cn/api/buffer/',
+      '/tmp/aaa', 'utf8', true);
+    expect(resource.replacePath).toBe('../index_page=1.html#aaa');
+    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/index_page=1.html'));
+  });
   test('prepare-resource-for-clone', () => {
     const resource: Resource = createResource(ResourceType.Html, 1,
       '/#buffer_buffers_and_typedarrays',

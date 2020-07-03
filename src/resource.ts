@@ -1,5 +1,5 @@
 import URI from 'urijs';
-import {escapePath} from './util';
+import {escapePath, orderUrlSearch, simpleHashString} from './util';
 import * as path from 'path';
 import {IncomingHttpHeaders} from 'http';
 
@@ -177,7 +177,8 @@ export function createResource(
   url: string,
   refUrl: string,
   localRoot: string,
-  encoding?: ResourceEncoding
+  encoding?: ResourceEncoding,
+  keepSearch?: boolean
 ): Resource {
   const rawUrl: string = url;
   const refUri: URI = URI(refUrl);
@@ -227,8 +228,30 @@ export function createResource(
     if (appendSuffix) {
       savePath += appendSuffix;
       if (replacePath) {
-        replaceUri.path(replacePath + appendSuffix);
+        replaceUri.path(replacePath += appendSuffix);
       }
+    }
+  }
+  let search: string;
+  if (keepSearch && (search = uri.search())) {
+    if (search.length > 43) {
+      // avoid too long search
+      search = '_' + simpleHashString(orderUrlSearch(search));
+    } else {
+      // order it
+      search = escapePath(orderUrlSearch(search));
+    }
+    const ext: string = path.extname(savePath);
+    if (ext) {
+      savePath = savePath.slice(0, -ext.length) + search + ext;
+      replaceUri
+        .search('')
+        .path(replacePath.slice(0, -ext.length) + search + ext);
+    } else {
+      savePath += search;
+      replaceUri
+        .search('')
+        .path(replaceUri.path() + search);
     }
   }
 
