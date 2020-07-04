@@ -3,7 +3,8 @@ import {
   escapePath,
   importDefaultFromPath,
   isSiteMap,
-  sleep
+  sleep,
+  toString
 } from '../src/util';
 import {join} from 'path';
 
@@ -53,5 +54,26 @@ describe('util', function () {
       .toBe('111');
     expect(importDefaultFromPath(join(__dirname, 'util-import-typescript-export')))
       .toBe('111');
+  });
+
+  test('toString', () => {
+    expect(toString('111', null)).toBe('111');
+    expect(toString('111', 'ascii')).toBe('111');
+    expect(toString('111', 'hex')).toBe('111');
+    expect(toString('111', 'base64')).toBe('111');
+    expect(toString(Buffer.of(97, 115, 100, 49, 50, 51), null))
+      .toBe('asd123');
+    expect(toString(Buffer.of(97, 115, 100, 49, 50, 51), 'ascii'))
+      .toBe('asd123');
+    expect(toString(Buffer.of(0x12, 0x34, 0x56, 0x78), 'hex'))
+      .toBe('12345678');
+    expect(toString(Buffer.of(97, 115, 100, 49, 50, 51), 'base64'))
+      .toBe('YXNkMTIz');
+    expect(toString(Buffer.of(97, 115, 100, 49, 50, 51).buffer, 'base64'))
+      .toBe('YXNkMTIz');
+    expect(toString(new Uint8Array([97, 115, 100, 49, 50, 51]), 'base64'))
+      .toBe('YXNkMTIz');
+    expect(toString(new Uint32Array([0x12345678, 0x90abcdef]), 'hex'))
+      .toBe('78563412efcdab90');
   });
 });
