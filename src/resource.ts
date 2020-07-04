@@ -108,8 +108,18 @@ export interface RawResource {
   redirectedUrl?: string;
 
   meta: {
+    /**
+     * Parsed html content for {@link .type} === {@link ResourceType.Html}
+     * after downloaded and parsed, content may differ from {@link .body}
+     */
     doc?: CheerioStatic;
+    /**
+     * Response headers after download
+     */
     headers?: IncomingHttpHeaders;
+    /**
+     * Other custom meta info for resource
+     */
     [key: string]: unknown;
   }
 }
@@ -171,6 +181,17 @@ export function prepareResourceForClone(res: Resource): RawResource {
   return clone as RawResource;
 }
 
+/**
+ * Create a resource
+ * @param type {@link RawResource.type}
+ * @param depth {@link RawResource.depth}
+ * @param url {@link RawResource.rawUrl}
+ * @param refUrl {@link RawResource.refUrl}
+ * @param localRoot {@link RawResource.localRoot}
+ * @param encoding {@link RawResource.encoding}
+ * @param keepSearch keep url search params as file name
+ * in {@link Resource.replacePath} and {@link Resource.savePath}
+ */
 export function createResource(
   type: ResourceType,
   depth: number,
