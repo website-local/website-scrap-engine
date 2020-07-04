@@ -1,4 +1,11 @@
-import {arrayToMap, escapePath, isSiteMap, sleep} from '../src/util';
+import {
+  arrayToMap,
+  escapePath,
+  importDefaultFromPath,
+  isSiteMap,
+  sleep
+} from '../src/util';
+import {join} from 'path';
 
 describe('util', function () {
   test('sleep', async done => {
@@ -39,5 +46,12 @@ describe('util', function () {
       '5': 1,
       'aaa': 1
     });
+  });
+
+  test('importDefaultFromPath', () => {
+    expect(importDefaultFromPath(join(__dirname, 'util-import-commonjs-export')))
+      .toBe('111');
+    expect(importDefaultFromPath(join(__dirname, 'util-import-typescript-export')))
+      .toBe('111');
   });
 });
