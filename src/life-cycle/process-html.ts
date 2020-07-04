@@ -37,6 +37,7 @@ export const processHtml: ProcessResourceAfterDownloadFunc = async (
       const elem = elements.eq(index);
       const attrValue: string | void = attr && elem.attr(attr);
       if (!attr || !attrValue) {
+        // style block
         if (type === ResourceType.CssInline) {
           let content = elem.html();
           if (!content) continue;
@@ -44,6 +45,11 @@ export const processHtml: ProcessResourceAfterDownloadFunc = async (
             pipeline, depth, resources);
           elem.html(content);
         }
+        continue;
+      } else if (type === ResourceType.CssInline) {
+        const content: string = await processCssText(attrValue, res, options,
+          pipeline, depth, resources);
+        elem.attr(attr, content);
         continue;
       }
       let links: string[], replaceValue: string | SrcSetDefinition[];

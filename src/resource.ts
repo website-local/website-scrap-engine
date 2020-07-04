@@ -4,10 +4,26 @@ import * as path from 'path';
 import {IncomingHttpHeaders} from 'http';
 
 export enum ResourceType {
+  /**
+   * Binary resource, not parsed nor processed
+   */
   Binary = 1,
+  /**
+   * Html resource
+   */
   Html,
+  /**
+   * Css resource
+   */
   Css,
+  /**
+   * Inline css resource in html,
+   * currently only style blocks and style attributes are processed
+   */
   CssInline,
+  /**
+   * Very limited support of site-maps, urls in it are not replaced.
+   */
   SiteMap
 }
 

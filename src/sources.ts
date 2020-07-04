@@ -10,7 +10,7 @@ export interface SourceDefinition {
 // /blob/66f5113475843ae86f12ea9e5d2ebcfade9f056e/lib/config/defaults.js
 export const sources: SourceDefinition[] = [
   {selector: 'style', type: ResourceType.CssInline},
-  // {selector: '[style]', attr: 'style', type: 'css'},
+  {selector: '[style]', attr: 'style', type: ResourceType.CssInline},
   {selector: 'img', attr: 'src'},
   {selector: 'img', attr: 'srcset'},
   {selector: 'input', attr: 'src'},
