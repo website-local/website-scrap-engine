@@ -1,7 +1,7 @@
 import {ResourceBody, ResourceEncoding} from './resource';
 import {createHash} from 'crypto';
 
-const forbiddenChar = /([:*?"<>|&]|%3A|%2A|%3F|%22|%3C|%3E|%7C|%26)+/ig;
+const forbiddenChar = /[:*?"<>|&]|%3A|%2A|%3F|%22|%3C|%3E|%7C|%26/ig;
 
 export const sleep = (ms: number): Promise<void> =>
   new Promise(r => setTimeout(r, ms | 0));
