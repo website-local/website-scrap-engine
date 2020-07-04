@@ -7,7 +7,7 @@ export interface SourceDefinition {
 }
 
 // https://github.com/website-scraper/node-website-scraper
-// /blob/a6f989a59e3a665b562f0f38a691aa1cc40557f9/lib/config/defaults.js
+// /blob/66f5113475843ae86f12ea9e5d2ebcfade9f056e/lib/config/defaults.js
 export const sources: SourceDefinition[] = [
   {selector: 'style', type: ResourceType.CssInline},
   // {selector: '[style]', attr: 'style', type: 'css'},
@@ -41,7 +41,9 @@ export const sources: SourceDefinition[] = [
   {selector: 'audio track', attr: 'src'},
   {selector: 'frame', attr: 'src', type: ResourceType.Html},
   {selector: 'iframe', attr: 'src', type: ResourceType.Html},
-  {selector: 'a', attr: 'href', type: ResourceType.Html}
+  {selector: 'a', attr: 'href', type: ResourceType.Html},
+  // https://github.com/website-scraper/node-website-scraper/pull/408
+  {selector: '[background]', attr: 'background'},
 ].map((obj: Partial<SourceDefinition>) => {
   if (obj.selector && !obj.selector.startsWith('svg') && obj.attr) {
     obj.selector += `[${obj.attr}]`;
