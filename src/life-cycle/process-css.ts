@@ -22,7 +22,7 @@ export async function processCssText(
   for (let i = 0, l = cssUrls.length; i < l; i++) {
     rawUrl = cssUrls[i];
     r = await pipeline.createAndProcessResource(
-      rawUrl, ResourceType.Html, depth, null, res);
+      rawUrl, ResourceType.Binary, depth, null, res);
     if (!r) continue;
     if (!r.shouldBeDiscardedFromDownload) {
       resources.push(r);
