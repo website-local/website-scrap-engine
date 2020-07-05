@@ -3,7 +3,7 @@ import {
   DownloadResourceFunc,
   RequestOptions
 } from '../pipeline';
-import {prepareResourceForClone, Resource, ResourceType} from '../resource';
+import {Resource, ResourceType} from '../resource';
 import {StaticDownloadOptions} from '../options';
 import * as logger from '../logger/logger';
 import {sleep} from '../util';
@@ -138,35 +138,31 @@ export const downloadResource: DownloadResourceFunc = async (
     res.downloadStartTimestamp = Date.now();
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
   }
-  try {
-    let downloadedResource: DownloadResource | Resource | void = await requestForResource(
-      res as (Resource & { downloadStartTimestamp: number }), requestOptions);
-    if (!downloadedResource || !downloadedResource.body) {
-      return downloadedResource;
-    }
-    if (downloadedResource.type === ResourceType.Html) {
-      if (options.meta.detectIncompleteHtml &&
-        (typeof downloadedResource.body === 'string' ||
-          Buffer.isBuffer(downloadedResource.body))) {
-        if (!downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
-          logger.error.info('Detected incomplete html, try again',
-            downloadedResource.downloadLink);
-          downloadedResource = await requestForResource(
-            res as (Resource & { downloadStartTimestamp: number }), requestOptions);
-        }
-        // probably more retries here?
-        if (!downloadedResource || typeof downloadedResource.body === 'string' &&
-          !downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
-          logger.error.warn('Detected incomplete html twice', res.downloadLink);
-          return downloadedResource;
-        }
-      }
-      downloadedResource.finishTimestamp = Date.now();
-      downloadedResource.downloadTime =
-        downloadedResource.finishTimestamp - res.downloadStartTimestamp;
-    }
+  let downloadedResource: DownloadResource | Resource | void = await requestForResource(
+    res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+  if (!downloadedResource || !downloadedResource.body) {
     return downloadedResource;
-  } catch (e) {
-    logger.error.error('Error downloading resource:', e, prepareResourceForClone(res));
   }
+  if (downloadedResource.type === ResourceType.Html) {
+    if (options.meta.detectIncompleteHtml &&
+      (typeof downloadedResource.body === 'string' ||
+        Buffer.isBuffer(downloadedResource.body))) {
+      if (!downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
+        logger.error.info('Detected incomplete html, try again',
+          downloadedResource.downloadLink);
+        downloadedResource = await requestForResource(
+          res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+      }
+      // probably more retries here?
+      if (!downloadedResource || typeof downloadedResource.body === 'string' &&
+        !downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
+        logger.error.warn('Detected incomplete html twice', res.downloadLink);
+        return downloadedResource;
+      }
+    }
+    downloadedResource.finishTimestamp = Date.now();
+    downloadedResource.downloadTime =
+      downloadedResource.finishTimestamp - res.downloadStartTimestamp;
+  }
+  return downloadedResource;
 };
