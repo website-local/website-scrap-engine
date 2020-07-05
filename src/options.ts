@@ -1,6 +1,5 @@
 import {createResource, ResourceEncoding, ResourceType} from './resource';
 import {ProcessingLifeCycle, RequestOptions} from './pipeline';
-import {DownloaderWithMeta} from './downloader/main';
 import {beforeRetryHook} from './life-cycle/download-resource';
 import {
   RetryFunction,
@@ -11,6 +10,7 @@ import {error} from './logger/logger';
 import {RequestError} from 'got/dist/source/core';
 import {adjust} from './downloader/adjust-concurrency';
 import {configureLogger} from './logger/config-logger';
+import {DownloaderWithMeta} from './downloader/types';
 
 /**
  * Options which should not be changed at runtime, and safe for cloning

@@ -17,7 +17,7 @@ import {
 } from '../resource';
 import {skip} from '../logger/logger';
 import {importDefaultFromPath} from '../util';
-import {DownloadWorkerMessage, WorkerMessageType} from './worker-type';
+import {DownloadWorkerMessage, WorkerMessageType} from './types';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,

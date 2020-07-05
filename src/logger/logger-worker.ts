@@ -2,9 +2,9 @@ import {getLogger, Logger} from 'log4js';
 import {parentPort} from 'worker_threads';
 import {
   LogWorkerMessage,
-  WorkerLog,
-  WorkerMessageType
+  WorkerLog
 } from '../downloader/worker-type';
+import {WorkerMessageType} from '../downloader/types';
 
 export const logLevels = [
   'log', 'trace', 'debug', 'info', 'warn', 'error', 'fatal', 'mark'

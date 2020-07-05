@@ -4,35 +4,18 @@ import {
   StaticDownloadOptions
 } from '../options';
 import PQueue from 'p-queue';
-import {DownloadResource, PipelineExecutor} from '../pipeline';
+import {PipelineExecutor} from '../pipeline';
 import {
   normalizeResource,
   RawResource,
   Resource,
   ResourceType
 } from '../resource';
-import {WorkerPool} from './worker-pool';
-import path from 'path';
 import {error, notFound, skip} from '../logger/logger';
 import {HTTPError} from 'got';
 import {importDefaultFromPath} from '../util';
 import URI from 'urijs';
-import {DownloadWorkerMessage} from './worker-type';
-
-export interface DownloaderStats {
-  firstPeriodCount: number;
-  lastPeriodTotalCount: number;
-  currentPeriodCount: number;
-  lastPeriodCount: number;
-}
-
-export interface DownloaderWithMeta {
-  readonly meta: DownloaderStats;
-  readonly queue: PQueue;
-  readonly options: DownloadOptions;
-
-  getDownloadedCount(): number;
-}
+import {DownloaderStats, DownloaderWithMeta} from './types';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
   readonly queue: PQueue;
@@ -54,6 +37,22 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     this.queue = new PQueue({concurrency: this.options.concurrency});
     this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
     this.options.configureLogger(this.options.localRoot, this.options.logSubDir || '');
+  }
+
+  get concurrency(): number {
+    return this.queue.concurrency;
+  }
+
+  set concurrency(newConcurrency: number) {
+    this.queue.concurrency = newConcurrency;
+  }
+
+  get queueSize(): number {
+    return this.queue.size;
+  }
+
+  get queuePending(): number {
+    return this.queue.pending;
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {
@@ -121,7 +120,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
 
-  getDownloadedCount(): number {
+  get downloadedCount(): number {
     return this.downloadedUrl.size;
   }
 
@@ -151,76 +150,3 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
 }
 
-export class DownloaderMain extends AbstractDownloader {
-  readonly workers: WorkerPool<RawResource, DownloadWorkerMessage>;
-  readonly init: Promise<void>;
-
-  constructor(public pathToOptions: string,
-    overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
-    super(pathToOptions, overrideOptions);
-    let workerCount: number = this.options.concurrency;
-    if (this.options.workerCount) {
-      workerCount = Math.min(this.options.workerCount, workerCount);
-    }
-    if (workerCount < 1) {
-      workerCount = 1;
-    }
-    this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
-      // worker script should be compiled to .js
-      overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker.js'),
-      {pathToOptions, overrideOptions}
-    );
-    if (this.options.initialUrl) {
-      this.init = this.addInitialResource(this.options.initialUrl);
-    } else {
-      this.init = Promise.resolve();
-    }
-  }
-
-  async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
-    let r: DownloadResource | void;
-    try {
-      r = await this.pipeline.download(res);
-      if (!r) {
-        skip.debug('discarded after download', res.url, res.rawUrl, res.refUrl);
-        return;
-      }
-    } catch (e) {
-      this.handleError(e, 'downloading resource', res);
-      return false;
-    }
-    let msg: DownloadWorkerMessage | void;
-    try {
-      // DOMException [DataCloneError]: An ArrayBuffer is neutered and could not be cloned.
-      if (Buffer.isBuffer(r.body)) {
-        r.body = r.body.buffer;
-        msg = await this.workers.submitTask(r);
-      } else {
-        msg = await this.workers.submitTask(r);
-      }
-    } catch (e) {
-      this.handleError(e, 'submitting resource to worker', res);
-      return false;
-    }
-    this.downloadedUrl.add(res.url);
-    if (!msg) {
-      skip.info('discarded in post-processing',
-        res.url, res.rawUrl, res.refUrl);
-      return;
-    }
-    if (msg.error) {
-      this.handleError(msg.error, 'post-process', res);
-    }
-    if (msg.body?.length) {
-      const body: RawResource[] = msg.body;
-      body.forEach(rawRes => this._addProcessedResource(rawRes));
-    }
-
-  }
-
-
-  async dispose(): Promise<void> {
-    await super.dispose();
-    await this.workers.dispose();
-  }
-}

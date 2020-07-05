@@ -1,12 +1,14 @@
 import {MessagePort, Worker} from 'worker_threads';
 import * as logger from '../logger/logger';
 import {
-  LogWorkerMessage,
+  LogWorkerMessage
+} from './worker-type';
+import {
   PendingPromise,
   PendingPromiseWithBody,
   WorkerMessage,
   WorkerMessageType
-} from './worker-type';
+} from './types';
 
 export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly pool: Worker[] = [];

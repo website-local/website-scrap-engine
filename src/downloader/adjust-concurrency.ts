@@ -1,25 +1,25 @@
 import {adjustConcurrency as logger} from '../logger/logger';
-import {DownloaderWithMeta} from './main';
+import {DownloaderWithMeta} from './types';
 
 export const adjust = (downloader: DownloaderWithMeta): void => {
   const {meta} = downloader;
   if (!meta.firstPeriodCount) {
-    meta.firstPeriodCount = downloader.getDownloadedCount();
+    meta.firstPeriodCount = downloader.downloadedCount;
     meta.lastPeriodTotalCount =
       meta.currentPeriodCount =
         meta.lastPeriodCount =
           meta.firstPeriodCount;
     return;
   }
-  const total = downloader.getDownloadedCount();
+  const total = downloader.downloadedCount;
   meta.lastPeriodCount = meta.currentPeriodCount;
   meta.currentPeriodCount = total - meta.lastPeriodTotalCount;
   meta.lastPeriodTotalCount = total;
-  if (downloader.queue.size === 0) {
+  if (downloader.queueSize === 0) {
     return logger.info('Queue is empty, keep concurrency as ',
-      downloader.queue.concurrency, 'pending items: ', downloader.queue.pending);
+      downloader.concurrency, 'pending items: ', downloader.queuePending);
   }
-  let concurrency = downloader.queue.concurrency;
+  let concurrency = downloader.concurrency;
   if (meta.currentPeriodCount < 2) {
     concurrency += 8;
   } else if (meta.currentPeriodCount < meta.lastPeriodCount >> 1) {
@@ -36,8 +36,8 @@ export const adjust = (downloader: DownloaderWithMeta): void => {
   } else if (meta.currentPeriodCount > meta.firstPeriodCount) {
     concurrency -= 2;
   }
-  downloader.queue.concurrency =
+  downloader.concurrency =
     Math.max(downloader.options.minConcurrency ?? 4, concurrency);
-  logger.info('concurrency', downloader.queue.concurrency,
-    'queue size:', downloader.queue.size);
+  logger.info('concurrency', downloader.concurrency,
+    'queue size:', downloader.queueSize);
 };
