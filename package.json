@@ -8,9 +8,11 @@
   },
   "scripts": {
     "clean": "rimraf lib/*",
+    "build": "npm run lint && npm run tsc",
     "tsc": "tsc",
     "lint": "eslint --fix src test",
-    "test": "jest"
+    "test": "jest",
+    "prepack": "npm run clean && npm run build"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.3",
@@ -38,6 +40,12 @@
     "ts-jest": "^26.1.1",
     "typescript": "^3.9.6"
   },
+  "files": [
+    ".editorconfig",
+    "tsconfig.json",
+    "lib",
+    "src"
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC"
