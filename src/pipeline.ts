@@ -8,7 +8,7 @@ import {
 import {Options as GotOptions} from 'got/dist/source/as-promise';
 import {StaticDownloadOptions} from './options';
 
-declare type AsyncResult<T> = T | Promise<T>;
+export type AsyncResult<T> = T | Promise<T>;
 
 export interface LinkRedirectFunc {
   /**
@@ -129,11 +129,12 @@ export interface ProcessingLifeCycle {
   detectResourceType: DetectResourceTypeFunc[];
   createResource: typeof createResource;
   /**
-   * link in parent resource would be replaced after this
+   * link in parent resource would be replaced after this,
+   * if not {@link Resource.shouldBeDiscardedFromDownload}
    */
   processBeforeDownload: ProcessResourceBeforeDownloadFunc[];
   /**
-   * The only pipeline executed in main thread
+   * The only pipeline executed in main thread for multi-thread downloader
    */
   download: DownloadResourceFunc[];
   processAfterDownload: ProcessResourceAfterDownloadFunc[];
