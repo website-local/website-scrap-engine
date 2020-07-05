@@ -129,8 +129,7 @@ export interface ProcessingLifeCycle {
   detectResourceType: DetectResourceTypeFunc[];
   createResource: typeof createResource;
   /**
-   * link in parent resource would be replaced after this,
-   * if not {@link Resource.shouldBeDiscardedFromDownload}
+   * link in parent resource would be replaced after this
    */
   processBeforeDownload: ProcessResourceBeforeDownloadFunc[];
   /**
