@@ -1,5 +1,5 @@
 import {AbstractDownloader} from './main';
-import {RawResource, Resource} from '../resource';
+import {Resource} from '../resource';
 import {StaticDownloadOptions} from '../options';
 import {skip} from '../logger/logger';
 import {DownloadResource, SubmitResourceFunc} from '../pipeline';
@@ -32,14 +32,13 @@ export class SingleThreadDownloader extends AbstractDownloader {
     }
     this.downloadedUrl.add(res.url);
 
-    const collectedResource: RawResource[] = [];
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
       if (Array.isArray(resources)) {
         for (let i = 0; i < resources.length; i++) {
-          collectedResource.push((resources[i]));
+          this._addProcessedResource(resources[i]);
         }
       } else {
-        collectedResource.push((resources));
+        this._addProcessedResource(resources);
       }
     };
     try {
@@ -52,9 +51,6 @@ export class SingleThreadDownloader extends AbstractDownloader {
       }
     } catch (e) {
       this.handleError(e, 'post-process', res);
-    }
-    if (collectedResource.length) {
-      collectedResource.forEach(rawRes => this._addProcessedResource(rawRes));
     }
   }
 
