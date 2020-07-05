@@ -1,13 +1,13 @@
 import parseCssUrls from 'css-url-parser';
 import {
   DownloadResource,
-  PipelineExecutor,
   ProcessResourceAfterDownloadFunc,
   SubmitResourceFunc
 } from '../pipeline';
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
+import {PipelineExecutor} from '../pipeline-executor';
 
 export async function processCssText(
   cssText: string,

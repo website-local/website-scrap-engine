@@ -1,13 +1,13 @@
 import cheerio from 'cheerio';
 import {
   DownloadResource,
-  PipelineExecutor,
   ProcessResourceAfterDownloadFunc,
   SubmitResourceFunc
 } from '../pipeline';
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
+import {PipelineExecutor} from '../pipeline-executor';
 
 export const processSiteMap: ProcessResourceAfterDownloadFunc = async (
   res: DownloadResource,

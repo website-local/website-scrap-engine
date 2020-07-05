@@ -3,7 +3,6 @@ import srcset, {SrcSetDefinition} from 'srcset';
 import cheerio from 'cheerio';
 import {
   DownloadResource,
-  PipelineExecutor,
   ProcessResourceAfterDownloadFunc,
   SubmitResourceFunc
 } from '../pipeline';
@@ -12,6 +11,7 @@ import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
 import {processCssText} from './process-css';
 import {error, skip} from '../logger/logger';
+import {PipelineExecutor} from '../pipeline-executor';
 
 export const processHtml: ProcessResourceAfterDownloadFunc = async (
   res: DownloadResource,

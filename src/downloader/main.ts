@@ -4,7 +4,6 @@ import {
   StaticDownloadOptions
 } from '../options';
 import PQueue from 'p-queue';
-import {PipelineExecutor} from '../pipeline';
 import {
   normalizeResource,
   RawResource,
@@ -16,6 +15,7 @@ import {HTTPError} from 'got';
 import {importDefaultFromPath} from '../util';
 import URI from 'urijs';
 import {DownloaderStats, DownloaderWithMeta} from './types';
+import {PipelineExecutor} from '../pipeline-executor';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
   readonly queue: PQueue;

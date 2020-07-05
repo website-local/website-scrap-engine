@@ -6,7 +6,6 @@ import {
 } from '../options';
 import {
   DownloadResource,
-  PipelineExecutor,
   SubmitResourceFunc
 } from '../pipeline';
 import {
@@ -18,6 +17,7 @@ import {
 import {skip} from '../logger/logger';
 import {importDefaultFromPath} from '../util';
 import {DownloadWorkerMessage, WorkerMessageType} from './types';
+import {PipelineExecutor} from '../pipeline-executor';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,

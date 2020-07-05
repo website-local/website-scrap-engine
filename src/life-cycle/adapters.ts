@@ -2,7 +2,6 @@ import {Resource, ResourceType} from '../resource';
 import {
   DownloadResource,
   LinkRedirectFunc,
-  PipelineExecutor,
   ProcessResourceAfterDownloadFunc,
   ProcessResourceBeforeDownloadFunc,
   SubmitResourceFunc
@@ -10,6 +9,7 @@ import {
 import cheerio from 'cheerio';
 import {toString} from '../util';
 import {StaticDownloadOptions} from '../options';
+import {PipelineExecutor} from '../pipeline-executor';
 
 export interface SkipProcessFunc {
   (url: string, element: Cheerio | null, parent: Resource | null): boolean;
