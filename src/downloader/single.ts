@@ -5,7 +5,6 @@ import {skip} from '../logger/logger';
 import {DownloadResource, SubmitResourceFunc} from '../pipeline';
 
 export class SingleThreadDownloader extends AbstractDownloader {
-  readonly queuedUrl: Set<string> = new Set<string>();
   readonly init: Promise<void>;
 
   constructor(public pathToOptions: string,
