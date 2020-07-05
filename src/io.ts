@@ -2,7 +2,7 @@ import {ResourceBody, ResourceEncoding} from './resource';
 import {dirname} from 'path';
 import fs from 'fs';
 import mkdirP from 'mkdirp';
-import * as logger from './logger/logger';
+import {mkdir as mkdirLogger} from './logger/logger';
 
 export const mkdirRetrySync = (dir: string): string | void => {
   try {
@@ -10,14 +10,14 @@ export const mkdirRetrySync = (dir: string): string | void => {
       return mkdirP.sync(dir);
     }
   } catch (e) {
-    logger.mkdir.trace('mkdir ', dir, 'fail', e);
+    mkdirLogger.trace('mkdir ', dir, 'fail', e);
     // in case of concurrent dir creation
     try {
       if (!fs.existsSync(dir)) {
         return mkdirP.sync(dir);
       }
     } catch (e) {
-      logger.mkdir.debug('mkdir ', dir, 'fail again', e);
+      mkdirLogger.debug('mkdir ', dir, 'fail again', e);
       // try again, 3 times seeming pretty enough
       if (!fs.existsSync(dir)) {
         return mkdirP.sync(dir);
@@ -31,14 +31,14 @@ export const mkdirRetry = async (dir: string): Promise<string | void> => {
       return await mkdirP(dir);
     }
   } catch (e) {
-    logger.mkdir.trace('mkdir ', dir, 'fail', e);
+    mkdirLogger.trace('mkdir ', dir, 'fail', e);
     // in case of concurrent dir creation
     try {
       if (!fs.existsSync(dir)) {
         return await mkdirP(dir);
       }
     } catch (e) {
-      logger.mkdir.debug('mkdir ', dir, 'fail again', e);
+      mkdirLogger.debug('mkdir ', dir, 'fail again', e);
       // try again, 3 times seeming pretty enough
       if (!fs.existsSync(dir)) {
         return await mkdirP(dir);
@@ -46,6 +46,7 @@ export const mkdirRetry = async (dir: string): Promise<string | void> => {
     }
   }
 };
+
 export const writeFile = async (
   filePath: string,
   data: ResourceBody,
