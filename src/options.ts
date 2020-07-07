@@ -11,6 +11,7 @@ import {RequestError} from 'got/dist/source/core';
 import {adjust} from './downloader/adjust-concurrency';
 import {configureLogger} from './logger/config-logger';
 import {DownloaderWithMeta} from './downloader/types';
+import {weakAssign} from './util';
 
 /**
  * Options which should not be changed at runtime, and safe for cloning
@@ -152,38 +153,48 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
   return delay;
 };
 
+const defaultOptions: DownloadOptions = {
+  concurrency: 12,
+  configureLogger,
+  createResource,
+  detectResourceType: [],
+  download: [],
+  // hack: force cast
+  encoding: {} as DownloadOptions['encoding'],
+  linkRedirect: [],
+  localRoot: '',
+  maxDepth: 1,
+  meta: {
+    detectIncompleteHtml: '</html>'
+  },
+  processAfterDownload: [],
+  processBeforeDownload: [],
+  req: {},
+  saveToDisk: [],
+  deduplicateStripSearch: true
+};
+
 export function defaultDownloadOptions(
   options: ProcessingLifeCycle & Partial<DownloadOptions>): DownloadOptions {
-  if (!options.meta) {
-    options.meta = {};
+  const merged: DownloadOptions = weakAssign(options, defaultOptions);
+  // merged = weakAssign(merged, defaultOptions);
+  if (!merged.concurrency || merged.concurrency < 1) {
+    merged.concurrency = 12;
   }
-  if (!('detectIncompleteHtml' in options.meta)) {
-    options.meta.detectIncompleteHtml = '</html>';
+  if (!merged.req.hooks) {
+    merged.req.hooks = {};
   }
-  if (!options.encoding) {
-    // hack: force cast
-    options.encoding = {} as typeof options.encoding;
+  if (!merged.req.hooks.beforeRetry) {
+    merged.req.hooks.beforeRetry = [beforeRetryHook];
   }
-  if (!options.concurrency || options.concurrency < 1) {
-    options.concurrency = 12;
+  if (!('maxRedirects' in merged.req)) {
+    merged.req.maxRedirects = 15;
   }
-  if (!options.req) {
-    options.req = {};
+  if (!('ignoreInvalidCookies' in merged.req)) {
+    merged.req.ignoreInvalidCookies = true;
   }
-  if (!options.req.hooks) {
-    options.req.hooks = {};
-  }
-  if (!options.req.hooks.beforeRetry) {
-    options.req.hooks.beforeRetry = [beforeRetryHook];
-  }
-  if (!('maxRedirects' in options.req)) {
-    options.req.maxRedirects = 15;
-  }
-  if (!('ignoreInvalidCookies' in options.req)) {
-    options.req.ignoreInvalidCookies = true;
-  }
-  if (!('timeout' in options.req)) {
-    options.req.timeout = {
+  if (!('timeout' in merged.req)) {
+    merged.req.timeout = {
       lookup: 1000,
       connect: 3500,
       secureConnect: 4000,
@@ -193,43 +204,27 @@ export function defaultDownloadOptions(
       request: 200000
     };
   }
-  if (!('retry' in options.req) || options.req.retry === undefined) {
-    options.req.retry = {
+  if (!('retry' in merged.req) || merged.req.retry === undefined) {
+    merged.req.retry = {
       limit: 25,
       maxRetryAfter: 60000,
       calculateDelay: calculateFastDelay
     };
-  } else if (typeof options.req.retry === 'number') {
-    options.req.retry = {
-      limit: options.req.retry,
+  } else if (typeof merged.req.retry === 'number') {
+    merged.req.retry = {
+      limit: merged.req.retry,
       maxRetryAfter: 60000,
       calculateDelay: calculateFastDelay
     };
-  } else if (!options.req.retry.calculateDelay) {
-    options.req.retry.calculateDelay = calculateFastDelay;
+  } else if (!merged.req.retry.calculateDelay) {
+    merged.req.retry.calculateDelay = calculateFastDelay;
   }
-  if (!options.linkRedirect) {
-    options.linkRedirect = [];
+  if (options.adjustConcurrencyPeriod &&
+    options.adjustConcurrencyPeriod > 0 &&
+    !options.adjustConcurrencyFunc) {
+    options.adjustConcurrencyFunc = adjust;
   }
-  if (!options.detectResourceType) {
-    options.detectResourceType = [];
-  }
-  if (!options.createResource) {
-    options.createResource = createResource;
-  }
-  if (!options.processBeforeDownload) {
-    options.processBeforeDownload = [];
-  }
-  if (!options.processAfterDownload) {
-    options.processAfterDownload = [];
-  }
-  if (options.deduplicateStripSearch !== false) {
-    options.deduplicateStripSearch = true;
-  }
-  if (!options.configureLogger) {
-    options.configureLogger = configureLogger;
-  }
-  return options as DownloadOptions;
+  return merged;
 }
 
 export function checkDownloadOptions(options: DownloadOptions): DownloadOptions {
@@ -239,22 +234,13 @@ export function checkDownloadOptions(options: DownloadOptions): DownloadOptions 
   if (!options.localRoot) {
     throw new TypeError('localRoot is required');
   }
-  if (!options.download) {
+  if (!options.download || !options.download.length) {
     throw new TypeError('download life cycle is required');
   }
-  if (!options.saveToDisk) {
+  if (!options.saveToDisk || !options.saveToDisk.length) {
     throw new TypeError('saveToDisk life cycle is required');
   }
-  options = defaultDownloadOptions(options);
-  if (options.adjustConcurrencyPeriod &&
-    options.adjustConcurrencyPeriod > 0 &&
-    !options.adjustConcurrencyFunc) {
-    options.adjustConcurrencyFunc = adjust;
-  }
-  if (!options.maxDepth || options.maxDepth < 0) {
-    options.maxDepth = 1;
-  }
-  return options;
+  return defaultDownloadOptions(options);
 }
 
 export function mergeOverrideOptions(
