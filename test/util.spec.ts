@@ -4,7 +4,7 @@ import {
   importDefaultFromPath,
   isSiteMap,
   sleep,
-  toString
+  toString, weakAssign
 } from '../src/util';
 import {join} from 'path';
 
@@ -75,5 +75,28 @@ describe('util', function () {
       .toBe('YXNkMTIz');
     expect(toString(new Uint32Array([0x12345678, 0x90abcdef]), 'hex'))
       .toBe('78563412efcdab90');
+  });
+
+  test('weakAssign', () => {
+    const obj = {};
+    expect(weakAssign(null, obj)).toStrictEqual(obj);
+    expect(weakAssign(obj, null)).toBe(obj);
+    expect(weakAssign({a: 0, b: false}, {a: 2, c: '3'})).toStrictEqual({
+      a: 0,
+      b: false,
+      c: '3'
+    });
+    expect(weakAssign({a: undefined}, {a: 2, c: '3'})).toStrictEqual({
+      a: undefined,
+      c: '3'
+    });
+    expect(weakAssign({a: NaN}, {a: [], c: '3'})).toStrictEqual({
+      a: NaN,
+      c: '3'
+    });
+    expect(weakAssign({a: null}, {a: [], c: ['3']})).toStrictEqual({
+      a: null,
+      c: ['3']
+    });
   });
 });

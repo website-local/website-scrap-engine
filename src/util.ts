@@ -78,3 +78,22 @@ export const simpleHashString = (str: string): string =>
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');
+
+export const hasOwnProperty = Object.prototype.hasOwnProperty;
+
+/**
+ * Merge values from source to target only if key not exists in target
+ */
+export const weakAssign = <T, U>(target: T, source: U): T & U => {
+  if (!target) return Object.assign({} as T, source);
+  if (!source) return target as T & U;
+  let key: keyof U;
+  for (key in source) {
+    if (hasOwnProperty.call(source, key) &&
+      !hasOwnProperty.call(target, key)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Reflect.set(target as any, key, source[key]);
+    }
+  }
+  return target as T & U;
+};
