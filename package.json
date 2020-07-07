@@ -1,7 +1,7 @@
 {
   "name": "website-scrap-engine",
   "version": "0.1.0",
-  "description": "",
+  "description": "Configurable website scraper in typescript",
   "main": "index.js",
   "engines": {
     "node": ">=12.16.0"
@@ -10,7 +10,7 @@
     "clean": "rimraf lib/*",
     "tsc": "tsc",
     "lint": "eslint --fix src test",
-    "test": "jest",
+    "test": "lint && jest",
     "build": "npm run lint && npm run tsc",
     "copy": "node copy-src",
     "prepack": "npm run clean && npm run build && npm run copy"
@@ -47,7 +47,20 @@
     "lib",
     "src"
   ],
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/myfreeer/website-scrap-engine.git"
+  },
+  "keywords": [
+    "typescript",
+    "website",
+    "scraper",
+    "download"
+  ],
+  "author": "myfreeer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/myfreeer/website-scrap-engine/issues"
+  },
+  "homepage": "https://github.com/myfreeer/website-scrap-engine#readme"
 }
