@@ -5,11 +5,11 @@ import {
   ProcessResourceAfterDownloadFunc,
   ProcessResourceBeforeDownloadFunc,
   SubmitResourceFunc
-} from '../pipeline';
+} from './types';
 import cheerio from 'cheerio';
 import {toString} from '../util';
 import {StaticDownloadOptions} from '../options';
-import {PipelineExecutor} from '../pipeline-executor';
+import {PipelineExecutor} from './pipeline-executor';
 
 export interface SkipProcessFunc {
   (url: string, element: Cheerio | null, parent: Resource | null): boolean;

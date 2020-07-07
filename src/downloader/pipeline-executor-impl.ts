@@ -1,16 +1,17 @@
-import {StaticDownloadOptions} from './options';
-import {Resource, ResourceEncoding, ResourceType} from './resource';
+import {StaticDownloadOptions} from '../options';
+import {Resource, ResourceEncoding, ResourceType} from '../resource';
 import {
   DownloadResource,
   ProcessingLifeCycle,
   RequestOptions,
   SubmitResourceFunc
-} from './pipeline';
+} from '../life-cycle/types';
+import {PipelineExecutor} from '../life-cycle/pipeline-executor';
 
 /**
  * Pipeline executor
  */
-export class PipelineExecutor {
+export class PipelineExecutorImpl implements PipelineExecutor {
   constructor(public lifeCycle: ProcessingLifeCycle,
               public requestOptions: RequestOptions,
               public options: StaticDownloadOptions) {

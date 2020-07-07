@@ -5,13 +5,13 @@ import {
   DownloadResource,
   ProcessResourceAfterDownloadFunc,
   SubmitResourceFunc
-} from '../pipeline';
+} from './types';
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
 import {processCssText} from './process-css';
 import {error, skip} from '../logger/logger';
-import {PipelineExecutor} from '../pipeline-executor';
+import {PipelineExecutor} from './pipeline-executor';
 
 export const processHtml: ProcessResourceAfterDownloadFunc = async (
   res: DownloadResource,
@@ -83,7 +83,7 @@ export const processHtml: ProcessResourceAfterDownloadFunc = async (
           }
           continue;
         }
-        let resource: Resource | void = pipeline.createResource(type, depth,
+        let resource: Resource | void = await pipeline.createResource(type, depth,
           link, refUrl, res.localRoot, options.encoding[type]);
         resource = await pipeline.processBeforeDownload(resource, elem, res, options);
         if (!resource) {

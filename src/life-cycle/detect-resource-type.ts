@@ -1,4 +1,4 @@
-import {DetectResourceTypeFunc} from '../pipeline';
+import {DetectResourceTypeFunc} from './types';
 import {ResourceType} from '../resource';
 import {arrayToMap, isSiteMap} from '../util';
 

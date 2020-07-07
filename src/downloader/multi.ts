@@ -3,7 +3,7 @@ import {RawResource, Resource} from '../resource';
 import {DownloadWorkerMessage} from './types';
 import {StaticDownloadOptions} from '../options';
 import path from 'path';
-import {DownloadResource} from '../pipeline';
+import {DownloadResource} from '../life-cycle/types';
 import {skip} from '../logger/logger';
 import {AbstractDownloader} from './main';
 

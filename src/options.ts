@@ -1,5 +1,5 @@
 import {createResource, ResourceEncoding, ResourceType} from './resource';
-import {ProcessingLifeCycle, RequestOptions} from './pipeline';
+import {ProcessingLifeCycle, RequestOptions} from './life-cycle/types';
 import {beforeRetryHook} from './life-cycle/download-resource';
 import {
   RetryFunction,

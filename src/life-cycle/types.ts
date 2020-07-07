@@ -1,6 +1,11 @@
-import {createResource, Resource, ResourceBody, ResourceType} from './resource';
+import {
+  createResource,
+  Resource,
+  ResourceBody,
+  ResourceType
+} from '../resource';
 import {Options as GotOptions} from 'got/dist/source/as-promise';
-import {StaticDownloadOptions} from './options';
+import {StaticDownloadOptions} from '../options';
 import {PipelineExecutor} from './pipeline-executor';
 
 export type AsyncResult<T> = T | Promise<T>;
@@ -8,6 +13,7 @@ export type AsyncResult<T> = T | Promise<T>;
 export interface LinkRedirectFunc {
   /**
    * redirect link before processing, or before child-resource creation
+   * @see PipelineExecutor.linkRedirect
    * @param url
    * @param element source element
    * @param parent source resource, null for initial resource
@@ -24,6 +30,7 @@ export interface LinkRedirectFunc {
 export interface DetectResourceTypeFunc {
   /**
    * Detect and change resource type
+   * @see PipelineExecutor.detectResourceType
    * @param url
    * @param type last detected type
    * @param element source element
@@ -41,6 +48,7 @@ export interface DetectResourceTypeFunc {
 export interface ProcessResourceBeforeDownloadFunc {
   /**
    * Process and filter resource
+   * @see PipelineExecutor.processBeforeDownload
    * @param res target resource
    * @param element source element
    * @param parent source resource, null for initial resource
@@ -70,6 +78,7 @@ export type RequestOptions = GotOptions
  */
 export interface DownloadResourceFunc {
   /**
+   * @see PipelineExecutor.download
    * @param res target resource
    * @param requestOptions passed to got
    * @param options
@@ -97,6 +106,7 @@ export interface DownloadResource extends Resource {
 export interface ProcessResourceAfterDownloadFunc {
   /**
    * Process resource after download, in worker thread
+   * @see PipelineExecutor.processAfterDownload
    * @param res resource received from main thread
    * @param submit function to submit resource to pipeline
    * @param options
@@ -110,6 +120,7 @@ export interface ProcessResourceAfterDownloadFunc {
 export interface SaveToDiskFunc {
   /**
    * Save to disk
+   * @see PipelineExecutor.saveToDisk
    * @param res
    * @param options
    * @param pipeline

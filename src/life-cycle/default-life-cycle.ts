@@ -1,4 +1,4 @@
-import {ProcessingLifeCycle} from '../pipeline';
+import {ProcessingLifeCycle} from './types';
 import {skipLinks} from './skip-links';
 import {detectResourceType} from './detect-resource-type';
 import {createResource} from '../resource';

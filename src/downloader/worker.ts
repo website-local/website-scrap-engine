@@ -4,10 +4,7 @@ import {
   mergeOverrideOptions,
   StaticDownloadOptions
 } from '../options';
-import {
-  DownloadResource,
-  SubmitResourceFunc
-} from '../pipeline';
+import {DownloadResource, SubmitResourceFunc} from '../life-cycle/types';
 import {
   normalizeResource,
   prepareResourceForClone,
@@ -17,7 +14,8 @@ import {
 import {skip} from '../logger/logger';
 import {importDefaultFromPath} from '../util';
 import {DownloadWorkerMessage, WorkerMessageType} from './types';
-import {PipelineExecutor} from '../pipeline-executor';
+import {PipelineExecutorImpl} from './pipeline-executor-impl';
+import {PipelineExecutor} from '../life-cycle/pipeline-executor';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,
@@ -29,7 +27,7 @@ const options: DownloadOptions =
   mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
 
 const pipeline: PipelineExecutor =
-  new PipelineExecutor(options, options.req, options);
+  new PipelineExecutorImpl(options, options.req, options);
 
 options.configureLogger(options.localRoot, options.logSubDir || '');
 

@@ -15,11 +15,11 @@ import {HTTPError} from 'got';
 import {importDefaultFromPath} from '../util';
 import URI from 'urijs';
 import {DownloaderStats, DownloaderWithMeta} from './types';
-import {PipelineExecutor} from '../pipeline-executor';
+import {PipelineExecutorImpl} from './pipeline-executor-impl';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
   readonly queue: PQueue;
-  readonly pipeline: PipelineExecutor;
+  readonly pipeline: PipelineExecutorImpl;
   readonly options: DownloadOptions;
   readonly downloadedUrl: Set<string> = new Set<string>();
   readonly queuedUrl: Set<string> = new Set<string>();
@@ -35,7 +35,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
     this.options = mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
     this.queue = new PQueue({concurrency: this.options.concurrency});
-    this.pipeline = new PipelineExecutor(this.options, this.options.req, this.options);
+    this.pipeline = new PipelineExecutorImpl(this.options, this.options.req, this.options);
     this.options.configureLogger(this.options.localRoot, this.options.logSubDir || '');
   }
 

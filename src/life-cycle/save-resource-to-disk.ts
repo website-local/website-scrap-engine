@@ -1,9 +1,9 @@
-import {DownloadResource, SaveToDiskFunc} from '../pipeline';
+import {DownloadResource, SaveToDiskFunc} from './types';
 import {StaticDownloadOptions} from '../options';
 import {ResourceBody, ResourceType} from '../resource';
 import path from 'path';
 import {writeFile} from '../io';
-import {PipelineExecutor} from '../pipeline-executor';
+import {PipelineExecutor} from './pipeline-executor';
 
 export const saveResourceToDisk: SaveToDiskFunc = async (
   res: DownloadResource,
