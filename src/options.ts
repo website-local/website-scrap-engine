@@ -60,6 +60,16 @@ export interface StaticDownloadOptions {
    */
   deduplicateStripSearch?: boolean;
 
+  /**
+   * Optional parse option for cheerio
+   */
+  cheerioParse?: CheerioOptionsInterface;
+
+  /**
+   * Optional serialize option for cheerio
+   */
+  cheerioSerialize?: CheerioOptionsInterface;
+
   meta: Record<string, string | number | boolean> & {
     detectIncompleteHtml?: '</html>' | '</body>' | string;
   }

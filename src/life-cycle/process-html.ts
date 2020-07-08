@@ -1,6 +1,5 @@
 import {sources} from '../sources';
 import srcset, {SrcSetDefinition} from 'srcset';
-import cheerio from 'cheerio';
 import {
   DownloadResource,
   ProcessResourceAfterDownloadFunc,
@@ -8,10 +7,10 @@ import {
 } from './types';
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
-import {toString} from '../util';
 import {processCssText} from './process-css';
 import {error, skip} from '../logger/logger';
 import {PipelineExecutor} from './pipeline-executor';
+import {parseHtml} from './adapters';
 
 export const processHtml: ProcessResourceAfterDownloadFunc = async (
   res: DownloadResource,
@@ -28,8 +27,7 @@ export const processHtml: ProcessResourceAfterDownloadFunc = async (
   const resources: Resource[] = [];
   let doc: CheerioStatic | void = res.meta.doc;
   if (!doc) {
-    res.meta.doc = doc = cheerio.load(toString(res.body,
-      res.encoding || options.encoding[res.type] || 'utf8'));
+    res.meta.doc = doc = parseHtml(res, options);
   }
   for (const {selector, attr, type} of sources) {
     const elements: Cheerio = doc(selector);

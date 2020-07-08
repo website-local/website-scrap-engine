@@ -6,6 +6,19 @@ import {escapePath} from '../util';
 import {writeFile} from '../io';
 import {PipelineExecutor} from './pipeline-executor';
 
+export const getResourceBodyFromHtml = (
+  res: DownloadResource & { type: ResourceType.Html },
+  options: StaticDownloadOptions
+): ResourceBody => {
+  if (!res.meta.doc) {
+    return res.body;
+  }
+  if (options.cheerioSerialize) {
+    return res.meta.doc.html(options.cheerioSerialize);
+  }
+  return res.meta.doc.html();
+};
+
 export const saveHtmlToDisk: SaveToDiskFunc = async (
   res: DownloadResource,
   options: StaticDownloadOptions,
@@ -22,6 +35,7 @@ export const saveHtmlToDisk: SaveToDiskFunc = async (
       const savePath = decodeURI(res.savePath);
       await writeFile(path.join(localRoot, savePath), `<html lang="en">
 <head>
+<meta charset="${res.encoding || 'utf8'}">
 <meta http-equiv="refresh" content="0; url=${relativePath}">
 <script>location.replace('${relativePath}');</script>
 <title>Redirecting</title>
@@ -30,7 +44,7 @@ export const saveHtmlToDisk: SaveToDiskFunc = async (
       const redirectedResource = await pipeline.createResource(ResourceType.Html,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot, res.encoding);
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
-      const body: ResourceBody = res.meta.doc ? res.meta.doc.html() : res.body;
+      const body: ResourceBody = getResourceBodyFromHtml(res, options);
       await writeFile(path.join(localRoot, redirectedSavePath), body, res.encoding);
       return;
     }
