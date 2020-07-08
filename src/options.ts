@@ -14,6 +14,7 @@ import {adjust} from './downloader/adjust-concurrency';
 import {configureLogger} from './logger/config-logger';
 import {DownloaderWithMeta} from './downloader/types';
 import {weakAssign} from './util';
+import {SourceDefinition} from './sources';
 
 /**
  * Options which should not be changed at runtime, and safe for cloning
@@ -71,6 +72,11 @@ export interface StaticDownloadOptions {
    * Optional serialize option for cheerio
    */
   cheerioSerialize?: CheerioOptionsInterface;
+
+  /**
+   * Custom html sources
+   */
+  sources?: SourceDefinition[];
 
   meta: Record<string, string | number | boolean> & {
     detectIncompleteHtml?: '</html>' | '</body>' | string;

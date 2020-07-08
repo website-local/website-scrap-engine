@@ -1,4 +1,4 @@
-import {sources} from '../sources';
+import {sources as defaultSources} from '../sources';
 import srcset, {SrcSetDefinition} from 'srcset';
 import {
   DownloadResource,
@@ -29,6 +29,7 @@ export const processHtml: ProcessResourceAfterDownloadFunc = async (
   if (!doc) {
     res.meta.doc = doc = parseHtml(res, options);
   }
+  const sources: typeof defaultSources = options.sources || defaultSources;
   for (const {selector, attr, type} of sources) {
     const elements: Cheerio = doc(selector);
     for (let index = 0; index < elements.length; index++) {
