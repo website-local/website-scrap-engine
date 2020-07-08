@@ -21,7 +21,7 @@ describe('resource', function () {
     expect(resource.rawUrl).toBe(
       'http://nodejs.cn/api/buffer.html#buffer_buffers_and_typedarrays');
     expect(resource.replacePath).toBe('../buffer.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn\\api\\buffer.html'));
+    expect(resource.savePath).toBe(path.join('nodejs.cn', 'api', 'buffer.html'));
   });
   test('path-to-html-resource', () => {
     const resource: Resource = createResource(ResourceType.Html, 1,
@@ -222,7 +222,7 @@ describe('resource', function () {
       rawUrl: '/#buffer_buffers_and_typedarrays',
       downloadLink: 'https://nodejs.com/',
       refUrl: 'https://nodejs.com/api/',
-      savePath: 'nodejs.com\\index.html',
+      savePath: path.join('nodejs.com', 'index.html'),
       localRoot: '/tmp/aaa',
       replacePath: '../index.html#buffer_buffers_and_typedarrays',
       createTimestamp: resource.createTimestamp,
