@@ -6,6 +6,7 @@ import {
   RequestOptions,
   SubmitResourceFunc
 } from '../life-cycle/types';
+// noinspection ES6PreferShortImport
 import {PipelineExecutor} from '../life-cycle/pipeline-executor';
 
 /**

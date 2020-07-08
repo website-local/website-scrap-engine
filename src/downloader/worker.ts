@@ -15,6 +15,7 @@ import {skip} from '../logger/logger';
 import {importDefaultFromPath} from '../util';
 import {DownloadWorkerMessage, WorkerMessageType} from './types';
 import {PipelineExecutorImpl} from './pipeline-executor-impl';
+// noinspection ES6PreferShortImport
 import {PipelineExecutor} from '../life-cycle/pipeline-executor';
 
 const {pathToOptions, overrideOptions}: {

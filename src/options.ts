@@ -1,5 +1,6 @@
 import {createResource, ResourceEncoding, ResourceType} from './resource';
 import {ProcessingLifeCycle, RequestOptions} from './life-cycle/types';
+// noinspection ES6PreferShortImport
 import {beforeRetryHook} from './life-cycle/download-resource';
 import {
   RetryFunction,
@@ -8,6 +9,7 @@ import {
 } from 'got/dist/source/as-promise/types';
 import {error} from './logger/logger';
 import {RequestError} from 'got/dist/source/core';
+// noinspection ES6PreferShortImport
 import {adjust} from './downloader/adjust-concurrency';
 import {configureLogger} from './logger/config-logger';
 import {DownloaderWithMeta} from './downloader/types';
