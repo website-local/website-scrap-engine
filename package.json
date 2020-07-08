@@ -10,7 +10,7 @@
     "clean": "rimraf lib/*",
     "tsc": "tsc",
     "lint": "eslint --fix src test",
-    "test": "lint && jest",
+    "test": "npm run lint && jest",
     "build": "npm run lint && npm run tsc",
     "copy": "node copy-src",
     "prepack": "npm run clean && npm run build && npm run copy"
