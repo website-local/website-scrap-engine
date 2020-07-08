@@ -185,9 +185,9 @@ export function prepareResourceForClone(res: Resource): RawResource {
         }
       } else if (key === 'body' && (
         typeof value === 'string' ||
-        value instanceof ArrayBuffer ||
-        ArrayBuffer.isView(value) ||
-        Buffer.isBuffer(value))) {
+          value instanceof ArrayBuffer ||
+          ArrayBuffer.isView(value) ||
+          Buffer.isBuffer(value))) {
         clone[key] = value;
       }
     } else {
@@ -333,8 +333,8 @@ export function normalizeResource(res: RawResource): Resource {
     resource.waitTime = resource.downloadStartTimestamp - resource.createTimestamp;
   }
   if (!resource.downloadTime &&
-    resource.finishTimestamp &&
-    resource.downloadStartTimestamp) {
+      resource.finishTimestamp &&
+      resource.downloadStartTimestamp) {
     resource.downloadTime = resource.finishTimestamp - resource.downloadStartTimestamp;
   }
   if (resource.body instanceof ArrayBuffer || ArrayBuffer.isView(resource.body)) {

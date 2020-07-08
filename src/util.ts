@@ -53,9 +53,9 @@ export const orderUrlSearch = (search: string): string => {
     .split('&');
   const searchKeys: string[] = [],
     searchMap: Record<string, string[]> = {};
-  let searchParam: string[] , searchKey: string;
+  let searchParam: string[], searchKey: string;
   for (let i = 0; i < parts.length; i++) {
-    searchParam= parts[i].split('=');
+    searchParam = parts[i].split('=');
     if (searchMap[searchKey = searchParam.shift() || parts[i]]) {
       searchMap[searchKey].push(searchParam.join('='));
     } else {

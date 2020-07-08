@@ -1,4 +1,4 @@
-import {Resource, ResourceType} from '../resource';
+import {Resource, ResourceEncoding, ResourceType} from '../resource';
 import {
   DownloadResource,
   LinkRedirectFunc,
@@ -85,12 +85,23 @@ export interface HtmlProcessFunc {
   ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): CheerioStatic;
 }
 
+export const parseHtml = (
+  res: DownloadResource & { type: ResourceType.Html },
+  options: StaticDownloadOptions
+): CheerioStatic => {
+  const encoding: ResourceEncoding =
+    res.encoding || options.encoding[res.type] || 'utf8';
+  if (options.cheerioParse) {
+    return cheerio.load(toString(res.body, encoding), options.cheerioParse);
+  }
+  return cheerio.load(toString(res.body, encoding));
+};
+
 export const processHtml = (fn: HtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
   (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions) => {
     if (res.type === ResourceType.Html) {
       if (!res.meta.doc) {
-        res.meta.doc = cheerio.load(toString(res.body,
-          res.encoding || options.encoding[res.type] || 'utf8'));
+        res.meta.doc = parseHtml(res, options);
       }
       res.meta.doc = fn(res.meta.doc, res);
     }

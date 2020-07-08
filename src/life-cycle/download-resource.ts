@@ -1,8 +1,4 @@
-import {
-  DownloadResource,
-  DownloadResourceFunc,
-  RequestOptions
-} from './types';
+import {DownloadResource, DownloadResourceFunc, RequestOptions} from './types';
 import {Resource, ResourceType} from '../resource';
 import {StaticDownloadOptions} from '../options';
 import * as logger from '../logger/logger';
