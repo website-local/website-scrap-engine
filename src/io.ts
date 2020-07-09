@@ -4,41 +4,20 @@ import fs from 'fs';
 import mkdirP from 'mkdirp';
 import {mkdir as mkdirLogger} from './logger/logger';
 
-export const mkdirRetrySync = (dir: string): string | void => {
-  try {
-    if (!fs.existsSync(dir)) {
-      return mkdirP.sync(dir);
-    }
-  } catch (e) {
-    mkdirLogger.trace('mkdir ', dir, 'fail', e);
-    // in case of concurrent dir creation
-    try {
-      if (!fs.existsSync(dir)) {
-        return mkdirP.sync(dir);
-      }
-    } catch (e) {
-      mkdirLogger.debug('mkdir ', dir, 'fail again', e);
-      // try again, 3 times seeming pretty enough
-      if (!fs.existsSync(dir)) {
-        return mkdirP.sync(dir);
-      }
-    }
-  }
-};
 export const mkdirRetry = async (dir: string): Promise<string | void> => {
   try {
     if (!fs.existsSync(dir)) {
       return await mkdirP(dir);
     }
   } catch (e) {
-    mkdirLogger.trace('mkdir ', dir, 'fail', e);
+    mkdirLogger.trace('mkdir', dir, 'fail', e);
     // in case of concurrent dir creation
     try {
       if (!fs.existsSync(dir)) {
         return await mkdirP(dir);
       }
     } catch (e) {
-      mkdirLogger.debug('mkdir ', dir, 'fail again', e);
+      mkdirLogger.debug('mkdir', dir, 'fail again', e);
       // try again, 3 times seeming pretty enough
       if (!fs.existsSync(dir)) {
         return await mkdirP(dir);
@@ -59,7 +38,12 @@ export const writeFile = async (
     return fs.promises.writeFile(filePath, data, {encoding});
   } else if (data instanceof ArrayBuffer) {
     return fs.promises.writeFile(filePath, Buffer.from(data));
-  } else {
+  } else if (data instanceof Uint8Array || Buffer.isBuffer(data)) {
     return fs.promises.writeFile(filePath, data);
+  } else if (ArrayBuffer.isView(data)) {
+    return fs.promises.writeFile(filePath, Buffer.from(data.buffer));
+  } else {
+    // not likely happen
+    throw new TypeError('Type of data not supported.');
   }
 };
