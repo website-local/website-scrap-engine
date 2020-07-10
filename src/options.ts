@@ -94,6 +94,8 @@ export interface StaticDownloadOptions {
    * with {@link StaticDownloadOptions}.
    * Configure them functions or class instances
    * using {@link DownloadOptions} only.
+   * @see RequestOptions
+   * @see PromisableRequest.mergeOptions
    */
   req?: RequestOptions;
 
@@ -104,18 +106,42 @@ export interface StaticDownloadOptions {
 }
 
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
+  /**
+   * Functions or class callbacks can only be here.
+   *
+   * @see StaticDownloadOptions.req
+   */
   req: RequestOptions;
+
+  /**
+   * Urls being pushed to pipeline with depth 0 and the url self as refUrl
+   */
   initialUrl?: string[];
+
+  /**
+   * Adjust downloaded concurrency at runtime.
+   *
+   * Note: this would not affect worker_threads
+   */
   adjustConcurrencyPeriod?: number;
   adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;
+
+  /**
+   * Use a custom function to configure logger.
+   */
   configureLogger: typeof configureLogger;
+
+  /**
+   * @see configureLogger
+   */
   logSubDir?: string;
 }
 
-const MAX_RETRY_DELAY = 5000;
 export type ExtendedError = (TimeoutError | RequestError) & {
   retryLimitExceeded: boolean;
 };
+
+const MAX_RETRY_DELAY = 5000;
 
 /**
  * If you would like to implement it yourself,
