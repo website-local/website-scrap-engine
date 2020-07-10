@@ -62,7 +62,7 @@ export interface ProcessResourceBeforeDownloadFunc {
    pipeline: PipelineExecutor): AsyncResult<Resource | void>;
 }
 
-export type RequestOptions = GotOptions
+export type RequestOptions = GotOptions;
 
 /**
  * Process and filter resource,
@@ -131,7 +131,7 @@ export interface SaveToDiskFunc {
 }
 
 export interface ProcessingLifeCycle {
-  linkRedirect: LinkRedirectFunc[]
+  linkRedirect: LinkRedirectFunc[];
   detectResourceType: DetectResourceTypeFunc[];
   createResource: typeof createResource;
   /**

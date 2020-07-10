@@ -9,12 +9,21 @@ import {
 } from 'got/dist/source/as-promise/types';
 import {error} from './logger/logger';
 import {RequestError} from 'got/dist/source/core';
+import PromisableRequest from 'got/dist/source/as-promise/core';
 // noinspection ES6PreferShortImport
 import {adjust} from './downloader/adjust-concurrency';
 import {configureLogger} from './logger/config-logger';
 import {DownloaderWithMeta} from './downloader/types';
 import {weakAssign} from './util';
 import {SourceDefinition} from './sources';
+
+/**
+ * Extra options for custom life cycle
+ */
+export interface StaticDownloadMeta
+  extends Record<string, string | number | boolean| void> {
+  detectIncompleteHtml?: '</html>' | '</body>' | string;
+}
 
 /**
  * Options which should not be changed at runtime, and safe for cloning
@@ -78,9 +87,20 @@ export interface StaticDownloadOptions {
    */
   sources?: SourceDefinition[];
 
-  meta: Record<string, string | number | boolean> & {
-    detectIncompleteHtml?: '</html>' | '</body>' | string;
-  }
+  /**
+   * Got options
+   *
+   * Never include functions or class instances
+   * with {@link StaticDownloadOptions}.
+   * Configure them functions or class instances
+   * using {@link DownloadOptions} only.
+   */
+  req?: RequestOptions;
+
+  /**
+   * @see StaticDownloadMeta
+   */
+  meta: StaticDownloadMeta;
 }
 
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
@@ -268,10 +288,12 @@ export function mergeOverrideOptions(
   if (!overrideOptions) {
     return opt;
   }
-  const {meta} = opt;
-  Object.assign(opt, overrideOptions);
-  if (overrideOptions.meta) {
-    Object.assign(meta, overrideOptions.meta);
+  if (opt.meta && overrideOptions.meta) {
+    overrideOptions.meta = Object.assign(opt.meta, overrideOptions.meta);
   }
-  return checkDownloadOptions(opt);
+  if (opt.req && overrideOptions.req) {
+    overrideOptions.req =
+      PromisableRequest.mergeOptions(opt.req, overrideOptions.req);
+  }
+  return checkDownloadOptions(Object.assign(opt, overrideOptions));
 }
