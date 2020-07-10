@@ -1,4 +1,4 @@
-import {DownloadResource, DownloadResourceFunc, RequestOptions} from './types';
+import {DownloadResource, RequestOptions} from './types';
 import {Resource, ResourceType} from '../resource';
 import {StaticDownloadOptions} from '../options';
 import * as logger from '../logger/logger';
@@ -41,10 +41,10 @@ export const beforeRetryHook: BeforeRetryHook = (
  * @param url
  * @param options
  */
-export const getRetry = async (
+export async function getRetry(
   url: string,
   options: Options
-): Promise<Response<Buffer | string> | void> => {
+): Promise<Response<Buffer | string> | void> {
   let res: Response<Buffer | string> | void;
   let err: Error | void, optionsClone: Options;
   for (let i = 0; i < 25; i++) {
@@ -84,12 +84,12 @@ export const getRetry = async (
     throw err;
   }
   return res;
-};
+}
 
-export const requestForResource = async (
+export async function requestForResource(
   res: Resource & { downloadStartTimestamp: number },
   requestOptions: RequestOptions
-): Promise<DownloadResource | Resource | void> => {
+): Promise<DownloadResource | Resource | void> {
   const downloadLink: string = encodeURI(decodeURI(res.downloadLink));
   const reqOptions: Options = Object.assign({}, requestOptions);
   reqOptions.responseType = 'buffer';
@@ -120,13 +120,13 @@ export const requestForResource = async (
   res.redirectedUrl = response.url;
   res.body = response.body;
   return res;
-};
+}
 
-export const downloadResource: DownloadResourceFunc = async (
+export async function downloadResource(
   res: Resource,
   requestOptions: RequestOptions,
   options: StaticDownloadOptions
-): Promise<DownloadResource | Resource | void> => {
+): Promise<DownloadResource | Resource | void> {
   if (res.body) {
     return res as DownloadResource;
   }
@@ -161,4 +161,4 @@ export const downloadResource: DownloadResourceFunc = async (
       downloadedResource.finishTimestamp - res.downloadStartTimestamp;
   }
   return downloadedResource;
-};
+}

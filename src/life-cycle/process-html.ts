@@ -1,10 +1,6 @@
 import {sources as defaultSources} from '../sources';
 import srcset, {SrcSetDefinition} from 'srcset';
-import {
-  DownloadResource,
-  ProcessResourceAfterDownloadFunc,
-  SubmitResourceFunc
-} from './types';
+import {DownloadResource, SubmitResourceFunc} from './types';
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {processCssText} from './process-css';
@@ -12,11 +8,11 @@ import {error, skip} from '../logger/logger';
 import {PipelineExecutor} from './pipeline-executor';
 import {parseHtml} from './adapters';
 
-export const processHtml: ProcessResourceAfterDownloadFunc = async (
+export async function processHtml(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions,
-  pipeline: PipelineExecutor): Promise<DownloadResource | void> => {
+  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   if (res.type !== ResourceType.Html) {
     return res;
   }
@@ -115,5 +111,5 @@ export const processHtml: ProcessResourceAfterDownloadFunc = async (
     }
   }
   return res;
-};
+}
 

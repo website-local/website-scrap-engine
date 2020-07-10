@@ -1,9 +1,5 @@
 import parseCssUrls from 'css-url-parser';
-import {
-  DownloadResource,
-  ProcessResourceAfterDownloadFunc,
-  SubmitResourceFunc
-} from './types';
+import {DownloadResource, SubmitResourceFunc} from './types';
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
@@ -32,11 +28,11 @@ export async function processCssText(
   return cssText;
 }
 
-export const processCss: ProcessResourceAfterDownloadFunc = async (
+export async function processCss(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions,
-  pipeline: PipelineExecutor): Promise<DownloadResource | void> => {
+  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   if (res.type !== ResourceType.Css) {
     return res;
   }
@@ -49,4 +45,4 @@ export const processCss: ProcessResourceAfterDownloadFunc = async (
   res.meta.cssProcessed = 1;
   await submit(resources);
   return res;
-};
+}

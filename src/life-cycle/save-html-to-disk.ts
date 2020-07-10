@@ -1,4 +1,4 @@
-import {DownloadResource, SaveToDiskFunc} from './types';
+import {DownloadResource} from './types';
 import {StaticDownloadOptions} from '../options';
 import {ResourceBody, ResourceType} from '../resource';
 import path from 'path';
@@ -6,10 +6,10 @@ import {escapePath} from '../util';
 import {writeFile} from '../io';
 import {PipelineExecutor} from './pipeline-executor';
 
-export const getResourceBodyFromHtml = (
+export function getResourceBodyFromHtml(
   res: DownloadResource & { type: ResourceType.Html },
   options: StaticDownloadOptions
-): ResourceBody => {
+): ResourceBody {
   if (!res.meta.doc) {
     return res.body;
   }
@@ -17,12 +17,12 @@ export const getResourceBodyFromHtml = (
     return res.meta.doc.html(options.cheerioSerialize);
   }
   return res.meta.doc.html();
-};
+}
 
-export const saveHtmlToDisk: SaveToDiskFunc = async (
+export async function saveHtmlToDisk(
   res: DownloadResource,
   options: StaticDownloadOptions,
-  pipeline: PipelineExecutor): Promise<DownloadResource | void> => {
+  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   if (res.type !== ResourceType.Html) {
     return res;
   }
@@ -53,4 +53,4 @@ export const saveHtmlToDisk: SaveToDiskFunc = async (
   const filePath: string = path.join(localRoot, decodeURI(res.savePath));
   await writeFile(filePath, body, res.encoding);
   return;
-};
+}

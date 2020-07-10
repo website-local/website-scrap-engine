@@ -1,14 +1,14 @@
-import {DownloadResource, SaveToDiskFunc} from './types';
+import {DownloadResource} from './types';
 import {StaticDownloadOptions} from '../options';
 import {ResourceBody, ResourceType} from '../resource';
 import path from 'path';
 import {writeFile} from '../io';
 import {PipelineExecutor} from './pipeline-executor';
 
-export const saveResourceToDisk: SaveToDiskFunc = async (
+export async function saveResourceToDisk(
   res: DownloadResource,
   options: StaticDownloadOptions,
-  pipeline: PipelineExecutor): Promise<DownloadResource | void> => {
+  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   const localRoot: string = res.localRoot ?? options.localRoot;
   if (res.redirectedUrl && res.redirectedUrl !== res.downloadLink) {
     const redirectResource = await pipeline.createResource(ResourceType.Html,
@@ -27,4 +27,4 @@ export const saveResourceToDisk: SaveToDiskFunc = async (
   const filePath: string = path.join(localRoot, decodeURI(res.savePath));
   await writeFile(filePath, body, res.encoding);
   return;
-};
+}

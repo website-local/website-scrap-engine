@@ -1,4 +1,3 @@
-import {DetectResourceTypeFunc} from './types';
 import {ResourceType} from '../resource';
 import {arrayToMap, isSiteMap} from '../util';
 
@@ -22,14 +21,10 @@ export const binaryExtension = arrayToMap([
   'psd'
 ], true);
 
-export interface DetectResourceType extends DetectResourceTypeFunc {
-  (url: string, type: ResourceType): ResourceType;
-}
-
-export const detectResourceType: DetectResourceType = (
+export function detectResourceType(
   url: string,
   type: ResourceType
-): ResourceType => {
+): ResourceType {
   if (isSiteMap(url)) {
     return ResourceType.SiteMap;
   }
@@ -59,4 +54,4 @@ export const detectResourceType: DetectResourceType = (
     }
   }
   return type;
-};
+}

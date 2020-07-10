@@ -1,5 +1,3 @@
-import {LinkRedirectFunc} from './types';
-
 // subset of https://en.wikipedia.org/wiki/List_of_URI_schemes
 export const unProcessableUriSchemes = [
   // Official IANA-registered schemes
@@ -112,14 +110,10 @@ export const fastUnProcessableUriSchemesMap: Record<string, string[]> = (() => {
   return map;
 })();
 
-export interface LinkSkipFunc extends LinkRedirectFunc {
-  (url: string): string | void;
-}
-
 /**
  * Skip unprocessable links
  */
-export const skipLinks: LinkSkipFunc = (url: string): string | void => {
+export function skipLinks(url: string): string | void {
   if (url.startsWith('#')) {
     return;
   }
@@ -134,4 +128,4 @@ export const skipLinks: LinkSkipFunc = (url: string): string | void => {
     }
   }
   return url;
-};
+}

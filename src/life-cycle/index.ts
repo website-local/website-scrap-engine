@@ -10,5 +10,5 @@ export {processHtml} from './process-html';
 export {processSiteMap} from './process-site-map';
 export {getResourceBodyFromHtml, saveHtmlToDisk} from './save-html-to-disk';
 export {saveResourceToDisk} from './save-resource-to-disk';
-export {LinkSkipFunc, skipLinks} from './skip-links';
+export {skipLinks} from './skip-links';
 export * as types from './types';

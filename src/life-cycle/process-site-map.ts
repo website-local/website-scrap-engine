@@ -1,19 +1,15 @@
 import cheerio from 'cheerio';
-import {
-  DownloadResource,
-  ProcessResourceAfterDownloadFunc,
-  SubmitResourceFunc
-} from './types';
+import {DownloadResource, SubmitResourceFunc} from './types';
 import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
 import {PipelineExecutor} from './pipeline-executor';
 
-export const processSiteMap: ProcessResourceAfterDownloadFunc = async (
+export async function processSiteMap(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions,
-  pipeline: PipelineExecutor): Promise<DownloadResource | void> => {
+  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   if (res.type !== ResourceType.SiteMap) {
     return res;
   }
@@ -43,4 +39,4 @@ export const processSiteMap: ProcessResourceAfterDownloadFunc = async (
   }
   await submit(resources);
   return res;
-};
+}
