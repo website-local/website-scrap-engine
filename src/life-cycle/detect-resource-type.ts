@@ -2,8 +2,10 @@ import {DetectResourceTypeFunc} from './types';
 import {ResourceType} from '../resource';
 import {arrayToMap, isSiteMap} from '../util';
 
-const binaryExtension = arrayToMap([
+// immutable
+export const binaryExtension = arrayToMap([
   'gif', 'jpg', 'jpeg', 'png',
+  // probably we could parse svg and download links
   'svg',
   'js', 'jsm', 'json', 'txt',
   'woff2', 'ttf', 'ttc',
@@ -18,9 +20,13 @@ const binaryExtension = arrayToMap([
   'dia',
   'eot',
   'psd'
-]);
+], true);
 
-export const detectResourceType: DetectResourceTypeFunc = (
+export interface DetectResourceType extends DetectResourceTypeFunc {
+  (url: string, type: ResourceType): ResourceType;
+}
+
+export const detectResourceType: DetectResourceType = (
   url: string,
   type: ResourceType
 ): ResourceType => {
@@ -28,10 +34,23 @@ export const detectResourceType: DetectResourceTypeFunc = (
     return ResourceType.SiteMap;
   }
   if (type === ResourceType.Html) {
-    let lastIndex: number;
-    if ((lastIndex = url.lastIndexOf('/')) != -1 &&
-      (lastIndex = url.lastIndexOf('.', lastIndex + 1)) != -1) {
-      const extension: string = url.slice(lastIndex).toLowerCase();
+    const hashIndex: number = url.lastIndexOf('#');
+    const searchIndex: number = hashIndex === -1 ?
+      url.lastIndexOf('?') :
+      url.lastIndexOf('?', hashIndex);
+    const endIndex: number = searchIndex === -1 ?
+      hashIndex :
+      hashIndex === -1 ? searchIndex : Math.min(searchIndex, hashIndex);
+    const endPath: number = endIndex === -1 ?
+      url.lastIndexOf('/') :
+      url.lastIndexOf('/', endIndex);
+    const lastIndex: number = endIndex === -1 ?
+      url.lastIndexOf('.') :
+      url.lastIndexOf('.', endIndex);
+    if (lastIndex !== -1 && lastIndex > endPath) {
+      const extension: string = endIndex === -1 ?
+        url.slice(lastIndex + 1).toLowerCase() :
+        url.slice(lastIndex + 1, endIndex).toLowerCase();
       if (binaryExtension[extension]) {
         return ResourceType.Binary;
       } else if ('css' === extension) {
