@@ -47,6 +47,10 @@ describe('util', function () {
       '5': 1,
       'aaa': 1
     });
+    expect(Object.isFrozen(arrayToMap([1], true))).toBeTruthy();
+    expect(Object.isFrozen(arrayToMap([1]))).toBeFalsy();
+    expect(Object.isExtensible(arrayToMap([1], true))).toBeFalsy();
+    expect(Object.isExtensible(arrayToMap([1]))).toBeTruthy();
   });
 
   test('importDefaultFromPath', () => {

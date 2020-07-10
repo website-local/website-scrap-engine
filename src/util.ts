@@ -13,13 +13,13 @@ export const isSiteMap = (url?: string): boolean | '' | void => url &&
   url.includes('/sitemaps/') &&
   (url.endsWith('sitemap.xml') || url.endsWith('sitemap_other.xml'));
 
-export const arrayToMap = (array: (string | number)[]):
+export const arrayToMap = (array: (string | number)[], freeze?: boolean):
   Record<string | number, number> => {
   const obj: Record<string | number, number> = {};
   for (const item of array) {
     obj[item] = 1;
   }
-  return obj;
+  return freeze ? Object.freeze(obj) : obj;
 };
 
 export const toString = (body: ResourceBody, encoding: ResourceEncoding): string => {
