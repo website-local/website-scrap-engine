@@ -65,12 +65,12 @@ export const redirectFilter = (fn: RequestRedirectFunc): ProcessResourceAfterDow
     return res;
   };
 
-export const processRedirectedUrl: ProcessResourceAfterDownloadFunc = async (
+export async function processRedirectedUrl(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions,
   pipeline: PipelineExecutor
-) => {
+): Promise<DownloadResource | void> {
   if (res.redirectedUrl) {
     const redirectedRes: Resource | void = await pipeline.createAndProcessResource(
       res.redirectedUrl, res.type, res.depth, null, res);
@@ -79,7 +79,7 @@ export const processRedirectedUrl: ProcessResourceAfterDownloadFunc = async (
     }
   }
   return res;
-};
+}
 
 export interface HtmlProcessFunc {
   ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): CheerioStatic;
