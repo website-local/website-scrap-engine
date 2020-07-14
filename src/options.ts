@@ -143,6 +143,27 @@ export type ExtendedError = (TimeoutError | RequestError) & {
 
 const MAX_RETRY_DELAY = 5000;
 
+const retryErrorCodes: Set<string> = new Set([
+  // One of the timeout limits were reached.
+  'ETIMEDOUT',
+  //  Connection was forcibly closed by a peer.
+  'ECONNRESET',
+  // Could not bind to any free port.
+  'EADDRINUSE',
+  // Connection was refused by the server.
+  'ECONNREFUSED',
+  // The remote side of the stream being written has been closed.
+  'EPIPE',
+  // Couldn't resolve the hostname to an IP address.
+  'ENOTFOUND',
+  // No internet connection.
+  'ENETUNREACH',
+  // DNS lookup timed out.
+  'EAI_AGAIN',
+  'ERR_STREAM_PREMATURE_CLOSE',
+  'ESERVFAIL'
+]);
+
 /**
  * If you would like to implement it yourself,
  * set error.retryLimitExceeded to 1 or true
@@ -160,15 +181,18 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
   }
 
   const hasMethod: boolean = err.options &&
-    retryOptions.methods.includes(err.options.method);
+    (retryOptions.methods.length ?
+      retryOptions.methods.includes(err.options.method) :
+      err.options.method === 'GET');
   const hasErrorCode = err.code &&
-    (retryOptions.errorCodes.includes(err.code) ||
-      'ERR_STREAM_PREMATURE_CLOSE' === err.code ||
-      'ESERVFAIL' === err.code);
+    (retryOptions.errorCodes.length ?
+      retryOptions.errorCodes.includes(err.code) :
+      retryErrorCodes.has(err.code as string));
   const hasStatusCode: undefined | boolean = retryOptions.statusCodes &&
     err.response &&
     retryOptions.statusCodes.includes(err.response.statusCode);
-  if (!hasMethod || (!hasErrorCode && !hasStatusCode && err.name !== 'ReadError')) {
+  if (!hasMethod || (!hasErrorCode && !hasStatusCode &&
+    err.name !== 'ReadError' && err.name !== 'TimeoutError')) {
 
     if (err && !((err.name === 'HTTPError' &&
       err.response && err.response.statusCode === 404))) {
@@ -257,7 +281,7 @@ export function defaultDownloadOptions(
   if (!('ignoreInvalidCookies' in merged.req)) {
     merged.req.ignoreInvalidCookies = true;
   }
-  if (!('timeout' in merged.req)) {
+  if (!('timeout' in merged.req) || merged.req.timeout === undefined) {
     merged.req.timeout = {
       lookup: 1000,
       connect: 3500,
