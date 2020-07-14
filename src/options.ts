@@ -100,6 +100,16 @@ export interface StaticDownloadOptions {
   req?: RequestOptions;
 
   /**
+   * Urls being pushed to pipeline with depth 0 and the url self as refUrl
+   */
+  initialUrl?: string[];
+
+  /**
+   * @see DownloadOptions.configureLogger
+   */
+  logSubDir?: string;
+
+  /**
    * @see StaticDownloadMeta
    */
   meta: StaticDownloadMeta;
@@ -114,11 +124,6 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
   req: RequestOptions;
 
   /**
-   * Urls being pushed to pipeline with depth 0 and the url self as refUrl
-   */
-  initialUrl?: string[];
-
-  /**
    * Adjust downloaded concurrency at runtime.
    *
    * Note: this would not affect worker_threads
@@ -130,11 +135,6 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
    * Use a custom function to configure logger.
    */
   configureLogger: typeof configureLogger;
-
-  /**
-   * @see configureLogger
-   */
-  logSubDir?: string;
 }
 
 export type ExtendedError = (TimeoutError | RequestError) & {
