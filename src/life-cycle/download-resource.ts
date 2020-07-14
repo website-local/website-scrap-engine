@@ -69,7 +69,10 @@ export async function getRetry(
       // these events might be accidentally unhandled
       if (e && !e.retryLimitExceeded &&
         (e.name === 'RequestError' || e.name === 'TimeoutError') &&
-        e.code === 'ETIMEDOUT') {
+        // RequestError: Cannot read property 'request' of undefined
+        // at Object.exports.default (got\dist\source\core\utils\timed-out.js:56:23)
+        // error.code === undefined
+        (e.code === 'ETIMEDOUT' || e.code === undefined)) {
         logger.retry.warn(i, url, `manually retry on ${e.event} timeout`,
           e.name, e.code, e.message);
         await sleep(i * 300);
