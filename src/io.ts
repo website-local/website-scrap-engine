@@ -4,32 +4,34 @@ import fs from 'fs';
 import mkdirP from 'mkdirp';
 import {mkdir as mkdirLogger} from './logger/logger';
 
-export const mkdirRetry = async (dir: string): Promise<string | void> => {
-  try {
-    if (!fs.existsSync(dir)) {
-      return await mkdirP(dir);
-    }
-  } catch (e) {
-    mkdirLogger.trace('mkdir', dir, 'fail', e);
-    // in case of concurrent dir creation
+export const mkdirRetry = async (dir: string, retry = 3): Promise<string | void> => {
+  let error: Error | void;
+  for (let i = 0; i < retry; i++) {
+    error = undefined;
     try {
-      if (!fs.existsSync(dir)) {
-        return await mkdirP(dir);
-      }
+      await mkdirP(dir);
     } catch (e) {
-      mkdirLogger.debug('mkdir', dir, 'fail again', e);
-      // try again, 3 times seeming pretty enough
-      if (!fs.existsSync(dir)) {
-        return await mkdirP(dir);
+      error = e;
+      if (i > 0) {
+        mkdirLogger.debug('mkdir', dir, 'fail', i, 'times', e);
+      } else {
+        mkdirLogger.trace('mkdir', dir, 'fail', i, 'times', e);
       }
+      continue;
     }
+    error = undefined;
+    return;
+  }
+  if (error) {
+    throw error;
   }
 };
 
 export const writeFile = async (
   filePath: string,
   data: ResourceBody,
-  encoding: ResourceEncoding): Promise<void> => {
+  encoding: ResourceEncoding
+): Promise<void> => {
   const dir: string = dirname(filePath);
   if (!fs.existsSync(dir)) {
     await mkdirRetry(dir);
