@@ -49,7 +49,13 @@ export async function processHtml(
       }
       let links: string[], replaceValue: string | SrcSetDefinition[];
       if (attr === 'srcset') {
-        replaceValue = srcset.parse(attrValue);
+        try {
+          replaceValue = srcset.parse(attrValue);
+        } catch (e) {
+          error.info('skipping invalid srcset', attrValue, e);
+          // should invalid srcset being removed?
+          continue;
+        }
         links = replaceValue.map(e => e.url);
       } else {
         links = [attrValue];
