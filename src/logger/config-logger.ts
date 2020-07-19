@@ -61,7 +61,7 @@ export const configureLogger = (localRoot: string, subDir: string): Log4js =>
         appenders: ['stdout', 'skip'],
         level: 'debug'
       },
-      'skip-external': {
+      'skipExternal': {
         appenders: ['skip'],
         level: 'debug'
       },
