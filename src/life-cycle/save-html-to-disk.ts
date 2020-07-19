@@ -27,7 +27,7 @@ export async function saveHtmlToDisk(
     return res;
   }
   const localRoot: string = res.localRoot ?? options.localRoot;
-  if (res.redirectedUrl && res.redirectedUrl !== res.downloadLink) {
+  if (res.redirectedUrl && res.redirectedUrl !== res.url) {
     const redirectResource = await pipeline.createResource(ResourceType.Html,
       res.depth, res.redirectedUrl, res.url, localRoot);
     if (redirectResource.replacePath) {
