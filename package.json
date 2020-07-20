@@ -11,9 +11,9 @@
     "tsc": "tsc",
     "lint": "eslint --fix src test",
     "test": "npm run lint && jest",
-    "build": "npm run lint && npm run tsc",
+    "build": "npm run lint && npm run tsc && npm run copy",
     "copy": "node copy-src",
-    "prepack": "npm run clean && npm run build && npm run copy"
+    "prepack": "npm run clean && npm run build"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.3",
