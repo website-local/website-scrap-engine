@@ -69,12 +69,12 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       r = await this.pipeline.processBeforeDownload(r, null, null);
       if (!r) continue;
       if (!r.shouldBeDiscardedFromDownload) {
-        await this.addProcessedResource(r);
+        this.addProcessedResource(r);
       }
     }
   }
 
-  protected _addProcessedResource(res: RawResource): Promise<boolean | void> | boolean {
+  protected _addProcessedResource(res: RawResource): boolean | void {
     // noinspection DuplicatedCode
     if (res.depth > this.options.maxDepth) {
       skip.info('skipped max depth', res.url, res.refUrl, res.depth);
@@ -93,17 +93,18 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     this.queuedUrl.add(url);
     const resource: Resource = normalizeResource(res);
     // cut the call stack
-    return this.queue.add(() => new Promise(r => setImmediate(
+    // noinspection JSIgnoredPromiseFromCall
+    this.queue.add(() => new Promise(r => setImmediate(
       () => r(this.downloadAndProcessResource(resource)))));
   }
 
   abstract async downloadAndProcessResource(res: RawResource): Promise<boolean | void>;
 
-  async addProcessedResource(res: RawResource): Promise<boolean | void> {
+  addProcessedResource(res: RawResource): boolean | void {
     try {
-      return await this._addProcessedResource(res);
+      return this._addProcessedResource(res);
     } catch (e) {
-      this.handleError(e, 'downloading or processing', res);
+      this.handleError(e, 'adding resource', res);
       return false;
     }
   }
