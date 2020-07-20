@@ -16,8 +16,9 @@ export async function processHtml(
   if (res.type !== ResourceType.Html) {
     return res;
   }
-  let refUrl: string = res.redirectedUrl || res.url;
-  refUrl = await pipeline.linkRedirect(refUrl, null, res) || refUrl;
+  const refUrl: string = res.redirectedUrl || res.url;
+  // useless since processRedirectedUrl enabled by default
+  // refUrl = await pipeline.linkRedirect(refUrl, null, res) || refUrl;
 
   const depth: number = res.depth + 1;
   const resources: Resource[] = [];
@@ -84,8 +85,8 @@ export async function processHtml(
           }
           continue;
         }
-        let resource: Resource | void = await pipeline.createResource(type, depth,
-          link, refUrl, res.localRoot, options.encoding[type]);
+        let resource: Resource | void = await pipeline.createResource(linkType, depth,
+          link, refUrl, res.localRoot, options.encoding[linkType]);
         resource = await pipeline.processBeforeDownload(resource, elem, res, options);
         if (!resource) {
           if (skip.isTraceEnabled()) {

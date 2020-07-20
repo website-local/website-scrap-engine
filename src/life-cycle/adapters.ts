@@ -71,7 +71,7 @@ export async function processRedirectedUrl(
   options: StaticDownloadOptions,
   pipeline: PipelineExecutor
 ): Promise<DownloadResource | void> {
-  if (res.redirectedUrl) {
+  if (res.redirectedUrl && res.redirectedUrl !== res.url) {
     const redirectedRes: Resource | void = await pipeline.createAndProcessResource(
       res.redirectedUrl, res.type, res.depth, null, res);
     if (redirectedRes) {
