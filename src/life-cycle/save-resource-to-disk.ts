@@ -10,7 +10,7 @@ export async function saveResourceToDisk(
   options: StaticDownloadOptions,
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   const localRoot: string = res.localRoot ?? options.localRoot;
-  if (res.redirectedUrl && res.redirectedUrl !== res.downloadLink) {
+  if (res.redirectedUrl && res.redirectedUrl !== res.url) {
     const redirectResource = await pipeline.createResource(ResourceType.Html,
       res.depth, res.url, res.redirectedUrl, localRoot);
     if (redirectResource.replacePath) {
