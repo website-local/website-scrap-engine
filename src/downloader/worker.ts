@@ -35,6 +35,7 @@ options.configureLogger(options.localRoot, options.logSubDir || '');
 parentPort?.addListener('message', async (msg: RawResource) => {
   const collectedResource: RawResource[] = [];
   let error: Error | void;
+  let redirectedUrl: string | undefined;
   try {
     const downloadResource: DownloadResource = normalizeResource(msg) as DownloadResource;
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
@@ -55,6 +56,11 @@ parentPort?.addListener('message', async (msg: RawResource) => {
       skip.warn('downloaded resource not saved',
         downloadResource.url, downloadResource.refUrl);
     }
+
+    if (processedResource && processedResource.redirectedUrl &&
+      processedResource.redirectedUrl !== processedResource.url) {
+      redirectedUrl = processedResource.redirectedUrl;
+    }
   } catch (e) {
     error = e;
   } finally {
@@ -62,6 +68,7 @@ parentPort?.addListener('message', async (msg: RawResource) => {
       type: WorkerMessageType.Complete,
       body: collectedResource,
       error,
+      redirectedUrl
     };
     parentPort?.postMessage(msg);
   }

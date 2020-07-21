@@ -56,4 +56,9 @@ export interface WorkerMessage<T = unknown> {
   error?: Error | void;
 }
 
-export type DownloadWorkerMessage = WorkerMessage<RawResource[]>;
+export interface DownloadWorkerMessage extends WorkerMessage<RawResource[]> {
+  /**
+   * Available if processed redirect url differs from url
+   */
+  redirectedUrl?: string;
+}

@@ -48,6 +48,10 @@ export class SingleThreadDownloader extends AbstractDownloader {
       } else if (await this.pipeline.saveToDisk(processedResource)) {
         skip.warn('downloaded resource not saved', r.url, r.refUrl);
       }
+      if (processedResource && processedResource.redirectedUrl &&
+        processedResource.redirectedUrl !== processedResource.url) {
+        this.queuedUrl.add(processedResource.redirectedUrl);
+      }
     } catch (e) {
       this.handleError(e, 'post-process', res);
     }

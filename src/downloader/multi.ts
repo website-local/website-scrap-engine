@@ -71,6 +71,9 @@ export class MultiThreadDownloader extends AbstractDownloader {
       const body: RawResource[] = msg.body;
       body.forEach(rawRes => this._addProcessedResource(rawRes));
     }
+    if (msg.redirectedUrl) {
+      this.queuedUrl.add(msg.redirectedUrl);
+    }
 
   }
 
