@@ -127,7 +127,11 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
   start(): void {
     if (typeof this.options.adjustConcurrencyFunc === 'function') {
-      setInterval(() => this.options.adjustConcurrencyFunc?.(this),
+      if (this.adjustTimer) {
+        clearInterval(this.adjustTimer);
+      }
+      this.adjustTimer = setInterval(
+        () => this.options.adjustConcurrencyFunc?.(this),
         this.options.adjustConcurrencyPeriod || 60000);
     }
     this.queue.start();
