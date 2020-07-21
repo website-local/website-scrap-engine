@@ -21,6 +21,7 @@ export async function processHtml(
   // refUrl = await pipeline.linkRedirect(refUrl, null, res) || refUrl;
 
   const depth: number = res.depth + 1;
+  // resources from inline css
   const resources: Resource[] = [];
   let doc: CheerioStatic | void = res.meta.doc;
   if (!doc) {
@@ -116,6 +117,9 @@ export async function processHtml(
         error.warn('skip attr replace', links, replaceValue, refUrl);
       }
     }
+  }
+  if (resources.length) {
+    submit(resources);
   }
   return res;
 }
