@@ -4,8 +4,6 @@ import {arrayToMap, isSiteMap} from '../util';
 // immutable
 export const binaryExtension = arrayToMap([
   'gif', 'jpg', 'jpeg', 'png',
-  // probably we could parse svg and download links
-  'svg',
   'js', 'jsm', 'json', 'txt',
   'woff2', 'ttf', 'ttc',
   'xul',
@@ -50,6 +48,8 @@ export function detectResourceType(
         return ResourceType.Binary;
       } else if ('css' === extension) {
         return ResourceType.Css;
+      } else if ('svg' === extension) {
+        return ResourceType.Svg;
       }
     }
   }

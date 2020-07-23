@@ -8,6 +8,7 @@ export {PipelineExecutor} from './pipeline-executor';
 export {processCssText, processCss} from './process-css';
 export {processHtml} from './process-html';
 export {processSiteMap} from './process-site-map';
+export {processSvg} from './process-svg';
 export {getResourceBodyFromHtml, saveHtmlToDisk} from './save-html-to-disk';
 export {saveResourceToDisk} from './save-resource-to-disk';
 export {skipLinks} from './skip-links';

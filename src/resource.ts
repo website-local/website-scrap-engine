@@ -24,7 +24,12 @@ export enum ResourceType {
   /**
    * Very limited support of site-maps, urls in it are not replaced.
    */
-  SiteMap
+  SiteMap,
+  /**
+   * Standalone svg image
+   * https://github.com/website-local/website-scrap-engine/issues/3
+   */
+  Svg
 }
 
 export type ResourceEncoding = null | BufferEncoding;
@@ -126,6 +131,7 @@ export interface RawResource {
   meta: {
     /**
      * Parsed html content for {@link .type} === {@link ResourceType.Html}
+     * or {@link .type} === {@link ResourceType.Svg}
      * after downloaded and parsed, content may differ from {@link .body}
      */
     doc?: CheerioStatic;
