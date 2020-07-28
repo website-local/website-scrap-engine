@@ -33,11 +33,12 @@ export async function saveHtmlToDisk(
     if (redirectResource.replacePath) {
       const relativePath: string = escapePath(redirectResource.replacePath);
       const savePath = decodeURI(res.savePath);
+      // language=HTML
       await writeFile(path.join(localRoot, savePath), `<html lang="en">
 <head>
 <meta charset="${res.encoding || 'utf8'}">
 <meta http-equiv="refresh" content="0; url=${relativePath}">
-<script>location.replace('${relativePath}');</script>
+<script>location.replace('${relativePath}' + location.hash);</script>
 <title>Redirecting</title>
 </head>
 </html>`, res.encoding);
