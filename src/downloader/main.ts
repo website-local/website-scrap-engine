@@ -112,11 +112,11 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   handleError(err: Error | null, cause: string, resource: RawResource): void {
     if (err && err.name === 'HTTPError' &&
       (err as HTTPError)?.response?.statusCode === 404) {
-      notFound.error(resource.url, resource.rawUrl, resource.refUrl);
+      notFound.error(resource.url, resource.downloadLink, resource.refUrl);
     } else if (err) {
-      error.error(cause, resource.url, resource.rawUrl, resource.refUrl, err);
+      error.error(cause, resource.url, resource.downloadLink, resource.refUrl, err);
     } else {
-      error.error(cause, resource.url, resource.rawUrl, resource.refUrl);
+      error.error(cause, resource.url, resource.downloadLink, resource.refUrl);
     }
   }
 
