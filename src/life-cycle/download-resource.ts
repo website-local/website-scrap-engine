@@ -106,9 +106,10 @@ export async function requestForResource(
   const response: Response<string | Buffer> | void =
     await getRetry(downloadLink, reqOptions);
   if (!response) {
-    delete res.downloadStartTimestamp;
-    delete res.waitTime;
-    return res as Resource;
+    const resource = res as Resource;
+    delete resource.downloadStartTimestamp;
+    delete resource.waitTime;
+    return resource;
   }
   if (!response.body) {
     logger.error.warn('Empty response body:', downloadLink, response);
