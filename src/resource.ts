@@ -29,7 +29,14 @@ export enum ResourceType {
    * Standalone svg image
    * https://github.com/website-local/website-scrap-engine/issues/3
    */
-  Svg
+  Svg,
+  /**
+   * Large binary, which would be streamed directly to disk,
+   * {@link Resource.type} must be explicitly set to this value to use streaming.
+   * @see downloadStreamingResource
+   * @see https://github.com/website-local/website-scrap-engine/issues/2
+   */
+  StreamingBinary
 }
 
 export type ResourceEncoding = null | BufferEncoding;
