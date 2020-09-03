@@ -9,7 +9,7 @@ import {
 } from 'got/dist/source/as-promise/types';
 import {error} from './logger/logger';
 import {RequestError} from 'got/dist/source/core';
-import PromisableRequest from 'got/dist/source/as-promise/core';
+import got from 'got';
 // noinspection ES6PreferShortImport
 import {adjust} from './downloader/adjust-concurrency';
 import {configureLogger} from './logger/config-logger';
@@ -95,7 +95,7 @@ export interface StaticDownloadOptions {
    * Configure them functions or class instances
    * using {@link DownloadOptions} only.
    * @see RequestOptions
-   * @see PromisableRequest.mergeOptions
+   * @see got.mergeOptions
    */
   req?: RequestOptions;
 
@@ -343,7 +343,7 @@ export function mergeOverrideOptions(
   }
   if (opt.req && overrideOptions.req) {
     overrideOptions.req =
-      PromisableRequest.mergeOptions(opt.req, overrideOptions.req);
+      got.mergeOptions(opt.req, overrideOptions.req);
   }
   return checkDownloadOptions(Object.assign(opt, overrideOptions));
 }
