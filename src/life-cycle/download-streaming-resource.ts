@@ -12,21 +12,48 @@ import {constants, createWriteStream, promises as fs, WriteStream} from 'fs';
 import {mkdirRetry} from '../io';
 import {pipeline} from 'stream';
 import {promisify} from 'util';
-import {retry as retryLogger} from '../logger/logger';
+import {error as errorLogger, retry as retryLogger} from '../logger/logger';
 import {StaticDownloadOptions} from '../options';
 import {PipelineExecutor} from './pipeline-executor';
 
 const promisifyPipeline = promisify(pipeline);
 
+export function isBytesAccepted(acceptRange?: string): boolean {
+  if (!acceptRange) {
+    return false;
+  }
+  const ranges = acceptRange.split(',');
+  for (let i = 0; i < ranges.length; i++) {
+    if (ranges[i] === 'bytes') {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isSameRangeStart(rangeStart: number, contentRange?: string): boolean {
+  if (!contentRange) {
+    return false;
+  }
+  let ranges = contentRange.split(',');
+  ranges = ranges[0].split(' ');
+  if (ranges.length < 2 || !ranges[1]) {
+    return false;
+  }
+  ranges = ranges[1].split('-');
+  return +ranges[0] === rangeStart;
+}
+
 export async function streamingDownloadToFile(
   res: Resource & { downloadStartTimestamp: number },
   requestOptions: RequestOptions
 ): Promise<Response | void> {
+  const savePath = path.join(res.localRoot, res.savePath);
   try {
-    await fs.access(res.savePath, constants.W_OK);
+    await fs.access(savePath, constants.W_OK);
   } catch (e) {
     if (e?.code === 'ENOENT') {
-      await mkdirRetry(path.dirname(res.savePath));
+      await mkdirRetry(path.dirname(savePath));
     } else {
       throw e;
     }
@@ -37,32 +64,64 @@ export async function streamingDownloadToFile(
   }) as RequestOptions & {
     isStream?: true
   };
-  let fos: WriteStream | void;
+  let fileWriteStream: WriteStream | void;
 
   return new Promise<Response>((resolve, reject) => {
+    let rangeIsSupported: void | boolean;
+    let rangeStart: void | number;
     const makeRequest = (retryCount: number): void => {
       let isRetry = false;
+      if (!rangeIsSupported && options.headers) {
+        rangeStart = undefined;
+        delete options.headers.range;
+      } else if (rangeStart && rangeIsSupported) {
+        if (!options.headers) {
+          options.headers = {};
+        }
+        options.headers.range = `bytes=${rangeStart}-`;
+        console.log(options.headers.range);
+        fileWriteStream = createWriteStream(savePath, {
+          flags: 'a',
+          start: rangeStart
+        });
+      }
       const request = got.stream(res.downloadLink, options);
       request.retryCount = retryCount;
 
       request.once('response', async (response: Response) => {
         response.retryCount = retryCount;
         res.meta.headers = response.headers;
+        if (rangeIsSupported === undefined) {
+          if (isBytesAccepted(response.headers['accept-ranges'])) {
+            rangeIsSupported = true;
+          }
+        }
+        if (rangeIsSupported && fileWriteStream && rangeStart &&
+          (response.statusCode !== 206 ||
+            !isSameRangeStart(rangeStart, response.headers['content-range']))) {
+          errorLogger.warn('Unexpected response for range',
+            rangeStart, response.headers['content-range'], response.statusCode);
+          rangeIsSupported = false;
+          fileWriteStream.destroy();
+          fileWriteStream = undefined;
+          rangeStart = undefined;
+        }
 
         if (response.request.aborted) {
-          // Canceled while downloading - will throw a `CancelError` or `TimeoutError` error
+          // Canceled while downloading
+          //- will throw a `CancelError` or `TimeoutError` error
           return;
         }
         // Download body
-        if (!fos) {
-          fos = createWriteStream(res.savePath, {
+        if (!fileWriteStream) {
+          fileWriteStream = createWriteStream(savePath, {
             flags: 'w'
           });
         }
 
         try {
           // Download body directly to file
-          await promisifyPipeline(request, fos);
+          await promisifyPipeline(request, fileWriteStream);
         } catch {
           // The same error is caught below.
           // See request.once('error')
@@ -76,11 +135,35 @@ export async function streamingDownloadToFile(
         resolve(response);
       });
 
-      const onError = (error: RequestError) => {
-        if (fos) {
-          fos.destroy();
+      const destroyStream = () => {
+        if (fileWriteStream) {
+          if (rangeIsSupported) {
+            if (rangeStart) {
+              rangeStart += fileWriteStream.bytesWritten;
+            } else {
+              rangeStart = fileWriteStream.bytesWritten;
+            }
+          } else {
+            rangeStart = undefined;
+          }
+          fileWriteStream.destroy();
+        } else {
+          rangeStart = undefined;
         }
-        fos = undefined;
+        console.log(rangeStart);
+        fileWriteStream = undefined;
+      };
+
+      const onError = (error: RequestError) => {
+        // https://developer.mozilla.org/docs/Web/HTTP/Headers/Range
+        // https://developer.mozilla.org/docs/Web/HTTP/Status/416
+        if (error instanceof HTTPError && error.response.statusCode === 416) {
+          errorLogger.warn('Unexpected response for range',
+            rangeStart, error.response.headers['content-range'],
+            error.response.statusCode);
+          rangeIsSupported = false;
+        }
+        destroyStream();
 
         const {options} = request;
 
@@ -92,7 +175,8 @@ export async function streamingDownloadToFile(
         if (!isRetry) {
           let retry = -1;
           if (error && error.message === 'premature close') {
-            retryLogger.warn(retryCount, res.downloadLink, 'manually retry on premature close',
+            retryLogger.warn(retryCount, res.downloadLink,
+              'manually retry on premature close',
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               error.name, error.code, (error as any).event, error.message);
             retry = retryCount * 200;
@@ -123,10 +207,7 @@ export async function streamingDownloadToFile(
       request.once('error', onError);
 
       request.once('retry', (newRetryCount: number) => {
-        if (fos) {
-          fos.destroy();
-        }
-        fos = undefined;
+        destroyStream();
         isRetry = true;
         makeRequest(newRetryCount);
       });
