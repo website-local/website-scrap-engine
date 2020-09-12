@@ -43,8 +43,7 @@ export async function streamingDownloadToFile(
     const makeRequest = (retryCount: number): void => {
       let isRetry = false;
       const request = got.stream(res.downloadLink, options);
-      // hack
-      (request as unknown as { retryCount?: number }).retryCount = retryCount;
+      request.retryCount = retryCount;
 
       request.once('response', async (response: Response) => {
         response.retryCount = retryCount;
@@ -54,6 +53,7 @@ export async function streamingDownloadToFile(
           // Canceled while downloading - will throw a `CancelError` or `TimeoutError` error
           return;
         }
+        // Download body
         if (!fos) {
           fos = createWriteStream(res.savePath, {
             flags: 'w'
@@ -69,8 +69,7 @@ export async function streamingDownloadToFile(
           return;
         }
 
-        // hack
-        if ((request as unknown as { _isAboutToError?: boolean })._isAboutToError) {
+        if (request._isAboutToError) {
           return;
         }
 
