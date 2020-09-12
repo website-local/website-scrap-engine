@@ -40,9 +40,6 @@
     ],
     "require-atomic-updates": [
       0
-    ],
-    "@typescript-eslint/no-unused-vars": [
-      0
     ]
   }
 }
