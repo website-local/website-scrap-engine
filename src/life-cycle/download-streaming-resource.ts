@@ -79,7 +79,6 @@ export async function streamingDownloadToFile(
           options.headers = {};
         }
         options.headers.range = `bytes=${rangeStart}-`;
-        console.log(options.headers.range);
         fileWriteStream = createWriteStream(savePath, {
           flags: 'a',
           start: rangeStart
@@ -150,7 +149,6 @@ export async function streamingDownloadToFile(
         } else {
           rangeStart = undefined;
         }
-        console.log(rangeStart);
         fileWriteStream = undefined;
       };
 
