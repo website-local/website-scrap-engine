@@ -2,6 +2,7 @@ import URI from 'urijs';
 import {escapePath, orderUrlSearch, simpleHashString} from './util';
 import * as path from 'path';
 import {IncomingHttpHeaders} from 'http';
+import {CheerioStatic} from './types';
 
 export enum ResourceType {
   /**

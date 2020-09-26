@@ -16,6 +16,7 @@ import {configureLogger} from './logger/config-logger';
 import {DownloaderWithMeta} from './downloader/types';
 import {weakAssign} from './util';
 import {SourceDefinition} from './sources';
+import {CheerioOptionsInterface} from './types';
 
 /**
  * Extra options for custom life cycle

@@ -7,6 +7,7 @@ import {processCssText} from './process-css';
 import {error, skip} from '../logger/logger';
 import {PipelineExecutor} from './pipeline-executor';
 import {parseHtml} from './adapters';
+import {Cheerio, CheerioStatic} from '../types';
 
 export async function processHtml(
   res: DownloadResource,

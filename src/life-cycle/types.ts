@@ -7,6 +7,7 @@ import {
 import {Options as GotOptions} from 'got/dist/source/as-promise';
 import {StaticDownloadOptions} from '../options';
 import {PipelineExecutor} from './pipeline-executor';
+import {Cheerio} from '../types';
 
 export type AsyncResult<T> = T | Promise<T>;
 

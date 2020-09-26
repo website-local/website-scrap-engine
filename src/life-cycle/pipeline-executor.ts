@@ -6,6 +6,7 @@ import {
   RequestOptions,
   SubmitResourceFunc
 } from './types';
+import {Cheerio} from '../types';
 
 export interface PipelineExecutor {
   /**

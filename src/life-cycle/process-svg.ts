@@ -6,6 +6,7 @@ import {error, skip} from '../logger/logger';
 import {PipelineExecutor} from './pipeline-executor';
 import {parseHtml} from './adapters';
 import {getResourceBodyFromHtml} from './save-html-to-disk';
+import {Cheerio, CheerioStatic} from '../types';
 
 const svgSelectors: SourceDefinition[] = [
   {selector: '*[xlink\\:href]', attr: 'xlink:href', type: ResourceType.Binary},

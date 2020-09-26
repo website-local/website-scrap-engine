@@ -30,7 +30,7 @@
     "preset": "ts-jest"
   },
   "devDependencies": {
-    "@types/cheerio": "0.22.21",
+    "@types/cheerio": ">=0.22.22",
     "@types/jest": "^26.0.14",
     "@types/mkdirp": "^1.0.1",
     "@types/node": "^14.11.2",

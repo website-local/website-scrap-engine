@@ -10,6 +10,7 @@ import cheerio from 'cheerio';
 import {toString} from '../util';
 import {StaticDownloadOptions} from '../options';
 import {PipelineExecutor} from './pipeline-executor';
+import {Cheerio, CheerioStatic} from '../types';
 
 export interface SkipProcessFunc {
   (url: string, element: Cheerio | null, parent: Resource | null): boolean;

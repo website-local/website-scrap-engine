@@ -8,6 +8,7 @@ import {
 } from '../life-cycle/types';
 // noinspection ES6PreferShortImport
 import {PipelineExecutor} from '../life-cycle/pipeline-executor';
+import {Cheerio} from '../types';
 
 /**
  * Pipeline executor

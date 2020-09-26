@@ -4,6 +4,7 @@ import {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
 import {PipelineExecutor} from './pipeline-executor';
+import {CheerioStatic} from '../types';
 
 export async function processSiteMap(
   res: DownloadResource,
