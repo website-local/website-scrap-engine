@@ -21,6 +21,8 @@ export const sources: SourceDefinition[] = [
   {selector: 'link[rel="stylesheet"]', attr: 'href', type: ResourceType.Css},
   {selector: 'link[rel*="icon"]', attr: 'href'},
   {selector: 'link[rel*="preload"]', attr: 'href'},
+  // prefetch links not included by default
+  // {selector: 'link[rel*="prefetch"]', attr: 'href'},
   {selector: 'svg *[xlink\\:href]', attr: 'xlink:href'},
   {selector: 'svg *[href]', attr: 'href'},
   {selector: 'picture source', attr: 'srcset'},
