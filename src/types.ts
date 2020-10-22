@@ -4,3 +4,4 @@ import type cheerio from 'cheerio';
 export type CheerioStatic = cheerio.Root;
 export type Cheerio = cheerio.Cheerio;
 export type CheerioOptionsInterface = cheerio.CheerioParserOptions;
+export type CheerioElement = cheerio.Element;
