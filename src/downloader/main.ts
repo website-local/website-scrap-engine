@@ -98,7 +98,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       () => r(this.downloadAndProcessResource(resource)))));
   }
 
-  abstract async downloadAndProcessResource(res: RawResource): Promise<boolean | void>;
+  abstract downloadAndProcessResource(res: RawResource): Promise<boolean | void>;
 
   addProcessedResource(res: RawResource): boolean | void {
     try {
