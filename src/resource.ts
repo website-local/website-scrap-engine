@@ -3,6 +3,7 @@ import {escapePath, orderUrlSearch, simpleHashString} from './util';
 import * as path from 'path';
 import {IncomingHttpHeaders} from 'http';
 import {CheerioStatic} from './types';
+import {error as log} from './logger/logger';
 
 export enum ResourceType {
   /**
@@ -221,6 +222,8 @@ export function prepareResourceForClone(res: Resource): RawResource {
  * @param encoding {@link RawResource.encoding}
  * @param keepSearch keep url search params as file name
  * in {@link Resource.replacePath} and {@link Resource.savePath}
+ * @param skipReplacePathError true to skip replacePath processing
+ * in case of parser error
  */
 export function createResource(
   type: ResourceType,
@@ -229,7 +232,8 @@ export function createResource(
   refUrl: string,
   localRoot: string,
   encoding?: ResourceEncoding,
-  keepSearch?: boolean
+  keepSearch?: boolean,
+  skipReplacePathError?: boolean
 ): Resource {
   const rawUrl: string = url;
   const refUri: URI = URI(refUrl);
@@ -242,20 +246,33 @@ export function createResource(
   }
   let uri: URI = URI(url);
   let replaceUri: URI;
-  if (uri.is('relative')) {
-    replaceUri = uri.clone();
-    uri = uri.absoluteTo(refUri);
-    url = uri.toString();
-  } else if (uri.host() !== refUri.host()) {
-    const crossOrigin = uri.host();
-    const crossUri = uri.clone()
-      .host(refUri.host())
-      .protocol(refUri.protocol());
-    crossUri.path(crossOrigin + '/' + crossUri.path());
-    replaceUri = crossUri.relativeTo(refUrl = refUri.toString());
-    replaceUri.path('../' + replaceUri.path());
-  } else {
-    replaceUri = uri.relativeTo(refUrl);
+  let replacePathHasError = false;
+  try {
+    if (uri.is('relative')) {
+      replaceUri = uri.clone();
+      uri = uri.absoluteTo(refUri);
+      url = uri.toString();
+    } else if (uri.host() !== refUri.host()) {
+      const crossOrigin = uri.host();
+      const crossUri = uri.clone()
+        .host(refUri.host())
+        .protocol(refUri.protocol());
+      crossUri.path(crossOrigin + '/' + crossUri.path());
+      replaceUri = crossUri.relativeTo(refUrl = refUri.toString());
+      replaceUri.path('../' + replaceUri.path());
+    } else {
+      replaceUri = uri.relativeTo(refUrl);
+    }
+  } catch (e) {
+    if (skipReplacePathError) {
+      log.warn('Error processing replacePath, skipping',
+        url, refUrl, type, e);
+      replaceUri = uri.clone();
+      replacePathHasError = true;
+    } else {
+      log.warn('Error processing replacePath',url, refUrl, type, e);
+      throw e;
+    }
   }
   let replacePath: string = replaceUri.path();
   // empty path...
@@ -267,7 +284,9 @@ export function createResource(
   const downloadLink: string = uri.clone().hash('').toString();
 
   // make html resource ends with .html
-  if (type === ResourceType.Html && !savePath.endsWith('.html')) {
+  if (!replacePathHasError &&
+    type === ResourceType.Html &&
+    !savePath.endsWith('.html')) {
     let appendSuffix: string | void;
     if (savePath.endsWith('/') || savePath.endsWith('\\')) {
       appendSuffix = 'index.html';
@@ -283,32 +302,34 @@ export function createResource(
       }
     }
   }
-  let search: string;
-  if (keepSearch && (search = uri.search())) {
-    if (search.length > 43) {
+  if (!replacePathHasError) {
+    let search: string;
+    if (keepSearch && (search = uri.search())) {
+      if (search.length > 43) {
       // avoid too long search
-      search = '_' + simpleHashString(orderUrlSearch(search));
-    } else {
+        search = '_' + simpleHashString(orderUrlSearch(search));
+      } else {
       // order it
-      search = escapePath(orderUrlSearch(search));
-    }
-    const ext: string = path.extname(savePath);
-    if (ext) {
-      savePath = savePath.slice(0, -ext.length) + search + ext;
-      replaceUri
-        .search('')
-        .path(replacePath.slice(0, -ext.length) + search + ext);
+        search = escapePath(orderUrlSearch(search));
+      }
+      const ext: string = path.extname(savePath);
+      if (ext) {
+        savePath = savePath.slice(0, -ext.length) + search + ext;
+        replaceUri
+          .search('')
+          .path(replacePath.slice(0, -ext.length) + search + ext);
+      } else {
+        savePath += search;
+        replaceUri
+          .search('')
+          .path(replaceUri.path() + search);
+      }
     } else {
-      savePath += search;
-      replaceUri
-        .search('')
-        .path(replaceUri.path() + search);
+      url = uri.search('').toString();
     }
-  } else {
-    url = uri.search('').toString();
   }
 
-  return {
+  const resource: Resource = {
     type,
     depth,
     encoding: encoding || (type === ResourceType.Binary ? null : 'utf8'),
@@ -327,6 +348,11 @@ export function createResource(
     replaceUri,
     host
   };
+  if (replacePathHasError) {
+    // urls with parser errors should never be downloaded
+    resource.shouldBeDiscardedFromDownload = true;
+  }
+  return resource;
 }
 
 export function normalizeResource(res: RawResource): Resource {

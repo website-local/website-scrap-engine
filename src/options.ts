@@ -114,6 +114,13 @@ export interface StaticDownloadOptions {
    * @see StaticDownloadMeta
    */
   meta: StaticDownloadMeta;
+
+  /**
+   * true to skip replacePath processing in case of parser error
+   * https://github.com/website-local/website-scrap-engine/issues/107
+   * @see createResource
+   */
+  skipReplacePathError?: boolean;
 }
 
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {

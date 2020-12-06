@@ -290,4 +290,23 @@ describe('resource', function () {
     expect(Buffer.isBuffer(normalized.body)).toBeTruthy();
 
   });
+
+  // https://github.com/website-local/website-scrap-engine/issues/107
+  test('skipReplacePathError skip if true', () => {
+    const resource: Resource = createResource(ResourceType.Html, 1,
+      'localhost:3000',
+      'https://nodejs.com/api/',
+      '/tmp/aaa',
+      undefined, undefined, true);
+    expect(resource.replaceUri?.toString()).toBe('localhost:3000');
+    expect(resource.shouldBeDiscardedFromDownload).toBe(true);
+  });
+
+  // https://github.com/website-local/website-scrap-engine/issues/107
+  test('skipReplacePathError throw error if false', () => {
+    expect(() => createResource(ResourceType.Html, 1,
+      'localhost:3000',
+      'https://nodejs.com/api/',
+      '/tmp/aaa')).toThrowError();
+  });
 });

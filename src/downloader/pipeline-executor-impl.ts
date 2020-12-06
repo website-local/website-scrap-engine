@@ -80,7 +80,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     return this.lifeCycle.createResource(type, depth, url, refUrl,
       localRoot ?? this.options.localRoot,
       encoding ?? this.options.encoding[type] ?? 'utf8',
-      this.options.deduplicateStripSearch);
+      this.options.deduplicateStripSearch,
+      this.options.skipReplacePathError);
   }
 
   async processBeforeDownload(
