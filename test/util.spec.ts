@@ -83,22 +83,31 @@ describe('util', function () {
 
   test('weakAssign', () => {
     const obj = {};
-    expect(weakAssign(null, obj)).toStrictEqual(obj);
+    expect(weakAssign(null, obj) as typeof obj).toStrictEqual(obj);
     expect(weakAssign(obj, null)).toBe(obj);
     expect(weakAssign({a: 0, b: false}, {a: 2, c: '3'})).toStrictEqual({
       a: 0,
       b: false,
       c: '3'
     });
-    expect(weakAssign({a: undefined}, {a: 2, c: '3'})).toStrictEqual({
+    expect(weakAssign({a: undefined}, {a: 2, c: '3'}) as {
+      a : undefined,
+      c: string
+    }).toStrictEqual({
       a: undefined,
       c: '3'
     });
-    expect(weakAssign({a: NaN}, {a: [], c: '3'})).toStrictEqual({
+    expect(weakAssign({a: NaN}, {a: [], c: '3'}) as {
+      a: number,
+      c: string
+    }).toStrictEqual({
       a: NaN,
       c: '3'
     });
-    expect(weakAssign({a: null}, {a: [], c: ['3']})).toStrictEqual({
+    expect(weakAssign({a: null}, {a: [], c: ['3']}) as {
+      a: null,
+      c: string[]
+    }).toStrictEqual({
       a: null,
       c: ['3']
     });

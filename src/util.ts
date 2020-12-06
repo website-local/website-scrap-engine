@@ -83,6 +83,8 @@ export const hasOwnProperty = Object.prototype.hasOwnProperty;
 
 /**
  * Merge values from source to target only if key not exists in target
+ * Note that using this function against incompatible type or null | undefined
+ * may lead to typescript parser errors.
  */
 export const weakAssign = <T, U>(target: T, source: U): T & U => {
   if (!target) return Object.assign({} as T, source);
