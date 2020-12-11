@@ -50,7 +50,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/myfreeer/website-scrap-engine.git"
+    "url": "git+https://github.com/website-local/website-scrap-engine.git"
   },
   "keywords": [
     "typescript",
