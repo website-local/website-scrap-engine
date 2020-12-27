@@ -4,7 +4,7 @@ import fs from 'fs';
 import mkdirP from 'mkdirp';
 import {mkdir as mkdirLogger} from './logger/logger';
 
-export const mkdirRetry = async (dir: string, retry = 3): Promise<string | void> => {
+export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
   let error: Error | void;
   for (let i = 0; i < retry; i++) {
     error = undefined;
