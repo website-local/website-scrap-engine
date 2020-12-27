@@ -52,6 +52,7 @@ describe('detect-resource-type', function () {
       'http://example.com/#!/1.jpg', ResourceType.Html))
       .toBe(ResourceType.Html);
   });
+
   test('detect css out of html', () => {
     expect(detectResourceType('1.css', ResourceType.Html))
       .toBe(ResourceType.Css);
@@ -64,5 +65,21 @@ describe('detect-resource-type', function () {
     expect(detectResourceType(
       'http://example.com/1.css?aaa.css=bbb.png', ResourceType.Html))
       .toBe(ResourceType.Css);
+  });
+
+  // https://github.com/website-local/website-scrap-engine/issues/3
+  // 791de1e060a91fb642845062b04909fb5ab1e32b
+  test('detect svg out of html', () => {
+    expect(detectResourceType('1.svg', ResourceType.Html))
+      .toBe(ResourceType.Svg);
+    expect(detectResourceType('//////1.svg', ResourceType.Html))
+      .toBe(ResourceType.Svg);
+    expect(detectResourceType('//1.html/..///1.svg', ResourceType.Html))
+      .toBe(ResourceType.Svg);
+    expect(detectResourceType('http://example.com/1.svg', ResourceType.Html))
+      .toBe(ResourceType.Svg);
+    expect(detectResourceType(
+      'http://example.com/1.svg?aaa.css=bbb.png', ResourceType.Html))
+      .toBe(ResourceType.Svg);
   });
 });
