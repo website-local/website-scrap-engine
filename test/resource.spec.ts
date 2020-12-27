@@ -288,6 +288,9 @@ describe('resource', function () {
     rawResource.body = new Uint8Array(1);
     normalizeResource(rawResource);
     expect(Buffer.isBuffer(normalized.body)).toBeTruthy();
+    rawResource.body = new Uint32Array(1);
+    normalizeResource(rawResource);
+    expect(Buffer.isBuffer(normalized.body)).toBeTruthy();
 
   });
 
