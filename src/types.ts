@@ -1,7 +1,7 @@
 import type cheerio from 'cheerio';
 
 // adapters for making cheerio's namespace type definitions to module
-export type CheerioStatic = cheerio.Root;
-export type Cheerio = cheerio.Cheerio;
-export type CheerioOptionsInterface = cheerio.CheerioParserOptions;
-export type CheerioElement = cheerio.Element;
+export type CheerioStatic = ReturnType<typeof cheerio.load>;
+export type Cheerio = ReturnType<CheerioStatic['root']>;
+export type CheerioOptionsInterface = NonNullable<Parameters<typeof cheerio.load>[1]>;
+export type CheerioElement = Cheerio[number];
