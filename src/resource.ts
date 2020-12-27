@@ -212,6 +212,67 @@ export function prepareResourceForClone(res: Resource): RawResource {
   return clone as RawResource;
 }
 
+function makeHtmlResourceEndWithHtml(
+  savePath: string,
+  replacePath: string,
+  replaceUri: URI
+): {
+  savePath: string;
+  replacePath: string;
+} {
+  let appendSuffix: string | void;
+  if (savePath.endsWith('/') || savePath.endsWith('\\')) {
+    appendSuffix = 'index.html';
+  } else if (savePath.endsWith('.htm')) {
+    appendSuffix = 'l';
+  } else {
+    appendSuffix = '.html';
+  }
+  if (appendSuffix) {
+    savePath += appendSuffix;
+    if (replacePath) {
+      replaceUri.path(replacePath += appendSuffix);
+    }
+  }
+  return {savePath, replacePath};
+}
+
+/**
+ * Sort and escape search string and replace long search string with hash
+ * @param search
+ * @param savePath
+ * @param replaceUri
+ * @param replacePath
+ * @return savePath
+ */
+function processUrlSearch(
+  search: string,
+  savePath: string,
+  replaceUri: URI,
+  replacePath: string
+): string {
+  if (search.length > 43) {
+    // avoid too long search
+    search = '_' + simpleHashString(orderUrlSearch(search));
+  } else {
+    // order it
+    search = escapePath(orderUrlSearch(search));
+  }
+  const ext: string = path.extname(savePath);
+  if (ext) {
+    savePath = savePath.slice(0, -ext.length) + search + ext;
+    replaceUri
+      .search('')
+      .path(replacePath.slice(0, -ext.length) + search + ext);
+  } else {
+    savePath += search;
+    replaceUri
+      .search('')
+      .path(replaceUri.path() + search);
+  }
+  return savePath;
+}
+
 /**
  * Create a resource
  * @param type {@link RawResource.type}
@@ -287,43 +348,14 @@ export function createResource(
   if (!replacePathHasError &&
     type === ResourceType.Html &&
     !savePath.endsWith('.html')) {
-    let appendSuffix: string | void;
-    if (savePath.endsWith('/') || savePath.endsWith('\\')) {
-      appendSuffix = 'index.html';
-    } else if (savePath.endsWith('.htm')) {
-      appendSuffix = 'l';
-    } else {
-      appendSuffix = '.html';
-    }
-    if (appendSuffix) {
-      savePath += appendSuffix;
-      if (replacePath) {
-        replaceUri.path(replacePath += appendSuffix);
-      }
-    }
+    const result = makeHtmlResourceEndWithHtml(savePath, replacePath, replaceUri);
+    savePath = result.savePath;
+    replacePath = result.replacePath;
   }
   if (!replacePathHasError) {
     let search: string;
     if (keepSearch && (search = uri.search())) {
-      if (search.length > 43) {
-      // avoid too long search
-        search = '_' + simpleHashString(orderUrlSearch(search));
-      } else {
-      // order it
-        search = escapePath(orderUrlSearch(search));
-      }
-      const ext: string = path.extname(savePath);
-      if (ext) {
-        savePath = savePath.slice(0, -ext.length) + search + ext;
-        replaceUri
-          .search('')
-          .path(replacePath.slice(0, -ext.length) + search + ext);
-      } else {
-        savePath += search;
-        replaceUri
-          .search('')
-          .path(replaceUri.path() + search);
-      }
+      savePath = processUrlSearch(search, savePath, replaceUri, replacePath);
     } else {
       url = uri.search('').toString();
     }
