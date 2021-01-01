@@ -1,5 +1,6 @@
 import {Resource, ResourceEncoding, ResourceType} from '../resource';
 import {
+  AsyncResult,
   DownloadResource,
   LinkRedirectFunc,
   ProcessResourceAfterDownloadFunc,
@@ -109,4 +110,19 @@ export const processHtml = (fn: HtmlProcessFunc): ProcessResourceAfterDownloadFu
     return res;
   };
 
+
+export interface AsyncHtmlProcessFunc {
+  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): AsyncResult<CheerioStatic>;
+}
+
+export const processHtmlAsync = (fn: AsyncHtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
+  async (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions) => {
+    if (res.type === ResourceType.Html) {
+      if (!res.meta.doc) {
+        res.meta.doc = parseHtml(res, options);
+      }
+      res.meta.doc = await fn(res.meta.doc, res);
+    }
+    return res;
+  };
 
