@@ -2,7 +2,7 @@ import {
   arrayToMap,
   escapePath,
   importDefaultFromPath,
-  isSiteMap,
+  isSiteMap, isUrlHttp,
   sleep,
   toString, weakAssign
 } from '../src/util';
@@ -111,5 +111,17 @@ describe('util', function () {
       a: null,
       c: ['3']
     });
+  });
+
+  test('isUrlHttp', () => {
+    expect(isUrlHttp('http://aaa')).toBeTruthy();
+    expect(isUrlHttp('https://aaa')).toBeTruthy();
+    expect(isUrlHttp('http://aaa.ccc')).toBeTruthy();
+    expect(isUrlHttp('https://aaa.bbb')).toBeTruthy();
+    expect(isUrlHttp('https_//aaa')).toBeFalsy();
+    expect(isUrlHttp('http_//aaa.ccc')).toBeFalsy();
+    expect(isUrlHttp('file:///dev/vda1')).toBeFalsy();
+    expect(isUrlHttp('/dev/vda1')).toBeFalsy();
+    expect(isUrlHttp('/static/main.js')).toBeFalsy();
   });
 });

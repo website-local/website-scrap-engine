@@ -99,3 +99,10 @@ export const weakAssign = <T, U>(target: T, source: U): T & U => {
   }
   return target as T & U;
 };
+
+/**
+ * Test if the given url is http url
+ * @param url
+ */
+export const isUrlHttp = (url: string): boolean =>
+  url.startsWith('http://') || url.startsWith('https://');

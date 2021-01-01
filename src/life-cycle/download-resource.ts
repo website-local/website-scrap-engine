@@ -2,7 +2,7 @@ import {DownloadResource, RequestOptions} from './types';
 import {Resource, ResourceType} from '../resource';
 import {StaticDownloadOptions} from '../options';
 import * as logger from '../logger/logger';
-import {sleep} from '../util';
+import {isUrlHttp, sleep} from '../util';
 import got, {
   BeforeRetryHook,
   NormalizedOptions,
@@ -133,6 +133,9 @@ export async function downloadResource(
 ): Promise<DownloadResource | Resource | void> {
   if (res.body) {
     return res as DownloadResource;
+  }
+  if (!isUrlHttp(res.downloadLink)) {
+    return res;
   }
   if (!res.downloadStartTimestamp) {
     res.downloadStartTimestamp = Date.now();

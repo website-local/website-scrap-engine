@@ -15,6 +15,7 @@ import {promisify} from 'util';
 import {error as errorLogger, retry as retryLogger} from '../logger/logger';
 import {StaticDownloadOptions} from '../options';
 import {PipelineExecutor} from './pipeline-executor';
+import {isUrlHttp} from '../util';
 
 const promisifyPipeline = promisify(pipeline);
 
@@ -303,6 +304,9 @@ export function downloadStreamingResourceWithHook(
       return res as DownloadResource;
     }
     if (res.type !== ResourceType.StreamingBinary) {
+      return res;
+    }
+    if (!isUrlHttp(res.downloadLink)) {
       return res;
     }
     let resource: DownloadResource | Resource | void = res;
