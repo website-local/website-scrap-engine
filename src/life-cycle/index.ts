@@ -4,6 +4,11 @@ export {detectResourceType} from './detect-resource-type';
 export {
   beforeRetryHook, getRetry, requestForResource, downloadResource
 } from './download-resource';
+export {
+  streamingDownloadToFile,
+  downloadStreamingResource,
+  downloadStreamingResourceWithHook
+} from './download-streaming-resource';
 export {PipelineExecutor} from './pipeline-executor';
 export {processCssText, processCss} from './process-css';
 export {processHtml} from './process-html';

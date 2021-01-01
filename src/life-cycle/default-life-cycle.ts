@@ -10,6 +10,7 @@ import {processSvg} from './process-svg';
 import {saveHtmlToDisk} from './save-html-to-disk';
 import {saveResourceToDisk} from './save-resource-to-disk';
 import {processRedirectedUrl} from './adapters';
+import {downloadStreamingResource} from './download-streaming-resource';
 
 /**
  * Get a copy of default life cycle
@@ -19,7 +20,7 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
   detectResourceType: [detectResourceType],
   createResource,
   processBeforeDownload: [],
-  download: [downloadResource],
+  download: [downloadResource, downloadStreamingResource],
   processAfterDownload: [
     processRedirectedUrl,
     processHtml,
