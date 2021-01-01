@@ -94,7 +94,9 @@ export const unProcessableUriSchemes = [
   'app',
   'javascript',
   'jdbc',
-  'odbc'
+  'odbc',
+  // Unix sockets is supported by got, but not yet supported here
+  'unix'
 ];
 
 export const fastUnProcessableUriSchemesMap: Record<string, string[]> = (() => {
