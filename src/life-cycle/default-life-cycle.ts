@@ -11,6 +11,7 @@ import {saveHtmlToDisk} from './save-html-to-disk';
 import {saveResourceToDisk} from './save-resource-to-disk';
 import {processRedirectedUrl} from './adapters';
 import {downloadStreamingResource} from './download-streaming-resource';
+import {readOrCopyLocalResource} from './read-or-copy-local-resource';
 
 /**
  * Get a copy of default life cycle
@@ -20,7 +21,11 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
   detectResourceType: [detectResourceType],
   createResource,
   processBeforeDownload: [],
-  download: [downloadResource, downloadStreamingResource],
+  download: [
+    downloadResource,
+    downloadStreamingResource,
+    readOrCopyLocalResource
+  ],
   processAfterDownload: [
     processRedirectedUrl,
     processHtml,
