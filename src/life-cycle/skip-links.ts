@@ -17,7 +17,6 @@ export const unProcessableUriSchemes = [
   'ed2k',
   'example',
   'feed',
-  'file',
   'filesystem',
   'ftp',
   'geo',
