@@ -134,6 +134,9 @@ export async function downloadResource(
   if (res.body) {
     return res as DownloadResource;
   }
+  if (res.type === ResourceType.StreamingBinary) {
+    return res;
+  }
   if (!isUrlHttp(res.downloadLink)) {
     return res;
   }
