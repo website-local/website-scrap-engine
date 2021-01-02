@@ -426,12 +426,12 @@ export function createResource({
   const downloadLink: string = uri.clone().hash('').toString();
 
   // make savePath and replaceUri
-  const savePath = replacePathHasError ? url : generateSavePath(
+  const savePath = replacePathHasError ? rawUrl : generateSavePath(
     uri, type === ResourceType.Html, keepSearch);
   if (!refSavePath) {
     refSavePath = generateSavePath(refUri, refType === ResourceType.Html);
   }
-  const replaceUri = replacePathHasError ? uri :
+  const replaceUri = replacePathHasError ? URI(rawUrl) :
     URI(urlOfSavePath(savePath)).relativeTo(urlOfSavePath(refSavePath));
 
   // recover hash
