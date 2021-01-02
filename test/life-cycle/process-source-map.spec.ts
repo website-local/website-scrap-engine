@@ -1,4 +1,9 @@
-import {createResource, Resource, ResourceType} from '../../src/resource';
+import {
+  createResource,
+  CreateResourceArgument,
+  Resource,
+  ResourceType
+} from '../../src/resource';
 import {
   processSourceMap,
   SOURCE_MAP_HEADER, sourceMapPrefix, X_SOURCE_MAP_HEADER
@@ -9,12 +14,15 @@ import {PipelineExecutorImpl} from '../../src/downloader';
 import {StaticDownloadOptions} from '../../src/options';
 
 const fakeRes = (url: string): DownloadResource => {
-  const resource = createResource(
-    ResourceType.Binary,
-    1,
+  const arg: CreateResourceArgument = {
+    localRoot: '',
+    type: ResourceType.Binary,
+    depth: 1,
     url,
-    'https://example.com/',
-    '');
+    refUrl:'https://example.com/',
+    refType: ResourceType.Binary
+  };
+  const resource = createResource(arg);
   resource.body = '';
   return resource as DownloadResource;
 };

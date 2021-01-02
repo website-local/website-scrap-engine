@@ -94,6 +94,14 @@ export interface RawResource {
   savePath: string;
 
   /**
+   * The relative path where the {@link RawResource}
+   * creating this resource should be saved to.
+   * This is used to generate the {@link .replacePath}
+   * See https://github.com/website-local/website-scrap-engine/issues/139
+   */
+  refSavePath: string;
+
+  /**
    * The absolute path which {@link RawResource.savePath} is relative to
    */
   localRoot: string;
@@ -200,9 +208,9 @@ export function prepareResourceForClone(res: Resource): RawResource {
         }
       } else if (key === 'body' && (
         typeof value === 'string' ||
-          value instanceof ArrayBuffer ||
-          ArrayBuffer.isView(value) ||
-          Buffer.isBuffer(value))) {
+        value instanceof ArrayBuffer ||
+        ArrayBuffer.isView(value) ||
+        Buffer.isBuffer(value))) {
         clone[key] = value;
       }
     } else {
@@ -211,93 +219,191 @@ export function prepareResourceForClone(res: Resource): RawResource {
   }
   return clone as RawResource;
 }
-
-function makeHtmlResourceEndWithHtml(
-  savePath: string,
-  replacePath: string,
-  replaceUri: URI
-): {
-  savePath: string;
-  replacePath: string;
-} {
-  let appendSuffix: string | void;
-  if (savePath.endsWith('/') || savePath.endsWith('\\')) {
-    appendSuffix = 'index.html';
-  } else if (savePath.endsWith('.htm')) {
-    appendSuffix = 'l';
-  } else {
-    appendSuffix = '.html';
-  }
-  if (appendSuffix) {
-    savePath += appendSuffix;
-    if (replacePath) {
-      replaceUri.path(replacePath += appendSuffix);
-    }
-  }
-  return {savePath, replacePath};
+/**
+ * The argument type of {@link createResource}
+ */
+export interface CreateResourceArgument {
+  /**
+   * {@link RawResource.type}
+   */
+  type: ResourceType;
+  /**
+   * {@link RawResource.depth}
+   */
+  depth: number;
+  /**
+   * {@link RawResource.rawUrl}
+   */
+  url: string;
+  /**
+   * {@link RawResource.refUrl}
+   */
+  refUrl: string;
+  /**
+   * {@link RawResource.refSavePath}
+   */
+  refSavePath?: string;
+  /**
+   * The {@link type} of the {@link RawResource} creating this resource.
+   */
+  refType?: ResourceType;
+  /**
+   * {@link RawResource.localRoot}
+   */
+  localRoot: string;
+  /**
+   * {@link RawResource.encoding}
+   */
+  encoding?: ResourceEncoding;
+  /**
+   * keep url search params in file name
+   * in {@link Resource.replacePath} and {@link Resource.savePath}
+   * See commit c8e270c6421ca8a9d1c519737949ad04c09fcb99
+   */
+  keepSearch?: boolean;
+  /**
+   * true to skip replacePath processing
+   * in case of parser error
+   * https://github.com/website-local/website-scrap-engine/issues/107
+   */
+  skipReplacePathError?: boolean;
 }
 
 /**
- * Sort and escape search string and replace long search string with hash
- * @param search
- * @param savePath
- * @param replaceUri
- * @param replacePath
- * @return savePath
+ * Generate save path from HTTP/HTTPS absolute uri
+ * @param uri the HTTP/HTTPS absolute uri
+ * @param isHtml should the savePath endsWith .html
+ * @param keepSearch keep url search params in file name
  */
-function processUrlSearch(
-  search: string,
-  savePath: string,
-  replaceUri: URI,
-  replacePath: string
+export function generateSavePath(
+  uri: URI,
+  isHtml?: boolean,
+  keepSearch?: boolean
 ): string {
-  if (search.length > 43) {
-    // avoid too long search
-    search = '_' + simpleHashString(orderUrlSearch(search));
-  } else {
-    // order it
-    search = escapePath(orderUrlSearch(search));
+  if (uri.is('relative')) {
+    throw new Error('generateSavePath: uri can not be relative: '
+      + uri.toString());
   }
-  const ext: string = path.extname(savePath);
-  if (ext) {
-    savePath = savePath.slice(0, -ext.length) + search + ext;
-    replaceUri
-      .search('')
-      .path(replacePath.slice(0, -ext.length) + search + ext);
-  } else {
-    savePath += search;
-    replaceUri
-      .search('')
-      .path(replaceUri.path() + search);
+
+  const host: string = uri.hostname();
+  let savePath: string = path.join(host, escapePath(uri.path()));
+
+  if (isHtml && !savePath.endsWith('.html')) {
+    if (savePath.endsWith('/') || savePath.endsWith('\\')) {
+      savePath += 'index.html';
+    } else if (savePath.endsWith('.htm')) {
+      savePath += 'l';
+    } else {
+      savePath += '.html';
+    }
+  }
+
+  if (keepSearch) {
+    let search = uri.search();
+    if (search && search.length > 0) {
+      if (search.length > 43) {
+        // avoid too long search
+        search = '_' + simpleHashString(orderUrlSearch(search));
+      } else {
+        // order it
+        search = escapePath(orderUrlSearch(search));
+      }
+      const ext: string = path.extname(savePath);
+      if (ext) {
+        savePath = savePath.slice(0, -ext.length) + search + ext;
+      } else {
+        savePath += search;
+      }
+    }
   }
   return savePath;
 }
 
+export const urlOfSavePath = (savePath: string): string => {
+  if (savePath.includes('\\')) {
+    return `file:///${savePath.replace(/\\/g, '/')}`;
+  }
+  return `file:///${savePath}`;
+};
+
 /**
- * Create a resource
- * @param type {@link RawResource.type}
- * @param depth {@link RawResource.depth}
- * @param url {@link RawResource.rawUrl}
- * @param refUrl {@link RawResource.refUrl}
- * @param localRoot {@link RawResource.localRoot}
- * @param encoding {@link RawResource.encoding}
- * @param keepSearch keep url search params as file name
- * in {@link Resource.replacePath} and {@link Resource.savePath}
- * @param skipReplacePathError true to skip replacePath processing
- * in case of parser error
+ * Check an absolute uri
+ * @param uri {@link RawResource.uri}
+ * @param refUri {@link RawResource.refUri}
+ * @param skipReplacePathError {@link CreateResourceArgument.skipReplacePathError}
+ * @param url {@link CreateResourceArgument.url}
+ * @param refUrl {@link CreateResourceArgument.refUrl}
+ * @param type {@link CreateResourceArgument.type}
+ * @throws Error if {@link skipReplacePathError} === false and check fail
+ * @return true if {@link skipReplacePathError} === true and check fail
  */
-export function createResource(
-  type: ResourceType,
-  depth: number,
+export function checkAbsoluteUri(
+  uri: URI,
+  refUri: URI,
+  skipReplacePathError: boolean | undefined,
   url: string,
   refUrl: string,
-  localRoot: string,
-  encoding?: ResourceEncoding,
-  keepSearch?: boolean,
-  skipReplacePathError?: boolean
-): Resource {
+  type: ResourceType
+): boolean {
+  let replacePathHasError = false;
+  const protocol = uri.protocol().toLowerCase();
+  if (protocol !== 'http' &&
+    protocol !== 'https' &&
+    protocol !== 'file' &&
+    protocol !== refUri.protocol().toLowerCase()) {
+    if (skipReplacePathError) {
+      log.warn('protocol not supported, skipping',
+        protocol, url, refUrl, type);
+      replacePathHasError = true;
+    } else {
+      log.warn('protocol not supported, skipping',
+        protocol, url, refUrl, type);
+      throw new Error(`protocol ${protocol} not supported`);
+    }
+  }
+  if (protocol !== 'file' && !uri.host()) {
+    if (skipReplacePathError) {
+      log.warn('empty host for non-file uri not supported, skipping',
+        protocol, url, refUrl, type);
+      replacePathHasError = true;
+    } else {
+      log.warn('empty host for non-file uri not supported, skipping',
+        protocol, url, refUrl, type);
+      throw new Error('empty host for non-file uri not supported');
+    }
+  }
+  return replacePathHasError;
+}
+
+/**
+ * Create a resource
+ * @param type {@link CreateResourceArgument.type}
+ * @param depth {@link CreateResourceArgument.depth}
+ * @param url {@link CreateResourceArgument.rawUrl}
+ * @param refUrl {@link CreateResourceArgument.refUrl}
+ * @param refSavePath {@link CreateResourceArgument.refSavePath}
+ * @param refType {@link CreateResourceArgument.refType}
+ * @param localRoot {@link CreateResourceArgument.localRoot}
+ * @param encoding {@link CreateResourceArgument.encoding}
+ * @param keepSearch {@link CreateResourceArgument.keepSearch}
+ * @param skipReplacePathError {@link CreateResourceArgument.skipReplacePathError}
+ * @return the resource
+ */
+export function createResource({
+  type,
+  depth,
+  url,
+  refUrl,
+  refSavePath,
+  refType,
+  localRoot,
+  encoding,
+  keepSearch,
+  skipReplacePathError
+}: CreateResourceArgument): Resource {
   const rawUrl: string = url;
   const refUri: URI = URI(refUrl);
+  // TODO: https://github.com/website-local/website-scrap-engine/issues/126
   if (url.startsWith('//')) {
     // url with the same protocol
     url = refUri.protocol() + ':' + url;
@@ -305,60 +411,38 @@ export function createResource(
     // absolute path
     url = refUri.protocol() + '://' + refUri.host() + url;
   }
-  let uri: URI = URI(url);
-  let replaceUri: URI;
+  let uri = URI(url);
   let replacePathHasError = false;
-  try {
-    if (uri.is('relative')) {
-      replaceUri = uri.clone();
-      uri = uri.absoluteTo(refUri);
-      url = uri.toString();
-    } else if (uri.host() !== refUri.host()) {
-      const crossOrigin = uri.host();
-      const crossUri = uri.clone()
-        .host(refUri.host())
-        .protocol(refUri.protocol());
-      crossUri.path(crossOrigin + '/' + crossUri.path());
-      replaceUri = crossUri.relativeTo(refUrl = refUri.toString());
-      replaceUri.path('../' + replaceUri.path());
-    } else {
-      replaceUri = uri.relativeTo(refUrl);
-    }
-  } catch (e) {
-    if (skipReplacePathError) {
-      log.warn('Error processing replacePath, skipping',
-        url, refUrl, type, e);
-      replaceUri = uri.clone();
-      replacePathHasError = true;
-    } else {
-      log.warn('Error processing replacePath',url, refUrl, type, e);
-      throw e;
-    }
+
+  if (uri.is('relative')) {
+    uri = uri.absoluteTo(refUri);
+    url = uri.toString();
   }
-  let replacePath: string = replaceUri.path();
-  // empty path...
-  if (replacePath) {
-    replaceUri.path(replacePath = escapePath(replacePath));
+
+  if (checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type)) {
+    replacePathHasError = true;
   }
-  const host: string = uri.hostname();
-  let savePath: string = path.join(host, escapePath(uri.path()));
+
   const downloadLink: string = uri.clone().hash('').toString();
 
-  // make html resource ends with .html
-  if (!replacePathHasError &&
-    type === ResourceType.Html &&
-    !savePath.endsWith('.html')) {
-    const result = makeHtmlResourceEndWithHtml(savePath, replacePath, replaceUri);
-    savePath = result.savePath;
-    replacePath = result.replacePath;
+  // make savePath and replaceUri
+  const savePath = replacePathHasError ? url : generateSavePath(
+    uri, type === ResourceType.Html, keepSearch);
+  if (!refSavePath) {
+    refSavePath = generateSavePath(refUri, refType === ResourceType.Html);
   }
-  if (!replacePathHasError) {
-    let search: string;
-    if (keepSearch && (search = uri.search())) {
-      savePath = processUrlSearch(search, savePath, replaceUri, replacePath);
-    } else {
-      url = uri.search('').toString();
-    }
+  const replaceUri = replacePathHasError ? uri :
+    URI(urlOfSavePath(savePath)).relativeTo(urlOfSavePath(refSavePath));
+
+  // recover hash
+  if (uri.hash()) {
+    replaceUri.hash(uri.hash());
+  }
+
+  // remove search if not keepSearch
+  if (!keepSearch && uri.search()) {
+    uri.search('');
+    url = uri.toString();
   }
 
   const resource: Resource = {
@@ -369,6 +453,7 @@ export function createResource(
     rawUrl,
     downloadLink,
     refUrl,
+    refSavePath,
     savePath,
     localRoot,
     replacePath: replaceUri.toString(),
@@ -378,7 +463,7 @@ export function createResource(
     uri,
     refUri,
     replaceUri,
-    host
+    host: uri.hostname()
   };
   if (replacePathHasError) {
     // urls with parser errors should never be downloaded

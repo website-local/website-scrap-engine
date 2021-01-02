@@ -87,8 +87,10 @@ export async function processHtml(
           }
           continue;
         }
-        let resource: Resource | void = await pipeline.createResource(linkType, depth,
-          link, refUrl, res.localRoot, options.encoding[linkType]);
+        let resource: Resource | void = await pipeline.createResource(
+          linkType, depth, link, refUrl,
+          res.localRoot, options.encoding[linkType],
+          res.savePath, res.type);
         resource = await pipeline.processBeforeDownload(resource, elem, res, options);
         if (!resource) {
           if (skip.isTraceEnabled()) {

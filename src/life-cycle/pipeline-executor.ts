@@ -44,7 +44,9 @@ export interface PipelineExecutor {
     url: string,
     refUrl: string,
     localRoot?: string,
-    encoding?: ResourceEncoding
+    encoding?: ResourceEncoding,
+    refSavePath?: string,
+    refType?: ResourceType
   ): AsyncResult<Resource>;
 
   processBeforeDownload(

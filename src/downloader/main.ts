@@ -64,7 +64,9 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       const type: ResourceType | void = await this.pipeline.detectResourceType(
         url, ResourceType.Html, null, null);
       if (!type) continue;
-      let r: Resource | void = await this.pipeline.createResource(type, 0, url, url);
+      let r: Resource | void = await this.pipeline.createResource(
+        type, 0, url, url,
+        undefined, undefined, undefined, type);
       if (!r) continue;
       r = await this.pipeline.processBeforeDownload(r, null, null);
       if (!r) continue;

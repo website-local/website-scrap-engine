@@ -1,5 +1,10 @@
 import {StaticDownloadOptions} from '../options';
-import {Resource, ResourceEncoding, ResourceType} from '../resource';
+import {
+  CreateResourceArgument,
+  Resource,
+  ResourceEncoding,
+  ResourceType
+} from '../resource';
 import {
   DownloadResource,
   ProcessingLifeCycle,
@@ -31,7 +36,11 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     const type = await this.detectResourceType(url, defaultType, element, parent);
     if (!type) return;
     const r = await this.createResource(type, depth || parent.depth + 1, url,
-      parent.redirectedUrl || parent.url, parent.localRoot, this.options.encoding[type]);
+      parent.redirectedUrl || parent.url,
+      parent.localRoot,
+      this.options.encoding[type],
+      parent.savePath,
+      parent.type);
     if (!r) return;
     return await this.processBeforeDownload(r, element, parent, this.options);
   }
@@ -75,13 +84,23 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     url: string,
     refUrl: string,
     localRoot?: string,
-    encoding?: ResourceEncoding
+    encoding?: ResourceEncoding,
+    refSavePath?: string,
+    refType?: ResourceType
   ): Resource {
-    return this.lifeCycle.createResource(type, depth, url, refUrl,
-      localRoot ?? this.options.localRoot,
-      encoding ?? this.options.encoding[type] ?? 'utf8',
-      this.options.deduplicateStripSearch,
-      this.options.skipReplacePathError);
+    const arg: CreateResourceArgument = {
+      type,
+      depth,
+      url,
+      refUrl,
+      refSavePath,
+      refType,
+      localRoot: localRoot ?? this.options.localRoot,
+      encoding: encoding ?? this.options.encoding[type] ?? 'utf8',
+      keepSearch: this.options.deduplicateStripSearch,
+      skipReplacePathError: this.options.skipReplacePathError
+    };
+    return this.lifeCycle.createResource(arg);
   }
 
   async processBeforeDownload(
