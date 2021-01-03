@@ -21,9 +21,22 @@ export async function readOrCopyLocalResource(
     res.downloadStartTimestamp = Date.now();
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
   }
-  const fileSrcPath = res.downloadLink.slice(FILE_PREFIX.length);
+  let fileSrcPath = res.downloadLink.slice(FILE_PREFIX.length);
   if (!fileSrcPath) {
     return;
+  }
+  // index.html handling
+  if (res.type === ResourceType.Html) {
+    const stats = await promises.stat(fileSrcPath);
+    if (stats.isDirectory()) {
+      for (const index of ['index.html', 'index.htm']) {
+        if (await promises.access(fileSrcPath + '/' + index)
+          .then(() => true).catch(() => false)) {
+          fileSrcPath += '/' + index;
+          break;
+        }
+      }
+    }
   }
   if (res.type ===  ResourceType.StreamingBinary) {
     const fileDestPath = path.join(res.localRoot ?? options.localRoot, res.savePath);
