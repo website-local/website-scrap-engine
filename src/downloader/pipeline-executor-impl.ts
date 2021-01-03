@@ -96,6 +96,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       refSavePath,
       refType,
       localRoot: localRoot ?? this.options.localRoot,
+      localSrcRoot: this.options.localSrcRoot,
       encoding: encoding ?? this.options.encoding[type] ?? 'utf8',
       keepSearch: this.options.deduplicateStripSearch,
       skipReplacePathError: this.options.skipReplacePathError
@@ -129,6 +130,9 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     requestOptions?: RequestOptions,
     options?: StaticDownloadOptions
   ): Promise<DownloadResource | void> {
+    if (res.shouldBeDiscardedFromDownload) {
+      return undefined;
+    }
     if (!requestOptions) {
       requestOptions = this.requestOptions;
     }

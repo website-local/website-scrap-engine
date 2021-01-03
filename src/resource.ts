@@ -1,5 +1,5 @@
 import URI from 'urijs';
-import {escapePath, orderUrlSearch, simpleHashString} from './util';
+import {escapePath, isUrlHttp, orderUrlSearch, simpleHashString} from './util';
 import * as path from 'path';
 import {IncomingHttpHeaders} from 'http';
 import {CheerioStatic} from './types';
@@ -251,6 +251,14 @@ export interface CreateResourceArgument {
    * {@link RawResource.localRoot}
    */
   localRoot: string;
+
+  /**
+   * Local source path to download from,
+   * if empty or undefined, file:// url would not be accepted
+   * https://github.com/website-local/website-scrap-engine/issues/126
+   */
+  localSrcRoot?: string;
+
   /**
    * {@link RawResource.encoding}
    */
@@ -274,22 +282,43 @@ export interface CreateResourceArgument {
  * @param uri the HTTP/HTTPS absolute uri
  * @param isHtml should the savePath endsWith .html
  * @param keepSearch keep url search params in file name
+ * @param localSrcRoot local source path to download from
  */
 export function generateSavePath(
   uri: URI,
   isHtml?: boolean,
-  keepSearch?: boolean
+  keepSearch?: boolean,
+  localSrcRoot?: string
 ): string {
-  if (uri.is('relative')) {
+  if (uri.is('relative') && uri.protocol() !== 'file') {
     throw new Error('generateSavePath: uri can not be relative: '
       + uri.toString());
   }
 
-  const host: string = uri.hostname();
-  let savePath: string = path.join(host, escapePath(uri.path()));
+  let savePath: string;
+  if (uri.protocol() === 'file') {
+    if (!localSrcRoot) {
+      throw new Error('generateSavePath: using file protocol without localSrcRoot'
+        + uri.toString());
+    }
+    if (process.platform === 'win32' &&
+      localSrcRoot.match(/^[a-z]:\//i)) {
+      // windows absolute fix
+      savePath = uri.pathname().slice(localSrcRoot.length - 2);
+      if (savePath[0] === '/') {
+        savePath = savePath.slice(1);
+      }
+    } else {
+      savePath = uri.pathname().slice(localSrcRoot.length);
+    }
+  } else {
+    const host: string = uri.hostname();
+    savePath = path.join(host || '', escapePath(uri.path()));
+  }
 
   if (isHtml && !savePath.endsWith('.html')) {
-    if (savePath.endsWith('/') || savePath.endsWith('\\')) {
+    if (uri.protocol() === 'file' && savePath === '' ||
+      savePath.endsWith('/') || savePath.endsWith('\\')) {
       savePath += 'index.html';
     } else if (savePath.endsWith('.htm')) {
       savePath += 'l';
@@ -375,6 +404,58 @@ export function checkAbsoluteUri(
   return replacePathHasError;
 }
 
+const FILE_PROTOCOL_PREFIX = 'file://';
+
+export function resolveFileUrl(
+  url: string,
+  refUrl: string,
+  localSrcRoot?: string,
+  skipReplacePathError?: boolean
+): string {
+  if (isUrlHttp(url)) {
+    return url;
+  }
+  let error: string | undefined;
+  if (!localSrcRoot) {
+    error = 'can not use file url without localSrcRoot';
+  }
+  if (!error && localSrcRoot && url.startsWith(FILE_PROTOCOL_PREFIX) &&
+    !url.slice(FILE_PROTOCOL_PREFIX.length).startsWith(localSrcRoot)) {
+    error = 'file url not starting with localSrcRoot is forbidden';
+  }
+  if (!error && localSrcRoot && refUrl.startsWith(FILE_PROTOCOL_PREFIX) &&
+    !refUrl.slice(FILE_PROTOCOL_PREFIX.length).startsWith(localSrcRoot)) {
+    error = 'file refUrl not starting with localSrcRoot is forbidden';
+  }
+  if (!error && localSrcRoot) {
+    if (localSrcRoot.endsWith('/')) {
+      localSrcRoot = localSrcRoot.slice(0, -1);
+    }
+    if (url.startsWith('//')) {
+      url = 'file://' + localSrcRoot + url.slice(1);
+    } else if (url.startsWith('/')) {
+      url = 'file://' + localSrcRoot + url;
+    } else if (!url.startsWith(FILE_PROTOCOL_PREFIX)) {
+      // relative url
+      const absoluteRefUri = URI('file:///' +
+        refUrl.slice(FILE_PROTOCOL_PREFIX.length + localSrcRoot.length));
+      const uri = URI(url).absoluteTo(absoluteRefUri);
+      url = 'file://' + localSrcRoot + uri.pathname() + uri.hash();
+    }
+  }
+  if (error) {
+    if (skipReplacePathError) {
+      log.warn(error, url, refUrl, localSrcRoot);
+      return '';
+    } else {
+      log.warn(error, url, refUrl, localSrcRoot);
+      throw new Error(error);
+    }
+  }
+
+  return url;
+}
+
 /**
  * Create a resource
  * @param type {@link CreateResourceArgument.type}
@@ -384,6 +465,7 @@ export function checkAbsoluteUri(
  * @param refSavePath {@link CreateResourceArgument.refSavePath}
  * @param refType {@link CreateResourceArgument.refType}
  * @param localRoot {@link CreateResourceArgument.localRoot}
+ * @param localSrcRoot {@link CreateResourceArgument.localSrcRoot}
  * @param encoding {@link CreateResourceArgument.encoding}
  * @param keepSearch {@link CreateResourceArgument.keepSearch}
  * @param skipReplacePathError {@link CreateResourceArgument.skipReplacePathError}
@@ -397,39 +479,63 @@ export function createResource({
   refSavePath,
   refType,
   localRoot,
+  localSrcRoot,
   encoding,
   keepSearch,
   skipReplacePathError
 }: CreateResourceArgument): Resource {
   const rawUrl: string = url;
   const refUri: URI = URI(refUrl);
-  // TODO: https://github.com/website-local/website-scrap-engine/issues/126
-  if (url.startsWith('//')) {
+  let replacePathHasError = false;
+  if (url.startsWith(FILE_PROTOCOL_PREFIX) ||
+    refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
+    // file url should never have search
+    keepSearch = false;
+    url = resolveFileUrl(url, refUrl, localSrcRoot, skipReplacePathError);
+    if (!url) {
+      replacePathHasError = true;
+      url = rawUrl;
+    }
+  }
+  if (!replacePathHasError && url.startsWith('//')) {
     // url with the same protocol
     url = refUri.protocol() + ':' + url;
-  } else if (url[0] === '/') {
+  } else if (!replacePathHasError && url[0] === '/') {
     // absolute path
     url = refUri.protocol() + '://' + refUri.host() + url;
   }
   let uri = URI(url);
-  let replacePathHasError = false;
 
-  if (uri.is('relative')) {
+  if (!replacePathHasError && uri.is('relative')) {
     uri = uri.absoluteTo(refUri);
     url = uri.toString();
   }
 
-  if (checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type)) {
+  if (!replacePathHasError &&
+    checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type)) {
     replacePathHasError = true;
   }
 
-  const downloadLink: string = uri.clone().hash('').toString();
+  let downloadLink: string;
+  if (uri.protocol() === 'file') {
+    // file downloadLink contains no search
+    downloadLink = uri.clone().search('').hash('').toString();
+    // windows absolute path fix
+    if (process.platform === 'win32' && downloadLink.match(
+      /^file:\/\/[a-z]\//i) &&
+      url.match(/^file:\/\/[a-z]:\//i)) {
+      downloadLink = 'file://' + downloadLink[7] + ':' + uri.pathname();
+    }
+  } else {
+    downloadLink = uri.clone().hash('').toString();
+  }
 
   // make savePath and replaceUri
   const savePath = replacePathHasError ? rawUrl : generateSavePath(
-    uri, type === ResourceType.Html, keepSearch);
+    uri, type === ResourceType.Html, keepSearch, localSrcRoot);
   if (!refSavePath) {
-    refSavePath = generateSavePath(refUri, refType === ResourceType.Html);
+    refSavePath = generateSavePath(refUri, refType === ResourceType.Html,
+      false, localSrcRoot);
   }
   const replaceUri = replacePathHasError ? URI(rawUrl) :
     URI(urlOfSavePath(savePath)).relativeTo(urlOfSavePath(refSavePath));

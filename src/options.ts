@@ -36,6 +36,15 @@ export interface StaticDownloadOptions {
   localRoot: string;
 
   /**
+   * Local source path to download from,
+   * if empty or undefined, file:// url would not be accepted,
+   * this should not start with file://
+   * Note: must use slash (/) on windows
+   * https://github.com/website-local/website-scrap-engine/issues/126
+   */
+  localSrcRoot?: string;
+
+  /**
    * Maximum recursive depth
    * @see Resource.depth
    */
@@ -329,6 +338,9 @@ export function checkDownloadOptions(options: DownloadOptions): DownloadOptions 
   }
   if (!options.localRoot) {
     throw new TypeError('localRoot is required');
+  }
+  if (options.localSrcRoot?.includes('\\')) {
+    options.localSrcRoot = options.localSrcRoot.replace(/\\/g, '/');
   }
   if (!options.download || !options.download.length) {
     throw new TypeError('download life cycle is required');

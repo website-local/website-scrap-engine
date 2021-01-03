@@ -3,7 +3,7 @@ import {
   CreateResourceArgument, generateSavePath,
   normalizeResource,
   prepareResourceForClone,
-  RawResource,
+  RawResource, resolveFileUrl,
   Resource,
   ResourceType, urlOfSavePath
 } from '../src/resource';
@@ -496,5 +496,215 @@ describe('resource', function () {
 
   test('generateSavePath no relative uri', () => {
     expect(() => generateSavePath(URI('aaaa'))).toThrowError();
+  });
+
+  // https://github.com/website-local/website-scrap-engine/issues/126
+  test('generateSavePath no localSrcRoot', () => {
+    expect(() => generateSavePath(URI('file://aaaaa'))).toThrowError();
+  });
+
+  test('generateSavePath windows file uri', () => {
+    // save original process.platform
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', {
+      value: 'win32'
+    });
+    try {
+      const urlArr = [
+        'file://D:/tmp/aaa/bbb/a.html',
+        'file://D:/tmp/aaa/bbb/',
+        'file://D:/tmp/aaa/',
+        'file://D:/tmp/aaa/index.html',
+        'file://D:/tmp/aaa/123457.html',
+        'file://D:/tmp/aaa/123/345/678.html',
+      ];
+      const expected = [
+        'bbb/a.html',
+        'bbb/index.html',
+        'index.html',
+        'index.html',
+        '123457.html',
+        '123/345/678.html',
+      ];
+      for (let i = 0; i < urlArr.length; i++) {
+        expect(generateSavePath(URI(urlArr[i]),
+          true, false, 'D:/tmp/aaa'))
+          .toBe(expected[i]);
+        expect(generateSavePath(URI(urlArr[i]),
+          true, false, 'D:/tmp/aaa/'))
+          .toBe(expected[i]);
+      }
+    } finally {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      Object.defineProperty(process, 'platform', originalPlatform!);
+    }
+  });
+
+  test('resolveFileUrl no localSrcRoot', () => {
+    expect(() => resolveFileUrl('', ''))
+      .toThrowError('can not use file url without localSrcRoot');
+  });
+
+  test('resolveFileUrl skip error on skipReplacePathError', () => {
+    expect(resolveFileUrl(
+      '111', '', undefined, true))
+      .toBe('');
+  });
+
+  test('resolveFileUrl url not starting with localSrcRoot', () => {
+    expect(() =>
+      resolveFileUrl('file:///dev/vda1', '', '/tmp/'))
+      .toThrowError('file url not starting with localSrcRoot is forbidden');
+  });
+
+  test('resolveFileUrl refUrl not starting with localSrcRoot', () => {
+    expect(() => resolveFileUrl(
+      'file:///tmp/11', 'file:///dev/11', '/tmp/'))
+      .toThrowError('file refUrl not starting with localSrcRoot is forbidden');
+  });
+
+  test('resolveFileUrl absolute url', () => {
+    expect(resolveFileUrl(
+      'file:///tmp/11', 'file:///tmp/22', '/tmp/'))
+      .toBe('file:///tmp/11');
+  });
+
+  test('resolveFileUrl http url', () => {
+    expect(resolveFileUrl('http://example.com/tmp/11', ''))
+      .toBe('http://example.com/tmp/11');
+    expect(resolveFileUrl('https://example.com/tmp/11', ''))
+      .toBe('https://example.com/tmp/11');
+  });
+
+  test('resolveFileUrl windows absolute url', () => {
+    expect(resolveFileUrl(
+      'file://C:/tmp/11', 'file://C:/tmp/22', 'C:/tmp/'))
+      .toBe('file://C:/tmp/11');
+  });
+
+  test('resolveFileUrl relative url', () => {
+    expect(resolveFileUrl(
+      '11', 'file:///tmp/22', '/tmp/'))
+      .toBe('file:///tmp/11');
+    expect(resolveFileUrl(
+      '../../11', 'file:///tmp/22', '/tmp/'))
+      .toBe('file:///tmp/11');
+    expect(resolveFileUrl(
+      '/11', 'file:///tmp/22', '/tmp/'))
+      .toBe('file:///tmp/11');
+    expect(resolveFileUrl(
+      '//11', 'file:///tmp/22', '/tmp/'))
+      .toBe('file:///tmp/11');
+    expect(resolveFileUrl(
+      '/11', 'file:///tmp/1/1/1/1/22', '/tmp/'))
+      .toBe('file:///tmp/11');
+    expect(resolveFileUrl(
+      '../../11', 'file:///tmp/1/1/1/1/22', '/tmp/'))
+      .toBe('file:///tmp/1/1/11');
+    expect(resolveFileUrl(
+      '../../../../../11', 'file:///tmp/1/22', '/tmp/'))
+      .toBe('file:///tmp/11');
+  });
+
+
+  test('resolveFileUrl windows relative url', () => {
+    expect(resolveFileUrl(
+      '11', 'file://D:/tmp/22', 'D:/tmp/'))
+      .toBe('file://D:/tmp/11');
+    expect(resolveFileUrl(
+      '../../11', 'file://D:/tmp/22', 'D:/tmp/'))
+      .toBe('file://D:/tmp/11');
+    expect(resolveFileUrl(
+      '/11', 'file://D:/tmp/22', 'D:/tmp/'))
+      .toBe('file://D:/tmp/11');
+    expect(resolveFileUrl(
+      '//11', 'file://D:/tmp/22', 'D:/tmp/'))
+      .toBe('file://D:/tmp/11');
+    expect(resolveFileUrl(
+      '/11', 'file://D:/tmp/1/1/1/1/22', 'D:/tmp/'))
+      .toBe('file://D:/tmp/11');
+    expect(resolveFileUrl(
+      '../../11', 'file://D:/tmp/1/1/1/1/22', 'D:/tmp/'))
+      .toBe('file://D:/tmp/1/1/11');
+    expect(resolveFileUrl(
+      '../../../../../11', 'file://D:/tmp/1/22', 'D:/tmp/'))
+      .toBe('file://D:/tmp/11');
+  });
+
+  test('createResource file url', () => {
+    const arg: CreateResourceArgument = {
+      type: ResourceType.Html,
+      depth: 1,
+      url: '/',
+      refUrl: 'file:///tmp/example.com/api/',
+      refType: ResourceType.Html,
+      localRoot: '/tmp/aaa',
+      localSrcRoot: '/tmp/example.com/'
+    };
+    const resource: Resource = createResource(arg);
+    expect(resource.replaceUri?.toString()).toBe('../index.html');
+    expect(resource.savePath).toBe('index.html');
+    expect(resource.downloadLink).toBe('file:///tmp/example.com/');
+  });
+
+  test('createResource file url skip error', () => {
+    const arg: CreateResourceArgument = {
+      type: ResourceType.Html,
+      depth: 1,
+      url: '/',
+      refUrl: 'file:///tmp/bbb/api/',
+      refType: ResourceType.Html,
+      localRoot: '/tmp/aaa',
+      localSrcRoot: '/tmp/example.com/',
+      skipReplacePathError: true
+    };
+    const resource: Resource = createResource(arg);
+    expect(resource.replaceUri?.toString()).toBe('/');
+    expect(resource.downloadLink).toBe('/');
+    expect(resource.shouldBeDiscardedFromDownload).toBe(true);
+  });
+
+  test('createResource file relative url', () => {
+    const arg: CreateResourceArgument = {
+      type: ResourceType.Binary,
+      depth: 1,
+      url: '../../../../../../../../static/main.js',
+      refUrl: 'file:///tmp/example.com/api/',
+      refType: ResourceType.Html,
+      localRoot: '/tmp/aaa',
+      localSrcRoot: '/tmp/example.com/'
+    };
+    const resource: Resource = createResource(arg);
+    expect(resource.replaceUri?.toString()).toBe('../static/main.js');
+    expect(resource.savePath).toBe('static/main.js');
+    expect(resource.downloadLink).toBe(
+      'file:///tmp/example.com/static/main.js');
+  });
+
+  test('createResource file url windows', () => {
+
+    // save original process.platform
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', {
+      value: 'win32'
+    });
+    try {
+      const arg: CreateResourceArgument = {
+        type: ResourceType.Html,
+        depth: 1,
+        url: '/',
+        refUrl: 'file://D:/tmp/example.com/api/',
+        refType: ResourceType.Html,
+        localRoot: '/tmp/aaa',
+        localSrcRoot: 'D:/tmp/example.com/'
+      };
+      const resource: Resource = createResource(arg);
+      expect(resource.replaceUri?.toString()).toBe('../index.html');
+      expect(resource.savePath).toBe('index.html');
+      expect(resource.downloadLink).toBe('file://D:/tmp/example.com/');
+    } finally {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      Object.defineProperty(process, 'platform', originalPlatform!);
+    }
   });
 });
