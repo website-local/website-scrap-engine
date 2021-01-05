@@ -304,7 +304,7 @@ export function generateSavePath(
     if (process.platform === 'win32' &&
       localSrcRoot.match(/^[a-z]:\//i)) {
       // windows absolute fix
-      savePath = uri.pathname().slice(localSrcRoot.length - 2);
+      savePath = uri.pathname().slice(localSrcRoot.length + 1);
       if (savePath[0] === '/') {
         savePath = savePath.slice(1);
       }
@@ -404,7 +404,7 @@ export function checkAbsoluteUri(
   return replacePathHasError;
 }
 
-const FILE_PROTOCOL_PREFIX = 'file://';
+const FILE_PROTOCOL_PREFIX = 'file:///';
 
 export function resolveFileUrl(
   url: string,
@@ -419,6 +419,10 @@ export function resolveFileUrl(
   if (!localSrcRoot) {
     error = 'can not use file url without localSrcRoot';
   }
+  // unix absolute path
+  if (localSrcRoot && localSrcRoot[0] === '/') {
+    localSrcRoot = localSrcRoot.slice(1);
+  }
   if (!error && localSrcRoot && url.startsWith(FILE_PROTOCOL_PREFIX) &&
     !url.slice(FILE_PROTOCOL_PREFIX.length).startsWith(localSrcRoot)) {
     error = 'file url not starting with localSrcRoot is forbidden';
@@ -432,15 +436,15 @@ export function resolveFileUrl(
       localSrcRoot = localSrcRoot.slice(0, -1);
     }
     if (url.startsWith('//')) {
-      url = 'file://' + localSrcRoot + url.slice(1);
+      url = FILE_PROTOCOL_PREFIX + localSrcRoot + url.slice(1);
     } else if (url.startsWith('/')) {
-      url = 'file://' + localSrcRoot + url;
+      url = FILE_PROTOCOL_PREFIX + localSrcRoot + url;
     } else if (!url.startsWith(FILE_PROTOCOL_PREFIX)) {
       // relative url
-      const absoluteRefUri = URI('file:///' +
+      const absoluteRefUri = URI(FILE_PROTOCOL_PREFIX +
         refUrl.slice(FILE_PROTOCOL_PREFIX.length + localSrcRoot.length));
       const uri = URI(url).absoluteTo(absoluteRefUri);
-      url = 'file://' + localSrcRoot + uri.pathname() + uri.hash();
+      url = FILE_PROTOCOL_PREFIX + localSrcRoot + uri.pathname() + uri.hash();
     }
   }
   if (error) {
@@ -520,12 +524,6 @@ export function createResource({
   if (uri.protocol() === 'file') {
     // file downloadLink contains no search
     downloadLink = uri.clone().search('').hash('').toString();
-    // windows absolute path fix
-    if (process.platform === 'win32' && downloadLink.match(
-      /^file:\/\/[a-z]\//i) &&
-      url.match(/^file:\/\/[a-z]:\//i)) {
-      downloadLink = 'file://' + downloadLink[7] + ':' + uri.pathname();
-    }
   } else {
     downloadLink = uri.clone().hash('').toString();
   }

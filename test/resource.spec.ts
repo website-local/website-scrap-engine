@@ -511,12 +511,12 @@ describe('resource', function () {
     });
     try {
       const urlArr = [
-        'file://D:/tmp/aaa/bbb/a.html',
-        'file://D:/tmp/aaa/bbb/',
-        'file://D:/tmp/aaa/',
-        'file://D:/tmp/aaa/index.html',
-        'file://D:/tmp/aaa/123457.html',
-        'file://D:/tmp/aaa/123/345/678.html',
+        'file:///D:/tmp/aaa/bbb/a.html',
+        'file:///D:/tmp/aaa/bbb/',
+        'file:///D:/tmp/aaa/',
+        'file:///D:/tmp/aaa/index.html',
+        'file:///D:/tmp/aaa/123457.html',
+        'file:///D:/tmp/aaa/123/345/678.html',
       ];
       const expected = [
         'bbb/a.html',
@@ -578,8 +578,8 @@ describe('resource', function () {
 
   test('resolveFileUrl windows absolute url', () => {
     expect(resolveFileUrl(
-      'file://C:/tmp/11', 'file://C:/tmp/22', 'C:/tmp/'))
-      .toBe('file://C:/tmp/11');
+      'file:///C:/tmp/11', 'file:///C:/tmp/22', 'C:/tmp/'))
+      .toBe('file:///C:/tmp/11');
   });
 
   test('resolveFileUrl relative url', () => {
@@ -609,26 +609,26 @@ describe('resource', function () {
 
   test('resolveFileUrl windows relative url', () => {
     expect(resolveFileUrl(
-      '11', 'file://D:/tmp/22', 'D:/tmp/'))
-      .toBe('file://D:/tmp/11');
+      '11', 'file:///D:/tmp/22', 'D:/tmp/'))
+      .toBe('file:///D:/tmp/11');
     expect(resolveFileUrl(
-      '../../11', 'file://D:/tmp/22', 'D:/tmp/'))
-      .toBe('file://D:/tmp/11');
+      '../../11', 'file:///D:/tmp/22', 'D:/tmp/'))
+      .toBe('file:///D:/tmp/11');
     expect(resolveFileUrl(
-      '/11', 'file://D:/tmp/22', 'D:/tmp/'))
-      .toBe('file://D:/tmp/11');
+      '/11', 'file:///D:/tmp/22', 'D:/tmp/'))
+      .toBe('file:///D:/tmp/11');
     expect(resolveFileUrl(
-      '//11', 'file://D:/tmp/22', 'D:/tmp/'))
-      .toBe('file://D:/tmp/11');
+      '//11', 'file:///D:/tmp/22', 'D:/tmp/'))
+      .toBe('file:///D:/tmp/11');
     expect(resolveFileUrl(
-      '/11', 'file://D:/tmp/1/1/1/1/22', 'D:/tmp/'))
-      .toBe('file://D:/tmp/11');
+      '/11', 'file:///D:/tmp/1/1/1/1/22', 'D:/tmp/'))
+      .toBe('file:///D:/tmp/11');
     expect(resolveFileUrl(
-      '../../11', 'file://D:/tmp/1/1/1/1/22', 'D:/tmp/'))
-      .toBe('file://D:/tmp/1/1/11');
+      '../../11', 'file:///D:/tmp/1/1/1/1/22', 'D:/tmp/'))
+      .toBe('file:///D:/tmp/1/1/11');
     expect(resolveFileUrl(
-      '../../../../../11', 'file://D:/tmp/1/22', 'D:/tmp/'))
-      .toBe('file://D:/tmp/11');
+      '../../../../../11', 'file:///D:/tmp/1/22', 'D:/tmp/'))
+      .toBe('file:///D:/tmp/11');
   });
 
   test('createResource file url', () => {
@@ -693,7 +693,7 @@ describe('resource', function () {
         type: ResourceType.Html,
         depth: 1,
         url: '/',
-        refUrl: 'file://D:/tmp/example.com/api/',
+        refUrl: 'file:///D:/tmp/example.com/api/',
         refType: ResourceType.Html,
         localRoot: '/tmp/aaa',
         localSrcRoot: 'D:/tmp/example.com/'
@@ -701,7 +701,7 @@ describe('resource', function () {
       const resource: Resource = createResource(arg);
       expect(resource.replaceUri?.toString()).toBe('../index.html');
       expect(resource.savePath).toBe('index.html');
-      expect(resource.downloadLink).toBe('file://D:/tmp/example.com/');
+      expect(resource.downloadLink).toBe('file:///D:/tmp/example.com/');
     } finally {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       Object.defineProperty(process, 'platform', originalPlatform!);
