@@ -5,6 +5,7 @@ import {
   ResourceType
 } from '../../src/resource';
 import {
+  isUriChar,
   processSourceMap,
   SOURCE_MAP_HEADER, sourceMapPrefix, X_SOURCE_MAP_HEADER
 } from '../../src/life-cycle/process-source-map';
@@ -316,6 +317,21 @@ describe('process-source-map', function () {
     const bbb = {}`));
       const resources: Resource[] = await process(res);
       expect(resources.length).toBe(0);
+    }
+  });
+
+  test('isUriChar', () => {
+    const reservedCharacters = '! # $ & \' ( ) + , / : ; = ? @ [ ]'
+      .replace(/ /g, '');
+    const unreservedCharacters = `
+A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+a b c d e f g h i j k l m n o p q r s t u v w x y z
+0 1 2 3 4 5 6 7 8 9 - _ . ~`.replace(/[ \n]/g, '');
+    for (let i = 0, char: string, expected: boolean; i < 4096; i++) {
+      char = String.fromCharCode(i);
+      expected = reservedCharacters.includes(char) ||
+        unreservedCharacters.includes(char);
+      expect(isUriChar(i)).toBe(expected);
     }
   });
 });
