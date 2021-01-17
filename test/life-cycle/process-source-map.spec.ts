@@ -7,12 +7,14 @@ import {
 import {
   isUriChar,
   processSourceMap,
-  SOURCE_MAP_HEADER, sourceMapPrefix, X_SOURCE_MAP_HEADER
+  sourceMapPrefix,
+  SOURCE_MAP_HEADER,
+  X_SOURCE_MAP_HEADER
 } from '../../src/life-cycle/process-source-map';
-import {DownloadResource} from '../../src/life-cycle/types';
+import type {DownloadResource} from '../../src/life-cycle/types';
 import {defaultLifeCycle} from '../../src/life-cycle';
 import {PipelineExecutorImpl} from '../../src/downloader';
-import {StaticDownloadOptions} from '../../src/options';
+import type {StaticDownloadOptions} from '../../src/options';
 
 const fakeRes = (url: string): DownloadResource => {
   const arg: CreateResourceArgument = {

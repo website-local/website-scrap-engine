@@ -1,14 +1,17 @@
-import {
-  createResource,
-  CreateResourceArgument, generateSavePath,
-  normalizeResource,
-  prepareResourceForClone,
-  RawResource, resolveFileUrl,
-  Resource,
-  ResourceType, urlOfSavePath
-} from '../src/resource';
 import path from 'path';
 import URI = require('urijs');
+import {
+  createResource,
+  CreateResourceArgument,
+  generateSavePath,
+  normalizeResource,
+  prepareResourceForClone,
+  RawResource,
+  resolveFileUrl,
+  Resource,
+  ResourceType,
+  urlOfSavePath
+} from '../src/resource';
 
 describe('resource', function () {
   test('html-to-html-resource', () => {
