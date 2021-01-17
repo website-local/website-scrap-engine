@@ -130,6 +130,12 @@ export interface StaticDownloadOptions {
    * @see createResource
    */
   skipReplacePathError?: boolean;
+
+  /**
+   * Wait for this.init in method onIdle.
+   * See https://github.com/website-local/website-scrap-engine/issues/152
+   */
+  waitForInitBeforeIdle?: boolean;
 }
 
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {

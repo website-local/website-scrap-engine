@@ -57,4 +57,10 @@ export class SingleThreadDownloader extends AbstractDownloader {
     }
   }
 
+  onIdle(): Promise<void> {
+    if (this.options.waitForInitBeforeIdle) {
+      return this.init.then(() => super.onIdle());
+    }
+    return super.onIdle();
+  }
 }

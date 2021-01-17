@@ -77,6 +77,12 @@ export class MultiThreadDownloader extends AbstractDownloader {
 
   }
 
+  onIdle(): Promise<void> {
+    if (this.options.waitForInitBeforeIdle) {
+      return this.init.then(() => super.onIdle());
+    }
+    return super.onIdle();
+  }
 
   async dispose(): Promise<void> {
     await super.dispose();
