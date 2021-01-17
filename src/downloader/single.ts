@@ -1,8 +1,8 @@
 import {AbstractDownloader} from './main';
-import {Resource} from '../resource';
-import {StaticDownloadOptions} from '../options';
+import type {Resource} from '../resource';
+import type {StaticDownloadOptions} from '../options';
 import {skip} from '../logger/logger';
-import {DownloadResource, SubmitResourceFunc} from '../life-cycle/types';
+import type {DownloadResource, SubmitResourceFunc} from '../life-cycle/types';
 
 export class SingleThreadDownloader extends AbstractDownloader {
   readonly init: Promise<void>;

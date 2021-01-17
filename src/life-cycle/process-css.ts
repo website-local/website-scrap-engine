@@ -1,9 +1,9 @@
 import parseCssUrls from 'css-url-parser';
-import {DownloadResource, SubmitResourceFunc} from './types';
-import {StaticDownloadOptions} from '../options';
+import type {DownloadResource, SubmitResourceFunc} from './types';
+import type {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {toString} from '../util';
-import {PipelineExecutor} from './pipeline-executor';
+import type {PipelineExecutor} from './pipeline-executor';
 
 export async function processCssText(
   cssText: string,

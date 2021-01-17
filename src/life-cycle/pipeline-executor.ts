@@ -1,12 +1,12 @@
 import {Resource, ResourceEncoding, ResourceType} from '../resource';
-import {StaticDownloadOptions} from '../options';
-import {
+import type {StaticDownloadOptions} from '../options';
+import type {
   AsyncResult,
   DownloadResource,
   RequestOptions,
   SubmitResourceFunc
 } from './types';
-import {Cheerio} from '../types';
+import type {Cheerio} from '../types';
 
 export interface PipelineExecutor {
   /**

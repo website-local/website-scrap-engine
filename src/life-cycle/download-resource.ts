@@ -1,8 +1,3 @@
-import {DownloadResource, RequestOptions} from './types';
-import {Resource, ResourceType} from '../resource';
-import {StaticDownloadOptions} from '../options';
-import * as logger from '../logger/logger';
-import {isUrlHttp, sleep} from '../util';
 import got, {
   BeforeRetryHook,
   NormalizedOptions,
@@ -10,7 +5,12 @@ import got, {
   RequestError,
   TimeoutError
 } from 'got';
-import {Response} from 'got/dist/source/as-promise';
+import type {Response} from 'got/dist/source/as-promise';
+import type {DownloadResource, RequestOptions} from './types';
+import {Resource, ResourceType} from '../resource';
+import type {StaticDownloadOptions} from '../options';
+import * as logger from '../logger/logger';
+import {isUrlHttp, sleep} from '../util';
 
 /** Take logs before retry */
 export const beforeRetryHook: BeforeRetryHook = (

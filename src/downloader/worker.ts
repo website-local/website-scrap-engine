@@ -4,7 +4,7 @@ import {
   mergeOverrideOptions,
   StaticDownloadOptions
 } from '../options';
-import {DownloadResource, SubmitResourceFunc} from '../life-cycle/types';
+import type {DownloadResource, SubmitResourceFunc} from '../life-cycle/types';
 import {
   normalizeResource,
   prepareResourceForClone,
@@ -16,7 +16,7 @@ import {importDefaultFromPath} from '../util';
 import {DownloadWorkerMessage, WorkerMessageType} from './types';
 import {PipelineExecutorImpl} from './pipeline-executor-impl';
 // noinspection ES6PreferShortImport
-import {PipelineExecutor} from '../life-cycle/pipeline-executor';
+import type {PipelineExecutor} from '../life-cycle/pipeline-executor';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,

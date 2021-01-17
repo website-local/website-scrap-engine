@@ -1,8 +1,8 @@
 import URI from 'urijs';
-import {escapePath, isUrlHttp, orderUrlSearch, simpleHashString} from './util';
+import type {IncomingHttpHeaders} from 'http';
 import * as path from 'path';
-import {IncomingHttpHeaders} from 'http';
-import {CheerioStatic} from './types';
+import {escapePath, isUrlHttp, orderUrlSearch, simpleHashString} from './util';
+import type {CheerioStatic} from './types';
 import {error as log} from './logger/logger';
 
 export enum ResourceType {

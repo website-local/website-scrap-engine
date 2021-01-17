@@ -1,5 +1,5 @@
-import {logLevels} from '../logger/logger-worker';
-import * as logger from '../logger/logger';
+import type {logLevels} from '../logger/logger-worker';
+import type * as logger from '../logger/logger';
 import {WorkerMessage, WorkerMessageType} from './types';
 
 export interface WorkerLog<T = unknown> {

@@ -1,6 +1,6 @@
 import {MessagePort, Worker} from 'worker_threads';
 import * as logger from '../logger/logger';
-import {LogWorkerMessage} from './worker-type';
+import type {LogWorkerMessage} from './worker-type';
 import {
   PendingPromise,
   PendingPromiseWithBody,

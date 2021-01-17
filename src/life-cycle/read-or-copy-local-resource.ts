@@ -1,8 +1,8 @@
-import {Resource, ResourceType} from '../resource';
-import {DownloadResource, RequestOptions} from './types';
-import {StaticDownloadOptions} from '../options';
-import {promises} from 'fs';
 import * as path from 'path';
+import {promises} from 'fs';
+import {Resource, ResourceType} from '../resource';
+import type {DownloadResource, RequestOptions} from './types';
+import type {StaticDownloadOptions} from '../options';
 
 const FILE_PREFIX = 'file://';
 

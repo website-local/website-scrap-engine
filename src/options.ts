@@ -1,22 +1,22 @@
-import {createResource, ResourceEncoding, ResourceType} from './resource';
-import {ProcessingLifeCycle, RequestOptions} from './life-cycle/types';
-// noinspection ES6PreferShortImport
-import {beforeRetryHook} from './life-cycle/download-resource';
-import {
+import got from 'got';
+import type {
   RetryFunction,
   RetryObject,
   TimeoutError
 } from 'got/dist/source/as-promise/types';
+import type {RequestError} from 'got/dist/source/core';
+import {createResource, ResourceEncoding, ResourceType} from './resource';
+import type {ProcessingLifeCycle, RequestOptions} from './life-cycle/types';
+// noinspection ES6PreferShortImport
+import {beforeRetryHook} from './life-cycle/download-resource';
 import {error} from './logger/logger';
-import {RequestError} from 'got/dist/source/core';
-import got from 'got';
 // noinspection ES6PreferShortImport
 import {adjust} from './downloader/adjust-concurrency';
 import {configureLogger} from './logger/config-logger';
-import {DownloaderWithMeta} from './downloader/types';
+import type {DownloaderWithMeta} from './downloader/types';
 import {weakAssign} from './util';
-import {SourceDefinition} from './sources';
-import {CheerioOptionsInterface} from './types';
+import type {SourceDefinition} from './sources';
+import type {CheerioOptionsInterface} from './types';
 
 /**
  * Extra options for custom life cycle

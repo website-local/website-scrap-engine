@@ -1,13 +1,13 @@
-import {
+import type {Options as GotOptions} from 'got/dist/source/as-promise';
+import type {
   createResource,
   Resource,
   ResourceBody,
   ResourceType
 } from '../resource';
-import {Options as GotOptions} from 'got/dist/source/as-promise';
-import {StaticDownloadOptions} from '../options';
-import {PipelineExecutor} from './pipeline-executor';
-import {Cheerio} from '../types';
+import type {StaticDownloadOptions} from '../options';
+import type {PipelineExecutor} from './pipeline-executor';
+import type {Cheerio} from '../types';
 
 export type AsyncResult<T> = T | Promise<T>;
 

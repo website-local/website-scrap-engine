@@ -1,10 +1,10 @@
-import {DownloadResource} from './types';
-import {StaticDownloadOptions} from '../options';
-import {ResourceBody, ResourceType} from '../resource';
 import path from 'path';
+import type {DownloadResource} from './types';
+import type {StaticDownloadOptions} from '../options';
+import {ResourceBody, ResourceType} from '../resource';
 import {escapePath} from '../util';
 import {writeFile} from '../io';
-import {PipelineExecutor} from './pipeline-executor';
+import type {PipelineExecutor} from './pipeline-executor';
 
 export function getResourceBodyFromHtml(
   res: DownloadResource & { type: ResourceType.Html },

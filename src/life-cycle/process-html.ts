@@ -1,13 +1,13 @@
-import {sources as defaultSources} from '../sources';
 import srcset, {SrcSetDefinition} from 'srcset';
-import {DownloadResource, SubmitResourceFunc} from './types';
-import {StaticDownloadOptions} from '../options';
+import {sources as defaultSources} from '../sources';
+import type {DownloadResource, SubmitResourceFunc} from './types';
+import type {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
 import {processCssText} from './process-css';
 import {error, skip} from '../logger/logger';
-import {PipelineExecutor} from './pipeline-executor';
+import type {PipelineExecutor} from './pipeline-executor';
 import {parseHtml} from './adapters';
-import {Cheerio, CheerioStatic} from '../types';
+import type {Cheerio, CheerioStatic} from '../types';
 
 export async function processHtml(
   res: DownloadResource,

@@ -1,9 +1,9 @@
-import {WorkerPool} from './worker-pool';
-import {RawResource, Resource} from '../resource';
-import {DownloadWorkerMessage} from './types';
-import {StaticDownloadOptions} from '../options';
 import path from 'path';
-import {DownloadResource} from '../life-cycle/types';
+import {WorkerPool} from './worker-pool';
+import type {RawResource, Resource} from '../resource';
+import type {DownloadWorkerMessage} from './types';
+import type {StaticDownloadOptions} from '../options';
+import type {DownloadResource} from '../life-cycle/types';
 import {skip} from '../logger/logger';
 import {AbstractDownloader} from './main';
 

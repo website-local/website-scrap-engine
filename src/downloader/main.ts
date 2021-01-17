@@ -1,9 +1,11 @@
+import PQueue from 'p-queue';
+import type {HTTPError} from 'got';
+import URI from 'urijs';
 import {
   DownloadOptions,
   mergeOverrideOptions,
   StaticDownloadOptions
 } from '../options';
-import PQueue from 'p-queue';
 import {
   normalizeResource,
   RawResource,
@@ -11,10 +13,8 @@ import {
   ResourceType
 } from '../resource';
 import {error, notFound, skip} from '../logger/logger';
-import {HTTPError} from 'got';
 import {importDefaultFromPath} from '../util';
-import URI from 'urijs';
-import {DownloaderStats, DownloaderWithMeta} from './types';
+import type {DownloaderStats, DownloaderWithMeta} from './types';
 import {PipelineExecutorImpl} from './pipeline-executor-impl';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {

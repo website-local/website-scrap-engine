@@ -1,7 +1,7 @@
-import {ResourceBody, ResourceEncoding} from './resource';
-import {dirname} from 'path';
 import fs from 'fs';
+import {dirname} from 'path';
 import mkdirP from 'mkdirp';
+import type {ResourceBody, ResourceEncoding} from './resource';
 import {mkdir as mkdirLogger} from './logger/logger';
 
 export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
