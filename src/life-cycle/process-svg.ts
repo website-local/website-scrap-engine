@@ -22,6 +22,7 @@ export async function processSvg(
     return res;
   }
   const refUrl: string = res.redirectedUrl || res.url;
+  const savePath = refUrl === res.url ? res.savePath : undefined;
   // useless since processRedirectedUrl enabled by default
   // refUrl = await pipeline.linkRedirect(refUrl, null, res) || refUrl;
 
@@ -64,7 +65,7 @@ export async function processSvg(
       let resource: Resource | void = await pipeline.createResource(
         linkType, depth, link, refUrl,
         res.localRoot, options.encoding[linkType],
-        res.savePath, res.type);
+        savePath, res.type);
       resource = await pipeline.processBeforeDownload(resource, elem, res, options);
       if (!resource) {
         if (skip.isTraceEnabled()) {

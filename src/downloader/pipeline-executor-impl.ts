@@ -35,11 +35,13 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!url) return;
     const type = await this.detectResourceType(url, defaultType, element, parent);
     if (!type) return;
+    const refUrl = parent.redirectedUrl || parent.url;
+    const savePath = refUrl === parent.url ? parent.savePath : undefined;
     const r = await this.createResource(type, depth || parent.depth + 1, url,
-      parent.redirectedUrl || parent.url,
+      refUrl,
       parent.localRoot,
       this.options.encoding[type],
-      parent.savePath,
+      savePath,
       parent.type);
     if (!r) return;
     return await this.processBeforeDownload(r, element, parent, this.options);

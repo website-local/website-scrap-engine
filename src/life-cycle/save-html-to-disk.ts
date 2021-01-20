@@ -45,7 +45,7 @@ export async function saveHtmlToDisk(
 </html>`, res.encoding);
       const redirectedResource = await pipeline.createResource(ResourceType.Html,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
-        res.encoding, res.refSavePath);
+        res.encoding, undefined, ResourceType.Html);
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
       const body: ResourceBody = getResourceBodyFromHtml(res, options);
       await writeFile(path.join(localRoot, redirectedSavePath), body, res.encoding);
