@@ -47,11 +47,14 @@ export class MultiThreadDownloader extends AbstractDownloader {
     }
     let msg: DownloadWorkerMessage | void;
     try {
-      // DOMException [DataCloneError]: An ArrayBuffer is neutered and could not be cloned.
-      if (Buffer.isBuffer(r.body)) {
+      if ((ArrayBuffer.isView(r.body) || Buffer.isBuffer(r.body)) &&
+        r.body.byteOffset === 0 &&
+        r.body.byteLength === r.body.buffer.byteLength) {
+        // the array buffer view fully owns the underlying ArrayBuffer
         r.body = r.body.buffer;
-        msg = await this.workers.submitTask(r);
+        msg = await this.workers.submitTask(r, [r.body]);
       } else {
+        // lets clone and send it.
         msg = await this.workers.submitTask(r);
       }
     } catch (e) {
