@@ -7,12 +7,19 @@ import type {DownloadResource} from '../life-cycle/types';
 import {skip} from '../logger/logger';
 import {AbstractDownloader} from './main';
 
+export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
+  pathToWorker?: string;
+  maxLoad: number;
+}
+
 export class MultiThreadDownloader extends AbstractDownloader {
   readonly workers: WorkerPool<RawResource, DownloadWorkerMessage>;
   readonly init: Promise<void>;
 
-  constructor(public pathToOptions: string,
-    overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
+  constructor(
+    public pathToOptions: string,
+    overrideOptions?: Partial<MultiThreadDownloaderOptions>
+  ) {
     super(pathToOptions, overrideOptions);
     let workerCount: number = this.options.concurrency;
     if (this.options.workerCount) {
@@ -24,7 +31,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
     this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
       // worker script should be compiled to .js
       overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker.js'),
-      {pathToOptions, overrideOptions}
+      {pathToOptions, overrideOptions},
+      overrideOptions?.maxLoad || -1
     );
     if (this.options.initialUrl) {
       this.init = this.addInitialResource(this.options.initialUrl);

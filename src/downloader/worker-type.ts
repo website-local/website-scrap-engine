@@ -12,3 +12,7 @@ export interface LogWorkerMessage<T = unknown> extends WorkerMessage<WorkerLog<T
   type: WorkerMessageType.Log;
 }
 
+export interface WorkerTaskMessage<T> {
+  readonly taskId: number;
+  body: T;
+}

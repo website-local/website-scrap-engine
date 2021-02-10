@@ -12,6 +12,7 @@ export function getWorkerLogger(category: WorkerLog['logger']): Logger {
   logLevels.forEach((level: typeof logLevels[number]) => {
     logger[level] = <T>(...content: T[]) => {
       const msg: LogWorkerMessage<T> = {
+        taskId: -1,
         type: WorkerMessageType.Log,
         body: {
           level,

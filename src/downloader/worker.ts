@@ -17,6 +17,7 @@ import {DownloadWorkerMessage, WorkerMessageType} from './types';
 import {PipelineExecutorImpl} from './pipeline-executor-impl';
 // noinspection ES6PreferShortImport
 import type {PipelineExecutor} from '../life-cycle/pipeline-executor';
+import type {WorkerTaskMessage} from './worker-type';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,
@@ -32,12 +33,13 @@ const pipeline: PipelineExecutor =
 
 options.configureLogger(options.localRoot, options.logSubDir || '');
 
-parentPort?.addListener('message', async (msg: RawResource) => {
+parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
   const collectedResource: RawResource[] = [];
   let error: Error | void;
   let redirectedUrl: string | undefined;
   try {
-    const downloadResource: DownloadResource = normalizeResource(msg) as DownloadResource;
+    const res = msg.body;
+    const downloadResource: DownloadResource = normalizeResource(res) as DownloadResource;
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
       if (Array.isArray(resources)) {
         for (let i = 0; i < resources.length; i++) {
@@ -64,13 +66,14 @@ parentPort?.addListener('message', async (msg: RawResource) => {
   } catch (e) {
     error = e;
   } finally {
-    const msg: DownloadWorkerMessage = {
+    const message: DownloadWorkerMessage = {
+      taskId: msg.taskId,
       type: WorkerMessageType.Complete,
       body: collectedResource,
       error,
       redirectedUrl
     };
-    parentPort?.postMessage(msg);
+    parentPort?.postMessage(message);
   }
 
 });

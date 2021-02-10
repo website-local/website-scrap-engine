@@ -43,6 +43,7 @@ export interface PendingPromise<T = unknown, E = unknown> {
 
 export interface PendingPromiseWithBody<R = unknown, E = unknown, B = unknown>
   extends PendingPromise<R, E> {
+  taskId: number;
   body: B;
   transferList?: Array<ArrayBuffer | MessagePort>;
 }
@@ -53,6 +54,7 @@ export enum WorkerMessageType {
 }
 
 export interface WorkerMessage<T = unknown> {
+  taskId: number;
   type: WorkerMessageType;
   body: T;
   error?: Error | void;
