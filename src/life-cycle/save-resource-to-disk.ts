@@ -1,7 +1,6 @@
 import path from 'path';
 import type {DownloadResource} from './types';
 import type {StaticDownloadOptions} from '../options';
-import type {ResourceBody} from '../resource';
 import {writeFile} from '../io';
 import type {PipelineExecutor} from './pipeline-executor';
 
@@ -14,6 +13,7 @@ export async function saveResourceToDisk(
     const redirectResource = await pipeline.createResource(res.type,
       res.depth, res.url, res.redirectedUrl, localRoot,
       res.encoding, undefined, res.type);
+    // maybe we can try module:fs/promises.symlink first
     if (redirectResource.replacePath) {
       const savePath = decodeURI(res.savePath);
       await writeFile(path.join(localRoot, savePath), res.body, res.encoding);
@@ -25,8 +25,7 @@ export async function saveResourceToDisk(
       return;
     }
   }
-  const body: ResourceBody = res.meta.doc ? res.meta.doc.toString() : res.body;
   const filePath: string = path.join(localRoot, decodeURI(res.savePath));
-  await writeFile(filePath, body, res.encoding);
+  await writeFile(filePath, res.body, res.encoding);
   return;
 }
