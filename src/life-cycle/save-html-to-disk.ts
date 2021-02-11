@@ -52,7 +52,7 @@ export async function saveHtmlToDisk(
       return;
     }
   }
-  const body: ResourceBody = res.meta.doc ? res.meta.doc.html() : res.body;
+  const body: ResourceBody = getResourceBodyFromHtml(res, options);
   const filePath: string = path.join(localRoot, decodeURI(res.savePath));
   await writeFile(filePath, body, res.encoding);
   return;
