@@ -341,8 +341,11 @@ export function generateSavePath(
     let search = uri.search();
     if (search && search.length > 0) {
       if (search.length > 43) {
+        const ordered = orderUrlSearch(search);
+        const hashed = simpleHashString(ordered);
+        log.debug('search too long, replacing with hash', ordered, hashed);
         // avoid too long search
-        search = '_' + simpleHashString(orderUrlSearch(search));
+        search = '_' + hashed;
       } else {
         // order it
         search = escapePath(orderUrlSearch(search));
