@@ -34,6 +34,7 @@ describe('save-resource-to-disk', function () {
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
+
   test('save redirected resource', async () => {
     const fakeFs: Record<string, string> = {};
     jest.spyOn(fs.promises, 'writeFile').mockClear()
@@ -50,5 +51,42 @@ describe('save-resource-to-disk', function () {
       [join('root', 'example.com', 'en-US', 'demo.bin')]: 'body'
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(2);
+  });
+
+  test('save redirected resource with redirectedSavePath', async () => {
+    const fakeFs: Record<string, string> = {};
+    jest.spyOn(fs.promises, 'writeFile').mockClear()
+      .mockImplementation((path, data) => {
+        fakeFs[path.toString()] = toString(data, 'utf8');
+        return Promise.resolve();
+      });
+    const downloadResource = res('http://example.com/demo.bin', 'body');
+    downloadResource.redirectedSavePath = join('example.com', 'en-US', 'demo1.bin');
+    downloadResource.redirectedUrl = 'http://example.com/en-US/demo.bin';
+    const saved = await saveResourceToDisk(downloadResource, fakeOpt, fakePipeline);
+    expect(saved).toBeUndefined();
+    expect(fakeFs).toStrictEqual({
+      [join('root', 'example.com', 'demo.bin')]: 'body',
+      [join('root', 'example.com', 'en-US', 'demo1.bin')]: 'body'
+    });
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(2);
+  });
+
+  test('save resource with same redirectedSavePath and savePath', async () => {
+    const fakeFs: Record<string, string> = {};
+    jest.spyOn(fs.promises, 'writeFile').mockClear()
+      .mockImplementation((path, data) => {
+        fakeFs[path.toString()] = toString(data, 'utf8');
+        return Promise.resolve();
+      });
+    const downloadResource = res('http://example.com/demo.bin', 'body');
+    downloadResource.redirectedSavePath = downloadResource.savePath;
+    downloadResource.redirectedUrl = 'http://example.com/en-US/demo.bin';
+    const saved = await saveResourceToDisk(downloadResource, fakeOpt, fakePipeline);
+    expect(saved).toBeUndefined();
+    expect(fakeFs).toStrictEqual({
+      [join('root', 'example.com', 'demo.bin')]: 'body',
+    });
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
 });

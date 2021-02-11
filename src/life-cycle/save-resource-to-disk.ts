@@ -10,6 +10,15 @@ export async function saveResourceToDisk(
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   const localRoot: string = res.localRoot ?? options.localRoot;
   if (res.redirectedUrl && res.redirectedUrl !== res.url) {
+    if (res.redirectedSavePath) {
+      if (res.redirectedSavePath !== res.savePath) {
+        const redirectedSavePath = decodeURI(res.redirectedSavePath);
+        await writeFile(path.join(localRoot, redirectedSavePath), res.body, res.encoding);
+      }
+      const savePath = decodeURI(res.savePath);
+      await writeFile(path.join(localRoot, savePath), res.body, res.encoding);
+      return;
+    }
     const redirectResource = await pipeline.createResource(res.type,
       res.depth, res.url, res.redirectedUrl, localRoot,
       res.encoding, undefined, res.type);

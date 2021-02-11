@@ -29,6 +29,7 @@ describe('save-html-to-disk', function () {
     expect(saved).toBe(downloadResource);
     expect(fs.promises.writeFile).not.toHaveBeenCalled();
   });
+
   test('save regular html', async () => {
     const fakeFs: Record<string, string> = {};
     expect(jest.isMockFunction(fs.promises.writeFile)).toBe(true);
@@ -45,6 +46,7 @@ describe('save-html-to-disk', function () {
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
+
   test('save processed html', async () => {
     const fakeFs: Record<string, string> = {};
     jest.spyOn(fs.promises, 'writeFile').mockClear()
@@ -62,6 +64,7 @@ describe('save-html-to-disk', function () {
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
+
   test('save processed html custom serialize options', async () => {
     const fakeFs: Record<string, string> = {};
     jest.spyOn(fs.promises, 'writeFile').mockClear()
@@ -86,6 +89,7 @@ describe('save-html-to-disk', function () {
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
+
   test('save redirected html', async () => {
     const fakeFs: Record<string, string> = {};
     jest.spyOn(fs.promises, 'writeFile').mockClear()
@@ -111,5 +115,50 @@ describe('save-html-to-disk', function () {
       [join('root', 'example.com', 'en-US', 'index.html')]: html
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(2);
+  });
+
+  test('save redirected html with redirectedSavePath', async () => {
+    const fakeFs: Record<string, string> = {};
+    jest.spyOn(fs.promises, 'writeFile').mockClear()
+      .mockImplementation((path, data) => {
+        fakeFs[path.toString()] = toString(data, 'utf8');
+        return Promise.resolve();
+      });
+    const downloadResource = res('http://example.com/', 'body');
+    downloadResource.redirectedSavePath = join('example.com', 'zh-CN', 'demo1.html');
+    downloadResource.redirectedUrl = 'http://example.com/zh-CN/';
+    const saved = await saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
+    expect(saved).toBeUndefined();
+    expect(fakeFs).toStrictEqual({
+      [join('root', 'example.com', 'index.html')]: `<html lang="en">
+<head>
+<meta charset="utf8">
+<meta http-equiv="refresh" content="0; url=zh-CN/demo1.html">
+<script>location.replace('zh-CN/demo1.html' + location.hash);</script>
+<title>Redirecting</title>
+</head>
+</html>`,
+      [join('root', 'example.com', 'zh-CN', 'demo1.html')]: 'body'
+    });
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(2);
+  });
+
+  test('save html with same redirectedSavePath and savePath', async () => {
+    const fakeFs: Record<string, string> = {};
+    jest.spyOn(fs.promises, 'writeFile').mockClear()
+      .mockImplementation((path, data) => {
+        fakeFs[path.toString()] = toString(data, 'utf8');
+        return Promise.resolve();
+      });
+    const downloadResource = res('http://example.com/', 'body');
+    downloadResource.redirectedSavePath = join('example.com', 'zh-CN', 'demo1.html');
+    downloadResource.redirectedUrl = 'http://example.com/zh-CN/';
+    downloadResource.redirectedSavePath = downloadResource.savePath;
+    const saved = await saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
+    expect(saved).toBeUndefined();
+    expect(fakeFs).toStrictEqual({
+      [join('root', 'example.com', 'index.html')]: 'body',
+    });
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
 });

@@ -145,6 +145,16 @@ export interface RawResource {
    */
   redirectedUrl?: string;
 
+  /**
+   * Redirected {@link .savePath} after downloaded,
+   * if this is provided, the saveToDisk life cycle would be affected.
+   *
+   * https://github.com/website-local/website-scrap-engine/issues/139
+   * https://github.com/website-local/website-scrap-engine/issues/157
+   * https://github.com/website-local/website-scrap-engine/issues/171
+   */
+  redirectedSavePath?: string;
+
   meta: {
     /**
      * Parsed html content for {@link .type} === {@link ResourceType.Html}
