@@ -13,8 +13,9 @@ export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
 }
 
 export class MultiThreadDownloader extends AbstractDownloader {
-  readonly workers: WorkerPool<RawResource, DownloadWorkerMessage>;
+  readonly pool: WorkerPool<RawResource, DownloadWorkerMessage>;
   readonly init: Promise<void>;
+  workerDispose: Promise<void>[];
 
   constructor(
     public pathToOptions: string,
@@ -28,16 +29,22 @@ export class MultiThreadDownloader extends AbstractDownloader {
     if (workerCount < 1) {
       workerCount = 1;
     }
-    this.workers = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
+    this.pool = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
       // worker script should be compiled to .js
       overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker.js'),
       {pathToOptions, overrideOptions},
       overrideOptions?.maxLoad || -1
     );
+    this.workerDispose = [];
+    for (const info of this.pool.workers) {
+      info.worker.addListener('exit',
+        exitCode => this.workerDispose.push(
+          this.pipeline.dispose(this.pipeline, this, info, exitCode)));
+    }
     if (this.options.initialUrl) {
       this.init = this.addInitialResource(this.options.initialUrl);
     } else {
-      this.init = Promise.resolve();
+      this.init = this.pipeline.init(this.pipeline, this);
     }
   }
 
@@ -60,10 +67,10 @@ export class MultiThreadDownloader extends AbstractDownloader {
         r.body.byteLength === r.body.buffer.byteLength) {
         // the array buffer view fully owns the underlying ArrayBuffer
         r.body = r.body.buffer;
-        msg = await this.workers.submitTask(r, [r.body]);
+        msg = await this.pool.submitTask(r, [r.body]);
       } else {
         // lets clone and send it.
-        msg = await this.workers.submitTask(r);
+        msg = await this.pool.submitTask(r);
       }
     } catch (e) {
       this.handleError(e, 'submitting resource to worker', res);
@@ -97,6 +104,9 @@ export class MultiThreadDownloader extends AbstractDownloader {
 
   async dispose(): Promise<void> {
     await super.dispose();
-    await this.workers.dispose();
+    await this.pool.dispose();
+    const workerDispose = this.workerDispose;
+    this.workerDispose = [];
+    await Promise.all(workerDispose);
   }
 }

@@ -13,7 +13,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
     if (this.options.initialUrl) {
       this.init = this.addInitialResource(this.options.initialUrl);
     } else {
-      this.init = Promise.resolve();
+      this.init = this.pipeline.init(this.pipeline, this);
     }
   }
 

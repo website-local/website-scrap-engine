@@ -14,6 +14,8 @@ import type {
 // noinspection ES6PreferShortImport
 import type {PipelineExecutor} from '../life-cycle/pipeline-executor';
 import type {Cheerio} from '../types';
+import type {DownloaderWithMeta} from './types';
+import type {WorkerInfo} from './worker-pool';
 
 /**
  * Pipeline executor
@@ -22,6 +24,16 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   constructor(public lifeCycle: ProcessingLifeCycle,
               public requestOptions: RequestOptions,
               public options: StaticDownloadOptions) {
+  }
+
+  async init(
+    pipeline: PipelineExecutor,
+    downloader?: DownloaderWithMeta
+  ): Promise<void> {
+    if (!this.lifeCycle.init) return;
+    for (const init of this.lifeCycle.init) {
+      await init(pipeline, downloader);
+    }
   }
 
   async createAndProcessResource(
@@ -47,9 +59,11 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     return await this.processBeforeDownload(r, element, parent, this.options);
   }
 
-  async linkRedirect(url: string,
+  async linkRedirect(
+    url: string,
     element: Cheerio | null,
-    parent: Resource | null): Promise<string | void> {
+    parent: Resource | null
+  ): Promise<string | void> {
     let redirectedUrl: string | void = url;
     for (const linkRedirectFunc of this.lifeCycle.linkRedirect) {
       if ((redirectedUrl =
@@ -201,4 +215,17 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     // not downloaded
     return downloadedResource;
   }
+
+  async dispose(
+    pipeline: PipelineExecutor,
+    downloader: DownloaderWithMeta,
+    workerInfo?: WorkerInfo,
+    workerExitCode?: number
+  ): Promise<void> {
+    if (!this.lifeCycle.dispose) return;
+    for (const dispose of this.lifeCycle.dispose) {
+      await dispose(pipeline, downloader, workerInfo, workerExitCode);
+    }
+  }
+
 }

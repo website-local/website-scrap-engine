@@ -33,11 +33,14 @@ const pipeline: PipelineExecutor =
 
 options.configureLogger(options.localRoot, options.logSubDir || '');
 
+const init = pipeline.init(pipeline);
+
 parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
   const collectedResource: RawResource[] = [];
   let error: Error | void;
   let redirectedUrl: string | undefined;
   try {
+    await init;
     const res = msg.body;
     const downloadResource: DownloadResource = normalizeResource(res) as DownloadResource;
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {

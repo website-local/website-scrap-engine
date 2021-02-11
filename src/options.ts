@@ -265,6 +265,8 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
 };
 
 const defaultOptions: DownloadOptions = {
+  init: [],
+  dispose: [],
   concurrency: 12,
   configureLogger,
   createResource,

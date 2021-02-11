@@ -8,8 +8,31 @@ import type {
 import type {StaticDownloadOptions} from '../options';
 import type {PipelineExecutor} from './pipeline-executor';
 import type {Cheerio} from '../types';
+import type {DownloaderWithMeta} from '../downloader/types';
+import type {WorkerInfo} from '../downloader/worker-pool';
 
 export type AsyncResult<T> = T | Promise<T>;
+
+export interface InitLifeCycleFunc {
+  /**
+   * The init life cycle would be called:
+   *
+   * Each time a downloader initialized,
+   * after configureLogger but before addInitialResource.
+   *
+   * Each time a worker initialized,
+   * after configureLogger but before parentPort?.addListener.
+   *
+   * The init life cycle could be async,
+   * in main thread the addInitialResource should wait for init completed,
+   * and in worker thread the message listener should wait for
+   * init completed before processing messages.
+   *
+   * @param pipeline the PipelineExecutor
+   * @param downloader the DownloaderWithMeta when in main thread
+   */
+  (pipeline: PipelineExecutor, downloader?: DownloaderWithMeta): AsyncResult<void>;
+}
 
 export interface LinkRedirectFunc {
   /**
@@ -131,7 +154,26 @@ export interface SaveToDiskFunc {
    pipeline: PipelineExecutor): AsyncResult<DownloadResource | void>;
 }
 
+export interface DisposeLifeCycle {
+
+  /**
+   * The dispose life cycle would be called in the main thread:
+   * Each time the dispose method of a downloader called.
+   * Each time the exit event fired on a worker.
+   *
+   * @param pipeline the PipelineExecutor
+   * @param downloader the DownloaderWithMeta
+   * @param workerInfo the worker if it is called on worker exit event
+   * @param workerExitCode exit code of a worker if on worker exit event
+   */
+  (pipeline: PipelineExecutor,
+   downloader: DownloaderWithMeta,
+   workerInfo?: WorkerInfo,
+   workerExitCode?: number): AsyncResult<void>;
+}
+
 export interface ProcessingLifeCycle {
+  init: InitLifeCycleFunc[];
   linkRedirect: LinkRedirectFunc[];
   detectResourceType: DetectResourceTypeFunc[];
   createResource: typeof createResource;
@@ -145,5 +187,6 @@ export interface ProcessingLifeCycle {
   download: DownloadResourceFunc[];
   processAfterDownload: ProcessResourceAfterDownloadFunc[];
   saveToDisk: SaveToDiskFunc[];
+  dispose: DisposeLifeCycle[];
 }
 

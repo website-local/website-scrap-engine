@@ -56,6 +56,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {
+    await this.pipeline.init(this.pipeline, this);
     // noinspection DuplicatedCode
     for (let i = 0, l = urlArr.length; i < l; i++) {
       let url: string | void = urlArr[i];
@@ -153,6 +154,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   async dispose(): Promise<void> {
     this.stop();
     this.queue.clear();
+    await this.pipeline.dispose(this.pipeline, this);
   }
 
 }

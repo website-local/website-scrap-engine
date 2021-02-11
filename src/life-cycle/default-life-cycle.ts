@@ -17,6 +17,7 @@ import {readOrCopyLocalResource} from './read-or-copy-local-resource';
  * Get a copy of default life cycle
  */
 export const defaultLifeCycle = (): ProcessingLifeCycle => ({
+  init: [],
   linkRedirect: [skipLinks],
   detectResourceType: [detectResourceType],
   createResource,
@@ -33,6 +34,7 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
     processCss,
     processSiteMap
   ],
-  saveToDisk: [saveHtmlToDisk, saveResourceToDisk]
+  saveToDisk: [saveHtmlToDisk, saveResourceToDisk],
+  dispose: []
 });
 

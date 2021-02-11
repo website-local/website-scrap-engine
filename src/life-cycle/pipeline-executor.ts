@@ -1,4 +1,4 @@
-import {Resource, ResourceEncoding, ResourceType} from '../resource';
+import type {Resource, ResourceEncoding, ResourceType} from '../resource';
 import type {StaticDownloadOptions} from '../options';
 import type {
   AsyncResult,
@@ -7,8 +7,18 @@ import type {
   SubmitResourceFunc
 } from './types';
 import type {Cheerio} from '../types';
+import type {DownloaderWithMeta} from '../downloader/types';
+import type {WorkerInfo} from '../downloader/worker-pool';
 
 export interface PipelineExecutor {
+  /**
+   * @see InitLifeCycleFunc
+   */
+  init(
+    pipeline: PipelineExecutor,
+    downloader?: DownloaderWithMeta
+  ): AsyncResult<void>;
+
   /**
    * Process
    * {@link .linkRedirect}
@@ -63,7 +73,7 @@ export interface PipelineExecutor {
   ): AsyncResult<DownloadResource | void>;
 
   /**
-   * Process resource after download, in worker thread
+   * Process resource after download, maybe in worker thread
    * @param res resource received from main thread
    * @param submit function to submit resource to pipeline
    * @param options
@@ -78,4 +88,15 @@ export interface PipelineExecutor {
     res: DownloadResource,
     options?: StaticDownloadOptions
   ): AsyncResult<DownloadResource | void>;
+
+  /**
+   * @see DisposeLifeCycle
+   */
+  dispose(
+    pipeline: PipelineExecutor,
+    downloader: DownloaderWithMeta,
+    workerInfo?: WorkerInfo,
+    workerExitCode?: number
+  ): AsyncResult<void>;
+
 }
