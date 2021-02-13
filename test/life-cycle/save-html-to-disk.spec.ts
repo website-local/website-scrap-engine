@@ -36,6 +36,45 @@ describe('save-html-to-disk', function () {
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
 
+  // https://github.com/website-local/website-scrap-engine/issues/174
+  test('save regular html with last-modified header', async () => {
+    const {fakeFs, fakeFsStats} = mockFs();
+    const resource = res('http://example.com', 'body');
+    resource.meta.headers = {
+      'last-modified': 'Wed, 21 Oct 2015 07:28:00 GMT'
+    };
+    const saved = await saveHtmlToDisk(resource, Object.assign({
+      preferRemoteLastModifiedTime: true
+    }, fakeOpt), fakePipeline);
+    expect(saved).toBeUndefined();
+    expect(fakeFs).toStrictEqual({
+      [join('root', 'example.com', 'index.html')]: 'body'
+    });
+    expect(fakeFsStats).toStrictEqual({
+      [join('root', 'example.com', 'index.html') + '::atime']: 1445412480000,
+      [join('root', 'example.com', 'index.html') + '::mtime']: 1445412480000,
+    });
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
+    expect(fs.promises.utimes).toHaveBeenCalledTimes(1);
+  });
+
+  // https://github.com/website-local/website-scrap-engine/issues/174
+  test('save regular html with disabled last-modified header', async () => {
+    const {fakeFs, fakeFsStats} = mockFs();
+    const resource = res('http://example.com', 'body');
+    resource.meta.headers = {
+      'last-modified': 'Wed, 21 Oct 2015 07:28:00 GMT'
+    };
+    const saved = await saveHtmlToDisk(resource, fakeOpt, fakePipeline);
+    expect(saved).toBeUndefined();
+    expect(fakeFs).toStrictEqual({
+      [join('root', 'example.com', 'index.html')]: 'body'
+    });
+    expect(fakeFsStats).toStrictEqual({});
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
+    expect(fs.promises.utimes).not.toHaveBeenCalled();
+  });
+
   test('save processed html', async () => {
     const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com', 'body');

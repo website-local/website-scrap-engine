@@ -45,6 +45,11 @@ export async function saveHtmlToDisk(
     return res;
   }
   const localRoot: string = res.localRoot ?? options.localRoot;
+  // https://github.com/website-local/website-scrap-engine/issues/174
+  let mtime: number | void;
+  if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
+    mtime = Date.parse(res.meta.headers?.['last-modified']);
+  }
   if (res.redirectedUrl && res.redirectedUrl !== res.url) {
     if (res.redirectedSavePath) {
       if (res.redirectedSavePath !== res.savePath) {
@@ -52,14 +57,14 @@ export async function saveHtmlToDisk(
           .relativeTo(urlOfSavePath(res.savePath));
         const relativePath: string = escapePath(replaceUri.toString());
         await writeFile(path.join(localRoot, decodeURI(res.savePath)),
-          redirectHtml(relativePath, res.encoding), res.encoding);
+          redirectHtml(relativePath, res.encoding), res.encoding, mtime);
         const body: ResourceBody = getResourceBodyFromHtml(res, options);
         await writeFile(path.join(localRoot, decodeURI(res.redirectedSavePath)),
-          body, res.encoding);
+          body, res.encoding, mtime);
       } else {
         const body: ResourceBody = getResourceBodyFromHtml(res, options);
         const filePath: string = path.join(localRoot, decodeURI(res.savePath));
-        await writeFile(filePath, body, res.encoding);
+        await writeFile(filePath, body, res.encoding, mtime);
       }
       return;
     }
@@ -70,18 +75,18 @@ export async function saveHtmlToDisk(
       const relativePath: string = escapePath(redirectResource.replacePath);
       const savePath = decodeURI(res.savePath);
       await writeFile(path.join(localRoot, savePath),
-        redirectHtml(relativePath, res.encoding), res.encoding);
+        redirectHtml(relativePath, res.encoding), res.encoding, mtime);
       const redirectedResource = await pipeline.createResource(ResourceType.Html,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
         res.encoding, undefined, ResourceType.Html);
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
       const body: ResourceBody = getResourceBodyFromHtml(res, options);
-      await writeFile(path.join(localRoot, redirectedSavePath), body, res.encoding);
+      await writeFile(path.join(localRoot, redirectedSavePath), body, res.encoding, mtime);
       return;
     }
   }
   const body: ResourceBody = getResourceBodyFromHtml(res, options);
   const filePath: string = path.join(localRoot, decodeURI(res.savePath));
-  await writeFile(filePath, body, res.encoding);
+  await writeFile(filePath, body, res.encoding, mtime);
   return;
 }

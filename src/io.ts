@@ -3,7 +3,7 @@ import type {BaseEncodingOptions} from 'fs';
 import {dirname} from 'path';
 import mkdirP from 'mkdirp';
 import type {ResourceBody, ResourceEncoding} from './resource';
-import {mkdir as mkdirLogger} from './logger/logger';
+import {mkdir as mkdirLogger, error as errorLogger} from './logger/logger';
 
 export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
   let error: Error | void;
@@ -31,7 +31,9 @@ export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
 export const writeFile = async (
   filePath: string,
   data: ResourceBody,
-  encoding: ResourceEncoding
+  encoding: ResourceEncoding,
+  mtime?: number | void,
+  atime?: number | void
 ): Promise<void> => {
   const dir: string = dirname(filePath);
   if (!fs.existsSync(dir)) {
@@ -53,8 +55,19 @@ export const writeFile = async (
     throw new TypeError('Type of data not supported.');
   }
   if (options) {
-    return fs.promises.writeFile(filePath, fileData, options);
+    await fs.promises.writeFile(filePath, fileData, options);
   } else {
-    return fs.promises.writeFile(filePath, fileData);
+    await fs.promises.writeFile(filePath, fileData);
+  }
+  // void and NaN check
+  if (mtime) {
+    if (!atime) {
+      atime = mtime;
+    }
+    try {
+      await fs.promises.utimes(filePath, atime, mtime);
+    } catch (e) {
+      errorLogger.warn('skipping utimes ' + filePath, e);
+    }
   }
 };

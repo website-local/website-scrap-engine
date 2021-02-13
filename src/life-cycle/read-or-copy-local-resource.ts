@@ -1,8 +1,9 @@
 import * as path from 'path';
-import {promises} from 'fs';
+import {promises, Stats} from 'fs';
 import {Resource, ResourceType} from '../resource';
 import type {DownloadResource, RequestOptions} from './types';
 import type {StaticDownloadOptions} from '../options';
+import {error as errorLogger} from '../logger/logger';
 
 const FILE_PREFIX = 'file://';
 
@@ -26,8 +27,9 @@ export async function readOrCopyLocalResource(
     return;
   }
   // index.html handling
+  let stats: Stats | void;
   if (res.type === ResourceType.Html) {
-    const stats = await promises.stat(fileSrcPath);
+    stats = await promises.stat(fileSrcPath);
     if (stats.isDirectory()) {
       for (const index of ['index.html', 'index.htm']) {
         if (await promises.access(fileSrcPath + '/' + index)
@@ -45,6 +47,19 @@ export async function readOrCopyLocalResource(
     res.body = await promises.readFile(fileSrcPath, {
       encoding: res.encoding
     });
+  }
+  try {
+    if (!stats) {
+      stats = await promises.stat(fileSrcPath);
+    }
+    if (stats) {
+      res.meta.headers = {
+        'last-modified': stats.mtime.toISOString(),
+        'content-length': stats.size.toString()
+      };
+    }
+  } catch (e) {
+    errorLogger.warn('stat ' + fileSrcPath, e);
   }
   res.finishTimestamp = Date.now();
   res.downloadTime =

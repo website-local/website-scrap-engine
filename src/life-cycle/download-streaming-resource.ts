@@ -49,7 +49,7 @@ export async function streamingDownloadToFile(
   res: Resource & { downloadStartTimestamp: number },
   requestOptions: RequestOptions
 ): Promise<Response | void> {
-  const savePath = path.join(res.localRoot, res.savePath);
+  const savePath = path.join(res.localRoot, decodeURI(res.savePath));
   try {
     await fs.access(savePath, constants.W_OK);
   } catch (e) {
@@ -217,9 +217,30 @@ export async function streamingDownloadToFile(
   });
 }
 
+export async function optionallySetLastModifiedTime(
+  res: Resource, options: StaticDownloadOptions
+): Promise<void> {
+  // https://github.com/website-local/website-scrap-engine/issues/174
+  let mtime: number | void;
+  if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
+    mtime = Date.parse(res.meta.headers?.['last-modified']);
+  }
+
+  // void and NaN check
+  if (mtime) {
+    const savePath = path.join(res.localRoot, decodeURI(res.savePath));
+    try {
+      await fs.utimes(savePath, mtime, mtime);
+    } catch (e) {
+      errorLogger.warn('skipping utimes ' + savePath, e);
+    }
+  }
+}
+
 export async function downloadStreamingResource(
   res: Resource,
-  requestOptions: RequestOptions
+  requestOptions: RequestOptions,
+  options: StaticDownloadOptions
 ): Promise<Resource | DownloadResource | void> {
   if (res.body) {
     return res as DownloadResource;
@@ -234,7 +255,8 @@ export async function downloadStreamingResource(
   await streamingDownloadToFile(
     res as (Resource & { downloadStartTimestamp: number }), requestOptions);
 
-  /// Not needed
+  await optionallySetLastModifiedTime(res, options);
+  /// Not needed before
   // res.finishTimestamp = Date.now();
   // res.downloadTime =
   //   res.finishTimestamp - res.downloadStartTimestamp;
@@ -329,10 +351,12 @@ export function downloadStreamingResourceWithHook(
     if (!downloadError) {
       await streamingDownloadToFile(
         res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+      await optionallySetLastModifiedTime(res, options);
     } else {
       try {
         await streamingDownloadToFile(
           res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+        await optionallySetLastModifiedTime(res, options);
       } catch (e) {
         await downloadError(e, res, requestOptions, options, pipeline);
       }

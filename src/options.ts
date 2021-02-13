@@ -136,6 +136,15 @@ export interface StaticDownloadOptions {
    * See https://github.com/website-local/website-scrap-engine/issues/152
    */
   waitForInitBeforeIdle?: boolean;
+
+  /**
+   * Set last modified time of local saved file with value from the
+   * Last-Modified http header, if available in response.
+   *
+   * https://developer.mozilla.org/docs/Web/HTTP/Headers/Last-Modified
+   * https://github.com/website-local/website-scrap-engine/issues/174
+   */
+  preferRemoteLastModifiedTime?: boolean;
 }
 
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
