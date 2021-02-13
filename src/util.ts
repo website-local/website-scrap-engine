@@ -28,7 +28,8 @@ export const toString = (body: ResourceBody, encoding: ResourceEncoding): string
     stringValue = body.toString(encoding || 'utf8');
   } else if (ArrayBuffer.isView(body)) {
     // note: this would not copy the buffer
-    stringValue = Buffer.from(body.buffer).toString(encoding || 'utf8');
+    stringValue = Buffer.from(body.buffer, body.byteOffset, body.byteLength)
+      .toString(encoding || 'utf8');
   } else if (body instanceof ArrayBuffer) {
     // note: this would not copy the buffer
     stringValue = Buffer.from(body).toString(encoding || 'utf8');

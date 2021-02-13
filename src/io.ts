@@ -1,4 +1,5 @@
 import fs from 'fs';
+import type {BaseEncodingOptions} from 'fs';
 import {dirname} from 'path';
 import mkdirP from 'mkdirp';
 import type {ResourceBody, ResourceEncoding} from './resource';
@@ -36,16 +37,24 @@ export const writeFile = async (
   if (!fs.existsSync(dir)) {
     await mkdirRetry(dir);
   }
+  let fileData: Uint8Array | string;
+  let options: BaseEncodingOptions | void;
   if (typeof data === 'string') {
-    return fs.promises.writeFile(filePath, data, {encoding});
+    fileData = data;
+    options = {encoding};
   } else if (data instanceof ArrayBuffer) {
-    return fs.promises.writeFile(filePath, Buffer.from(data));
+    fileData = Buffer.from(data);
   } else if (data instanceof Uint8Array || Buffer.isBuffer(data)) {
-    return fs.promises.writeFile(filePath, data);
+    fileData = data;
   } else if (ArrayBuffer.isView(data)) {
-    return fs.promises.writeFile(filePath, Buffer.from(data.buffer));
+    fileData = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
   } else {
     // not likely happen
     throw new TypeError('Type of data not supported.');
+  }
+  if (options) {
+    return fs.promises.writeFile(filePath, fileData, options);
+  } else {
+    return fs.promises.writeFile(filePath, fileData);
   }
 };

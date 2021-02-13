@@ -75,7 +75,7 @@ export async function processSourceMap(
   } else if (res.body instanceof ArrayBuffer) {
     body = Buffer.from(res.body);
   } else if (ArrayBuffer.isView(res.body)) {
-    body = Buffer.from(res.body.buffer);
+    body = Buffer.from(res.body.buffer, res.body.byteOffset, res.body.byteLength);
   } else {
     // we can not process that
     if (resources.length) {
