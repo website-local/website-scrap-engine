@@ -1,28 +1,23 @@
 import cheerio from 'cheerio';
 import * as fs from 'fs';
-import {toString} from '../../src/util';
 // noinspection ES6PreferShortImport
 import {saveHtmlToDisk} from '../../src/life-cycle/save-html-to-disk';
-import {fakeOpt, fakePipeline, resHtml as res} from './save-mock-fs';
+import {
+  fakeOpt,
+  fakePipeline,
+  mockFs,
+  mockModules,
+  resHtml as res
+} from './save-mock-fs';
 import {join} from 'path';
 import {ResourceType} from '../../src/resource';
 
-jest.mock('fs', () => ({
-  // skip the mkdir process
-  existsSync: jest.fn().mockReturnValue(true),
-  // make log4js and fs-extra happy in mocked env
-  realpath: jest.fn(),
-  promises: {
-    writeFile: jest.fn()
-  }
-}));
-jest.mock('mkdirp');
-jest.mock('log4js');
+mockModules();
 
 describe('save-html-to-disk', function () {
   test('skip non html', async () => {
-    expect(jest.isMockFunction(fs.promises.writeFile)).toBe(true);
     jest.spyOn(fs.promises, 'writeFile').mockClear();
+    expect(jest.isMockFunction(fs.promises.writeFile)).toBe(true);
     const downloadResource = res('http://example.com', 'body');
     downloadResource.type = ResourceType.Binary;
     const saved = await saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
@@ -31,13 +26,7 @@ describe('save-html-to-disk', function () {
   });
 
   test('save regular html', async () => {
-    const fakeFs: Record<string, string> = {};
-    expect(jest.isMockFunction(fs.promises.writeFile)).toBe(true);
-    jest.spyOn(fs.promises, 'writeFile').mockClear()
-      .mockImplementation((path, data) => {
-        fakeFs[path.toString()] = toString(data, 'utf8');
-        return Promise.resolve();
-      });
+    const {fakeFs} = mockFs();
     const saved = await saveHtmlToDisk(
       res('http://example.com', 'body'), fakeOpt, fakePipeline);
     expect(saved).toBeUndefined();
@@ -48,12 +37,7 @@ describe('save-html-to-disk', function () {
   });
 
   test('save processed html', async () => {
-    const fakeFs: Record<string, string> = {};
-    jest.spyOn(fs.promises, 'writeFile').mockClear()
-      .mockImplementation((path, data) => {
-        fakeFs[path.toString()] = toString(data, 'utf8');
-        return Promise.resolve();
-      });
+    const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com', 'body');
     const html = '<html lang="en"><head><title></title></head><body></body></html>';
     downloadResource.meta.doc = cheerio.load(html);
@@ -66,12 +50,7 @@ describe('save-html-to-disk', function () {
   });
 
   test('save processed html custom serialize options', async () => {
-    const fakeFs: Record<string, string> = {};
-    jest.spyOn(fs.promises, 'writeFile').mockClear()
-      .mockImplementation((path, data) => {
-        fakeFs[path.toString()] = toString(data, 'utf8');
-        return Promise.resolve();
-      });
+    const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com', 'body');
     const html = '<html lang="en"><head><title>啊</title></head><body></body></html>';
     downloadResource.meta.doc = cheerio.load(html);
@@ -91,12 +70,7 @@ describe('save-html-to-disk', function () {
   });
 
   test('save redirected html', async () => {
-    const fakeFs: Record<string, string> = {};
-    jest.spyOn(fs.promises, 'writeFile').mockClear()
-      .mockImplementation((path, data) => {
-        fakeFs[path.toString()] = toString(data, 'utf8');
-        return Promise.resolve();
-      });
+    const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com', 'body');
     downloadResource.redirectedUrl = 'http://example.com/en-US/';
     const html = '<html lang="en"><head><title></title></head><body></body></html>';
@@ -118,12 +92,7 @@ describe('save-html-to-disk', function () {
   });
 
   test('save redirected html with redirectedSavePath', async () => {
-    const fakeFs: Record<string, string> = {};
-    jest.spyOn(fs.promises, 'writeFile').mockClear()
-      .mockImplementation((path, data) => {
-        fakeFs[path.toString()] = toString(data, 'utf8');
-        return Promise.resolve();
-      });
+    const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com/', 'body');
     downloadResource.redirectedSavePath = join('example.com', 'zh-CN', 'demo1.html');
     downloadResource.redirectedUrl = 'http://example.com/zh-CN/';
@@ -144,12 +113,7 @@ describe('save-html-to-disk', function () {
   });
 
   test('save html with same redirectedSavePath and savePath', async () => {
-    const fakeFs: Record<string, string> = {};
-    jest.spyOn(fs.promises, 'writeFile').mockClear()
-      .mockImplementation((path, data) => {
-        fakeFs[path.toString()] = toString(data, 'utf8');
-        return Promise.resolve();
-      });
+    const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com/', 'body');
     downloadResource.redirectedSavePath = join('example.com', 'zh-CN', 'demo1.html');
     downloadResource.redirectedUrl = 'http://example.com/zh-CN/';
