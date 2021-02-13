@@ -7,14 +7,15 @@ import {
 import {
   isUriChar,
   processSourceMap,
-  sourceMapPrefix,
   SOURCE_MAP_HEADER,
+  sourceMapPrefix,
   X_SOURCE_MAP_HEADER
 } from '../../src/life-cycle/process-source-map';
 import type {DownloadResource} from '../../src/life-cycle/types';
-import {defaultLifeCycle} from '../../src/life-cycle';
-import {PipelineExecutorImpl} from '../../src/downloader';
+// noinspection ES6PreferShortImport
+import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor';
 import type {StaticDownloadOptions} from '../../src/options';
+import type {Cheerio} from '../../src/types';
 
 const fakeRes = (url: string): DownloadResource => {
   const arg: CreateResourceArgument = {
@@ -22,7 +23,7 @@ const fakeRes = (url: string): DownloadResource => {
     type: ResourceType.Binary,
     depth: 1,
     url,
-    refUrl:'https://example.com/',
+    refUrl: 'https://example.com/',
     refType: ResourceType.Binary
   };
   const resource = createResource(arg);
@@ -30,15 +31,36 @@ const fakeRes = (url: string): DownloadResource => {
   return resource as DownloadResource;
 };
 
-const pipeline = new PipelineExecutorImpl(defaultLifeCycle(), {}, {
+const fakeOpt = {
   concurrency: 0,
   encoding: {},
   localRoot: '',
   maxDepth: 0,
   meta: {}
-} as StaticDownloadOptions);
+} as StaticDownloadOptions;
 
-const process = async(res: DownloadResource) => {
+// full pipeline is not needed here
+const pipeline = {
+  createAndProcessResource(
+    rawUrl: string,
+    defaultType: ResourceType,
+    depth: number | void | null,
+    element: Cheerio | null,
+    parent: Resource
+  ): Resource | void {
+    const arg: CreateResourceArgument = {
+      localRoot: '',
+      type: ResourceType.Binary,
+      depth: 1,
+      url: rawUrl,
+      refUrl: parent.url,
+      refType: ResourceType.Binary
+    };
+    return createResource(arg);
+  }
+} as PipelineExecutor;
+
+const process = async (res: DownloadResource) => {
   let resources: Resource[] = [];
   const submit = (r: Resource | Resource[]) => {
     if (Array.isArray(r)) {
@@ -47,7 +69,7 @@ const process = async(res: DownloadResource) => {
       resources.push(r);
     }
   };
-  await processSourceMap(res, submit, pipeline.options, pipeline);
+  await processSourceMap(res, submit, fakeOpt, pipeline);
   return resources;
 };
 
