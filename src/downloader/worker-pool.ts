@@ -45,7 +45,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       this.workers[i].worker.addListener('error',
         err => this.workerOnError(this.workers[i], err));
       ready.push(new Promise(resolve =>
-        this.workers[i].worker.addListener('error',resolve)));
+        this.workers[i].worker.addListener('online',resolve)));
     }
     this.ready = Promise.all(ready).then(() => undefined);
   }
@@ -130,11 +130,13 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   async dispose(): Promise<number[]> {
-    const numbers = Promise.all(
+    const numbers = await Promise.all(
       this.workers.map(info => info.worker.terminate()));
     for (const taskId in this.workingTasks) {
       // noinspection JSUnfilteredForInLoop
       this.workingTasks[taskId].reject(new Error('disposed'));
+      // noinspection JSUnfilteredForInLoop
+      delete this.workingTasks[taskId];
     }
     return numbers;
   }
