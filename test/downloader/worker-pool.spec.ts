@@ -1,6 +1,6 @@
 import { join } from 'path';
 // noinspection ES6PreferShortImport
-import {WorkerPool} from '../../src/downloader/worker-pool';
+import {WorkerPool, WorkerInfo} from '../../src/downloader/worker-pool';
 
 describe('worker-pool', function () {
   test('pool would work correctly', async done => {
@@ -27,4 +27,31 @@ describe('worker-pool', function () {
       await pool.dispose();
     }
   });
+
+  test('pool logs worker error', async () => {
+    const fn = jest.fn();
+    let error: Error | undefined;
+
+    class Pool extends WorkerPool {
+      workerOnError(info: WorkerInfo, err: Error) {
+        super.workerOnError(info, err);
+        fn(err);
+        console.log(info.id, err);
+        error = err;
+      }
+    }
+    const pool = new Pool(2,
+      join(__dirname, 'error-worker.js'), {});
+    try {
+      await pool.ready;
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(fn).toBeCalledTimes(2);
+      // noinspection JSUnusedAssignment
+      expect(error).toBeTruthy();
+      expect(error?.message).toBe('Test worker error');
+    } finally {
+      await pool.dispose();
+    }
+  });
+
 });

@@ -27,6 +27,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly workers: WorkerInfo[] = [];
   readonly pendingTasks: PendingPromiseWithBody<R>[] = [];
   readonly workingTasks: Record<number, PendingPromise> = {};
+  readonly ready: Promise<void>;
   taskIdCounter = 0;
 
   constructor(
@@ -35,12 +36,22 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     workerData: Record<string, unknown>,
     public maxLoad: number = -1
   ) {
+    const ready: Promise<void>[] = [];
     for (let i = 0; i < coreSize; i++) {
       this.workers[i] = new WorkerInfoImpl(
         new Worker(workerScript, {workerData}));
       this.workers[i].worker.addListener('message',
         msg => this.onMessage(this.workers[i], msg));
+      this.workers[i].worker.addListener('error',
+        err => this.workerOnError(this.workers[i], err));
+      ready.push(new Promise(resolve =>
+        this.workers[i].worker.addListener('error',resolve)));
     }
+    this.ready = Promise.all(ready).then(() => undefined);
+  }
+
+  workerOnError(info: WorkerInfo, err: Error): void {
+    logger.error.error('worker error', info.id, err);
   }
 
   onMessage(info: WorkerInfo, message: WorkerMessage): void {
