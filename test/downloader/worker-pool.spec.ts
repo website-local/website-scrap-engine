@@ -1,9 +1,9 @@
-import { join } from 'path';
+import {join} from 'path';
 // noinspection ES6PreferShortImport
-import {WorkerPool, WorkerInfo} from '../../src/downloader/worker-pool';
+import {WorkerInfo, WorkerPool} from '../../src/downloader/worker-pool';
 
 describe('worker-pool', function () {
-  test('pool would work correctly', async done => {
+  test('pool would work correctly', async () => {
     const cases: number[][] = [];
     for (let i = 0; i < 100; i++) {
       cases.push([Math.random() * 65535 | 0, Math.random() * 65535 | 0]);
@@ -22,7 +22,6 @@ describe('worker-pool', function () {
       const badResult = await pool.submitTask([12, NaN]);
       expect(badResult.body).toBeNaN();
       expect(badResult.error).toBeTruthy();
-      done();
     } finally {
       await pool.dispose();
     }
@@ -40,6 +39,7 @@ describe('worker-pool', function () {
         error = err;
       }
     }
+
     const pool = new Pool(2,
       join(__dirname, 'error-worker.js'), {});
     try {
@@ -54,4 +54,29 @@ describe('worker-pool', function () {
     }
   });
 
+  test('pool rejects bad argument', async () => {
+
+    const pool = new WorkerPool(1,
+      join(__dirname, 'delay-calc-worker.js'), {});
+    try {
+      await pool.ready;
+      const b = Buffer.alloc(10);
+      await expect(pool.submitTask([1, 2, b], [b]))
+        .rejects.toThrow();
+    } finally {
+      await pool.dispose();
+    }
+  });
+
+  test('pool rejects unfinished tasks on dispose', async () => {
+
+    const pool = new WorkerPool(1,
+      join(__dirname, 'delay-calc-worker.js'), {});
+    await pool.ready;
+    const task1 = pool.submitTask([1, 2]);
+    const task2 = pool.submitTask([2, 2]);
+    await pool.dispose();
+    await expect(task1).rejects.toThrow('disposed');
+    await expect(task2).rejects.toThrow('disposed');
+  });
 });
