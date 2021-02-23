@@ -44,7 +44,7 @@ describe('worker-pool', function () {
       join(__dirname, 'error-worker.js'), {});
     try {
       await pool.ready;
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 200));
       expect(fn).toBeCalledTimes(2);
       // noinspection JSUnusedAssignment
       expect(error).toBeTruthy();
