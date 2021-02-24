@@ -25,7 +25,7 @@ describe('worker-pool', function () {
     } finally {
       await pool.dispose();
     }
-  });
+  }, 10000);
 
   test('pool logs worker error', async () => {
     const fn = jest.fn();
@@ -52,7 +52,7 @@ describe('worker-pool', function () {
     } finally {
       await pool.dispose();
     }
-  });
+  }, 10000);
 
   test('pool rejects bad argument', async () => {
 
@@ -66,7 +66,7 @@ describe('worker-pool', function () {
     } finally {
       await pool.dispose();
     }
-  });
+  }, 10000);
 
   test('pool rejects unfinished tasks on dispose', async () => {
 
@@ -78,5 +78,5 @@ describe('worker-pool', function () {
     await pool.dispose();
     await expect(task1).rejects.toThrow('disposed');
     await expect(task2).rejects.toThrow('disposed');
-  });
+  }, 10000);
 });
