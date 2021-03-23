@@ -1,4 +1,6 @@
-import {MessagePort, Worker} from 'worker_threads';
+import type {MessagePort, WorkerOptions} from 'worker_threads';
+import type {URL} from 'url';
+import {Worker} from 'worker_threads';
 import * as logger from '../logger/logger';
 import type {LogWorkerMessage} from './worker-type';
 import {
@@ -23,6 +25,15 @@ export class WorkerInfoImpl implements WorkerInfo {
   }
 }
 
+export interface WorkerFactory {
+  (filename: string | URL, options?: WorkerOptions): Worker;
+}
+
+function defaultWorkerFactory(
+  filename: string | URL, options?: WorkerOptions): Worker {
+  return new Worker(filename, options);
+}
+
 export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly workers: WorkerInfo[] = [];
   readonly pendingTasks: PendingPromiseWithBody<R>[] = [];
@@ -34,12 +45,13 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     public coreSize: number,
     workerScript: string,
     workerData: Record<string, unknown>,
-    public maxLoad: number = -1
+    public maxLoad: number = -1,
+    factory: WorkerFactory = defaultWorkerFactory
   ) {
     const ready: Promise<void>[] = [];
     for (let i = 0; i < coreSize; i++) {
       this.workers[i] = new WorkerInfoImpl(
-        new Worker(workerScript, {workerData}));
+        factory(workerScript, {workerData}));
       this.workers[i].worker.addListener('message',
         msg => this.onMessage(this.workers[i], msg));
       this.workers[i].worker.addListener('error',

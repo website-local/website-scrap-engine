@@ -1,5 +1,5 @@
 import path from 'path';
-import {WorkerPool} from './worker-pool';
+import {WorkerPool, WorkerFactory} from './worker-pool';
 import type {RawResource, Resource} from '../resource';
 import type {DownloadWorkerMessage} from './types';
 import type {StaticDownloadOptions} from '../options';
@@ -19,7 +19,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
 
   constructor(
     public pathToOptions: string,
-    overrideOptions?: Partial<MultiThreadDownloaderOptions>
+    overrideOptions?: Partial<MultiThreadDownloaderOptions>,
+    workerFactory?: WorkerFactory
   ) {
     super(pathToOptions, overrideOptions);
     let workerCount: number = this.options.concurrency;
@@ -33,7 +34,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
       // worker script should be compiled to .js
       overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker.js'),
       {pathToOptions, overrideOptions},
-      overrideOptions?.maxLoad || -1
+      overrideOptions?.maxLoad || -1,
+      workerFactory
     );
     this.workerDispose = [];
     for (const info of this.pool.workers) {
