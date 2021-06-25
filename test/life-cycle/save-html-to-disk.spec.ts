@@ -95,8 +95,11 @@ describe('save-html-to-disk', function () {
     downloadResource.meta.doc = cheerio.load(html);
     const opt = Object.assign({}, fakeOpt);
     opt.cheerioSerialize = {
-      _useHtmlParser2: true,
-      decodeEntities: true
+      // the new mode of  _useHtmlParser2: true,
+      xml: {
+        xmlMode: false,
+        decodeEntities: true
+      },
     };
     const saved = await saveHtmlToDisk(downloadResource, opt, fakePipeline);
     expect(saved).toBeUndefined();
