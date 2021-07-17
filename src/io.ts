@@ -1,5 +1,5 @@
 import fs from 'fs';
-import type {BaseEncodingOptions} from 'fs';
+import type {ObjectEncodingOptions} from 'fs';
 import {dirname} from 'path';
 import mkdirP from 'mkdirp';
 import type {ResourceBody, ResourceEncoding} from './resource';
@@ -40,7 +40,7 @@ export const writeFile = async (
     await mkdirRetry(dir);
   }
   let fileData: Uint8Array | string;
-  let options: BaseEncodingOptions | void;
+  let options: ObjectEncodingOptions | void;
   if (typeof data === 'string') {
     fileData = data;
     options = {encoding};
