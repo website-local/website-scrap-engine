@@ -463,32 +463,22 @@ describe('resource', function () {
     expect(() => createResource(arg)).toThrowError();
   });
 
-  // https://github.com/website-local/website-scrap-engine/issues/107
-  test('skipReplacePathError skip if http empty host', () => {
+  // BREAKING CHANGE v0.4
+  // https://github.com/medialize/URI.js/commit/ac43ca8f80c042f0256fb551ea5203863dec4481
+  // https://github.com/website-local/website-scrap-engine/pull/301
+  test('merge leading slashes for the web protocols', () => {
     const arg: CreateResourceArgument = {
       type: ResourceType.Html,
       depth: 1,
+      // since URI.js v1.19.7, http:///aaa -> http://aaa
       url: 'http:///aaa',
       refUrl: 'https://nodejs.com/api/',
       refType: ResourceType.Html,
       localRoot: '/tmp/aaa',
-      skipReplacePathError: true,
     };
     const resource: Resource = createResource(arg);
-    expect(resource.replaceUri?.toString()).toBe('http:///aaa');
-    expect(resource.shouldBeDiscardedFromDownload).toBe(true);
-  });
-
-  test('throw error on http empty host', () => {
-    const arg: CreateResourceArgument = {
-      type: ResourceType.Html,
-      depth: 1,
-      url: 'http:///aaa',
-      refUrl: 'https://nodejs.com/api/',
-      refType: ResourceType.Html,
-      localRoot: '/tmp/aaa'
-    };
-    expect(() => createResource(arg)).toThrowError();
+    expect(resource.replaceUri?.toString()).toBe('../../aaa/index.html');
+    expect(resource.shouldBeDiscardedFromDownload).toBeFalsy();
   });
 
   test('urlOfSavePath', () => {
