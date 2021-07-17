@@ -82,8 +82,15 @@ export function mockFs(): {
   const fakeFs: Record<string, string> = {};
   jest.spyOn(fs.promises, 'writeFile').mockClear()
     .mockImplementation((path, data) => {
-      fakeFs[path.toString()] = toString(data, 'utf8');
-      return Promise.resolve();
+      if (typeof data === 'string' ||
+        Buffer.isBuffer(data) ||
+        data instanceof ArrayBuffer ||
+        data instanceof Uint8Array) {
+        fakeFs[path.toString()] = toString(data, 'utf8');
+        return Promise.resolve();
+      }
+      return Promise.reject(
+        'mock fs writeFile with type not supported yet');
     });
   const fakeFsStats: Record<string, number> = {};
   jest.spyOn(fs.promises, 'utimes').mockClear()
