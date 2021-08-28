@@ -112,8 +112,9 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     }
   }
 
-  handleError(err: Error | null, cause: string, resource: RawResource): void {
-    if (err && err.name === 'HTTPError' &&
+  handleError(err: Error | unknown | null, cause: string, resource: RawResource): void {
+    // force cast in case of typescript 4.4
+    if (err && (err as {name?: string}).name === 'HTTPError' &&
       (err as HTTPError)?.response?.statusCode === 404) {
       notFound.error(resource.url, resource.downloadLink, resource.refUrl);
     } else if (err) {

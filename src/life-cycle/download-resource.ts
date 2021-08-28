@@ -33,6 +33,11 @@ export const beforeRetryHook: BeforeRetryHook = (
   }
 };
 
+export interface DownloadError extends Partial<Error> {
+  retryLimitExceeded?: boolean;
+  code?: string;
+  event?: string;
+}
 
 /**
  * workaround for retry premature close on node 12
@@ -46,7 +51,7 @@ export async function getRetry(
   options: Options
 ): Promise<Response<Buffer | string> | void> {
   let res: Response<Buffer | string> | void;
-  let err: Error | void, optionsClone: Options;
+  let err: DownloadError | void, optionsClone: Options;
   for (let i = 0; i < 25; i++) {
     err = void 0;
     try {
@@ -59,22 +64,23 @@ export async function getRetry(
       }
       break;
     } catch (e) {
-      err = e;
-      if (e && e.message === 'premature close') {
+      // force cast for typescript 4.4
+      err = e as DownloadError | void;
+      if (err && err.message === 'premature close') {
         logger.retry.warn(i, url, 'manually retry on premature close',
-          e.name, e.code, e.event, e.message);
+          err.name, err.code, err.event, err.message);
         await sleep(i * 200);
         continue;
       }
       // these events might be accidentally unhandled
-      if (e && !e.retryLimitExceeded &&
-        (e.name === 'RequestError' || e.name === 'TimeoutError') &&
+      if (err && !err.retryLimitExceeded &&
+        (err.name === 'RequestError' || err.name === 'TimeoutError') &&
         // RequestError: Cannot read property 'request' of undefined
         // at Object.exports.default (got\dist\source\core\utils\timed-out.js:56:23)
         // error.code === undefined
-        (e.code === 'ETIMEDOUT' || e.code === undefined)) {
-        logger.retry.warn(i, url, `manually retry on ${e.event} timeout`,
-          e.name, e.code, e.message);
+        (err.code === 'ETIMEDOUT' || err.code === undefined)) {
+        logger.retry.warn(i, url, `manually retry on ${err.event} timeout`,
+          err.name, err.code, err.message);
         await sleep(i * 300);
         continue;
       }

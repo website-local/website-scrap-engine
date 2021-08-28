@@ -57,7 +57,7 @@ export interface WorkerMessage<T = unknown> {
   taskId: number;
   type: WorkerMessageType;
   body: T;
-  error?: Error | void;
+  error?: Error | unknown | void;
 }
 
 export interface DownloadWorkerMessage extends WorkerMessage<RawResource[]> {

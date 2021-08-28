@@ -53,7 +53,8 @@ export async function streamingDownloadToFile(
   try {
     await fs.access(savePath, constants.W_OK);
   } catch (e) {
-    if (e?.code === 'ENOENT') {
+    // force cast for typescript 4.4
+    if (e && (e as {code?: string | void}).code === 'ENOENT') {
       await mkdirRetry(path.dirname(savePath));
     } else {
       throw e;
@@ -303,7 +304,7 @@ export interface StreamingDownloadErrorHook {
    * @param options
    * @param pipeline
    */
-  (e: Error, res: Resource, requestOptions: RequestOptions,
+  (e: Error | unknown, res: Resource, requestOptions: RequestOptions,
    options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<void>;
 }

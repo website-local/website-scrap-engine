@@ -6,7 +6,7 @@ import type {ResourceBody, ResourceEncoding} from './resource';
 import {mkdir as mkdirLogger, error as errorLogger} from './logger/logger';
 
 export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
-  let error: Error | void;
+  let error: unknown | void;
   for (let i = 0; i < retry; i++) {
     error = undefined;
     try {

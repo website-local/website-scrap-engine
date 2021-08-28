@@ -37,7 +37,7 @@ const init = pipeline.init(pipeline);
 
 parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
   const collectedResource: RawResource[] = [];
-  let error: Error | void;
+  let error: Error | unknown | void;
   let redirectedUrl: string | undefined;
   try {
     await init;
@@ -67,6 +67,7 @@ parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) =
       redirectedUrl = processedResource.redirectedUrl;
     }
   } catch (e) {
+    // TODO: handle if object could not be cloned here
     error = e;
   } finally {
     const message: DownloadWorkerMessage = {
