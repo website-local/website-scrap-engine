@@ -30,7 +30,7 @@
     "urijs": "^1.19.7"
   },
   "devDependencies": {
-    "@types/jest": "^26.0.24",
+    "@types/jest": "^27.0.1",
     "@types/mkdirp": "^1.0.2",
     "@types/node": "^16.9.2",
     "@types/urijs": "^1.19.16",
