@@ -9,7 +9,7 @@ import {
 import {join} from 'path';
 
 describe('util', function () {
-  test('sleep', async done => {
+  test('sleep', async () => {
     const tolerance = 2;
     let ts: number;
     const testSleepTimes = [0, 1, 6, 11, 3, 14];
@@ -18,7 +18,6 @@ describe('util', function () {
       await sleep(time);
       expect(Date.now() - ts + tolerance).toBeGreaterThanOrEqual(time);
     }
-    done();
   });
 
   test('escapePath', () => {
