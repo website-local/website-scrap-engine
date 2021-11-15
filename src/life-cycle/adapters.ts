@@ -78,6 +78,11 @@ export async function processRedirectedUrl(
       res.redirectedUrl, res.type, res.depth, null, res);
     if (redirectedRes) {
       res.redirectedUrl = redirectedRes.url;
+      // https://github.com/website-local/website-scrap-engine/issues/385
+      // 2011/11/15
+      if (redirectedRes.savePath) {
+        res.redirectedSavePath = redirectedRes.savePath;
+      }
     }
   }
   return res;

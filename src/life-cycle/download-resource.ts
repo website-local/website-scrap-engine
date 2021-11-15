@@ -7,10 +7,11 @@ import got, {
 } from 'got';
 import type {Response} from 'got/dist/source/as-promise';
 import type {DownloadResource, RequestOptions} from './types';
-import {Resource, ResourceType} from '../resource';
+import {generateSavePath, Resource, ResourceType} from '../resource';
 import type {StaticDownloadOptions} from '../options';
 import * as logger from '../logger/logger';
 import {isUrlHttp, sleep} from '../util';
+import URI from 'urijs';
 
 /** Take logs before retry */
 export const beforeRetryHook: BeforeRetryHook = (
@@ -97,7 +98,8 @@ export async function getRetry(
 
 export async function requestForResource(
   res: Resource & { downloadStartTimestamp: number },
-  requestOptions: RequestOptions
+  requestOptions: RequestOptions,
+  options?: StaticDownloadOptions
 ): Promise<DownloadResource | Resource | void> {
   const downloadLink: string = encodeURI(decodeURI(res.downloadLink));
   const reqOptions: Options = Object.assign({}, requestOptions);
@@ -128,6 +130,15 @@ export async function requestForResource(
   res.finishTimestamp = Date.now();
   res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp;
   res.redirectedUrl = response.url;
+  // https://github.com/website-local/website-scrap-engine/issues/385
+  // 2011/11/15
+  if (res.redirectedUrl !== res.url) {
+    res.redirectedSavePath = generateSavePath(
+      URI(res.redirectedUrl),
+      res.type === ResourceType.Html,
+      !options?.deduplicateStripSearch,
+      options?.localSrcRoot);
+  }
   res.body = response.body;
   return res;
 }
@@ -151,7 +162,7 @@ export async function downloadResource(
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
   }
   let downloadedResource: DownloadResource | Resource | void = await requestForResource(
-    res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+    res as (Resource & { downloadStartTimestamp: number }), requestOptions, options);
   if (!downloadedResource || !downloadedResource.body) {
     return downloadedResource;
   }
