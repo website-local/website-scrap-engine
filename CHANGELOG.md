@@ -1,0 +1,140 @@
+0.5.0
+============
+
+BREAKING
+------------
+* typescript 4.4 support
+  * WorkerMessage: `error` can be `unknown`
+  * StreamingDownloadErrorHook: `e` can be `unknown`
+* pipeline-executor-impl fix keepSearch param
+* resource: redirectedSavePath not set after redirect
+
+Test
+------------
+* test: adapt for jest 27 and ts-jest 27
+
+0.4.0
+============
+
+BREAKING
+------------
+* worker-pool: load based worker pool (#11)
+* cheerio: adapt for version 1.0.0-rc.10 (#271)
+* test: adapt for URI.js v1.19.7 (#301)
+
+Fix
+------------
+* downloader: correctly transfer resource body
+* correctly convent ArrayBufferView to Buffer
+* worker-pool: fix ready
+
+Enhancement
+------------
+* npm: update
+* life-cycle: add init and dispose life cycle
+* resource: optionally redirected savePath
+* resource: take a log on replacing long search string
+* save-to-disk: optionally use remote date
+* worker-pool: log worker errors
+* worker-pool: custom initializer of worker
+
+Test
+------------
+* worker-pool: basic unit test
+* save-html-to-disk: initial unit tests with mocked fs
+* save-to-disk: refactor tests
+
+0.3.2
+============
+
+* resource: fix redirected path processing (#157)
+* downloader: optional wait for this.init in method onIdle (#152)
+* typescript: prefer type only import
+
+0.3.1
+============
+
+* resource: use correct file scheme for windows (#145)
+
+0.3.0
+============
+
+New Feature
+------------
+* life-cycle: extract and process source maps (#123)
+* adapters: async processHtml
+* life-cycle: add read-or-copy-local-resource
+* resource: support file protocol (#126)
+
+Misc
+------------
+* types: export type CheerioElement
+* resource: optional skip replacePath processing in case of parser error (#107)
+* resource: fix new type of Buffer.from (#116)
+* build(deps): bump cheerio from 1.0.0-rc.3 to 1.0.0-rc.5
+* io: mkdirRetry returns no string
+* life-cycle: add download-streaming-resource to default
+* skip-links: skip unix scheme
+* skip-links: allow file protocol
+* download: skip non-http url
+* (BREAKING) resource: refactor createResource (#139)
+
+0.2.0
+============
+* life-cycle: streaming download and save binary resource to disk
+* build(deps-dev): bump @types/cheerio from 0.22.21 to 0.22.22
+
+0.1.7
+============
+* resource: parse and process standalone svg images
+* save-html-to-disk: keep location hash in redirect placeholder
+* detect-resource-type: export lowerCaseExtension
+* downloader: log downloadLink instead of rawUrl
+* typescript: update to v4.0
+
+0.1.6
+============
+* save-resource-to-disk: compare redirectedUrl with url
+* process-html: submit resources from inline css
+* downloader: correctly use adjustTimer on start
+* downloader: deduplicate on redirectedUrl
+  downloader: do not wait for complete on add
+
+0.1.5
+============
+* downloader: do not wait for complete on add
+* process-html: fix detecting type
+* npm: update p-queue to 6.6.0
+* npm: move copy script to build
+
+0.1.4
+============
+* save-html-to-disk: fix redirect check
+* logger: add logger for skipExternal
+
+0.1.3
+============
+* save-html-to-disk: fix redirect placeholder path
+
+0.1.2
+============
+* adapters: make processRedirectedUrl named function
+* options: move initialUrl and logSubDir to StaticDownloadOptions
+* options: retry on error codes
+* download-resource: manually retry on got internal errors
+* io: refactor mkdirRetry
+* process-html: skip invalid srcset
+
+0.1.1
+============
+* io: remove mkdirRetrySync and update writeFile
+* util: arrayToMap could freeze the object returned if required
+* detect-resource-type: fix url with search and hash
+* options: allow merging got options from StaticDownloadOptions
+* options: add comments
+* life-cycle: convent default life cycle fn to named function
+
+0.1.0
+============
+Initial release.
+

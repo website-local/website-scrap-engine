@@ -1,4 +1,3 @@
-CHANGELOG.md
 node.exe
 node_etw_provider.man
 node_modules
@@ -21,3 +20,5 @@ eslint.cmd
 lib/**/*.js
 lib/**/*.map
 lib/**/*.d.ts
+
+/*.tgz
