@@ -1,8 +1,9 @@
 {
   "name": "website-scrap-engine",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Configurable website scraper in typescript",
-  "main": "lib/index",
+  "main": "lib",
+  "types": "lib",
   "engines": {
     "node": ">=12.16.0"
   },
@@ -60,7 +61,7 @@
   "author": "myfreeer",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/myfreeer/website-scrap-engine/issues"
+    "url": "https://github.com/website-local/website-scrap-engine/issues"
   },
-  "homepage": "https://github.com/myfreeer/website-scrap-engine#readme"
+  "homepage": "https://github.com/website-local/website-scrap-engine#readme"
 }
