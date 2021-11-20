@@ -74,8 +74,16 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   takeLog(info: WorkerInfo, message: LogWorkerMessage): void {
-    logger?.[message.body.logger]?.[message.body.level]
-      ?.(info.id, ...message?.body?.content);
+    if (!message?.body) {
+      logger.error.warn('Invalid formatted log', info.id);
+      return;
+    }
+    const content = message?.body?.content;
+    if (content?.length) {
+      logger?.[message.body.logger]?.[message.body.level]?.(info.id, ...content);
+    } else {
+      logger?.[message.body.logger]?.[message.body.level]?.(info.id);
+    }
   }
 
   complete(info: WorkerInfo, message: WorkerMessage): void {

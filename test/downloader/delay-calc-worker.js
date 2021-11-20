@@ -12,4 +12,38 @@ parentPort.addListener('message', async (msg) => {
     error: isNaN(result) ? new Error('NaN') : undefined
   };
   parentPort.postMessage(message);
+  parentPort.postMessage({
+    // this simulates an invalid log
+    type: 0
+  });
+  parentPort.postMessage({
+    // this simulates an log
+    type: 0,
+    body: {
+    }
+  });
+  parentPort.postMessage({
+    // this simulates an log
+    type: 0,
+    body: {
+      logger: 'complete'
+    }
+  });
+  parentPort.postMessage({
+    // this simulates an log
+    type: 0,
+    body: {
+      logger: 'complete',
+      level: 'info'
+    }
+  });
+  parentPort.postMessage({
+    // this simulates an log
+    type: 0,
+    body: {
+      logger: 'complete',
+      level: 'info',
+      content: ['aaa']
+    }
+  });
 });
