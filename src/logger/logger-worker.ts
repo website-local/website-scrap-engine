@@ -4,7 +4,7 @@ import type {LogWorkerMessage, WorkerLog} from '../downloader/worker-type';
 import {WorkerMessageType} from '../downloader/types';
 
 export const logLevels = [
-  'log', 'trace', 'debug', 'info', 'warn', 'error', 'fatal', 'mark'
+  'trace', 'debug', 'info', 'warn', 'error', 'fatal', 'mark'
 ] as const;
 
 export function getWorkerLogger(category: WorkerLog['logger']): Logger {
