@@ -28,12 +28,12 @@
     "mkdirp": "^1.0.4",
     "p-queue": "^6.6.2",
     "srcset": "^4.0.0",
-    "urijs": "^1.19.7"
+    "urijs": "^1.19.8"
   },
   "devDependencies": {
     "@types/jest": "^27.4.0",
     "@types/mkdirp": "^1.0.2",
-    "@types/node": "^17.0.17",
+    "@types/node": "^17.0.18",
     "@types/urijs": "^1.19.18",
     "@typescript-eslint/eslint-plugin": "^5.11.0",
     "@typescript-eslint/parser": "^5.11.0",
