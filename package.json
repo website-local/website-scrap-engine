@@ -28,7 +28,7 @@
     "mkdirp": "^1.0.4",
     "p-queue": "^6.6.2",
     "srcset": "^4.0.0",
-    "urijs": "^1.19.8"
+    "urijs": "^1.19.9"
   },
   "devDependencies": {
     "@types/jest": "^27.4.1",
