@@ -115,7 +115,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       localSrcRoot: this.options.localSrcRoot,
       encoding: encoding ?? this.options.encoding[type] ?? 'utf8',
       keepSearch: !this.options.deduplicateStripSearch,
-      skipReplacePathError: this.options.skipReplacePathError
+      skipReplacePathError: this.options.skipReplacePathError,
+      generateSavePathFn: this.lifeCycle.generateSavePath,
     };
     return this.lifeCycle.createResource(arg);
   }

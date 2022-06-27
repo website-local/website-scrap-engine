@@ -1,6 +1,7 @@
 import type {Options as GotOptions} from 'got/dist/source/as-promise';
 import type {
   createResource,
+  GenerateSavePathFn,
   Resource,
   ResourceBody,
   ResourceType
@@ -176,6 +177,7 @@ export interface ProcessingLifeCycle {
   init: InitLifeCycleFunc[];
   linkRedirect: LinkRedirectFunc[];
   detectResourceType: DetectResourceTypeFunc[];
+  generateSavePath?: GenerateSavePathFn | void;
   createResource: typeof createResource;
   /**
    * link in parent resource would be replaced after this
