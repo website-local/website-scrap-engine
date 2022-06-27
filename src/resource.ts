@@ -285,6 +285,10 @@ export interface CreateResourceArgument {
    * https://github.com/website-local/website-scrap-engine/issues/107
    */
   skipReplacePathError?: boolean;
+  /**
+   * Set this to use a custom implementation of {@link generateSavePath}
+   */
+  generateSavePathFn?: GenerateSavePathFn | void;
 }
 
 /**
@@ -293,6 +297,7 @@ export interface CreateResourceArgument {
  * @param isHtml should the savePath endsWith .html
  * @param keepSearch keep url search params in file name
  * @param localSrcRoot local source path to download from
+ * @return string must return non-empty string
  */
 export function generateSavePath(
   uri: URI,
@@ -360,6 +365,8 @@ export function generateSavePath(
   }
   return savePath;
 }
+
+export type GenerateSavePathFn = typeof generateSavePath;
 
 export const urlOfSavePath = (savePath: string): string => {
   if (savePath.includes('\\')) {
@@ -486,6 +493,7 @@ export function resolveFileUrl(
  * @param encoding {@link CreateResourceArgument.encoding}
  * @param keepSearch {@link CreateResourceArgument.keepSearch}
  * @param skipReplacePathError {@link CreateResourceArgument.skipReplacePathError}
+ * @param generateSavePathFn {@link CreateResourceArgument.generateSavePathFn}
  * @return the resource
  */
 export function createResource({
@@ -499,7 +507,8 @@ export function createResource({
   localSrcRoot,
   encoding,
   keepSearch,
-  skipReplacePathError
+  skipReplacePathError,
+  generateSavePathFn
 }: CreateResourceArgument): Resource {
   const rawUrl: string = url;
   const refUri: URI = URI(refUrl);
@@ -541,11 +550,13 @@ export function createResource({
     downloadLink = uri.clone().hash('').toString();
   }
 
+  const implGenerateSavePath = generateSavePathFn || generateSavePath;
+
   // make savePath and replaceUri
-  const savePath = replacePathHasError ? rawUrl : generateSavePath(
+  const savePath = replacePathHasError ? rawUrl : implGenerateSavePath(
     uri, type === ResourceType.Html, keepSearch, localSrcRoot);
   if (!refSavePath) {
-    refSavePath = generateSavePath(refUri, refType === ResourceType.Html,
+    refSavePath = implGenerateSavePath(refUri, refType === ResourceType.Html,
       false, localSrcRoot);
   }
   const replaceUri = replacePathHasError ? URI(rawUrl) :
