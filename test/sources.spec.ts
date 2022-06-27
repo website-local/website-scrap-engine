@@ -1,5 +1,5 @@
 import {sources} from '../src/sources';
-import cheerio from 'cheerio';
+import {load} from 'cheerio';
 import {ResourceType} from '../src/resource';
 
 describe('sources', function () {
@@ -10,7 +10,7 @@ describe('sources', function () {
     }
   });
   test('source should contains valid selector', () => {
-    const $ = cheerio.load('<html lang="en"></html>');
+    const $ = load('<html lang="en"></html>');
     for (const source of sources) {
       expect(source.selector).toBeTruthy();
       // expect no error thrown

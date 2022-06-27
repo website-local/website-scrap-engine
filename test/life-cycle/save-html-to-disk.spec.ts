@@ -1,4 +1,4 @@
-import cheerio from 'cheerio';
+import {load} from 'cheerio';
 import * as fs from 'fs';
 // noinspection ES6PreferShortImport
 import {saveHtmlToDisk} from '../../src/life-cycle/save-html-to-disk';
@@ -79,7 +79,7 @@ describe('save-html-to-disk', function () {
     const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com', 'body');
     const html = '<html lang="en"><head><title></title></head><body></body></html>';
-    downloadResource.meta.doc = cheerio.load(html);
+    downloadResource.meta.doc = load(html);
     const saved = await saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
     expect(saved).toBeUndefined();
     expect(fakeFs).toStrictEqual({
@@ -92,7 +92,7 @@ describe('save-html-to-disk', function () {
     const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com', 'body');
     const html = '<html lang="en"><head><title>啊</title></head><body></body></html>';
-    downloadResource.meta.doc = cheerio.load(html);
+    downloadResource.meta.doc = load(html);
     const opt = Object.assign({}, fakeOpt);
     opt.cheerioSerialize = {
       // the new mode of  _useHtmlParser2: true,
@@ -116,7 +116,7 @@ describe('save-html-to-disk', function () {
     const downloadResource = res('http://example.com', 'body');
     downloadResource.redirectedUrl = 'http://example.com/en-US/';
     const html = '<html lang="en"><head><title></title></head><body></body></html>';
-    downloadResource.meta.doc = cheerio.load(html);
+    downloadResource.meta.doc = load(html);
     const saved = await saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
     expect(saved).toBeUndefined();
     expect(fakeFs).toStrictEqual({

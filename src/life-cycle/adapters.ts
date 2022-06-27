@@ -1,4 +1,4 @@
-import cheerio from 'cheerio';
+import {load} from 'cheerio';
 import {Resource, ResourceEncoding, ResourceType} from '../resource';
 import type {
   AsyncResult,
@@ -99,9 +99,9 @@ export const parseHtml = (
   const encoding: ResourceEncoding =
     res.encoding || options.encoding[res.type] || 'utf8';
   if (options.cheerioParse) {
-    return cheerio.load(toString(res.body, encoding), options.cheerioParse);
+    return load(toString(res.body, encoding), options.cheerioParse);
   }
-  return cheerio.load(toString(res.body, encoding));
+  return load(toString(res.body, encoding));
 };
 
 export const processHtml = (fn: HtmlProcessFunc): ProcessResourceAfterDownloadFunc =>

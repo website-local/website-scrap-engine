@@ -1,4 +1,4 @@
-import cheerio from 'cheerio';
+import {load} from 'cheerio';
 import type {DownloadResource, SubmitResourceFunc} from './types';
 import type {StaticDownloadOptions} from '../options';
 import {Resource, ResourceType} from '../resource';
@@ -14,7 +14,7 @@ export async function processSiteMap(
   if (res.type !== ResourceType.SiteMap) {
     return res;
   }
-  const $: CheerioStatic = cheerio.load(toString(res.body,
+  const $: CheerioStatic = load(toString(res.body,
     res.encoding || options.encoding[ResourceType.SiteMap] || 'utf8'));
   const urlSet: Set<string> = new Set();
   const depth: number = res.depth + 1;
