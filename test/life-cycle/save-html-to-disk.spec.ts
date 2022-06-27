@@ -88,6 +88,19 @@ describe('save-html-to-disk', function () {
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
 
+  test('save processed html with non-ascii chars', async () => {
+    const {fakeFs} = mockFs();
+    const downloadResource = res('http://example.com', 'body');
+    const html = '<html lang="en"><head><title>啊</title></head><body></body></html>';
+    downloadResource.meta.doc = load(html);
+    const saved = await saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
+    expect(saved).toBeUndefined();
+    expect(fakeFs).toStrictEqual({
+      [join('root', 'example.com', 'index.html')]: html
+    });
+    expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
+  });
+
   test('save processed html custom serialize options', async () => {
     const {fakeFs} = mockFs();
     const downloadResource = res('http://example.com', 'body');
@@ -104,7 +117,7 @@ describe('save-html-to-disk', function () {
     const saved = await saveHtmlToDisk(downloadResource, opt, fakePipeline);
     expect(saved).toBeUndefined();
     const encodedHtml =
-      '<html lang="en"><head><title>&#x554A;</title></head><body></body></html>';
+      '<html lang="en"><head><title>&#x554a;</title></head><body></body></html>';
     expect(fakeFs).toStrictEqual({
       [join('root', 'example.com', 'index.html')]: encodedHtml
     });
