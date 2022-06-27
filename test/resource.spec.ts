@@ -1,6 +1,7 @@
 import path from 'path';
 import URI = require('urijs');
 import {
+  checkAbsoluteUri,
   createResource,
   CreateResourceArgument,
   generateSavePath,
@@ -699,5 +700,39 @@ describe('resource', function () {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       Object.defineProperty(process, 'platform', originalPlatform!);
     }
+  });
+
+  test('checkAbsoluteUri throws on empty host', () => {
+    const checkAbsoluteUri0 = (
+      url: string,
+      refUrl: string,
+      skipReplacePathError?: boolean
+    ) => checkAbsoluteUri(
+      URI(url), URI(refUrl),
+      skipReplacePathError,
+      url, refUrl, ResourceType.Binary);
+
+    expect(checkAbsoluteUri0('ftp://111', 'http://111', true))
+      .toBe(true);
+    expect(() => checkAbsoluteUri0('ftp://111', 'http://111'))
+      .toThrow('protocol ftp not supported');
+    expect(checkAbsoluteUri0('ftp://111', 'ftp://111'))
+      .toBe(false);
+
+
+    expect(checkAbsoluteUri0('http://aa', 'http://bbb')).toBe(false);
+
+    expect(checkAbsoluteUri0('aa', 'http://bbb', true))
+      .toBe(true);
+    expect(() => checkAbsoluteUri0('aa', 'http://bbb'))
+      .toThrow('protocol  not supported');
+
+    expect(checkAbsoluteUri0('http:///', 'http:///aaa', true))
+      .toBe(true);
+    expect(() => checkAbsoluteUri0('http:///', 'http:///aaa'))
+      .toThrow('empty host for non-file uri not supported');
+
+    expect(checkAbsoluteUri0('file:///', 'file:///aaa', true))
+      .toBe(false);
   });
 });
