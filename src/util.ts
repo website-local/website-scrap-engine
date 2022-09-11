@@ -88,10 +88,9 @@ export const hasOwnProperty = Object.prototype.hasOwnProperty;
  * may lead to typescript parser errors.
  */
 export const weakAssign = <T, U>(target: T, source: U): T & U => {
-  if (!target) return Object.assign({} as T, source);
+  if (!target) return Object.assign({}, source) as T & U;
   if (!source) return target as T & U;
-  let key: keyof U;
-  for (key in source) {
+  for (const key in source) {
     if (hasOwnProperty.call(source, key) &&
       !hasOwnProperty.call(target, key)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
