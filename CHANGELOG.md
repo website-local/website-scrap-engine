@@ -1,3 +1,30 @@
+0.6.0
+============
+
+BREAKING
+------------
+* resource: custom callback for rewriting savePath
+* life-cycle: custom callback for rewriting savePath (<https://github.com/website-local/website-scrap-engine/issues/383>)
+
+Fix
+------------
+* cheerio: replace deprecated api
+
+Test
+------------
+* test: migrating to eslint v8 and typescript-eslint v5
+* cheerio: fix a test
+* resource: add a test
+* ci: run tests on node.js 18.x (<https://github.com/website-local/website-scrap-engine/issues/610>)
+
+Misc
+------------
+* package-lock-resolved: process registry.npmmirror.com
+* logger: fix type conflict
+* util: fix compatibility with typescript 4.8
+* npm: drop @types/mkdirp
+* update deps
+
 0.5.0
 ============
 
