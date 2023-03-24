@@ -27,7 +27,7 @@
     "log4js": "^6.9.1",
     "mkdirp": "^2.1.6",
     "p-queue": "^6.6.2",
-    "srcset": "^4.0.0",
+    "srcset": "^5.0.0",
     "urijs": "^1.19.11"
   },
   "devDependencies": {
