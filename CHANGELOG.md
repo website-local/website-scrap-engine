@@ -1,3 +1,11 @@
+0.7.0
+============
+
+BREAKING
+------------
+* build(deps): bump mkdirp from 2.1.6 to 3.0.0
+* build(deps-dev): bump typescript from 4.9.5 to 5.0.4
+
 0.6.0
 ============
 
