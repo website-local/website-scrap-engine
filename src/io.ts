@@ -1,16 +1,16 @@
-import fs from 'fs';
 import type {ObjectEncodingOptions} from 'fs';
+import fs from 'fs';
 import {dirname} from 'path';
-import mkdirP from 'mkdirp';
+import {mkdirp} from 'mkdirp';
 import type {ResourceBody, ResourceEncoding} from './resource';
-import {mkdir as mkdirLogger, error as errorLogger} from './logger/logger';
+import {error as errorLogger, mkdir as mkdirLogger} from './logger/logger';
 
 export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
   let error: unknown | void;
   for (let i = 0; i < retry; i++) {
     error = undefined;
     try {
-      await mkdirP(dir);
+      await mkdirp(dir);
     } catch (e) {
       error = e;
       if (i > 0) {
