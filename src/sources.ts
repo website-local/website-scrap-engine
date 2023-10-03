@@ -36,6 +36,7 @@ export const sources: SourceDefinition[] = [
   {selector: 'meta[property="og\\:video\\:url"]', attr: 'content'},
   {selector: 'meta[property="og\\:video\\:secure_url"]', attr: 'content'},
   {selector: 'video', attr: 'src'},
+  {selector: 'video', attr: 'poster'},
   {selector: 'video source', attr: 'src'},
   {selector: 'video track', attr: 'src'},
   {selector: 'audio', attr: 'src'},
