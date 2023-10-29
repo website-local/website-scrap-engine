@@ -12,6 +12,7 @@ export {
 export {PipelineExecutor} from './pipeline-executor';
 export {processCssText, processCss} from './process-css';
 export {processHtml} from './process-html';
+export {processHtmlMetaRefresh} from './process-html-meta';
 export {processSiteMap} from './process-site-map';
 export {processSvg} from './process-svg';
 export {getResourceBodyFromHtml, saveHtmlToDisk} from './save-html-to-disk';

@@ -4,6 +4,7 @@ import {detectResourceType} from './detect-resource-type';
 import {createResource} from '../resource';
 import {downloadResource} from './download-resource';
 import {processHtml} from './process-html';
+import {processHtmlMetaRefresh} from './process-html-meta';
 import {processCss} from './process-css';
 import {processSiteMap} from './process-site-map';
 import {processSvg} from './process-svg';
@@ -30,6 +31,7 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
   processAfterDownload: [
     processRedirectedUrl,
     processHtml,
+    processHtmlMetaRefresh,
     processSvg,
     processCss,
     processSiteMap
