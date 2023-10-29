@@ -1,3 +1,20 @@
+0.7.1
+============
+
+Enhancement
+------------
+* sources: add video poster
+* process-html: handle meta refresh redirect (#897)
+
+Test
+------------
+* npm: upgrade jest to 28
+
+Misc
+------------
+* npm: update dependencies
+* npm: initial npm provenance support (#898)
+
 0.7.0
 ============
 
