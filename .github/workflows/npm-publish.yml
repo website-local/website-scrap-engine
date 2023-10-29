@@ -21,13 +21,17 @@ jobs:
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4.0.0
         with:
-          node-version: 14
-          registry-url: https://registry.npmjs.org/
+          node-version: '18.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm
       - run: npm ci
-      - run: npm publish
+      - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
