@@ -1,8 +1,11 @@
 import type {Logger} from 'log4js';
-import {getLogger} from 'log4js';
+// https://github.com/jestjs/jest/issues/11563
+import log4js from 'log4js';
 import {parentPort} from 'worker_threads';
 import type {LogWorkerMessage, WorkerLog} from '../downloader/worker-type.js';
 import {WorkerMessageType} from '../downloader/types.js';
+
+const getLogger = log4js.getLogger;
 
 export const logLevels = [
   'trace', 'debug', 'info', 'warn', 'error', 'fatal', 'mark'

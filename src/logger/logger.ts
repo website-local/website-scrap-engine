@@ -1,10 +1,11 @@
 import type {Logger} from 'log4js';
-import {getLogger as getMainLogger} from 'log4js';
+// https://github.com/jestjs/jest/issues/11563
+import log4js from 'log4js';
 import {isMainThread} from 'worker_threads';
 import {getWorkerLogger} from './logger-worker.js';
 
 const getLogger: typeof getWorkerLogger =
-  isMainThread ? getMainLogger : getWorkerLogger;
+  isMainThread ? log4js.getLogger : getWorkerLogger;
 
 export const notFound: Logger = getLogger('notFound');
 export const retry: Logger = getLogger('retry');
