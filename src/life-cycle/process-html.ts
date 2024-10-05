@@ -1,5 +1,5 @@
 import type {SrcSetDefinition} from 'srcset';
-import srcset from 'srcset';
+import {parseSrcset, stringifySrcset} from 'srcset';
 import {sources as defaultSources} from '../sources.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
@@ -10,6 +10,9 @@ import {error, skip} from '../logger/logger.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {parseHtml} from './adapters.js';
 import type {Cheerio, CheerioStatic} from '../types.js';
+
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+type WriteableSrcSet = Writeable<SrcSetDefinition>;
 
 export async function processHtml(
   res: DownloadResource,
@@ -56,7 +59,7 @@ export async function processHtml(
       let links: string[], replaceValue: string | SrcSetDefinition[];
       if (attr === 'srcset') {
         try {
-          replaceValue = srcset.parse(attrValue);
+          replaceValue = parseSrcset(attrValue);
         } catch (e) {
           error.info('skipping invalid srcset', attrValue, e);
           // should invalid srcset being removed?
@@ -106,7 +109,10 @@ export async function processHtml(
           submit(resource);
         }
         if (attr === 'srcset') {
-          (replaceValue as SrcSetDefinition[])[linkIndex].url = resource.replacePath;
+          // 20241005: It's ok to do this
+          // I've looked into the source code of srcset 5.0.1
+          // and there is nothing preventing the return value to change
+          (replaceValue as WriteableSrcSet[])[linkIndex].url = resource.replacePath;
         } else {
           replaceValue = resource.replacePath;
           // historical workaround here
@@ -116,7 +122,7 @@ export async function processHtml(
         }
       }
       if (attr === 'srcset') {
-        elem.attr(attr, srcset.stringify(replaceValue as SrcSetDefinition[]));
+        elem.attr(attr, stringifySrcset(replaceValue as SrcSetDefinition[]));
       } else if (attr) {
         elem.attr(attr, replaceValue as string);
       } else {
