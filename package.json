@@ -4,6 +4,7 @@
   "description": "Configurable website scraper in typescript",
   "main": "lib",
   "types": "lib",
+  "type": "module",
   "engines": {
     "node": ">=18.17.0"
   },
