@@ -1,16 +1,16 @@
 import {load} from 'cheerio';
 import * as fs from 'fs';
 // noinspection ES6PreferShortImport
-import {saveHtmlToDisk} from '../../src/life-cycle/save-html-to-disk';
+import {saveHtmlToDisk} from '../../src/life-cycle/save-html-to-disk.js';
 import {
   fakeOpt,
   fakePipeline,
   mockFs,
   mockModules,
   resHtml as res
-} from './save-mock-fs';
+} from './save-mock-fs.js';
 import {join} from 'path';
-import {ResourceType} from '../../src/resource';
+import {ResourceType} from '../../src/resource.js';
 
 mockModules();
 

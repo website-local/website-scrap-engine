@@ -1,7 +1,7 @@
 import {join} from 'path';
 // noinspection ES6PreferShortImport
-import type {WorkerInfo} from '../../src/downloader/worker-pool';
-import {WorkerPool} from '../../src/downloader/worker-pool';
+import type {WorkerInfo} from '../../src/downloader/worker-pool.js';
+import {WorkerPool} from '../../src/downloader/worker-pool.js';
 
 describe('worker-pool', function () {
   test('pool would work correctly', async () => {

@@ -1,6 +1,6 @@
-import {sources} from '../src/sources';
+import {sources} from '../src/sources.js';
 import {load} from 'cheerio';
-import {ResourceType} from '../src/resource';
+import {ResourceType} from '../src/resource.js';
 
 describe('sources', function () {
   test('source should contains type', () => {

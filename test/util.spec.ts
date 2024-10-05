@@ -2,10 +2,12 @@ import {
   arrayToMap,
   escapePath,
   importDefaultFromPath,
-  isSiteMap, isUrlHttp,
+  isSiteMap,
+  isUrlHttp,
   sleep,
-  toString, weakAssign
-} from '../src/util';
+  toString,
+  weakAssign
+} from '../src/util.js';
 import {join} from 'path';
 
 describe('util', function () {

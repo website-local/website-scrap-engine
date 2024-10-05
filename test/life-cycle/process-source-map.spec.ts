@@ -1,17 +1,17 @@
-import type {CreateResourceArgument, Resource} from '../../src/resource';
-import {createResource, ResourceType} from '../../src/resource';
+import type {CreateResourceArgument, Resource} from '../../src/resource.js';
+import {createResource, ResourceType} from '../../src/resource.js';
 import {
   isUriChar,
   processSourceMap,
   SOURCE_MAP_HEADER,
   sourceMapPrefix,
   X_SOURCE_MAP_HEADER
-} from '../../src/life-cycle/process-source-map';
-import type {DownloadResource} from '../../src/life-cycle/types';
+} from '../../src/life-cycle/process-source-map.js';
+import type {DownloadResource} from '../../src/life-cycle/types.js';
 // noinspection ES6PreferShortImport
-import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor';
-import type {StaticDownloadOptions} from '../../src/options';
-import type {Cheerio} from '../../src/types';
+import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor.js';
+import type {StaticDownloadOptions} from '../../src/options.js';
+import type {Cheerio} from '../../src/types.js';
 
 const fakeRes = (url: string): DownloadResource => {
   const arg: CreateResourceArgument = {

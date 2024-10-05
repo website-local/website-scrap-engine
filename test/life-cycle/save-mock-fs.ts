@@ -3,14 +3,14 @@ import type {
   Resource,
   ResourceBody,
   ResourceEncoding
-} from '../../src/resource';
-import {createResource, ResourceType} from '../../src/resource';
-import type {DownloadResource} from '../../src/life-cycle/types';
-import type {StaticDownloadOptions} from '../../src/options';
+} from '../../src/resource.js';
+import {createResource, ResourceType} from '../../src/resource.js';
+import type {DownloadResource} from '../../src/life-cycle/types.js';
+import type {StaticDownloadOptions} from '../../src/options.js';
 // noinspection ES6PreferShortImport
-import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor';
+import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor.js';
 import {promises} from 'fs';
-import {toString} from '../../src/util';
+import {toString} from '../../src/util.js';
 
 export const fakeOpt = {
   concurrency: 0,

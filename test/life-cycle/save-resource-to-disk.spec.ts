@@ -1,8 +1,16 @@
 import * as fs from 'fs';
 // noinspection ES6PreferShortImport
-import {saveResourceToDisk} from '../../src/life-cycle/save-resource-to-disk';
+import {
+  saveResourceToDisk
+} from '../../src/life-cycle/save-resource-to-disk.js';
 import {join} from 'path';
-import {fakeOpt, fakePipeline, mockFs, mockModules, res} from './save-mock-fs';
+import {
+  fakeOpt,
+  fakePipeline,
+  mockFs,
+  mockModules,
+  res
+} from './save-mock-fs.js';
 
 mockModules();
 

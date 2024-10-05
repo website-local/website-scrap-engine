@@ -1,7 +1,7 @@
 import {
   skipLinks,
   unProcessableUriSchemes
-} from '../../src/life-cycle/skip-links';
+} from '../../src/life-cycle/skip-links.js';
 
 describe('life-cycle/skip-links', function () {
   test('skip-un-processable-uri-schemes', () => {

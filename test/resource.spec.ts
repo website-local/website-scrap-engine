@@ -3,7 +3,7 @@ import type {
   CreateResourceArgument,
   RawResource,
   Resource
-} from '../src/resource';
+} from '../src/resource.js';
 import {
   checkAbsoluteUri,
   createResource,
@@ -13,8 +13,8 @@ import {
   resolveFileUrl,
   ResourceType,
   urlOfSavePath
-} from '../src/resource';
-import URI = require('urijs');
+} from '../src/resource.js';
+import URI from 'urijs';
 
 describe('resource', function () {
   test('html-to-html-resource', () => {

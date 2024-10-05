@@ -2,8 +2,8 @@
 import {
   binaryExtension,
   detectResourceType
-} from '../../src/life-cycle/detect-resource-type';
-import {ResourceType} from '../../src/resource';
+} from '../../src/life-cycle/detect-resource-type.js';
+import {ResourceType} from '../../src/resource.js';
 
 describe('detect-resource-type', function () {
 
