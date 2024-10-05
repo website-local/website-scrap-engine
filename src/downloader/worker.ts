@@ -21,22 +21,29 @@ const {pathToOptions, overrideOptions}: {
   overrideOptions?: Partial<StaticDownloadOptions>
 } = workerData;
 
-const options: DownloadOptions =
-  mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
+const asyncOptions: Promise<DownloadOptions> = importDefaultFromPath(pathToOptions);
 
-const pipeline: PipelineExecutor =
-  new PipelineExecutorImpl(options, options.req, options);
+const asyncPipeline = asyncOptions.then(options => {
+  options = mergeOverrideOptions(options, overrideOptions);
 
-options.configureLogger(options.localRoot, options.logSubDir || '');
+  const pipeline: PipelineExecutor =
+    new PipelineExecutorImpl(options, options.req, options);
 
-const init = pipeline.init(pipeline);
+  options.configureLogger(options.localRoot, options.logSubDir || '');
+
+  const init = pipeline.init(pipeline);
+  if (init && (init as Promise<void>).then) {
+    return init.then(() => pipeline);
+  }
+  return pipeline;
+});
 
 parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
   const collectedResource: RawResource[] = [];
   let error: Error | unknown | void;
   let redirectedUrl: string | undefined;
   try {
-    await init;
+    const pipeline = await asyncPipeline;
     const res = msg.body;
     const downloadResource: DownloadResource = normalizeResource(res) as DownloadResource;
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
