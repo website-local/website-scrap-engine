@@ -1,9 +1,12 @@
 import {describe, expect, jest, test} from '@jest/globals';
-import {join} from 'path';
+import {dirname, join} from 'path';
+import {fileURLToPath} from 'url';
 // noinspection ES6PreferShortImport
 import type {WorkerInfo} from '../../src/downloader/worker-pool.js';
 // noinspection ES6PreferShortImport
 import {WorkerPool} from '../../src/downloader/worker-pool.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe('worker-pool', function () {
   test('pool would work correctly', async () => {

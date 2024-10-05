@@ -105,16 +105,31 @@ export function mockFs(): {
 }
 
 export function mockModules(): void {
-  jest.mock('fs', () => ({
-    // skip the mkdir process
-    existsSync: jest.fn().mockReturnValue(true),
-    // make log4js and fs-extra happy in mocked env
-    realpath: jest.fn(),
-    promises: {
-      writeFile: jest.fn(),
-      utimes: jest.fn()
-    }
+  jest.unstable_mockModule('fs', () => {
+    const fs = {
+      // skip the mkdir process
+      existsSync: jest.fn().mockReturnValue(true),
+      // make log4js and fs-extra happy in mocked env
+      realpath: jest.fn(),
+      promises: {
+        writeFile: jest.fn(),
+        utimes: jest.fn(),
+      },
+      default: {},
+    };
+    fs.default = fs;
+    return fs;
+  });
+  jest.mock('mkdirp', () => ({
+    default: jest.fn(),
+    mkdirp: jest.fn(),
   }));
-  jest.mock('mkdirp');
-  jest.mock('log4js');
+  jest.unstable_mockModule('mkdirp', () => ({
+    default: jest.fn(),
+    mkdirp: jest.fn(),
+  }));
+  jest.mock('log4js', () => ({
+    configure: jest.fn(),
+    getLogger: jest.fn(),
+  }));
 }
