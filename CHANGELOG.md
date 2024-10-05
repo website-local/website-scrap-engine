@@ -1,3 +1,20 @@
+0.8.0
+============
+
+BREAKING
+------------
+* [Requires node.js 18.17 or higher](https://github.com/website-local/website-scrap-engine/commit/c8974a6e42e121230e674b722bf06be186e9e41e)
+* Support of es module (and not supports commonjs) ([#995](https://github.com/website-local/website-scrap-engine/pull/995)) ([#218](https://github.com/website-local/website-scrap-engine/issues/218))
+* build(deps-dev): bump typescript from 5.0.4 to 5.6.2 ([#990](https://github.com/website-local/website-scrap-engine/pull/990))
+* build(deps): bump cheerio from 1.0.0-rc.12 to 1.0.0 ([#989](https://github.com/website-local/website-scrap-engine/pull/989))
+* npm: upgrade to lockfile v3 ([#437](https://github.com/website-local/website-scrap-engine/issues/437))
+* [migrate to got 13](https://github.com/website-local/website-scrap-engine/commit/c0796cff3f6f8c879a0be1e7e5cbd8545cd2cc7b)
+* [change importDefaultFromPath to async](https://github.com/website-local/website-scrap-engine/commit/27aa83db3ae8422c9ae0f798f0706144e2a8e82f)
+
+Misc
+------------
+* npm: update dependencies
+
 0.7.2
 ============
 
