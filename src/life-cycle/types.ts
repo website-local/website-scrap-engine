@@ -1,4 +1,4 @@
-import type {Options as GotOptions} from 'got/dist/source/as-promise';
+import type {OptionsInit as GotOptions} from 'got';
 import type {
   createResource,
   GenerateSavePathFn,

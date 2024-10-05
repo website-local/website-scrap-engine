@@ -1,11 +1,5 @@
-import type {
-  BeforeRetryHook,
-  NormalizedOptions,
-  Options,
-  RequestError
-} from 'got';
+import type {BeforeRetryHook, OptionsInit, RequestError, Response} from 'got';
 import got, {TimeoutError} from 'got';
-import type {Response} from 'got/dist/source/as-promise';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {Resource} from '../resource.js';
 import {generateSavePath, ResourceType} from '../resource.js';
@@ -16,10 +10,13 @@ import URI from 'urijs';
 
 /** Take logs before retry */
 export const beforeRetryHook: BeforeRetryHook = (
-  options: NormalizedOptions,
-  error: RequestError | undefined,
+  error: RequestError,
   retryCount: number | undefined
 ) => {
+  const options = error.options;
+  if (!options) {
+    return;
+  }
   if (!error) {
     logger.retry.warn(retryCount, String(options.url));
     return;
@@ -50,10 +47,10 @@ export interface DownloadError extends Partial<Error> {
  */
 export async function getRetry(
   url: string,
-  options: Options
+  options: OptionsInit
 ): Promise<Response<Buffer | string> | void> {
   let res: Response<Buffer | string> | void = void 0;
-  let err: DownloadError | void = void 0, optionsClone: Options;
+  let err: DownloadError | void = void 0, optionsClone: OptionsInit;
   for (let i = 0; i < 25; i++) {
     err = void 0;
     try {
@@ -103,7 +100,7 @@ export async function requestForResource(
   options?: StaticDownloadOptions
 ): Promise<DownloadResource | Resource | void> {
   const downloadLink: string = encodeURI(decodeURI(res.downloadLink));
-  const reqOptions: Options = Object.assign({}, requestOptions);
+  const reqOptions: OptionsInit = Object.assign({}, requestOptions);
   reqOptions.responseType = 'buffer';
   if (res.refUrl && res.refUrl !== downloadLink) {
     const headers = Object.assign({}, reqOptions.headers);

@@ -1,6 +1,5 @@
-import type {RequestError} from 'got';
+import type {RequestError, Response} from 'got';
 import got, {HTTPError} from 'got';
-import type {Response} from 'got/dist/source/core';
 import path from 'path';
 import type {WriteStream} from 'fs';
 import {constants, createWriteStream, promises as fs} from 'fs';
@@ -111,7 +110,7 @@ export async function streamingDownloadToFile(
           rangeStart = undefined;
         }
 
-        if (response.request.aborted) {
+        if (response.request.isAborted) {
           // Canceled while downloading
           //- will throw a `CancelError` or `TimeoutError` error
           return;
@@ -132,9 +131,9 @@ export async function streamingDownloadToFile(
           return;
         }
 
-        if (request._isAboutToError) {
-          return;
-        }
+        // if (request._isAboutToError) {
+        //   return;
+        // }
 
         resolve(response);
       });

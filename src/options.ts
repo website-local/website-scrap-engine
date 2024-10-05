@@ -1,6 +1,5 @@
-import type {RetryFunction, RetryObject, TimeoutError} from 'got';
-import got from 'got';
-import type {RequestError} from 'got/dist/source/core';
+import type {RequestError, RetryFunction, RetryObject, TimeoutError} from 'got';
+import got, {Options} from 'got';
 import type {ResourceEncoding, ResourceType} from './resource.js';
 import {createResource} from './resource.js';
 import type {ProcessingLifeCycle, RequestOptions} from './life-cycle/types.js';
@@ -376,8 +375,8 @@ export function mergeOverrideOptions(
     overrideOptions.meta = Object.assign(opt.meta, overrideOptions.meta);
   }
   if (opt.req && overrideOptions.req) {
-    overrideOptions.req =
-      got.mergeOptions(opt.req, overrideOptions.req);
+    const options = got.defaults.options;
+    overrideOptions.req = new Options(opt.req, overrideOptions.req, options);
   }
   return checkDownloadOptions(Object.assign(opt, overrideOptions));
 }
