@@ -7,5 +7,5 @@
 declare function parseCssUrls(cssText: string): string[];
 
 declare module 'css-url-parser' {
-  export = parseCssUrls;
+  export default parseCssUrls;
 }
