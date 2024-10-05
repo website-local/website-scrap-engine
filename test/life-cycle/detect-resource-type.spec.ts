@@ -1,3 +1,4 @@
+import {describe, expect, test} from '@jest/globals';
 // noinspection ES6PreferShortImport
 import {
   binaryExtension,

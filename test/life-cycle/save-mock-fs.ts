@@ -1,3 +1,4 @@
+import {expect, jest} from '@jest/globals';
 import type {
   CreateResourceArgument,
   Resource,

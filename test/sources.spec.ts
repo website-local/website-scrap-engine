@@ -1,3 +1,4 @@
+import {describe, expect, test} from '@jest/globals';
 import {sources} from '../src/sources.js';
 import {load} from 'cheerio';
 import {ResourceType} from '../src/resource.js';

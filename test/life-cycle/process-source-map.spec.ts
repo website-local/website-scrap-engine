@@ -1,3 +1,4 @@
+import {describe, expect, test} from '@jest/globals';
 import type {CreateResourceArgument, Resource} from '../../src/resource.js';
 import {createResource, ResourceType} from '../../src/resource.js';
 import {

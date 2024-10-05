@@ -1,3 +1,4 @@
+import {describe, expect, jest, test} from '@jest/globals';
 import {load} from 'cheerio';
 import * as fs from 'fs';
 // noinspection ES6PreferShortImport

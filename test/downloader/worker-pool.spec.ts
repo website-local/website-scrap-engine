@@ -1,6 +1,8 @@
+import {describe, expect, jest, test} from '@jest/globals';
 import {join} from 'path';
 // noinspection ES6PreferShortImport
 import type {WorkerInfo} from '../../src/downloader/worker-pool.js';
+// noinspection ES6PreferShortImport
 import {WorkerPool} from '../../src/downloader/worker-pool.js';
 
 describe('worker-pool', function () {
