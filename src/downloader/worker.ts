@@ -22,7 +22,6 @@ const {pathToOptions, overrideOptions}: {
 } = workerData;
 
 const options: DownloadOptions =
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
 
 const pipeline: PipelineExecutor =

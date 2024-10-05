@@ -531,7 +531,6 @@ describe('resource', function () {
           .toBe(expected[i]);
       }
     } finally {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       Object.defineProperty(process, 'platform', originalPlatform!);
     }
   });
@@ -699,7 +698,6 @@ describe('resource', function () {
       expect(resource.savePath).toBe('index.html');
       expect(resource.downloadLink).toBe('file:///D:/tmp/example.com/');
     } finally {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       Object.defineProperty(process, 'platform', originalPlatform!);
     }
   });

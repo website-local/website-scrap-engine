@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const {parentPort} = require('worker_threads');
 const sleep = ms => new Promise(r => setTimeout(r, ms | 0));
 
