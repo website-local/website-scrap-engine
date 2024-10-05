@@ -1,3 +1,14 @@
+0.7.2
+============
+
+Note
+------------
+* This would be the last version before updating minimal supported node version
+
+Misc
+------------
+* npm: update dependencies
+
 0.7.1
 ============
 
