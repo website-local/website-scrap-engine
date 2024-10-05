@@ -1,4 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
+import {dirname, join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {
   arrayToMap,
   escapePath,
@@ -9,8 +11,6 @@ import {
   toString,
   weakAssign
 } from '../src/util.js';
-import {dirname, join} from 'path';
-import {fileURLToPath} from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 describe('util', function () {

@@ -1,8 +1,9 @@
 import {describe, expect, jest, test} from '@jest/globals';
+import * as fs from 'node:fs';
 import {load} from 'cheerio';
-import * as fs from 'fs';
 // noinspection ES6PreferShortImport
 import {saveHtmlToDisk} from '../../src/life-cycle/save-html-to-disk.js';
+import {join} from 'node:path';
 import {
   fakeOpt,
   fakePipeline,
@@ -10,7 +11,6 @@ import {
   mockModules,
   resHtml as res
 } from './save-mock-fs.js';
-import {join} from 'path';
 import {ResourceType} from '../../src/resource.js';
 
 mockModules();

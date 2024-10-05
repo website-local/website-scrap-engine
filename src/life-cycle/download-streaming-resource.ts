@@ -1,8 +1,10 @@
+import path from 'node:path';
+import type {WriteStream} from 'node:fs';
+import {constants, createWriteStream, promises as fs} from 'node:fs';
+import {pipeline} from 'node:stream';
+import {promisify} from 'node:util';
 import type {RequestError, Response} from 'got';
 import got, {HTTPError} from 'got';
-import path from 'path';
-import type {WriteStream} from 'fs';
-import {constants, createWriteStream, promises as fs} from 'fs';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {
@@ -12,8 +14,6 @@ import type {
   RequestOptions
 } from './types.js';
 import {mkdirRetry} from '../io.js';
-import {pipeline} from 'stream';
-import {promisify} from 'util';
 import {error as errorLogger, retry as retryLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';

@@ -1,6 +1,6 @@
 import URI from 'urijs';
-import type {IncomingHttpHeaders} from 'http';
-import * as path from 'path';
+import type {IncomingHttpHeaders} from 'node:http';
+import * as path from 'node:path';
 import {
   escapePath,
   isUrlHttp,

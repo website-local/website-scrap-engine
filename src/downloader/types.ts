@@ -1,4 +1,4 @@
-import type {MessagePort} from 'worker_threads';
+import type {MessagePort} from 'node:worker_threads';
 import type {DownloadOptions} from '../options.js';
 import type {RawResource} from '../resource.js';
 

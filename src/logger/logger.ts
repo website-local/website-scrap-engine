@@ -1,7 +1,7 @@
 import type {Logger} from 'log4js';
 // https://github.com/jestjs/jest/issues/11563
 import log4js from 'log4js';
-import {isMainThread} from 'worker_threads';
+import {isMainThread} from 'node:worker_threads';
 import {getWorkerLogger} from './logger-worker.js';
 
 const getLogger: typeof getWorkerLogger =

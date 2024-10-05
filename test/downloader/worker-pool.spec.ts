@@ -1,6 +1,6 @@
 import {describe, expect, jest, test} from '@jest/globals';
-import {dirname, join} from 'path';
-import {fileURLToPath} from 'url';
+import {dirname, join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 // noinspection ES6PreferShortImport
 import type {WorkerInfo} from '../../src/downloader/worker-pool.js';
 // noinspection ES6PreferShortImport

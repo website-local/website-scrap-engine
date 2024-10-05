@@ -1,7 +1,7 @@
 import type {Logger} from 'log4js';
 // https://github.com/jestjs/jest/issues/11563
 import log4js from 'log4js';
-import {parentPort} from 'worker_threads';
+import {parentPort} from 'node:worker_threads';
 import type {LogWorkerMessage, WorkerLog} from '../downloader/worker-type.js';
 import {WorkerMessageType} from '../downloader/types.js';
 

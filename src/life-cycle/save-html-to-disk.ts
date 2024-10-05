@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import URI from 'urijs';
 import type {DownloadResource} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';

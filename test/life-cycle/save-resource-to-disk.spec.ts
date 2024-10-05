@@ -1,10 +1,10 @@
 import {describe, expect, test} from '@jest/globals';
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 // noinspection ES6PreferShortImport
 import {
   saveResourceToDisk
 } from '../../src/life-cycle/save-resource-to-disk.js';
-import {join} from 'path';
+import {join} from 'node:path';
 import {
   fakeOpt,
   fakePipeline,

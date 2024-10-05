@@ -1,4 +1,4 @@
-import {parentPort} from 'worker_threads';
+import {parentPort} from 'node:worker_threads';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms | 0));
 

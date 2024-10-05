@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import type {WorkerFactory} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
 import type {RawResource, Resource} from '../resource.js';

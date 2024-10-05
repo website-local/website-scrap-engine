@@ -1,5 +1,5 @@
 import {describe, expect, test} from '@jest/globals';
-import {join, normalize} from 'path';
+import {join, normalize} from 'node:path';
 import type {
   CreateResourceArgument,
   RawResource,

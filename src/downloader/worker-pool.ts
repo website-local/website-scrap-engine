@@ -1,6 +1,6 @@
-import type {MessagePort, WorkerOptions} from 'worker_threads';
-import {Worker} from 'worker_threads';
-import type {URL} from 'url';
+import type {MessagePort, WorkerOptions} from 'node:worker_threads';
+import {Worker} from 'node:worker_threads';
+import type {URL} from 'node:url';
 import * as logger from '../logger/logger.js';
 import type {LogWorkerMessage} from './worker-type.js';
 import type {

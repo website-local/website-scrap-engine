@@ -1,6 +1,6 @@
-import type {ObjectEncodingOptions} from 'fs';
-import fs from 'fs';
-import {dirname} from 'path';
+import type {ObjectEncodingOptions} from 'node:fs';
+import fs from 'node:fs';
+import {dirname} from 'node:path';
 import {mkdirp} from 'mkdirp';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
 import {error as errorLogger, mkdir as mkdirLogger} from './logger/logger.js';

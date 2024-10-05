@@ -1,6 +1,6 @@
-import * as path from 'path';
-import type {Stats} from 'fs';
-import {promises} from 'fs';
+import * as path from 'node:path';
+import type {Stats} from 'node:fs';
+import {promises} from 'node:fs';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {DownloadResource, RequestOptions} from './types.js';

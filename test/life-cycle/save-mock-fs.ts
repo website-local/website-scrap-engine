@@ -1,4 +1,5 @@
 import {expect, jest} from '@jest/globals';
+import {promises} from 'node:fs';
 import type {
   CreateResourceArgument,
   Resource,
@@ -10,7 +11,6 @@ import type {DownloadResource} from '../../src/life-cycle/types.js';
 import type {StaticDownloadOptions} from '../../src/options.js';
 // noinspection ES6PreferShortImport
 import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor.js';
-import {promises} from 'fs';
 import {toString} from '../../src/util.js';
 
 export const fakeOpt = {

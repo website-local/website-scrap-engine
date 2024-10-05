@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import {fileURLToPath} from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 // true to remove the resolved property from dependencies
 // false to convent the awful registry.npm.taobao.org url to registry.npmjs.org

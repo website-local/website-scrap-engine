@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {mkdirp as mkdir} from 'mkdirp';
-import {fileURLToPath} from 'url';
 
 const readDir = dir => fs.promises.readdir(path.join(dirname, dir), {
   withFileTypes: true
