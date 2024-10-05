@@ -1,9 +1,10 @@
 import type {Log4js} from 'log4js';
-import {configure} from 'log4js';
+// https://github.com/jestjs/jest/issues/11563
+import log4js from 'log4js';
 import * as path from 'path';
 
 export const configureLogger = (localRoot: string, subDir: string): Log4js =>
-  configure({
+  log4js.configure({
     appenders: {
       'retry': {
         type: 'file',
