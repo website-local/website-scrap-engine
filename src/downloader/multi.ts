@@ -47,14 +47,14 @@ export class MultiThreadDownloader extends AbstractDownloader {
     if (this.options.initialUrl) {
       this.init = this.addInitialResource(this.options.initialUrl);
     } else {
-      this.init = this.pipeline.init(this.pipeline, this);
+      this.init = this._initOptions.then(() => this.pipeline.init(this.pipeline, this));
     }
   }
 
   async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
     let r: DownloadResource | void;
     try {
-      r = await this.pipeline.download(res);
+      r = await this.pipeline!.download(res);
       if (!r) {
         skip.debug('discarded after download', res.url, res.rawUrl, res.refUrl);
         return;

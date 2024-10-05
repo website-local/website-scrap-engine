@@ -12,8 +12,12 @@ import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
   readonly queue: PQueue;
-  readonly pipeline: PipelineExecutorImpl;
-  readonly options: DownloadOptions;
+  readonly _asyncOptions: Promise<DownloadOptions>;
+  readonly _overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string };
+  _options?: DownloadOptions;
+  _isInit: boolean;
+  _pipeline?: PipelineExecutorImpl;
+  _initOptions: Promise<void>;
   readonly downloadedUrl: Set<string> = new Set<string>();
   readonly queuedUrl: Set<string> = new Set<string>();
   readonly meta: DownloaderStats = {
@@ -26,10 +30,31 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
   protected constructor(public pathToOptions: string,
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
-    this.options = mergeOverrideOptions(importDefaultFromPath(pathToOptions), overrideOptions);
-    this.queue = new PQueue({concurrency: this.options.concurrency});
-    this.pipeline = new PipelineExecutorImpl(this.options, this.options.req, this.options);
-    this.options.configureLogger(this.options.localRoot, this.options.logSubDir || '');
+    this._asyncOptions = importDefaultFromPath(pathToOptions);
+    this._overrideOptions = overrideOptions;
+    this.queue = new PQueue();
+    this._isInit = false;
+    this._initOptions = this._asyncOptions.then(options => {
+      options = mergeOverrideOptions(options, this._overrideOptions);
+      this._options = options;
+      this._pipeline = new PipelineExecutorImpl(options, options.req, options);
+      options.configureLogger(options.localRoot, options.logSubDir || '');
+      this._isInit = true;
+    });
+  }
+
+  get options(): DownloadOptions {
+    if (this._options) {
+      return this._options;
+    }
+    throw new TypeError('AbstractDownloader: not initialized');
+  }
+
+  get pipeline(): PipelineExecutorImpl {
+    if (this._pipeline) {
+      return this._pipeline;
+    }
+    throw new TypeError('AbstractDownloader: not initialized');
   }
 
   get concurrency(): number {
@@ -49,20 +74,22 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {
-    await this.pipeline.init(this.pipeline, this);
+    await this._initOptions;
+    const pipeline = this.pipeline;
+    await pipeline.init(pipeline, this);
     // noinspection DuplicatedCode
     for (let i = 0, l = urlArr.length; i < l; i++) {
       let url: string | void = urlArr[i];
-      url = await this.pipeline.linkRedirect(url, null, null);
+      url = await pipeline.linkRedirect(url, null, null);
       if (!url) continue;
-      const type: ResourceType | void = await this.pipeline.detectResourceType(
+      const type: ResourceType | void = await pipeline.detectResourceType(
         url, ResourceType.Html, null, null);
       if (!type) continue;
-      let r: Resource | void = await this.pipeline.createResource(
+      let r: Resource | void = await pipeline.createResource(
         type, 0, url, url,
         undefined, undefined, undefined, type);
       if (!r) continue;
-      r = await this.pipeline.processBeforeDownload(r, null, null);
+      r = await pipeline.processBeforeDownload(r, null, null);
       if (!r) continue;
       if (!r.shouldBeDiscardedFromDownload) {
         this.addProcessedResource(r);
@@ -131,7 +158,9 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
         () => this.options.adjustConcurrencyFunc?.(this),
         this.options.adjustConcurrencyPeriod || 60000);
     }
-    this.queue.start();
+    this._initOptions.then(() => {
+      this.queue.start();
+    });
   }
 
   stop(): void {
@@ -148,7 +177,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   async dispose(): Promise<void> {
     this.stop();
     this.queue.clear();
-    await this.pipeline.dispose(this.pipeline, this);
+    await this.pipeline?.dispose(this.pipeline, this);
   }
 
 }
