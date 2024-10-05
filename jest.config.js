@@ -1,17 +1,19 @@
-/**  @type {import('@jest/types').Config.ProjectConfig} */
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 const config = {
-  transform: {
-    '\\.[jt]sx?$': 'ts-jest',
-  },
-  'globals': {
-    'ts-jest': {
-      'useESM': true
-    }
-  },
-  moduleNameMapper: {
-    '^\\.(.+)\\.js': '.$1'
-  },
   extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  transform: {
+    // '^.+\\.[tj]sx?$' to process ts,js,tsx,jsx with `ts-jest`
+    // '^.+\\.m?[tj]sx?$' to process ts,js,tsx,jsx,mts,mjs,mtsx,mjsx with `ts-jest`
+    '\\.[jt]sx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+      },
+    ],
+  },
 };
 
 module.exports = config;
