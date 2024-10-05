@@ -10,7 +10,7 @@ export async function saveResourceToDisk(
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   const localRoot: string = res.localRoot ?? options.localRoot;
   // https://github.com/website-local/website-scrap-engine/issues/174
-  let mtime: number | void;
+  let mtime: number | void = void 0;
   if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
     mtime = Date.parse(res.meta.headers?.['last-modified']);
   }

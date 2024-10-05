@@ -51,13 +51,13 @@ export async function getRetry(
   url: string,
   options: Options
 ): Promise<Response<Buffer | string> | void> {
-  let res: Response<Buffer | string> | void;
-  let err: DownloadError | void, optionsClone: Options;
+  let res: Response<Buffer | string> | void = void 0;
+  let err: DownloadError | void = void 0, optionsClone: Options;
   for (let i = 0; i < 25; i++) {
     err = void 0;
     try {
       optionsClone = Object.assign({}, options);
-      res = (await got(url, optionsClone)) as typeof res;
+      res = (await got(url, optionsClone)) as Response<Buffer | string>;
       if (!res || !res.body || !res.body.length) {
         logger.retry.warn(i, url, 'manually retry on empty response or body',
           res && res.body);

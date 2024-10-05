@@ -40,7 +40,7 @@ export const writeFile = async (
     await mkdirRetry(dir);
   }
   let fileData: Uint8Array | string;
-  let options: ObjectEncodingOptions | void;
+  let options: ObjectEncodingOptions | void = void 0;
   if (typeof data === 'string') {
     fileData = data;
     options = {encoding};

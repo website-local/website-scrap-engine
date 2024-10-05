@@ -222,7 +222,7 @@ export async function optionallySetLastModifiedTime(
   res: Resource, options: StaticDownloadOptions
 ): Promise<void> {
   // https://github.com/website-local/website-scrap-engine/issues/174
-  let mtime: number | void;
+  let mtime: number | void = void 0;
   if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
     mtime = Date.parse(res.meta.headers?.['last-modified']);
   }
