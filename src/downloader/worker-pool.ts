@@ -1,14 +1,14 @@
 import type {MessagePort, WorkerOptions} from 'worker_threads';
-import type {URL} from 'url';
 import {Worker} from 'worker_threads';
-import * as logger from '../logger/logger';
-import type {LogWorkerMessage} from './worker-type';
-import {
+import type {URL} from 'url';
+import * as logger from '../logger/logger.js';
+import type {LogWorkerMessage} from './worker-type.js';
+import type {
   PendingPromise,
   PendingPromiseWithBody,
-  WorkerMessage,
-  WorkerMessageType
-} from './types';
+  WorkerMessage
+} from './types.js';
+import {WorkerMessageType} from './types.js';
 
 export interface WorkerInfo {
   readonly id: number;

@@ -1,21 +1,21 @@
-import type {StaticDownloadOptions} from '../options';
+import type {StaticDownloadOptions} from '../options.js';
 import type {
   CreateResourceArgument,
   Resource,
   ResourceEncoding,
   ResourceType
-} from '../resource';
+} from '../resource.js';
 import type {
   DownloadResource,
   ProcessingLifeCycle,
   RequestOptions,
   SubmitResourceFunc
-} from '../life-cycle/types';
+} from '../life-cycle/types.js';
 // noinspection ES6PreferShortImport
-import type {PipelineExecutor} from '../life-cycle/pipeline-executor';
-import type {Cheerio} from '../types';
-import type {DownloaderWithMeta} from './types';
-import type {WorkerInfo} from './worker-pool';
+import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
+import type {Cheerio} from '../types.js';
+import type {DownloaderWithMeta} from './types.js';
+import type {WorkerInfo} from './worker-pool.js';
 
 /**
  * Pipeline executor

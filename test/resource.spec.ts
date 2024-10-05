@@ -1,18 +1,20 @@
-import path, {join} from 'path';
-import URI = require('urijs');
+import {join, normalize} from 'path';
+import type {
+  CreateResourceArgument,
+  RawResource,
+  Resource
+} from '../src/resource';
 import {
   checkAbsoluteUri,
   createResource,
-  CreateResourceArgument,
   generateSavePath,
   normalizeResource,
   prepareResourceForClone,
-  RawResource,
   resolveFileUrl,
-  Resource,
   ResourceType,
   urlOfSavePath
 } from '../src/resource';
+import URI = require('urijs');
 
 describe('resource', function () {
   test('html-to-html-resource', () => {
@@ -31,7 +33,7 @@ describe('resource', function () {
     expect(resource.rawUrl).toBe(
       'http://nodejs.cn/api/buffer.html#buffer_buffers_and_typedarrays');
     expect(resource.replacePath).toBe('../buffer.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.join('nodejs.cn', 'api', 'buffer.html'));
+    expect(resource.savePath).toBe(join('nodejs.cn', 'api', 'buffer.html'));
   });
   test('path-to-html-resource', () => {
     const arg: CreateResourceArgument = {
@@ -44,7 +46,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../buffer.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer.html'));
   });
   test('html-to-path-resource', () => {
     const arg: CreateResourceArgument = {
@@ -57,7 +59,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../buffer.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer.html'));
   });
   test('html-to-index-resource', () => {
     const arg: CreateResourceArgument = {
@@ -70,7 +72,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../index.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/index.html'));
   });
   test('index-to-index-resource', () => {
     const arg: CreateResourceArgument = {
@@ -83,7 +85,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../index.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/index.html'));
   });
   test('path-to-path-resource', () => {
     const arg: CreateResourceArgument = {
@@ -96,7 +98,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../buffer.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer.html'));
   });
   test('html-self-link-resource', () => {
     const arg: CreateResourceArgument = {
@@ -109,7 +111,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer.html'));
   });
   test('htm-self-link-resource', () => {
     const arg: CreateResourceArgument = {
@@ -122,7 +124,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer.html'));
   });
   test('path-self-link-resource', () => {
     const arg: CreateResourceArgument = {
@@ -135,7 +137,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer.html'));
   });
   test('path-index-self-link-resource', () => {
     const arg: CreateResourceArgument = {
@@ -148,7 +150,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/index.html'));
   });
   test('cross-host-link-resource', () => {
     const arg: CreateResourceArgument = {
@@ -162,7 +164,7 @@ describe('resource', function () {
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe(
       '../../nodejs.com/api/index.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.com/api/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.com/api/index.html'));
   });
   test('cross-host-link-resource-with-different-protocol', () => {
     const arg: CreateResourceArgument = {
@@ -176,7 +178,7 @@ describe('resource', function () {
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe(
       '../../nodejs.com/api/index.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.com/api/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.com/api/index.html'));
   });
   test('cross-host-link-resource-with-no-protocol', () => {
     const arg: CreateResourceArgument = {
@@ -190,7 +192,7 @@ describe('resource', function () {
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe(
       '../../nodejs.com/api/index.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.com/api/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.com/api/index.html'));
   });
   test('relative-link', () => {
     const arg: CreateResourceArgument = {
@@ -203,7 +205,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.com/api/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.com/api/index.html'));
   });
   test('same-site-absolute-link', () => {
     const arg: CreateResourceArgument = {
@@ -216,7 +218,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../index.html#buffer_buffers_and_typedarrays');
-    expect(resource.savePath).toBe(path.normalize('nodejs.com/index.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.com/index.html'));
   });
 
   test('path-to-html-resource-not-keeping-search', () => {
@@ -232,7 +234,7 @@ describe('resource', function () {
     expect(resource.replacePath).toBe('../buffer.html#aaa');
     expect(resource.url).toBe('http://nodejs.cn/api/buffer.html#aaa');
     expect(resource.uri?.toString()).toBe(resource.url);
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer.html'));
   });
   test('path-to-html-resource-with-search', () => {
     const arg: CreateResourceArgument = {
@@ -247,7 +249,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../buffer_page=1.html#aaa');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/buffer_page=1.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/buffer_page=1.html'));
   });
   test('path-to-html-resource-with-multi-search', () => {
     const arg: CreateResourceArgument = {
@@ -263,7 +265,7 @@ describe('resource', function () {
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe(
       '../buffer_a=b_page=1_page=2.html#aaa');
-    expect(resource.savePath).toBe(path.normalize(
+    expect(resource.savePath).toBe(normalize(
       'nodejs.cn/api/buffer_a=b_page=1_page=2.html'));
   });
   test('path-to-index-resource-with-search', () => {
@@ -279,7 +281,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../index_page=1.html#aaa');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/index_page=1.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/index_page=1.html'));
   });
   test('css-resource-with-search', () => {
     const arg: CreateResourceArgument = {
@@ -294,7 +296,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../api_page=1.css#aaa');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/api_page=1.css'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/api_page=1.css'));
   });
   test('no-ext-resource-with-search', () => {
     const arg: CreateResourceArgument = {
@@ -309,7 +311,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../api_page=1#aaa');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/api_page=1'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/api_page=1'));
   });
   test('path-to-index-resource-with-long-search', () => {
     const arg: CreateResourceArgument = {
@@ -325,7 +327,7 @@ describe('resource', function () {
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe(
       '../index_g6rVCvz2dtFaE2fbrIJTGyzhYtGRYC-6EJAwoGeLm-Q.html#aaa');
-    expect(resource.savePath).toBe(path.normalize(
+    expect(resource.savePath).toBe(normalize(
       'nodejs.cn/api/index_g6rVCvz2dtFaE2fbrIJTGyzhYtGRYC-6EJAwoGeLm-Q.html'));
   });
   test('index-to-index-resource-with-search', () => {
@@ -341,7 +343,7 @@ describe('resource', function () {
     };
     const resource: Resource = createResource(arg);
     expect(resource.replacePath).toBe('../index_page=1.html#aaa');
-    expect(resource.savePath).toBe(path.normalize('nodejs.cn/api/index_page=1.html'));
+    expect(resource.savePath).toBe(normalize('nodejs.cn/api/index_page=1.html'));
   });
   test('prepare-resource-for-clone', () => {
     const arg: CreateResourceArgument = {
@@ -361,8 +363,8 @@ describe('resource', function () {
       rawUrl: '/#buffer_buffers_and_typedarrays',
       downloadLink: 'https://nodejs.com/',
       refUrl: 'https://nodejs.com/api/',
-      refSavePath: path.join('nodejs.com', 'api', 'index.html'),
-      savePath: path.join('nodejs.com', 'index.html'),
+      refSavePath: join('nodejs.com', 'api', 'index.html'),
+      savePath: join('nodejs.com', 'index.html'),
       localRoot: '/tmp/aaa',
       replacePath: '../index.html#buffer_buffers_and_typedarrays',
       createTimestamp: resource.createTimestamp,

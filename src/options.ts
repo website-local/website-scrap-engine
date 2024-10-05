@@ -1,22 +1,19 @@
+import type {RetryFunction, RetryObject, TimeoutError} from 'got';
 import got from 'got';
-import type {
-  RetryFunction,
-  RetryObject,
-  TimeoutError
-} from 'got/dist/source/as-promise/types';
 import type {RequestError} from 'got/dist/source/core';
-import {createResource, ResourceEncoding, ResourceType} from './resource';
-import type {ProcessingLifeCycle, RequestOptions} from './life-cycle/types';
+import type {ResourceEncoding, ResourceType} from './resource.js';
+import {createResource} from './resource.js';
+import type {ProcessingLifeCycle, RequestOptions} from './life-cycle/types.js';
 // noinspection ES6PreferShortImport
-import {beforeRetryHook} from './life-cycle/download-resource';
-import {error} from './logger/logger';
+import {beforeRetryHook} from './life-cycle/download-resource.js';
+import {error} from './logger/logger.js';
 // noinspection ES6PreferShortImport
-import {adjust} from './downloader/adjust-concurrency';
-import {configureLogger} from './logger/config-logger';
-import type {DownloaderWithMeta} from './downloader/types';
-import {weakAssign} from './util';
-import type {SourceDefinition} from './sources';
-import type {CheerioOptionsInterface} from './types';
+import {adjust} from './downloader/adjust-concurrency.js';
+import {configureLogger} from './logger/config-logger.js';
+import type {DownloaderWithMeta} from './downloader/types.js';
+import {weakAssign} from './util.js';
+import type {SourceDefinition} from './sources.js';
+import type {CheerioOptionsInterface} from './types.js';
 
 /**
  * Extra options for custom life cycle

@@ -1,16 +1,12 @@
 import path from 'path';
 import URI from 'urijs';
-import type {DownloadResource} from './types';
-import type {StaticDownloadOptions} from '../options';
-import {
-  ResourceBody,
-  ResourceEncoding,
-  ResourceType,
-  urlOfSavePath
-} from '../resource';
-import {escapePath} from '../util';
-import {writeFile} from '../io';
-import type {PipelineExecutor} from './pipeline-executor';
+import type {DownloadResource} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {ResourceBody, ResourceEncoding} from '../resource.js';
+import {ResourceType, urlOfSavePath} from '../resource.js';
+import {escapePath} from '../util.js';
+import {writeFile} from '../io.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
 
 export function getResourceBodyFromHtml(
   res: DownloadResource & { type: ResourceType.Html },

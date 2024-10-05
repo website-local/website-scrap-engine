@@ -1,8 +1,8 @@
-export {adjust} from './adjust-concurrency';
-export {AbstractDownloader} from './main';
-export {MultiThreadDownloader} from './multi';
-export {PipelineExecutorImpl} from './pipeline-executor-impl';
-export {SingleThreadDownloader} from './single';
-export * as types from './types';
-export {WorkerPool} from './worker-pool';
-export * as workerType from './worker-type';
+export {adjust} from './adjust-concurrency.js';
+export {AbstractDownloader} from './main.js';
+export {MultiThreadDownloader} from './multi.js';
+export {PipelineExecutorImpl} from './pipeline-executor-impl.js';
+export {SingleThreadDownloader} from './single.js';
+export * as types from './types.js';
+export {WorkerPool} from './worker-pool.js';
+export * as workerType from './worker-type.js';

@@ -1,6 +1,7 @@
-import {getLogger as getMainLogger, Logger} from 'log4js';
+import type {Logger} from 'log4js';
+import {getLogger as getMainLogger} from 'log4js';
 import {isMainThread} from 'worker_threads';
-import {getWorkerLogger} from './logger-worker';
+import {getWorkerLogger} from './logger-worker.js';
 
 const getLogger: typeof getWorkerLogger =
   isMainThread ? getMainLogger : getWorkerLogger;

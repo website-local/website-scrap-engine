@@ -1,6 +1,6 @@
 import type {MessagePort} from 'worker_threads';
-import type {DownloadOptions} from '../options';
-import type {RawResource} from '../resource';
+import type {DownloadOptions} from '../options.js';
+import type {RawResource} from '../resource.js';
 
 export interface DownloaderStats {
   firstPeriodCount: number;

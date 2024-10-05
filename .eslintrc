@@ -40,6 +40,7 @@
     ],
     "require-atomic-updates": [
       0
-    ]
+    ],
+    "@typescript-eslint/consistent-type-imports": "warn"
   }
 }

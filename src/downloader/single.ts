@@ -1,8 +1,11 @@
-import {AbstractDownloader} from './main';
-import type {Resource} from '../resource';
-import type {StaticDownloadOptions} from '../options';
-import {skip} from '../logger/logger';
-import type {DownloadResource, SubmitResourceFunc} from '../life-cycle/types';
+import {AbstractDownloader} from './main.js';
+import type {Resource} from '../resource.js';
+import type {StaticDownloadOptions} from '../options.js';
+import {skip} from '../logger/logger.js';
+import type {
+  DownloadResource,
+  SubmitResourceFunc
+} from '../life-cycle/types.js';
 
 export class SingleThreadDownloader extends AbstractDownloader {
   readonly init: Promise<void>;

@@ -1,6 +1,6 @@
-import type {logLevels} from '../logger/logger-worker';
-import type * as logger from '../logger/logger';
-import {WorkerMessage, WorkerMessageType} from './types';
+import type {logLevels} from '../logger/logger-worker.js';
+import type * as logger from '../logger/logger.js';
+import type {WorkerMessage, WorkerMessageType} from './types.js';
 
 export interface WorkerLog<T = unknown> {
   logger: keyof typeof logger;

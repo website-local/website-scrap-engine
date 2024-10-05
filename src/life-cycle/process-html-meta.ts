@@ -1,9 +1,10 @@
-import type {DownloadResource, SubmitResourceFunc} from './types';
-import type {StaticDownloadOptions} from '../options';
-import type {PipelineExecutor} from './pipeline-executor';
-import {Resource, ResourceType} from '../resource';
-import {parseHtml} from './adapters';
-import {skip} from '../logger/logger';
+import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
+import type {Resource} from '../resource.js';
+import {ResourceType} from '../resource.js';
+import {parseHtml} from './adapters.js';
+import {skip} from '../logger/logger.js';
 
 /**
  * Originally create by https://github.com/stevenvachon at

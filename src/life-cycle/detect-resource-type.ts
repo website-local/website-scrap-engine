@@ -1,5 +1,5 @@
-import {ResourceType} from '../resource';
-import {arrayToMap, isSiteMap} from '../util';
+import {ResourceType} from '../resource.js';
+import {arrayToMap, isSiteMap} from '../util.js';
 
 // immutable
 export const binaryExtension = arrayToMap([

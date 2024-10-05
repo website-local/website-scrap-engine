@@ -1,4 +1,5 @@
-import {configure, Log4js} from 'log4js';
+import type {Log4js} from 'log4js';
+import {configure} from 'log4js';
 import * as path from 'path';
 
 export const configureLogger = (localRoot: string, subDir: string): Log4js =>

@@ -1,7 +1,8 @@
-import type {DownloadResource, SubmitResourceFunc} from './types';
-import type {StaticDownloadOptions} from '../options';
-import {Resource, ResourceEncoding, ResourceType} from '../resource';
-import type {PipelineExecutor} from './pipeline-executor';
+import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {Resource, ResourceEncoding} from '../resource.js';
+import {ResourceType} from '../resource.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
 
 // https://developer.mozilla.org/docs/Web/HTTP/Headers/SourceMap
 export const SOURCE_MAP_HEADER = 'SourceMap'.toLowerCase();

@@ -1,12 +1,13 @@
-import type {SourceDefinition} from '../sources';
-import type {DownloadResource, SubmitResourceFunc} from './types';
-import type {StaticDownloadOptions} from '../options';
-import {Resource, ResourceType} from '../resource';
-import {error, skip} from '../logger/logger';
-import type {PipelineExecutor} from './pipeline-executor';
-import {parseHtml} from './adapters';
-import {getResourceBodyFromHtml} from './save-html-to-disk';
-import type {Cheerio, CheerioStatic} from '../types';
+import type {SourceDefinition} from '../sources.js';
+import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {Resource} from '../resource.js';
+import {ResourceType} from '../resource.js';
+import {error, skip} from '../logger/logger.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
+import {parseHtml} from './adapters.js';
+import {getResourceBodyFromHtml} from './save-html-to-disk.js';
+import type {Cheerio, CheerioStatic} from '../types.js';
 
 const svgSelectors: SourceDefinition[] = [
   {selector: '*[xlink\\:href]', attr: 'xlink:href', type: ResourceType.Binary},

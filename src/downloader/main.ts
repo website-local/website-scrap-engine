@@ -1,21 +1,14 @@
 import PQueue from 'p-queue';
 import type {HTTPError} from 'got';
 import URI from 'urijs';
-import {
-  DownloadOptions,
-  mergeOverrideOptions,
-  StaticDownloadOptions
-} from '../options';
-import {
-  normalizeResource,
-  RawResource,
-  Resource,
-  ResourceType
-} from '../resource';
-import {error, notFound, skip} from '../logger/logger';
-import {importDefaultFromPath} from '../util';
-import type {DownloaderStats, DownloaderWithMeta} from './types';
-import {PipelineExecutorImpl} from './pipeline-executor-impl';
+import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
+import {mergeOverrideOptions} from '../options.js';
+import type {RawResource, Resource} from '../resource.js';
+import {normalizeResource, ResourceType} from '../resource.js';
+import {error, notFound, skip} from '../logger/logger.js';
+import {importDefaultFromPath} from '../util.js';
+import type {DownloaderStats, DownloaderWithMeta} from './types.js';
+import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
   readonly queue: PQueue;

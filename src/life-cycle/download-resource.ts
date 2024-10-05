@@ -1,16 +1,17 @@
-import got, {
+import type {
   BeforeRetryHook,
   NormalizedOptions,
   Options,
-  RequestError,
-  TimeoutError
+  RequestError
 } from 'got';
+import got, {TimeoutError} from 'got';
 import type {Response} from 'got/dist/source/as-promise';
-import type {DownloadResource, RequestOptions} from './types';
-import {generateSavePath, Resource, ResourceType} from '../resource';
-import type {StaticDownloadOptions} from '../options';
-import * as logger from '../logger/logger';
-import {isUrlHttp, sleep} from '../util';
+import type {DownloadResource, RequestOptions} from './types.js';
+import type {Resource} from '../resource.js';
+import {generateSavePath, ResourceType} from '../resource.js';
+import type {StaticDownloadOptions} from '../options.js';
+import * as logger from '../logger/logger.js';
+import {isUrlHttp, sleep} from '../util.js';
 import URI from 'urijs';
 
 /** Take logs before retry */

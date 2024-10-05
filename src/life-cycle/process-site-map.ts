@@ -1,10 +1,11 @@
 import {load} from 'cheerio';
-import type {DownloadResource, SubmitResourceFunc} from './types';
-import type {StaticDownloadOptions} from '../options';
-import {Resource, ResourceType} from '../resource';
-import {toString} from '../util';
-import type {PipelineExecutor} from './pipeline-executor';
-import type {CheerioStatic} from '../types';
+import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {Resource} from '../resource.js';
+import {ResourceType} from '../resource.js';
+import {toString} from '../util.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
+import type {CheerioStatic} from '../types.js';
 
 export async function processSiteMap(
   res: DownloadResource,

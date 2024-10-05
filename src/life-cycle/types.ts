@@ -5,12 +5,12 @@ import type {
   Resource,
   ResourceBody,
   ResourceType
-} from '../resource';
-import type {StaticDownloadOptions} from '../options';
-import type {PipelineExecutor} from './pipeline-executor';
-import type {Cheerio} from '../types';
-import type {DownloaderWithMeta} from '../downloader/types';
-import type {WorkerInfo} from '../downloader/worker-pool';
+} from '../resource.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
+import type {Cheerio} from '../types.js';
+import type {DownloaderWithMeta} from '../downloader/types.js';
+import type {WorkerInfo} from '../downloader/worker-pool.js';
 
 export type AsyncResult<T> = T | Promise<T>;
 

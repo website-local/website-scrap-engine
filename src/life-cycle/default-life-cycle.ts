@@ -1,18 +1,18 @@
-import type {ProcessingLifeCycle} from './types';
-import {skipLinks} from './skip-links';
-import {detectResourceType} from './detect-resource-type';
-import {createResource} from '../resource';
-import {downloadResource} from './download-resource';
-import {processHtml} from './process-html';
-import {processHtmlMetaRefresh} from './process-html-meta';
-import {processCss} from './process-css';
-import {processSiteMap} from './process-site-map';
-import {processSvg} from './process-svg';
-import {saveHtmlToDisk} from './save-html-to-disk';
-import {saveResourceToDisk} from './save-resource-to-disk';
-import {processRedirectedUrl} from './adapters';
-import {downloadStreamingResource} from './download-streaming-resource';
-import {readOrCopyLocalResource} from './read-or-copy-local-resource';
+import type {ProcessingLifeCycle} from './types.js';
+import {skipLinks} from './skip-links.js';
+import {detectResourceType} from './detect-resource-type.js';
+import {createResource} from '../resource.js';
+import {downloadResource} from './download-resource.js';
+import {processHtml} from './process-html.js';
+import {processHtmlMetaRefresh} from './process-html-meta.js';
+import {processCss} from './process-css.js';
+import {processSiteMap} from './process-site-map.js';
+import {processSvg} from './process-svg.js';
+import {saveHtmlToDisk} from './save-html-to-disk.js';
+import {saveResourceToDisk} from './save-resource-to-disk.js';
+import {processRedirectedUrl} from './adapters.js';
+import {downloadStreamingResource} from './download-streaming-resource.js';
+import {readOrCopyLocalResource} from './read-or-copy-local-resource.js';
 
 /**
  * Get a copy of default life cycle

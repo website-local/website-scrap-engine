@@ -1,4 +1,4 @@
-import {ResourceType} from './resource';
+import {ResourceType} from './resource.js';
 
 export interface SourceDefinition {
   selector: string;

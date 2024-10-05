@@ -1,8 +1,8 @@
 import path from 'path';
-import type {DownloadResource} from './types';
-import type {StaticDownloadOptions} from '../options';
-import {writeFile} from '../io';
-import type {PipelineExecutor} from './pipeline-executor';
+import type {DownloadResource} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import {writeFile} from '../io.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
 
 export async function saveResourceToDisk(
   res: DownloadResource,

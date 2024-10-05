@@ -1,9 +1,11 @@
 import * as path from 'path';
-import {promises, Stats} from 'fs';
-import {Resource, ResourceType} from '../resource';
-import type {DownloadResource, RequestOptions} from './types';
-import type {StaticDownloadOptions} from '../options';
-import {error as errorLogger} from '../logger/logger';
+import type {Stats} from 'fs';
+import {promises} from 'fs';
+import type {Resource} from '../resource.js';
+import {ResourceType} from '../resource.js';
+import type {DownloadResource, RequestOptions} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import {error as errorLogger} from '../logger/logger.js';
 
 const FILE_PREFIX = 'file://';
 

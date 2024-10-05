@@ -1,7 +1,8 @@
-import {getLogger, Logger} from 'log4js';
+import type {Logger} from 'log4js';
+import {getLogger} from 'log4js';
 import {parentPort} from 'worker_threads';
-import type {LogWorkerMessage, WorkerLog} from '../downloader/worker-type';
-import {WorkerMessageType} from '../downloader/types';
+import type {LogWorkerMessage, WorkerLog} from '../downloader/worker-type.js';
+import {WorkerMessageType} from '../downloader/types.js';
 
 export const logLevels = [
   'trace', 'debug', 'info', 'warn', 'error', 'fatal', 'mark'

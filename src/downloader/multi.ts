@@ -1,11 +1,12 @@
 import path from 'path';
-import {WorkerPool, WorkerFactory} from './worker-pool';
-import type {RawResource, Resource} from '../resource';
-import type {DownloadWorkerMessage} from './types';
-import type {StaticDownloadOptions} from '../options';
-import type {DownloadResource} from '../life-cycle/types';
-import {skip} from '../logger/logger';
-import {AbstractDownloader} from './main';
+import type {WorkerFactory} from './worker-pool.js';
+import {WorkerPool} from './worker-pool.js';
+import type {RawResource, Resource} from '../resource.js';
+import type {DownloadWorkerMessage} from './types.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {DownloadResource} from '../life-cycle/types.js';
+import {skip} from '../logger/logger.js';
+import {AbstractDownloader} from './main.js';
 
 export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
   pathToWorker?: string;

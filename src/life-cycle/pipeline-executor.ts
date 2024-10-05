@@ -1,14 +1,14 @@
-import type {Resource, ResourceEncoding, ResourceType} from '../resource';
-import type {StaticDownloadOptions} from '../options';
+import type {Resource, ResourceEncoding, ResourceType} from '../resource.js';
+import type {StaticDownloadOptions} from '../options.js';
 import type {
   AsyncResult,
   DownloadResource,
   RequestOptions,
   SubmitResourceFunc
-} from './types';
-import type {Cheerio} from '../types';
-import type {DownloaderWithMeta} from '../downloader/types';
-import type {WorkerInfo} from '../downloader/worker-pool';
+} from './types.js';
+import type {Cheerio} from '../types.js';
+import type {DownloaderWithMeta} from '../downloader/types.js';
+import type {WorkerInfo} from '../downloader/worker-pool.js';
 
 export interface PipelineExecutor {
   /**

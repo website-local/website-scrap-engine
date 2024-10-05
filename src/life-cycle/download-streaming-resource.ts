@@ -1,21 +1,24 @@
-import got, {HTTPError, RequestError} from 'got';
+import type {RequestError} from 'got';
+import got, {HTTPError} from 'got';
 import type {Response} from 'got/dist/source/core';
 import path from 'path';
-import {constants, createWriteStream, promises as fs, WriteStream} from 'fs';
-import {Resource, ResourceType} from '../resource';
+import type {WriteStream} from 'fs';
+import {constants, createWriteStream, promises as fs} from 'fs';
+import type {Resource} from '../resource.js';
+import {ResourceType} from '../resource.js';
 import type {
   AsyncResult,
   DownloadResource,
   DownloadResourceFunc,
   RequestOptions
-} from './types';
-import {mkdirRetry} from '../io';
+} from './types.js';
+import {mkdirRetry} from '../io.js';
 import {pipeline} from 'stream';
 import {promisify} from 'util';
-import {error as errorLogger, retry as retryLogger} from '../logger/logger';
-import type {StaticDownloadOptions} from '../options';
-import type {PipelineExecutor} from './pipeline-executor';
-import {isUrlHttp} from '../util';
+import {error as errorLogger, retry as retryLogger} from '../logger/logger.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
+import {isUrlHttp} from '../util.js';
 
 const promisifyPipeline = promisify(pipeline);
 

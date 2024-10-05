@@ -2,8 +2,8 @@ import type {ObjectEncodingOptions} from 'fs';
 import fs from 'fs';
 import {dirname} from 'path';
 import {mkdirp} from 'mkdirp';
-import type {ResourceBody, ResourceEncoding} from './resource';
-import {error as errorLogger, mkdir as mkdirLogger} from './logger/logger';
+import type {ResourceBody, ResourceEncoding} from './resource.js';
+import {error as errorLogger, mkdir as mkdirLogger} from './logger/logger.js';
 
 export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
   let error: unknown | void;

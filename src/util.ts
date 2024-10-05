@@ -1,5 +1,5 @@
 import {createHash} from 'crypto';
-import type {ResourceBody, ResourceEncoding} from './resource';
+import type {ResourceBody, ResourceEncoding} from './resource.js';
 
 const forbiddenChar = /[:*?"<>|&]|%3A|%2A|%3F|%22|%3C|%3E|%7C|%26/ig;
 

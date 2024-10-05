@@ -1,16 +1,15 @@
-import {
-  createResource,
+import type {
   CreateResourceArgument,
   Resource,
   ResourceBody,
-  ResourceEncoding,
-  ResourceType
+  ResourceEncoding
 } from '../../src/resource';
+import {createResource, ResourceType} from '../../src/resource';
 import type {DownloadResource} from '../../src/life-cycle/types';
 import type {StaticDownloadOptions} from '../../src/options';
 // noinspection ES6PreferShortImport
 import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor';
-import fs from 'fs';
+import {promises} from 'fs';
 import {toString} from '../../src/util';
 
 export const fakeOpt = {
@@ -80,7 +79,7 @@ export function mockFs(): {
   fakeFsStats: Record<string, number>
   } {
   const fakeFs: Record<string, string> = {};
-  jest.spyOn(fs.promises, 'writeFile').mockClear()
+  jest.spyOn(promises, 'writeFile').mockClear()
     .mockImplementation((path, data) => {
       if (typeof data === 'string' ||
         Buffer.isBuffer(data) ||
@@ -93,14 +92,14 @@ export function mockFs(): {
         'mock fs writeFile with type not supported yet');
     });
   const fakeFsStats: Record<string, number> = {};
-  jest.spyOn(fs.promises, 'utimes').mockClear()
+  jest.spyOn(promises, 'utimes').mockClear()
     .mockImplementation((path, atime, mtime) => {
       fakeFsStats[path + '::atime'] = atime as number;
       fakeFsStats[path + '::mtime'] = mtime as number;
       return Promise.resolve();
     });
-  expect(jest.isMockFunction(fs.promises.writeFile)).toBe(true);
-  expect(jest.isMockFunction(fs.promises.utimes)).toBe(true);
+  expect(jest.isMockFunction(promises.writeFile)).toBe(true);
+  expect(jest.isMockFunction(promises.utimes)).toBe(true);
   return {fakeFs, fakeFsStats};
 }
 

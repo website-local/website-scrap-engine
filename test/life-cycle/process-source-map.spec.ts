@@ -1,9 +1,5 @@
-import {
-  createResource,
-  CreateResourceArgument,
-  Resource,
-  ResourceType
-} from '../../src/resource';
+import type {CreateResourceArgument, Resource} from '../../src/resource';
+import {createResource, ResourceType} from '../../src/resource';
 import {
   isUriChar,
   processSourceMap,

@@ -1,23 +1,20 @@
 import {parentPort, workerData} from 'worker_threads';
-import {
-  DownloadOptions,
-  mergeOverrideOptions,
-  StaticDownloadOptions
-} from '../options';
-import type {DownloadResource, SubmitResourceFunc} from '../life-cycle/types';
-import {
-  normalizeResource,
-  prepareResourceForClone,
-  RawResource,
-  Resource
-} from '../resource';
-import {skip} from '../logger/logger';
-import {importDefaultFromPath} from '../util';
-import {DownloadWorkerMessage, WorkerMessageType} from './types';
-import {PipelineExecutorImpl} from './pipeline-executor-impl';
+import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
+import {mergeOverrideOptions} from '../options.js';
+import type {
+  DownloadResource,
+  SubmitResourceFunc
+} from '../life-cycle/types.js';
+import type {RawResource, Resource} from '../resource.js';
+import {normalizeResource, prepareResourceForClone} from '../resource.js';
+import {skip} from '../logger/logger.js';
+import {importDefaultFromPath} from '../util.js';
+import type {DownloadWorkerMessage} from './types.js';
+import {WorkerMessageType} from './types.js';
+import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 // noinspection ES6PreferShortImport
-import type {PipelineExecutor} from '../life-cycle/pipeline-executor';
-import type {WorkerTaskMessage} from './worker-type';
+import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
+import type {WorkerTaskMessage} from './worker-type.js';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,

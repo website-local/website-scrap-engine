@@ -1,5 +1,6 @@
 import {load} from 'cheerio';
-import {Resource, ResourceEncoding, ResourceType} from '../resource';
+import type {Resource, ResourceEncoding} from '../resource.js';
+import {ResourceType} from '../resource.js';
 import type {
   AsyncResult,
   DownloadResource,
@@ -7,11 +8,11 @@ import type {
   ProcessResourceAfterDownloadFunc,
   ProcessResourceBeforeDownloadFunc,
   SubmitResourceFunc
-} from './types';
-import {toString} from '../util';
-import type {StaticDownloadOptions} from '../options';
-import type {PipelineExecutor} from './pipeline-executor';
-import type {Cheerio, CheerioStatic} from '../types';
+} from './types.js';
+import {toString} from '../util.js';
+import type {StaticDownloadOptions} from '../options.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
+import type {Cheerio, CheerioStatic} from '../types.js';
 
 export interface SkipProcessFunc {
   (url: string, element: Cheerio | null, parent: Resource | null): boolean;
