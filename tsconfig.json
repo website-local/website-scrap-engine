@@ -9,7 +9,8 @@
     "esModuleInterop": true,
     "removeComments": false,
     "strict": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "allowJs": true
   },
   "include": [
     "src"

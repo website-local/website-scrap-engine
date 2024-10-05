@@ -17,9 +17,6 @@
     "prepack": "npm run clean && npm run build",
     "postshrinkwrap": "node package-lock-resolved.js"
   },
-  "jest": {
-    "preset": "ts-jest"
-  },
   "dependencies": {
     "cheerio": "^1.0.0",
     "css-url-parser": "^1.1.3",
