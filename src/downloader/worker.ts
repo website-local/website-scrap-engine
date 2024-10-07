@@ -70,8 +70,27 @@ parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) =
       redirectedUrl = processedResource.redirectedUrl;
     }
   } catch (e) {
-    // TODO: handle if object could not be cloned here
-    error = e;
+    // handle if object could not be cloned here
+    // https://github.com/website-local/website-scrap-engine/issues/340
+    try {
+      // should always be
+      if (typeof structuredClone === 'function') {
+        error = structuredClone(e);
+      } else {
+        // this is the old behavior before this
+        error = e;
+      }
+    } catch {
+      // can not clone, so no need to get the full error here
+      if (e && typeof e === 'object') {
+        const clone: Record<string, string> = {};
+        for (const k in e) {
+          clone[k] = String((e as Record<string, unknown>)[k]);
+        }
+      } else {
+        error = String(e);
+      }
+    }
   } finally {
     const message: DownloadWorkerMessage = {
       taskId: msg.taskId,
