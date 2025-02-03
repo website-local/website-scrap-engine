@@ -1,5 +1,6 @@
 import type {SrcSetDefinition} from 'srcset';
 import {parseSrcset, stringifySrcset} from 'srcset';
+import {load} from 'cheerio';
 import {sources as defaultSources} from '../sources.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
@@ -14,26 +15,17 @@ import type {Cheerio, CheerioStatic} from '../types.js';
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 type WriteableSrcSet = Writeable<SrcSetDefinition>;
 
-export async function processHtml(
-  res: DownloadResource,
-  submit: SubmitResourceFunc,
+async function processHtmlDoc(
   options: StaticDownloadOptions,
-  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
-  if (res.type !== ResourceType.Html) {
-    return res;
-  }
-  const refUrl: string = res.redirectedUrl || res.url;
-  const savePath = refUrl === res.url ? res.savePath : undefined;
-  // useless since processRedirectedUrl enabled by default
-  // refUrl = await pipeline.linkRedirect(refUrl, null, res) || refUrl;
-
-  const depth: number = res.depth + 1;
-  // resources from inline css
-  const resources: Resource[] = [];
-  let doc: CheerioStatic | void = res.meta.doc;
-  if (!doc) {
-    res.meta.doc = doc = parseHtml(res, options);
-  }
+  doc: CheerioStatic,
+  res: DownloadResource,
+  pipeline: PipelineExecutor,
+  depth: number,
+  resources: Resource[],
+  refUrl: string,
+  savePath: string | undefined,
+  submit: SubmitResourceFunc
+) {
   const sources: typeof defaultSources = options.sources || defaultSources;
   for (const {selector, attr, type} of sources) {
     const elements: Cheerio = doc(selector);
@@ -130,6 +122,48 @@ export async function processHtml(
       }
     }
   }
+  const iframeSrcDocs = doc('iframe[srcdoc]');
+
+  for (let index = 0; index < iframeSrcDocs.length; index++) {
+    const elem = iframeSrcDocs.eq(index);
+    const attrValue: string | void = elem.attr('srcdoc');
+    if (!attrValue) {
+      continue;
+    }
+    try {
+      const iframeDoc = load(attrValue);
+      await processHtmlDoc(options, iframeDoc, res, pipeline, depth, resources, refUrl, savePath, submit);
+      const html = options.cheerioSerialize ?
+        iframeDoc.html(options.cheerioSerialize) : iframeDoc.html();
+      elem.attr('srcdoc', html);
+    } catch (e) {
+      error.info('can not parse iframe srcdoc', res.url, res.rawUrl, e);
+    }
+  }
+}
+
+export async function processHtml(
+  res: DownloadResource,
+  submit: SubmitResourceFunc,
+  options: StaticDownloadOptions,
+  pipeline: PipelineExecutor
+): Promise<DownloadResource | void> {
+  if (res.type !== ResourceType.Html) {
+    return res;
+  }
+  const refUrl: string = res.redirectedUrl || res.url;
+  const savePath = refUrl === res.url ? res.savePath : undefined;
+  // useless since processRedirectedUrl enabled by default
+  // refUrl = await pipeline.linkRedirect(refUrl, null, res) || refUrl;
+
+  const depth: number = res.depth + 1;
+  let doc: CheerioStatic | void = res.meta.doc;
+  if (!doc) {
+    res.meta.doc = doc = parseHtml(res, options);
+  }
+  // resources from inline css
+  const resources: Resource[] = [];
+  await processHtmlDoc(options, doc, res, pipeline, depth, resources, refUrl, savePath, submit);
   if (resources.length) {
     submit(resources);
   }
