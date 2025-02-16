@@ -165,6 +165,33 @@ export async function downloadResource(
     return downloadedResource;
   }
   if (downloadedResource.type === ResourceType.Html) {
+    if (options.meta.warnForNonHtml) {
+      const headers = downloadedResource.meta.headers;
+      if (headers) {
+        const contentType =
+          headers['content-type'] || headers['Content-Type'];
+        let nonHtml = false;
+        if (typeof contentType === 'string') {
+          nonHtml = !contentType.includes('/html') &&
+            !contentType.includes('/xml') &&
+            !contentType.includes('application/xhtml+xml');
+        } else if (Array.isArray(contentType)) {
+          nonHtml = true;
+          for (const header of contentType) {
+            if (!header.includes('/html') &&
+              !header.includes('/xml') &&
+              !header.includes('application/xhtml+xml')) {
+              nonHtml = false;
+              break;
+            }
+          }
+        }
+        if (nonHtml) {
+          logger.error.warn('Detected non-html content type',
+            downloadedResource.downloadLink, downloadedResource.rawUrl, contentType);
+        }
+      }
+    }
     if (options.meta.detectIncompleteHtml &&
       (typeof downloadedResource.body === 'string' ||
         Buffer.isBuffer(downloadedResource.body))) {

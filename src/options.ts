@@ -20,6 +20,7 @@ import type {CheerioOptionsInterface} from './types.js';
 export interface StaticDownloadMeta
   extends Record<string, string | number | boolean| void> {
   detectIncompleteHtml?: '</html>' | '</body>' | string;
+  warnForNonHtml?: boolean;
 }
 
 /**
