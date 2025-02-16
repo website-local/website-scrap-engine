@@ -81,6 +81,24 @@ function toHtml(selector: string) {
 
 // https://github.com/website-local/website-scrap-engine/issues/1092
 describe('process-html', function () {
+  test('non-html-resources', async function () {
+    const res = resHtml('https://example.com/dir01/index.bin', '');
+    res.type = ResourceType.Binary;
+    const processed =
+      await processHtml(res, () => {}, testPipeline.options, testPipeline);
+    expect(processed).toBeTruthy();
+    expect(processed!.meta.doc).toBeFalsy();
+  });
+
+  test('parse-html', async function () {
+    const res = resHtml('https://example.com/dir01/index.bin', '');
+    res.body = '<html><body></body></html>';
+    const processed =
+      await processHtml(res, () => {}, testPipeline.options, testPipeline);
+    expect(processed).toBeTruthy();
+    expect(processed!.meta.doc).toBeTruthy();
+  });
+
   test('simple-attr', async function () {
     for (const {selector, attr, type} of sources) {
       if (type === ResourceType.CssInline || attr === 'srcset' || !attr) {
