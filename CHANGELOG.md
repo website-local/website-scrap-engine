@@ -1,3 +1,15 @@
+0.8.1
+============
+
+Enhancement
+------------
+* sources: support iframe srcdoc (#1081)
+* download-resource: add option to warn for non-html (Part of #993)
+
+Test
+------------
+* tests: process-html (#1092)
+
 0.8.0
 ============
 
