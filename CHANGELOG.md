@@ -1,3 +1,16 @@
+0.8.2
+============
+
+Fix
+------------
+* downloader: use of options before init (#1110)
+
+
+Misc
+------------
+* npm: update dependencies
+* options: deprecate waitForInitBeforeIdle
+
 0.8.1
 ============
 
