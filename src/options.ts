@@ -131,6 +131,7 @@ export interface StaticDownloadOptions {
   /**
    * Wait for this.init in method onIdle.
    * See https://github.com/website-local/website-scrap-engine/issues/152
+   * @deprecated since 0.8.2
    */
   waitForInitBeforeIdle?: boolean;
 
