@@ -43,10 +43,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   constructor(
     public coreSize: number,
-    workerScript: string,
-    workerData: Record<string, unknown>,
+    public workerScript: string,
+    public workerData: Record<string, unknown>,
     public maxLoad: number = -1,
-    factory: WorkerFactory = defaultWorkerFactory
+    public factory: WorkerFactory = defaultWorkerFactory
   ) {
     const ready: Promise<void>[] = [];
     for (let i = 0; i < coreSize; i++) {

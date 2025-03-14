@@ -3,7 +3,7 @@ import type {WorkerFactory} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
 import type {RawResource, Resource} from '../resource.js';
 import type {DownloadWorkerMessage} from './types.js';
-import type {StaticDownloadOptions} from '../options.js';
+import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import type {DownloadResource} from '../life-cycle/types.js';
 import {skip} from '../logger/logger.js';
 import {AbstractDownloader} from './main.js';
@@ -14,41 +14,53 @@ export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
 }
 
 export class MultiThreadDownloader extends AbstractDownloader {
-  readonly pool: WorkerPool<RawResource, DownloadWorkerMessage>;
+  private _pool: WorkerPool<RawResource, DownloadWorkerMessage> | undefined;
   readonly init: Promise<void>;
   workerDispose: Promise<void>[];
 
   constructor(
     public pathToOptions: string,
     overrideOptions?: Partial<MultiThreadDownloaderOptions>,
-    workerFactory?: WorkerFactory
+    private _workerFactory?: WorkerFactory
   ) {
     super(pathToOptions, overrideOptions);
-    let workerCount: number = this.options.concurrency;
-    if (this.options.workerCount) {
-      workerCount = Math.min(this.options.workerCount, workerCount);
+    this.init = this._initOptions;
+    this.workerDispose = [];
+  }
+
+  protected _internalInit(options: DownloadOptions): Promise<void> {
+    let workerCount: number = options.concurrency;
+    if (options.workerCount) {
+      workerCount = Math.min(options.workerCount, workerCount);
     }
     if (workerCount < 1) {
       workerCount = 1;
     }
-    this.pool = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
+    const overrideOptions = options as Partial<MultiThreadDownloaderOptions>;
+    this._pool = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
       // worker script should be compiled to .js
       overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker.js'),
-      {pathToOptions, overrideOptions},
+      {pathToOptions: this.pathToOptions, overrideOptions},
       overrideOptions?.maxLoad || -1,
-      workerFactory
+      this._workerFactory
     );
-    this.workerDispose = [];
     for (const info of this.pool.workers) {
       info.worker.addListener('exit',
         exitCode => this.workerDispose.push(
           this.pipeline.dispose(this.pipeline, this, info, exitCode)));
     }
     if (this.options.initialUrl) {
-      this.init = this.addInitialResource(this.options.initialUrl);
+      return this.addInitialResource(this.options.initialUrl);
     } else {
-      this.init = this._initOptions.then(() => this.pipeline.init(this.pipeline, this));
+      return this._initOptions.then(() => this.pipeline.init(this.pipeline, this));
     }
+  }
+
+  get pool(): WorkerPool<RawResource, DownloadWorkerMessage> {
+    if (this._pool) {
+      return this._pool;
+    }
+    throw new TypeError('MultiThreadDownloader: pool not initialized');
   }
 
   async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
@@ -96,13 +108,6 @@ export class MultiThreadDownloader extends AbstractDownloader {
       this.queuedUrl.add(msg.redirectedUrl);
     }
 
-  }
-
-  onIdle(): Promise<void> {
-    if (this.options.waitForInitBeforeIdle) {
-      return this.init.then(() => super.onIdle());
-    }
-    return super.onIdle();
   }
 
   async dispose(): Promise<void> {
