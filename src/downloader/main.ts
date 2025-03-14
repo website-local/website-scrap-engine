@@ -39,8 +39,15 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       this._options = options;
       this._pipeline = new PipelineExecutorImpl(options, options.req, options);
       options.configureLogger(options.localRoot, options.logSubDir || '');
-      this._isInit = true;
+      return this._internalInit(options).then(() => {
+        this._isInit = true;
+      });
     });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected _internalInit(options: DownloadOptions): Promise<void> {
+    return Promise.resolve();
   }
 
   get options(): DownloadOptions {
@@ -150,15 +157,15 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   start(): void {
-    if (typeof this.options.adjustConcurrencyFunc === 'function') {
-      if (this.adjustTimer) {
-        clearInterval(this.adjustTimer);
-      }
-      this.adjustTimer = setInterval(
-        () => this.options.adjustConcurrencyFunc?.(this),
-        this.options.adjustConcurrencyPeriod || 60000);
-    }
     this._initOptions.then(() => {
+      if (typeof this.options.adjustConcurrencyFunc === 'function') {
+        if (this.adjustTimer) {
+          clearInterval(this.adjustTimer);
+        }
+        this.adjustTimer = setInterval(
+          () => this.options.adjustConcurrencyFunc?.(this),
+          this.options.adjustConcurrencyPeriod || 60000);
+      }
       this.queue.start();
     });
   }
@@ -171,7 +178,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   onIdle(): Promise<void> {
-    return this.queue.onIdle();
+    return this._initOptions.then(() => this.queue.onIdle());
   }
 
   async dispose(): Promise<void> {
