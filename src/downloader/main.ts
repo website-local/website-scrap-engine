@@ -81,7 +81,10 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   async addInitialResource(urlArr: string[]): Promise<void> {
-    await this._initOptions;
+    if (!this._pipeline) {
+      // _initOptions could await addInitialResource
+      await this._initOptions;
+    }
     const pipeline = this.pipeline;
     await pipeline.init(pipeline, this);
     // noinspection DuplicatedCode
