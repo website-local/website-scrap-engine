@@ -1,10 +1,17 @@
+0.8.3
+============
+
+Fix
+------------
+* options: fix got options memory leak (#1112)
+* downloader: correctly set queue.concurrency (#1113)
+
 0.8.2
 ============
 
 Fix
 ------------
 * downloader: use of options before init (#1110)
-
 
 Misc
 ------------
