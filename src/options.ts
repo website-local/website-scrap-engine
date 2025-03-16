@@ -378,7 +378,13 @@ export function mergeOverrideOptions(
   }
   if (opt.req && overrideOptions.req) {
     const options = got.defaults.options;
-    overrideOptions.req = new Options(opt.req, overrideOptions.req, options);
+    const mergedOptions = new Options(opt.req, overrideOptions.req, options);
+    // New versions of got removed `mergeOptions`
+    // Instances of `Options` can not be reused, or it will result in memory leak
+    // Will try to find a better way as there is no public api for this
+    // See https://github.com/website-local/website-scrap-engine/issues/1112
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    overrideOptions.req = (mergedOptions as any)._internals;
   }
   return checkDownloadOptions(Object.assign(opt, overrideOptions));
 }
