@@ -32,11 +32,14 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
     this._asyncOptions = importDefaultFromPath(pathToOptions);
     this._overrideOptions = overrideOptions;
-    this.queue = new PQueue();
+    // A safeguard here, concurrency is set later
+    this.queue = new PQueue({concurrency: 2});
     this._isInit = false;
     this._initOptions = this._asyncOptions.then(options => {
       options = mergeOverrideOptions(options, this._overrideOptions);
       this._options = options;
+      // https://github.com/website-local/website-scrap-engine/issues/1113
+      this.queue.concurrency = options.concurrency;
       this._pipeline = new PipelineExecutorImpl(options, options.req, options);
       options.configureLogger(options.localRoot, options.logSubDir || '');
       return this._internalInit(options).then(() => {
