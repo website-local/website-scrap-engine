@@ -464,7 +464,7 @@ describe('resource', function () {
       refType: ResourceType.Html,
       localRoot: '/tmp/aaa'
     };
-    expect(() => createResource(arg)).toThrowError();
+    expect(() => createResource(arg)).toThrow();
   });
 
   // BREAKING CHANGE v0.4
@@ -492,12 +492,12 @@ describe('resource', function () {
   });
 
   test('generateSavePath no relative uri', () => {
-    expect(() => generateSavePath(URI('aaaa'))).toThrowError();
+    expect(() => generateSavePath(URI('aaaa'))).toThrow();
   });
 
   // https://github.com/website-local/website-scrap-engine/issues/126
   test('generateSavePath no localSrcRoot', () => {
-    expect(() => generateSavePath(URI('file://aaaaa'))).toThrowError();
+    expect(() => generateSavePath(URI('file://aaaaa'))).toThrow();
   });
 
   test('generateSavePath windows file uri', () => {
@@ -538,7 +538,7 @@ describe('resource', function () {
 
   test('resolveFileUrl no localSrcRoot', () => {
     expect(() => resolveFileUrl('', ''))
-      .toThrowError('can not use file url without localSrcRoot');
+      .toThrow('can not use file url without localSrcRoot');
   });
 
   test('resolveFileUrl skip error on skipReplacePathError', () => {
@@ -550,13 +550,13 @@ describe('resource', function () {
   test('resolveFileUrl url not starting with localSrcRoot', () => {
     expect(() =>
       resolveFileUrl('file:///dev/vda1', '', '/tmp/'))
-      .toThrowError('file url not starting with localSrcRoot is forbidden');
+      .toThrow('file url not starting with localSrcRoot is forbidden');
   });
 
   test('resolveFileUrl refUrl not starting with localSrcRoot', () => {
     expect(() => resolveFileUrl(
       'file:///tmp/11', 'file:///dev/11', '/tmp/'))
-      .toThrowError('file refUrl not starting with localSrcRoot is forbidden');
+      .toThrow('file refUrl not starting with localSrcRoot is forbidden');
   });
 
   test('resolveFileUrl absolute url', () => {
