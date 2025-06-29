@@ -51,7 +51,7 @@ describe('worker-pool', function () {
     try {
       await pool.ready;
       await new Promise(resolve => setTimeout(resolve, 200));
-      expect(fn).toBeCalledTimes(2);
+      expect(fn).toHaveBeenCalledTimes(2);
       // noinspection JSUnusedAssignment
       expect(error).toBeTruthy();
       expect(error?.message).toBe('Test worker error');
