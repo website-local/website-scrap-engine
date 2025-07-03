@@ -29,7 +29,7 @@
     "urijs": "^1.19.11"
   },
   "devDependencies": {
-    "@jest/globals": "^30.0.3",
+    "@jest/globals": "^30.0.4",
     "@types/node": "^24.0.10",
     "@types/urijs": "^1.19.25",
     "@typescript-eslint/eslint-plugin": "^8.35.1",
