@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.0.4",
-    "@types/node": "^24.0.10",
+    "@types/node": "^24.0.12",
     "@types/urijs": "^1.19.25",
     "@typescript-eslint/eslint-plugin": "^8.36.0",
     "@typescript-eslint/parser": "^8.35.1",
