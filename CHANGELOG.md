@@ -1,3 +1,18 @@
+0.8.4
+============
+
+Enhancement
+------------
+* Upgraded to typescript 5.9
+
+Test
+------------
+* tests: support typescript 5.9
+
+Misc
+------------
+* npm: update dependencies
+
 0.8.3
 ============
 
