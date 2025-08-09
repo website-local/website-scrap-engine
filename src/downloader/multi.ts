@@ -79,7 +79,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
     try {
       if ((ArrayBuffer.isView(r.body) || Buffer.isBuffer(r.body)) &&
         r.body.byteOffset === 0 &&
-        r.body.byteLength === r.body.buffer.byteLength) {
+        r.body.byteLength === r.body.buffer.byteLength &&
+        r.body.buffer instanceof ArrayBuffer) {
         // the array buffer view fully owns the underlying ArrayBuffer
         r.body = r.body.buffer;
         msg = await this.pool.submitTask(r, [r.body]);

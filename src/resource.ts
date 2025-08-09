@@ -628,9 +628,9 @@ export function normalizeResource(res: RawResource): Resource {
     resource.downloadTime =
       resource.finishTimestamp - resource.downloadStartTimestamp;
   }
-  if (resource.body instanceof ArrayBuffer || resource.body instanceof Uint8Array) {
+  if (resource.body instanceof ArrayBuffer) {
     resource.body = Buffer.from(resource.body);
-  } else if (ArrayBuffer.isView(resource.body)) {
+  } else if (ArrayBuffer.isView(resource.body) && !Buffer.isBuffer(resource.body)) {
     resource.body = Buffer.from(
       resource.body.buffer, resource.body.byteOffset, resource.body.byteLength);
   }
