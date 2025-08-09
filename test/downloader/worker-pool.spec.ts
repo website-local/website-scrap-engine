@@ -67,7 +67,8 @@ describe('worker-pool', function () {
     try {
       await pool.ready;
       const b = Buffer.alloc(10);
-      await expect(pool.submitTask([1, 2, b], [b]))
+      // Note that this is expected to fail here
+      await expect(pool.submitTask([1, 2, b], [b as never]))
         .rejects.toThrow();
     } finally {
       await pool.dispose();
