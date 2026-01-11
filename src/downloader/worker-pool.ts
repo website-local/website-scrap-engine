@@ -55,7 +55,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       this.workers[i].worker.addListener('message',
         msg => this.onMessage(this.workers[i], msg));
       this.workers[i].worker.addListener('error',
-        err => this.workerOnError(this.workers[i], err));
+        err => this.workerOnError(this.workers[i], err as Error));
       ready.push(new Promise(resolve =>
         this.workers[i].worker.addListener('online',resolve)));
     }
