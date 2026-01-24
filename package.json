@@ -39,6 +39,9 @@
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3"
   },
+  "overrides": {
+    "undici": "npm:@favware/skip-dependency@1.2.2"
+  },
   "files": [
     ".editorconfig",
     "tsconfig.json",
