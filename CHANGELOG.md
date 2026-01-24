@@ -1,3 +1,14 @@
+0.8.5
+============
+
+Enhancement
+------------
+* [worker-pool: cast err to Error](https://github.com/website-local/website-scrap-engine/commit/d8fecbaa088d7f7fb5632c099c7a7753731825ec)
+
+Misc
+------------
+* npm: update dependencies
+
 0.8.4
 ============
 
