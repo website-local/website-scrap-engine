@@ -1,6 +1,6 @@
 {
   "name": "website-scrap-engine",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Configurable website scraper in typescript",
   "main": "lib",
   "types": "lib",
