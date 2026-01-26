@@ -20,7 +20,7 @@
     "postinstall": "npm run postshrinkwrap && node -e \"require('fs').copyFileSync('fake-undici.d.ts', 'node_modules/cheerio/node_modules/undici/index.d.ts')\""
   },
   "dependencies": {
-    "cheerio": "^1.1.2",
+    "cheerio": "^1.2.0",
     "css-url-parser": "^1.1.4",
     "got": "^13.0.0",
     "log4js": "^6.9.1",
