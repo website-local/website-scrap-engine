@@ -198,7 +198,7 @@ export async function streamingDownloadToFile(
             retry = retryCount * 300;
           }
           if (retry > 0) {
-            makeRequest(retryCount + 1);
+            setTimeout(() => makeRequest(retryCount + 1), retry);
             return;
           }
         }

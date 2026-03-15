@@ -39,6 +39,6 @@ export async function processSiteMap(
       resources.push(r);
     }
   }
-  await submit(resources);
+  submit(resources);
   return res;
 }

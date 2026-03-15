@@ -69,8 +69,9 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   onMessage(info: WorkerInfo, message: WorkerMessage): void {
     if (message.type === WorkerMessageType.Complete) {
       this.complete(info, message);
+    } else {
+      this.takeLog(info, message as LogWorkerMessage);
     }
-    this.takeLog(info, message as LogWorkerMessage);
   }
 
   takeLog(info: WorkerInfo, message: LogWorkerMessage): void {

@@ -94,7 +94,7 @@ export interface HtmlProcessFunc {
 }
 
 export const parseHtml = (
-  res: DownloadResource & { type: ResourceType.Html },
+  res: DownloadResource & { type: ResourceType.Html | ResourceType.Svg },
   options: StaticDownloadOptions
 ): CheerioStatic => {
   const encoding: ResourceEncoding =

@@ -202,7 +202,9 @@ export async function downloadResource(
           res as (Resource & { downloadStartTimestamp: number }), requestOptions);
       }
       // probably more retries here?
-      if (!downloadedResource || typeof downloadedResource.body === 'string' &&
+      if (!downloadedResource ||
+        (typeof downloadedResource.body === 'string' ||
+          Buffer.isBuffer(downloadedResource.body)) &&
         !downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
         logger.error.warn('Detected incomplete html twice', res.downloadLink);
         return downloadedResource;

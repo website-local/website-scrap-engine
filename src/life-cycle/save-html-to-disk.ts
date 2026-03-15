@@ -22,12 +22,13 @@ export function getResourceBodyFromHtml(
 }
 
 export function redirectHtml(relativePath: string, encoding?: ResourceEncoding): string {
+  const jsPath = relativePath.replace(/'/g, '\\\'');
   // language=HTML
   return `<html lang="en">
 <head>
 <meta charset="${encoding || 'utf8'}">
 <meta http-equiv="refresh" content="0; url=${relativePath}">
-<script>location.replace('${relativePath}' + location.hash);</script>
+<script>location.replace('${jsPath}' + location.hash);</script>
 <title>Redirecting</title>
 </head>
 </html>`;

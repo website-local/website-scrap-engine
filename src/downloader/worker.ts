@@ -87,6 +87,7 @@ parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) =
         for (const k in e) {
           clone[k] = String((e as Record<string, unknown>)[k]);
         }
+        error = clone;
       } else {
         error = String(e);
       }
