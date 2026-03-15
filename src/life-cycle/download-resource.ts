@@ -178,9 +178,9 @@ export async function downloadResource(
         } else if (Array.isArray(contentType)) {
           nonHtml = true;
           for (const header of contentType) {
-            if (!header.includes('/html') &&
-              !header.includes('/xml') &&
-              !header.includes('application/xhtml+xml')) {
+            if (header.includes('/html') ||
+              header.includes('/xml') ||
+              header.includes('application/xhtml+xml')) {
               nonHtml = false;
               break;
             }
@@ -199,7 +199,7 @@ export async function downloadResource(
         logger.error.info('Detected incomplete html, try again',
           downloadedResource.downloadLink);
         downloadedResource = await requestForResource(
-          res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+          res as (Resource & { downloadStartTimestamp: number }), requestOptions, options);
       }
       // probably more retries here?
       if (!downloadedResource ||

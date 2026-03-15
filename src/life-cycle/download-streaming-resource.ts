@@ -226,7 +226,7 @@ export async function optionallySetLastModifiedTime(
   // https://github.com/website-local/website-scrap-engine/issues/174
   let mtime: number | void = void 0;
   if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
-    mtime = Date.parse(res.meta.headers?.['last-modified']);
+    mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
   }
 
   // void and NaN check

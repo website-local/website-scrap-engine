@@ -12,7 +12,7 @@ export async function saveResourceToDisk(
   // https://github.com/website-local/website-scrap-engine/issues/174
   let mtime: number | void = void 0;
   if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
-    mtime = Date.parse(res.meta.headers?.['last-modified']);
+    mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
   }
   if (res.redirectedUrl && res.redirectedUrl !== res.url) {
     if (res.redirectedSavePath) {

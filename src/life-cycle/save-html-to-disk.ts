@@ -9,7 +9,7 @@ import {writeFile} from '../io.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 
 export function getResourceBodyFromHtml(
-  res: DownloadResource & { type: ResourceType.Html },
+  res: DownloadResource & { type: ResourceType.Html | ResourceType.Svg },
   options: StaticDownloadOptions
 ): ResourceBody {
   if (!res.meta.doc) {
@@ -45,7 +45,7 @@ export async function saveHtmlToDisk(
   // https://github.com/website-local/website-scrap-engine/issues/174
   let mtime: number | void = void 0;
   if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
-    mtime = Date.parse(res.meta.headers?.['last-modified']);
+    mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
   }
   if (res.redirectedUrl && res.redirectedUrl !== res.url) {
     if (res.redirectedSavePath) {

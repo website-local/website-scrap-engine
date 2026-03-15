@@ -52,8 +52,8 @@ describe('save-html-to-disk', function () {
       [join('root', 'example.com', 'index.html')]: 'body'
     });
     expect(fakeFsStats).toStrictEqual({
-      [join('root', 'example.com', 'index.html') + '::atime']: 1445412480000,
-      [join('root', 'example.com', 'index.html') + '::mtime']: 1445412480000,
+      [join('root', 'example.com', 'index.html') + '::atime']: 1445412480,
+      [join('root', 'example.com', 'index.html') + '::mtime']: 1445412480,
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
     expect(fs.promises.utimes).toHaveBeenCalledTimes(1);

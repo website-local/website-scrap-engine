@@ -6,6 +6,7 @@ import {ResourceType} from '../resource.js';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import {error as errorLogger} from '../logger/logger.js';
+import {mkdirRetry} from '../io.js';
 
 const FILE_PREFIX = 'file://';
 
@@ -44,6 +45,7 @@ export async function readOrCopyLocalResource(
   }
   if (res.type ===  ResourceType.StreamingBinary) {
     const fileDestPath = path.join(res.localRoot ?? options.localRoot, res.savePath);
+    await mkdirRetry(path.dirname(fileDestPath));
     await promises.copyFile(fileSrcPath, fileDestPath);
   } else {
     res.body = await promises.readFile(fileSrcPath, {

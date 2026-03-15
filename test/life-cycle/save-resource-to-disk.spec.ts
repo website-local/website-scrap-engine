@@ -42,8 +42,8 @@ describe('save-resource-to-disk', function () {
       [join('root', 'example.com', 'test.bin')]: 'body'
     });
     expect(fakeFsStats).toStrictEqual({
-      [join('root', 'example.com', 'test.bin') + '::atime']: 1445412480000,
-      [join('root', 'example.com', 'test.bin') + '::mtime']: 1445412480000,
+      [join('root', 'example.com', 'test.bin') + '::atime']: 1445412480,
+      [join('root', 'example.com', 'test.bin') + '::mtime']: 1445412480,
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
     expect(fs.promises.utimes).toHaveBeenCalledTimes(1);
@@ -97,10 +97,10 @@ describe('save-resource-to-disk', function () {
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(2);
     expect(fakeFsStats).toStrictEqual({
-      [join('root', 'example.com', 'demo.bin') + '::atime']: 1445412480000,
-      [join('root', 'example.com', 'demo.bin') + '::mtime']: 1445412480000,
-      [join('root', 'example.com', 'en-US', 'demo.bin') + '::atime']: 1445412480000,
-      [join('root', 'example.com', 'en-US', 'demo.bin') + '::mtime']: 1445412480000,
+      [join('root', 'example.com', 'demo.bin') + '::atime']: 1445412480,
+      [join('root', 'example.com', 'demo.bin') + '::mtime']: 1445412480,
+      [join('root', 'example.com', 'en-US', 'demo.bin') + '::atime']: 1445412480,
+      [join('root', 'example.com', 'en-US', 'demo.bin') + '::mtime']: 1445412480,
     });
     expect(fs.promises.utimes).toHaveBeenCalledTimes(2);
   });
@@ -139,10 +139,10 @@ describe('save-resource-to-disk', function () {
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(2);
     expect(fakeFsStats).toStrictEqual({
-      [join('root', 'example.com', 'demo.bin') + '::atime']: 1445412480000,
-      [join('root', 'example.com', 'demo.bin') + '::mtime']: 1445412480000,
-      [join('root', 'example.com', 'en-US', 'demo1.bin') + '::atime']: 1445412480000,
-      [join('root', 'example.com', 'en-US', 'demo1.bin') + '::mtime']: 1445412480000,
+      [join('root', 'example.com', 'demo.bin') + '::atime']: 1445412480,
+      [join('root', 'example.com', 'demo.bin') + '::mtime']: 1445412480,
+      [join('root', 'example.com', 'en-US', 'demo1.bin') + '::atime']: 1445412480,
+      [join('root', 'example.com', 'en-US', 'demo1.bin') + '::mtime']: 1445412480,
     });
     expect(fs.promises.utimes).toHaveBeenCalledTimes(2);
   });
@@ -179,8 +179,8 @@ describe('save-resource-to-disk', function () {
     });
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
     expect(fakeFsStats).toStrictEqual({
-      [join('root', 'example.com', 'demo.bin') + '::atime']: 1445412480000,
-      [join('root', 'example.com', 'demo.bin') + '::mtime']: 1445412480000,
+      [join('root', 'example.com', 'demo.bin') + '::atime']: 1445412480,
+      [join('root', 'example.com', 'demo.bin') + '::mtime']: 1445412480,
     });
     expect(fs.promises.utimes).toHaveBeenCalledTimes(1);
   });

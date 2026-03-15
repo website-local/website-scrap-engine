@@ -258,7 +258,7 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
           retryAfter = 1;
         }
         if (retryOptions.maxRetryAfter) {
-          if (retryAfter >= retryOptions.maxRetryAfter) {
+          if (retryAfter <= retryOptions.maxRetryAfter) {
             delay = retryAfter;
           }
         } else {
