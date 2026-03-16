@@ -116,37 +116,82 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     if (!this.pendingTasks.length) {
       return;
     }
-    // hopefully there would not be too many workers
-    const sorted = this.workers.sort(
+    const sorted = this.workers.slice().sort(
       (a, b) => a.load - b.load);
-    for (let i = 0, l = sorted.length, ll = l - 1, n, curr; i < l; i++) {
-      curr = sorted[i];
-      n = i + 1;
-      while (
-        (this.maxLoad <= 0 || curr.load < this.maxLoad) &&
-        (i == ll || curr.load <= sorted[n].load)
-      ) {
-        const task: PendingPromiseWithBody<R> | undefined =
-          this.pendingTasks.shift();
-        if (!task) {
-          break;
+    const n = sorted.length;
+    let remaining = this.pendingTasks.length;
+
+    // Cap by maxLoad capacity
+    if (this.maxLoad > 0) {
+      let capacity = 0;
+      for (let i = 0; i < n; i++) {
+        capacity += Math.max(0, this.maxLoad - sorted[i].load);
+      }
+      remaining = Math.min(remaining, capacity);
+    }
+
+    if (remaining <= 0) {
+      return;
+    }
+
+    // Pass 1: water-fill to calculate balanced task assignments
+    const assign: number[] = new Array(n).fill(0);
+    let level = sorted[0].load;
+    for (let i = 0; i < n - 1 && remaining > 0; i++) {
+      let gap = sorted[i + 1].load - level;
+      if (this.maxLoad > 0) {
+        gap = Math.min(gap, this.maxLoad - level);
+      }
+      if (gap <= 0) continue;
+      const width = i + 1;
+      const cost = gap * width;
+      if (cost <= remaining) {
+        for (let j = 0; j <= i; j++) assign[j] += gap;
+        remaining -= cost;
+        level += gap;
+      } else {
+        const each = (remaining / width) | 0;
+        let extra = remaining % width;
+        for (let j = 0; j <= i; j++) {
+          assign[j] += each + (extra > 0 ? 1 : 0);
+          if (extra > 0) extra--;
         }
+        remaining = 0;
+      }
+    }
+    // Distribute remaining evenly across all workers
+    if (remaining > 0) {
+      const each = (remaining / n) | 0;
+      let extra = remaining % n;
+      for (let j = 0; j < n; j++) {
+        assign[j] += each + (extra > 0 ? 1 : 0);
+        if (extra > 0) extra--;
+      }
+    }
+
+    // Pass 2: dispatch tasks to workers
+    let dispatched = 0;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < assign[i]; j++) {
+        const task: PendingPromiseWithBody<R> | undefined =
+          this.pendingTasks[dispatched];
+        if (!task) break;
+        dispatched++;
         try {
-          curr.worker.postMessage({
+          sorted[i].worker.postMessage({
             taskId: task.taskId,
             body: task.body
           }, task.transferList);
           this.workingTasks[task.taskId] = task as PendingPromise;
+          ++sorted[i].load;
         } catch (e) {
           delete this.workingTasks[task.taskId];
           task.reject(e);
-          continue;
         }
-        ++sorted[i].load;
       }
-      if (!this.pendingTasks.length) {
-        break;
-      }
+    }
+    if (dispatched > 0) {
+      this.pendingTasks.splice(0, dispatched);
     }
   }
 

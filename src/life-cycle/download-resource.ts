@@ -66,6 +66,9 @@ export async function getRetry(
       // force cast for typescript 4.4
       err = e as DownloadError | void;
       if (err && err.message === 'premature close') {
+        if (err.retryLimitExceeded) {
+          throw e;
+        }
         logger.retry.warn(i, url, 'manually retry on premature close',
           err.name, err.code, err.event, err.message);
         await sleep(i * 200);
@@ -99,7 +102,12 @@ export async function requestForResource(
   requestOptions: RequestOptions,
   options?: StaticDownloadOptions
 ): Promise<DownloadResource | Resource | void> {
-  const downloadLink: string = encodeURI(decodeURI(res.downloadLink));
+  let downloadLink: string;
+  try {
+    downloadLink = encodeURI(decodeURI(res.downloadLink));
+  } catch {
+    downloadLink = res.downloadLink;
+  }
   const reqOptions: OptionsInit = Object.assign({}, requestOptions);
   reqOptions.responseType = 'buffer';
   if (res.refUrl && res.refUrl !== downloadLink) {
