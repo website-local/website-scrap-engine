@@ -198,6 +198,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   async dispose(): Promise<number[]> {
     const numbers = await Promise.all(
       this.workers.map(info => info.worker.terminate()));
+    for (const task of this.pendingTasks) {
+      task.reject(new Error('disposed'));
+    }
+    this.pendingTasks.length = 0;
     for (const taskId in this.workingTasks) {
       // noinspection JSUnfilteredForInLoop
       this.workingTasks[taskId].reject(new Error('disposed'));
