@@ -2,8 +2,8 @@
   "name": "website-scrap-engine",
   "version": "0.8.7",
   "description": "Configurable website scraper in typescript",
-  "main": "lib",
-  "types": "lib",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "type": "module",
   "engines": {
     "node": ">=18.17.0"
@@ -17,7 +17,7 @@
     "copy": "node copy-src.js",
     "prepack": "npm run clean && npm run build",
     "postshrinkwrap": "node package-lock-resolved.js",
-    "postinstall": "npm run postshrinkwrap && node -e \"require('fs').copyFileSync('fake-undici.d.ts', 'node_modules/cheerio/node_modules/undici/index.d.ts')\""
+    "postinstall": "node -e \"var f='fake-undici.d.ts',t='node_modules/cheerio/node_modules/undici/index.d.ts';try{require('fs').copyFileSync(f,t)}catch(e){}\""
   },
   "dependencies": {
     "cheerio": "^1.2.0",
