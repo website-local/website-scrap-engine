@@ -1,3 +1,37 @@
+0.8.6
+============
+
+Fix
+------------
+* worker-pool: rewrite task dispatch with 2-pass water-fill algorithm for even load balancing
+* worker-pool: reject pending tasks on dispose when maxLoad is set
+* process-css: single-pass positional replacement to prevent corrupting already-replaced paths
+* download-resource: fix inverted nonHtml detection for array content-type headers
+* download-resource: pass missing `options` arg to requestForResource on retry
+* download-resource: guard premature close retry with retryLimitExceeded check
+* download-resource: wrap encodeURI(decodeURI()) in try-catch for malformed URLs
+* download-resource: check Buffer bodies (not just strings) on incomplete HTML retry
+* download-streaming-resource: apply computed backoff delay via setTimeout on retry
+* options: fix inverted maxRetryAfter comparison
+* save-html-to-disk: convert Date.parse milliseconds to seconds for fs.utimes
+* save-resource-to-disk: convert Date.parse milliseconds to seconds for fs.utimes
+* save-html-to-disk: escape single quotes in redirect HTML JS string literal
+* read-or-copy-local-resource: create parent directory before copyFile for StreamingBinary
+* worker: assign cloned error back so worker errors propagate to main thread
+* worker-pool: only call takeLog for Log messages, not Complete messages
+* adapters: widen parseHtml and getResourceBodyFromHtml type to accept Svg
+
+Test
+------------
+* redirect-html: test encoding and single-quote escaping
+* download-streaming-resource: test isBytesAccepted, isSameRangeStart
+* options: test calculateFastDelay retry limit, maxRetryAfter, non-retryable methods
+
+Misc
+------------
+* npm: exclude undici from bundle
+* npm: update dependencies
+
 0.8.5
 ============
 
