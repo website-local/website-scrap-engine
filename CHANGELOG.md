@@ -1,3 +1,11 @@
+0.8.7
+============
+
+Fix
+------------
+* npm: fix postinstall failure when installed as a dependency
+* npm: fix Node.js DEP0151 deprecation warning for ESM main field resolution
+
 0.8.6
 ============
 
