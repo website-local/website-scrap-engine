@@ -469,7 +469,7 @@ describe('existingResource: context object', () => {
     mockStatSync.mockReset();
   });
 
-  test('passes correct localPath and options', async () => {
+  test('download stage passes correct context', async () => {
     const cb = jest.fn<ExistingResourceFunc>().mockReturnValue('overwrite');
     const lc = makeLifeCycle(cb);
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
@@ -482,8 +482,34 @@ describe('existingResource: context object', () => {
 
     expect(cb).toHaveBeenCalledTimes(1);
     const ctx: ExistingResourceContext = cb.mock.calls[0][0];
+    expect(ctx.stage).toBe('download');
     expect(ctx.localPath).toContain('/test/root');
     expect(ctx.localPath).toContain('example.com');
+    expect(ctx.stat).toBe(fakeStat);
+    expect(ctx.res).toBe(res);
+    expect(ctx.options).toBe(fakeOpt);
+  });
+
+  test('saveToDisk stage passes correct context', async () => {
+    const cb = jest.fn<ExistingResourceFunc>().mockReturnValue('overwrite');
+    const lc = makeLifeCycle(cb);
+    const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
+    const res = makeResource('https://example.com/page');
+    res.body = '<html></html>';
+    res.meta.headers = {'last-modified': 'Wed, 22 Jan 2025 12:00:00 GMT'};
+
+    mockExistsSync.mockReturnValue(true);
+    mockStatSync.mockReturnValue(fakeStat);
+
+    await pipeline.saveToDisk(res as DownloadResource);
+
+    expect(cb).toHaveBeenCalledTimes(1);
+    const ctx: ExistingResourceContext = cb.mock.calls[0][0];
+    expect(ctx.stage).toBe('saveToDisk');
+    expect(ctx.localPath).toContain('/test/root');
+    expect(ctx.localPath).toContain('example.com');
+    expect(ctx.stat).toBe(fakeStat);
+    expect(ctx.res).toBe(res);
     expect(ctx.options).toBe(fakeOpt);
   });
 });
