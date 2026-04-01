@@ -32,6 +32,18 @@ export interface StatusChangeFunc {
    pipeline: PipelineExecutor): void | Promise<void>;
 }
 
+export interface InitSubmitFunc {
+  /**
+   * Submit a raw URL to be processed through the full pipeline
+   * after all init hooks complete.
+   *
+   * This is fire-and-forget: the URL is appended to the initial URL list
+   * and processed identically to entries in {@link DownloadOptions.initialUrl}.
+   * No pipeline stages run during the call.
+   */
+  (url: string): void;
+}
+
 export interface InitLifeCycleFunc {
   /**
    * The init life cycle would be called:
@@ -49,8 +61,12 @@ export interface InitLifeCycleFunc {
    *
    * @param pipeline the PipelineExecutor
    * @param downloader the DownloaderWithMeta when in main thread
+   * @param submit function to submit URLs for processing after init;
+   *   undefined in worker threads
    */
-  (pipeline: PipelineExecutor, downloader?: DownloaderWithMeta): AsyncResult<void>;
+  (pipeline: PipelineExecutor,
+   downloader?: DownloaderWithMeta,
+   submit?: InitSubmitFunc): AsyncResult<void>;
 }
 
 export interface LinkRedirectFunc {

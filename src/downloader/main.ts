@@ -8,6 +8,7 @@ import {skip} from '../logger/logger.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloaderStats, DownloaderWithMeta} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
+import type {InitSubmitFunc} from '../life-cycle/types.js';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
   readonly queue: PQueue;
@@ -88,9 +89,12 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       await this._initOptions;
     }
     const pipeline = this.pipeline;
-    await pipeline.init(pipeline, this);
+    const submit: InitSubmitFunc = (url: string) => {
+      urlArr.push(url);
+    };
+    await pipeline.init(pipeline, this, submit);
     // noinspection DuplicatedCode
-    for (let i = 0, l = urlArr.length; i < l; i++) {
+    for (let i = 0; i < urlArr.length; i++) {
       let url: string | void = urlArr[i];
       url = await pipeline.linkRedirect(url, null, null);
       if (!url) continue;

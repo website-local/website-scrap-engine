@@ -13,6 +13,7 @@ import type {
   DownloadResource,
   ExistingResourceAction,
   ExistingResourceStage,
+  InitSubmitFunc,
   ProcessingLifeCycle,
   RequestOptions,
   ResourceStatus,
@@ -35,11 +36,12 @@ export class PipelineExecutorImpl implements PipelineExecutor {
 
   async init(
     pipeline: PipelineExecutor,
-    downloader?: DownloaderWithMeta
+    downloader?: DownloaderWithMeta,
+    submit?: InitSubmitFunc
   ): Promise<void> {
     if (!this.lifeCycle.init) return;
     for (const init of this.lifeCycle.init) {
-      await init(pipeline, downloader);
+      await init(pipeline, downloader, submit);
     }
   }
 

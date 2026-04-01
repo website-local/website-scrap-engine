@@ -51,7 +51,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     if (this.options.initialUrl) {
       return this.addInitialResource(this.options.initialUrl);
     } else {
-      return this._initOptions.then(() => this.pipeline.init(this.pipeline, this));
+      return this.addInitialResource([]);
     }
   }
 

@@ -3,6 +3,7 @@ import type {StaticDownloadOptions} from '../options.js';
 import type {
   AsyncResult,
   DownloadResource,
+  InitSubmitFunc,
   RequestOptions,
   ResourceStatus,
   SubmitResourceFunc
@@ -17,7 +18,8 @@ export interface PipelineExecutor {
    */
   init(
     pipeline: PipelineExecutor,
-    downloader?: DownloaderWithMeta
+    downloader?: DownloaderWithMeta,
+    submit?: InitSubmitFunc
   ): AsyncResult<void>;
 
   /**
