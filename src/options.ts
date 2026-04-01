@@ -285,7 +285,8 @@ const defaultOptions: DownloadOptions = {
   localRoot: '',
   maxDepth: 1,
   meta: {
-    detectIncompleteHtml: '</html>'
+    detectIncompleteHtml: '</html>',
+    warnForNonHtml: true
   },
   processAfterDownload: [],
   processBeforeDownload: [],

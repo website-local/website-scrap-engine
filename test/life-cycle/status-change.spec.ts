@@ -11,8 +11,6 @@ import {
   PipelineExecutorImpl
 } from '../../src/downloader/pipeline-executor-impl.js';
 import type {StaticDownloadOptions} from '../../src/options.js';
-// noinspection ES6PreferShortImport
-import type {PipelineExecutor} from '../../src/life-cycle/pipeline-executor.js';
 
 jest.mock('log4js', () => ({
   configure: jest.fn(),
@@ -173,7 +171,7 @@ describe('defaultStatusListener', () => {
     const res = makeResource();
     // should not throw
     defaultStatusListener(
-      res, 'download', fakeOpt, {} as PipelineExecutor);
+      res, 'download');
   });
 
   test('handles processAfterDownload status', async () => {
@@ -181,7 +179,7 @@ describe('defaultStatusListener', () => {
       await import('../../src/life-cycle/default-status-listener.js');
     const res = makeResource();
     defaultStatusListener(
-      res, 'processAfterDownload', fakeOpt, {} as PipelineExecutor);
+      res, 'processAfterDownload');
   });
 
   test('handles saveToDisk status', async () => {
@@ -189,7 +187,7 @@ describe('defaultStatusListener', () => {
       await import('../../src/life-cycle/default-status-listener.js');
     const res = makeResource();
     defaultStatusListener(
-      res, 'saveToDisk', fakeOpt, {} as PipelineExecutor);
+      res, 'saveToDisk');
   });
 
   test('handles error status with HTTPError 404', async () => {
@@ -202,7 +200,7 @@ describe('defaultStatusListener', () => {
       response: {statusCode: 404}
     };
     defaultStatusListener(
-      res, 'error', fakeOpt, {} as PipelineExecutor);
+      res, 'error');
   });
 
   test('handles error status with generic error', async () => {
@@ -212,7 +210,7 @@ describe('defaultStatusListener', () => {
     res.meta['errorCause'] = 'post-process';
     res.meta['error'] = new Error('something broke');
     defaultStatusListener(
-      res, 'error', fakeOpt, {} as PipelineExecutor);
+      res, 'error');
   });
 
   test('handles error status with null error', async () => {
@@ -222,7 +220,7 @@ describe('defaultStatusListener', () => {
     res.meta['errorCause'] = 'unknown';
     res.meta['error'] = null;
     defaultStatusListener(
-      res, 'error', fakeOpt, {} as PipelineExecutor);
+      res, 'error');
   });
 
   test('handles dispose status', async () => {
@@ -230,7 +228,7 @@ describe('defaultStatusListener', () => {
       await import('../../src/life-cycle/default-status-listener.js');
     const res = makeResource();
     defaultStatusListener(
-      res, 'dispose', fakeOpt, {} as PipelineExecutor);
+      res, 'dispose');
   });
 
   test('handles createResource status', async () => {
@@ -238,7 +236,7 @@ describe('defaultStatusListener', () => {
       await import('../../src/life-cycle/default-status-listener.js');
     const res = makeResource();
     defaultStatusListener(
-      res, 'createResource', fakeOpt, {} as PipelineExecutor);
+      res, 'createResource');
   });
 
   test('handles processBeforeDownload status', async () => {
@@ -246,7 +244,7 @@ describe('defaultStatusListener', () => {
       await import('../../src/life-cycle/default-status-listener.js');
     const res = makeResource();
     defaultStatusListener(
-      res, 'processBeforeDownload', fakeOpt, {} as PipelineExecutor);
+      res, 'processBeforeDownload');
   });
 });
 

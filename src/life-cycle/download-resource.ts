@@ -195,7 +195,8 @@ export async function downloadResource(
           }
         }
         if (nonHtml) {
-          logger.error.warn('Detected non-html content type',
+          logger.error.warn('Detected non-html content type for resource typed as',
+            downloadedResource.type,
             downloadedResource.downloadLink, downloadedResource.rawUrl, contentType);
         }
       }
