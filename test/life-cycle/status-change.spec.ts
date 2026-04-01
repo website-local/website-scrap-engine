@@ -1,6 +1,6 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import {createResource, ResourceType} from '../../src/resource.js';
-import type {Resource, RawResource} from '../../src/resource.js';
+import type {Resource} from '../../src/resource.js';
 import type {
   DownloadResource,
   ProcessingLifeCycle,

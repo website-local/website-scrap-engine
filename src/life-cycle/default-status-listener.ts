@@ -1,14 +1,10 @@
 import type {RawResource, Resource} from '../resource.js';
 import type {ResourceStatus} from './types.js';
-import type {StaticDownloadOptions} from '../options.js';
-import type {PipelineExecutor} from './pipeline-executor.js';
 import {error, notFound, skip} from '../logger/logger.js';
 
 export const defaultStatusListener = (
   res: Resource | RawResource,
-  status: ResourceStatus,
-  _options: StaticDownloadOptions,
-  _pipeline: PipelineExecutor
+  status: ResourceStatus
 ): void => {
   switch (status) {
   case 'processBeforeDownload':
