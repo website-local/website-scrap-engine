@@ -1,11 +1,10 @@
 import PQueue from 'p-queue';
-import type {HTTPError} from 'got';
 import URI from 'urijs';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';
 import {normalizeResource, ResourceType} from '../resource.js';
-import {error, notFound, skip} from '../logger/logger.js';
+import {skip} from '../logger/logger.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloaderStats, DownloaderWithMeta} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
@@ -114,6 +113,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     // noinspection DuplicatedCode
     if (res.depth > this.options.maxDepth) {
       skip.info('skipped max depth', res.url, res.refUrl, res.depth);
+      this.pipeline.notifyStatusChange(res, 'dispose');
       return false;
     }
     let url: string;
@@ -146,15 +146,10 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   handleError(err: Error | unknown | null, cause: string, resource: RawResource): void {
-    // force cast in case of typescript 4.4
-    if (err && (err as {name?: string}).name === 'HTTPError' &&
-      (err as HTTPError)?.response?.statusCode === 404) {
-      notFound.error(resource.url, resource.downloadLink, resource.refUrl);
-    } else if (err) {
-      error.error(cause, resource.url, resource.downloadLink, resource.refUrl, err);
-    } else {
-      error.error(cause, resource.url, resource.downloadLink, resource.refUrl);
-    }
+    resource.meta = resource.meta || {};
+    resource.meta['error'] = err;
+    resource.meta['errorCause'] = cause;
+    this.pipeline.notifyStatusChange(resource, 'error');
   }
 
 

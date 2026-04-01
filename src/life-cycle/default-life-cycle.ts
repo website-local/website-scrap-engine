@@ -13,6 +13,7 @@ import {saveResourceToDisk} from './save-resource-to-disk.js';
 import {processRedirectedUrl} from './adapters.js';
 import {downloadStreamingResource} from './download-streaming-resource.js';
 import {readOrCopyLocalResource} from './read-or-copy-local-resource.js';
+import {defaultStatusListener} from './default-status-listener.js';
 
 /**
  * Get a copy of default life cycle
@@ -37,6 +38,7 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
     processSiteMap
   ],
   saveToDisk: [saveHtmlToDisk, saveResourceToDisk],
-  dispose: []
+  dispose: [],
+  statusChange: [defaultStatusListener]
 });
 

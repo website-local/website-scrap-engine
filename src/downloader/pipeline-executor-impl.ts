@@ -1,6 +1,7 @@
 import type {StaticDownloadOptions} from '../options.js';
 import type {
   CreateResourceArgument,
+  RawResource,
   Resource,
   ResourceEncoding,
   ResourceType
@@ -9,6 +10,7 @@ import type {
   DownloadResource,
   ProcessingLifeCycle,
   RequestOptions,
+  ResourceStatus,
   SubmitResourceFunc
 } from '../life-cycle/types.js';
 // noinspection ES6PreferShortImport
@@ -226,6 +228,21 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!this.lifeCycle.dispose) return;
     for (const dispose of this.lifeCycle.dispose) {
       await dispose(pipeline, downloader, workerInfo, workerExitCode);
+    }
+  }
+
+  async notifyStatusChange(
+    res: Resource | RawResource,
+    status: ResourceStatus
+  ): Promise<void> {
+    if (!this.lifeCycle.statusChange?.length) return;
+    for (const listener of this.lifeCycle.statusChange) {
+      try {
+        const r = listener(res, status, this.options, this);
+        if (r) await r;
+      } catch {
+        // swallow
+      }
     }
   }
 

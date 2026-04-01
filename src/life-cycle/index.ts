@@ -1,5 +1,6 @@
 export * as adapter from './adapters.js';
 export {defaultLifeCycle} from './default-life-cycle.js';
+export {defaultStatusListener} from './default-status-listener.js';
 export {detectResourceType} from './detect-resource-type.js';
 export {
   beforeRetryHook, getRetry, requestForResource, downloadResource

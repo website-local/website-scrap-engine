@@ -291,7 +291,8 @@ const defaultOptions: DownloadOptions = {
   processBeforeDownload: [],
   req: {},
   saveToDisk: [],
-  deduplicateStripSearch: true
+  deduplicateStripSearch: true,
+  statusChange: []
 };
 
 export function defaultDownloadOptions(

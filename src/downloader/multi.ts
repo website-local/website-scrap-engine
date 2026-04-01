@@ -5,7 +5,6 @@ import type {RawResource, Resource} from '../resource.js';
 import type {DownloadWorkerMessage} from './types.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import type {DownloadResource} from '../life-cycle/types.js';
-import {skip} from '../logger/logger.js';
 import {AbstractDownloader} from './main.js';
 
 export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
@@ -68,7 +67,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     try {
       r = await this.pipeline!.download(res);
       if (!r) {
-        skip.debug('discarded after download', res.url, res.rawUrl, res.refUrl);
+        await this.pipeline.notifyStatusChange(res, 'download');
         return;
       }
     } catch (e) {
@@ -94,8 +93,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     }
     this.downloadedUrl.add(res.url);
     if (!msg) {
-      skip.info('discarded in post-processing',
-        res.url, res.rawUrl, res.refUrl);
+      await this.pipeline.notifyStatusChange(res, 'processAfterDownload');
       return;
     }
     if (msg.error) {

@@ -7,7 +7,6 @@ import type {
 } from '../life-cycle/types.js';
 import type {RawResource, Resource} from '../resource.js';
 import {normalizeResource, prepareResourceForClone} from '../resource.js';
-import {skip} from '../logger/logger.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
 import {WorkerMessageType} from './types.js';
@@ -58,11 +57,9 @@ parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) =
     const processedResource: DownloadResource | void =
       await pipeline.processAfterDownload(downloadResource, submit);
     if (!processedResource) {
-      skip.warn('skipped downloaded resource',
-        downloadResource.url, downloadResource.refUrl);
+      await pipeline.notifyStatusChange(downloadResource, 'processAfterDownload');
     } else if (await pipeline.saveToDisk(processedResource)) {
-      skip.warn('downloaded resource not saved',
-        downloadResource.url, downloadResource.refUrl);
+      await pipeline.notifyStatusChange(downloadResource, 'saveToDisk');
     }
 
     if (processedResource && processedResource.redirectedUrl &&

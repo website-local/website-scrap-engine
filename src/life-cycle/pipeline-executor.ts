@@ -1,9 +1,10 @@
-import type {Resource, ResourceEncoding, ResourceType} from '../resource.js';
+import type {RawResource, Resource, ResourceEncoding, ResourceType} from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {
   AsyncResult,
   DownloadResource,
   RequestOptions,
+  ResourceStatus,
   SubmitResourceFunc
 } from './types.js';
 import type {Cheerio} from '../types.js';
@@ -97,6 +98,17 @@ export interface PipelineExecutor {
     downloader: DownloaderWithMeta,
     workerInfo?: WorkerInfo,
     workerExitCode?: number
+  ): AsyncResult<void>;
+
+  /**
+   * Notify status change listeners.
+   *
+   * All listeners always run (void return does not short-circuit),
+   * and thrown errors are swallowed.
+   */
+  notifyStatusChange(
+    res: Resource | RawResource,
+    status: ResourceStatus
   ): AsyncResult<void>;
 
 }

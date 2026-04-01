@@ -1,7 +1,6 @@
 import {AbstractDownloader} from './main.js';
 import type {Resource} from '../resource.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
-import {skip} from '../logger/logger.js';
 import type {
   DownloadResource,
   SubmitResourceFunc
@@ -29,7 +28,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
     try {
       r = await this.pipeline.download(res);
       if (!r) {
-        skip.debug('discarded after download', res.url, res.rawUrl, res.refUrl);
+        await this.pipeline.notifyStatusChange(res, 'download');
         return;
       }
     } catch (e) {
@@ -51,9 +50,9 @@ export class SingleThreadDownloader extends AbstractDownloader {
       const processedResource: DownloadResource | void =
         await this.pipeline.processAfterDownload(r, submit);
       if (!processedResource) {
-        skip.warn('skipped downloaded resource', r.url, r.refUrl);
+        await this.pipeline.notifyStatusChange(r, 'processAfterDownload');
       } else if (await this.pipeline.saveToDisk(processedResource)) {
-        skip.warn('downloaded resource not saved', r.url, r.refUrl);
+        await this.pipeline.notifyStatusChange(r, 'saveToDisk');
       }
       if (processedResource && processedResource.redirectedUrl &&
         processedResource.redirectedUrl !== processedResource.url) {

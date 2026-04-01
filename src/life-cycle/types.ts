@@ -2,6 +2,7 @@ import type {OptionsInit as GotOptions} from 'got';
 import type {
   createResource,
   GenerateSavePathFn,
+  RawResource,
   Resource,
   ResourceBody,
   ResourceType
@@ -13,6 +14,22 @@ import type {DownloaderWithMeta} from '../downloader/types.js';
 import type {WorkerInfo} from '../downloader/worker-pool.js';
 
 export type AsyncResult<T> = T | Promise<T>;
+
+export type ResourceStatus =
+  | 'createResource'
+  | 'processBeforeDownload'
+  | 'download'
+  | 'processAfterDownload'
+  | 'saveToDisk'
+  | 'error'
+  | 'dispose';
+
+export interface StatusChangeFunc {
+  (res: Resource | RawResource,
+   status: ResourceStatus,
+   options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): void | Promise<void>;
+}
 
 export interface InitLifeCycleFunc {
   /**
@@ -190,5 +207,15 @@ export interface ProcessingLifeCycle {
   processAfterDownload: ProcessResourceAfterDownloadFunc[];
   saveToDisk: SaveToDiskFunc[];
   dispose: DisposeLifeCycle[];
+  /**
+   * Status change listeners.
+   *
+   * Unlike other life cycle hooks, all listeners always run
+   * (returning void does not short-circuit), and thrown errors are swallowed.
+   *
+   * Listeners should treat the resource and all parameters as readonly.
+   * Mutating them is undefined behavior.
+   */
+  statusChange: StatusChangeFunc[];
 }
 

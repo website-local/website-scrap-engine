@@ -26,7 +26,8 @@ const testLifeCycle = (): ProcessingLifeCycle => ({
   processAfterDownload: [
   ],
   saveToDisk: [],
-  dispose: []
+  dispose: [],
+  statusChange: []
 });
 
 const testPipeline = new PipelineExecutorImpl(testLifeCycle(), {}, {
