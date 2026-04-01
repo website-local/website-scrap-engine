@@ -4,6 +4,7 @@ import {ResourceType} from '../resource.js';
 import type {
   AsyncResult,
   DownloadResource,
+  ExistingResourceFunc,
   LinkRedirectFunc,
   ProcessResourceAfterDownloadFunc,
   ProcessResourceBeforeDownloadFunc,
@@ -131,4 +132,16 @@ export const processHtmlAsync = (fn: AsyncHtmlProcessFunc): ProcessResourceAfter
     }
     return res;
   };
+
+/** Skip download if local file already exists */
+export const skipExisting = (): ExistingResourceFunc =>
+  ({stage}) => stage === 'download' ? 'skip' : 'overwrite';
+
+/** Re-download only if remote is newer (If-Modified-Since) */
+export const preferNewerRemote = (): ExistingResourceFunc =>
+  () => 'ifModifiedSince';
+
+/** Always overwrite (current default behavior, explicit) */
+export const alwaysOverwrite = (): ExistingResourceFunc =>
+  () => 'overwrite';
 

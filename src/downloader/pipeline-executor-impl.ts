@@ -1,3 +1,6 @@
+import path from 'node:path';
+import {existsSync, statSync} from 'node:fs';
+import type {Stats} from 'node:fs';
 import type {StaticDownloadOptions} from '../options.js';
 import type {
   CreateResourceArgument,
@@ -8,6 +11,8 @@ import type {
 } from '../resource.js';
 import type {
   DownloadResource,
+  ExistingResourceAction,
+  ExistingResourceStage,
   ProcessingLifeCycle,
   RequestOptions,
   ResourceStatus,
@@ -158,6 +163,22 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
+    if (this.lifeCycle.existingResource) {
+      const action = this._checkExistingResource(res, 'download');
+      if (action === 'skip') {
+        res.shouldBeDiscardedFromDownload = true;
+        return undefined;
+      }
+      if (action === 'ifModifiedSince') {
+        const mtime = this._getExistingFileMtime(res);
+        if (mtime) {
+          requestOptions = Object.assign({}, requestOptions);
+          requestOptions.headers = Object.assign({}, requestOptions.headers, {
+            'if-modified-since': mtime
+          });
+        }
+      }
+    }
     let downloadedResource: DownloadResource | Resource | void = res;
     for (const download of this.lifeCycle.download) {
       if ((downloadedResource = await download(
@@ -206,6 +227,29 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
+    if (this.lifeCycle.existingResource) {
+      const action = this._checkExistingResource(res, 'saveToDisk');
+      if (action === 'skip' || action === 'skipSave') {
+        return undefined;
+      }
+      if (action === 'ifModifiedSince') {
+        const remoteLastMod = res.meta?.headers?.['last-modified'];
+        if (remoteLastMod) {
+          const localPath = path.join(
+            res.localRoot ?? this.options.localRoot,
+            decodeURI(res.savePath)
+          );
+          try {
+            const localMtime = statSync(localPath).mtime;
+            if (new Date(remoteLastMod as string) <= localMtime) {
+              return undefined;
+            }
+          } catch {
+            // file removed between check and stat, proceed with save
+          }
+        }
+      }
+    }
     let downloadedResource: DownloadResource | void = res;
     for (const saveToDisk of this.lifeCycle.saveToDisk) {
       if ((downloadedResource = await saveToDisk(
@@ -243,6 +287,39 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       } catch {
         // swallow
       }
+    }
+  }
+
+  private _checkExistingResource(
+    res: Resource, stage: ExistingResourceStage
+  ): ExistingResourceAction | void {
+    const localPath = path.join(
+      res.localRoot ?? this.options.localRoot,
+      decodeURI(res.savePath)
+    );
+    if (!existsSync(localPath)) return undefined;
+    let stat: Stats;
+    try {
+      stat = statSync(localPath);
+    } catch {
+      // TOCTOU: file deleted between existsSync and statSync
+      return undefined;
+    }
+    if (!stat.isFile()) return undefined;
+    return this.lifeCycle.existingResource!({
+      res, stage, localPath, stat, options: this.options
+    });
+  }
+
+  private _getExistingFileMtime(res: Resource): string | undefined {
+    const localPath = path.join(
+      res.localRoot ?? this.options.localRoot,
+      decodeURI(res.savePath)
+    );
+    try {
+      return statSync(localPath).mtime.toUTCString();
+    } catch {
+      return undefined;
     }
   }
 

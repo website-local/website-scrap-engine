@@ -1,4 +1,5 @@
 import type {OptionsInit as GotOptions} from 'got';
+import type {Stats} from 'node:fs';
 import type {
   createResource,
   GenerateSavePathFn,
@@ -217,5 +218,37 @@ export interface ProcessingLifeCycle {
    * Mutating them is undefined behavior.
    */
   statusChange: StatusChangeFunc[];
+  /**
+   * Optional callback to decide what to do when a local file already exists
+   * for a resource. Called at most twice per resource: once before download
+   * and once before save.
+   *
+   * Unlike other life cycle hooks, this is a single function (not an array)
+   * because the decision is mutually exclusive — there is no meaningful way
+   * to compose multiple strategies.
+   *
+   * If absent, the pipeline behaves as before (always download and overwrite).
+   */
+  existingResource?: ExistingResourceFunc;
+}
+
+export type ExistingResourceAction =
+  | 'skip'
+  | 'overwrite'
+  | 'ifModifiedSince'
+  | 'skipSave';
+
+export type ExistingResourceStage = 'download' | 'saveToDisk';
+
+export interface ExistingResourceContext {
+  res: Resource;
+  stage: ExistingResourceStage;
+  localPath: string;
+  stat: Stats;
+  options: StaticDownloadOptions;
+}
+
+export interface ExistingResourceFunc {
+  (ctx: ExistingResourceContext): ExistingResourceAction;
 }
 

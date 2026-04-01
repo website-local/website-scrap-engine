@@ -1,5 +1,5 @@
 import type {BeforeRetryHook, OptionsInit, RequestError, Response} from 'got';
-import got, {TimeoutError} from 'got';
+import got, {HTTPError, TimeoutError} from 'got';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {Resource} from '../resource.js';
 import {generateSavePath, ResourceType} from '../resource.js';
@@ -117,8 +117,16 @@ export async function requestForResource(
   }
   logger.request.info(res.url, downloadLink, res.refUrl,
     res.encoding, res.type);
-  const response: Response<string | Buffer> | void =
-    await getRetry(downloadLink, reqOptions);
+  let response: Response<string | Buffer> | void;
+  try {
+    response = await getRetry(downloadLink, reqOptions);
+  } catch (e) {
+    if (e instanceof HTTPError &&
+      (e as HTTPError).response.statusCode === 304) {
+      return undefined;
+    }
+    throw e;
+  }
   if (!response) {
     const resource = res as Resource;
     delete resource.downloadStartTimestamp;
