@@ -1,19 +1,39 @@
-import type {Logger} from 'log4js';
-// https://github.com/jestjs/jest/issues/11563
-import log4js from 'log4js';
 import {isMainThread} from 'node:worker_threads';
-import {getWorkerLogger} from './logger-worker.js';
+import type {CategoryLogger, Logger, LogType} from './types.js';
+import {createDefaultLogger} from './default-logger.js';
+import {createWorkerCategoryLogger} from './logger-worker.js';
 
-const getLogger: typeof getWorkerLogger =
-  isMainThread ? log4js.getLogger : getWorkerLogger;
+let _logger: Logger = createDefaultLogger();
 
-export const notFound: Logger = getLogger('notFound');
-export const retry: Logger = getLogger('retry');
-export const mkdir: Logger = getLogger('mkdir');
-export const request: Logger = getLogger('request');
-export const response: Logger = getLogger('response');
-export const error: Logger = getLogger('error');
-export const complete: Logger = getLogger('complete');
-export const skip: Logger = getLogger('skip');
-export const skipExternal: Logger = getLogger('skipExternal');
-export const adjustConcurrency: Logger = getLogger('adjustConcurrency');
+export function setLogger(logger: Logger): void {
+  _logger = logger;
+}
+
+export function getLogger(): Logger {
+  return _logger;
+}
+
+function createCategoryProxy(type: LogType): CategoryLogger {
+  if (!isMainThread) {
+    return createWorkerCategoryLogger(type);
+  }
+  return {
+    trace(...contents: unknown[]) { _logger.trace(type, ...contents); },
+    debug(...contents: unknown[]) { _logger.debug(type, ...contents); },
+    info(...contents: unknown[]) { _logger.info(type, ...contents); },
+    warn(...contents: unknown[]) { _logger.warn(type, ...contents); },
+    error(...contents: unknown[]) { _logger.error(type, ...contents); },
+    isTraceEnabled() { return _logger.isTraceEnabled(); },
+  };
+}
+
+export const notFound: CategoryLogger = createCategoryProxy('io.http.notFound');
+export const retry: CategoryLogger = createCategoryProxy('io.http.retry');
+export const mkdir: CategoryLogger = createCategoryProxy('io.disk.mkdir');
+export const request: CategoryLogger = createCategoryProxy('io.http.request');
+export const response: CategoryLogger = createCategoryProxy('io.http.response');
+export const error: CategoryLogger = createCategoryProxy('system.error');
+export const complete: CategoryLogger = createCategoryProxy('system.complete');
+export const skip: CategoryLogger = createCategoryProxy('system.skip');
+export const skipExternal: CategoryLogger = createCategoryProxy('system.skipExternal');
+export const adjustConcurrency: CategoryLogger = createCategoryProxy('system.adjustConcurrency');

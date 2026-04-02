@@ -17,31 +17,31 @@ parentPort.addListener('message', async (msg) => {
     type: 0
   });
   parentPort.postMessage({
-    // this simulates an log
+    // this simulates an log with empty body
     type: 0,
     body: {
     }
   });
   parentPort.postMessage({
-    // this simulates an log
+    // this simulates a log with logType only
     type: 0,
     body: {
-      logger: 'complete'
+      logType: 'system.complete'
     }
   });
   parentPort.postMessage({
-    // this simulates an log
+    // this simulates a log without content
     type: 0,
     body: {
-      logger: 'complete',
+      logType: 'system.complete',
       level: 'info'
     }
   });
   parentPort.postMessage({
-    // this simulates an log
+    // this simulates a log with content
     type: 0,
     body: {
-      logger: 'complete',
+      logType: 'system.complete',
       level: 'info',
       content: ['aaa']
     }

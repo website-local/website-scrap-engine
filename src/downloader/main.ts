@@ -5,6 +5,8 @@ import {mergeOverrideOptions} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';
 import {normalizeResource, ResourceType} from '../resource.js';
 import {skip} from '../logger/logger.js';
+import {setLogger} from '../logger/logger.js';
+import {createDefaultLogger} from '../logger/default-logger.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloaderStats, DownloaderWithMeta} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
@@ -41,7 +43,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       // https://github.com/website-local/website-scrap-engine/issues/1113
       this.queue.concurrency = options.concurrency;
       this._pipeline = new PipelineExecutorImpl(options, options.req, options);
-      options.configureLogger(options.localRoot, options.logSubDir || '');
+      setLogger((options.createLogger ?? createDefaultLogger)(options));
       return this._internalInit(options).then(() => {
         this._isInit = true;
       });

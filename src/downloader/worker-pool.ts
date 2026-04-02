@@ -1,7 +1,7 @@
 import type {MessagePort, WorkerOptions} from 'node:worker_threads';
 import {Worker} from 'node:worker_threads';
 import type {URL} from 'node:url';
-import * as logger from '../logger/logger.js';
+import {error as errorLogger, getLogger} from '../logger/logger.js';
 import type {LogWorkerMessage} from './worker-type.js';
 import type {
   PendingPromise,
@@ -63,7 +63,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   workerOnError(info: WorkerInfo, err: Error): void {
-    logger.error.error('worker error', info.id, err);
+    errorLogger.error('worker error', info.id, err);
   }
 
   onMessage(info: WorkerInfo, message: WorkerMessage): void {
@@ -76,14 +76,20 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   takeLog(info: WorkerInfo, message: LogWorkerMessage): void {
     if (!message?.body) {
-      logger.error.warn('Invalid formatted log', info.id);
+      errorLogger.warn('Invalid formatted log', info.id);
       return;
     }
-    const content = message?.body?.content;
+    const level = message.body.level;
+    const logType = message.body.logType;
+    if (!level || !logType) {
+      return;
+    }
+    const log = getLogger();
+    const content = message.body.content;
     if (content?.length) {
-      logger?.[message.body.logger]?.[message.body.level]?.(info.id, ...content);
+      log[level](logType, info.id, ...content);
     } else {
-      logger?.[message.body.logger]?.[message.body.level]?.(info.id);
+      log[level](logType, info.id);
     }
   }
 

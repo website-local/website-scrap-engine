@@ -8,7 +8,8 @@ import {beforeRetryHook} from './life-cycle/download-resource.js';
 import {error} from './logger/logger.js';
 // noinspection ES6PreferShortImport
 import {adjust} from './downloader/adjust-concurrency.js';
-import {configureLogger} from './logger/config-logger.js';
+import type {Logger} from './logger/types.js';
+import {createDefaultLogger} from './logger/default-logger.js';
 import type {DownloaderWithMeta} from './downloader/types.js';
 import {weakAssign} from './util.js';
 import type {SourceDefinition} from './sources.js';
@@ -112,7 +113,7 @@ export interface StaticDownloadOptions {
   initialUrl?: string[];
 
   /**
-   * @see DownloadOptions.configureLogger
+   * @see DownloadOptions.createLogger
    */
   logSubDir?: string;
 
@@ -162,9 +163,10 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
   adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;
 
   /**
-   * Use a custom function to configure logger.
+   * Use a custom function to create a logger instance.
+   * Defaults to {@link createDefaultLogger} (console-based).
    */
-  configureLogger: typeof configureLogger;
+  createLogger?: (options: StaticDownloadOptions) => Logger;
 }
 
 export type ExtendedError = (TimeoutError | RequestError) & {
@@ -275,7 +277,7 @@ const defaultOptions: DownloadOptions = {
   init: [],
   dispose: [],
   concurrency: 12,
-  configureLogger,
+  createLogger: createDefaultLogger,
   createResource,
   detectResourceType: [],
   download: [],

@@ -1,9 +1,9 @@
 import type {logLevels} from '../logger/logger-worker.js';
-import type * as logger from '../logger/logger.js';
+import type {LogType} from '../logger/types.js';
 import type {WorkerMessage, WorkerMessageType} from './types.js';
 
 export interface WorkerLog<T = unknown> {
-  logger: keyof typeof logger;
+  logType: LogType;
   level: typeof logLevels[number];
   content: T[];
 }

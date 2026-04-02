@@ -1,4 +1,6 @@
 export * as logger from './logger/logger.js';
+export type {Logger, LogType, CategoryLogger} from './logger/types.js';
+export {createDefaultLogger} from './logger/default-logger.js';
 export * as downloader from './downloader/index.js';
 export * as lifeCycle from './life-cycle/index.js';
 export * as io from './io.js';

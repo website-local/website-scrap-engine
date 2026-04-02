@@ -23,7 +23,6 @@
     "cheerio": "^1.2.0",
     "css-url-parser": "^1.1.4",
     "got": "^13.0.0",
-    "log4js": "^6.9.1",
     "mkdirp": "^3.0.1",
     "p-queue": "^8.1.1",
     "srcset": "^5.0.3",
@@ -39,6 +38,9 @@
     "jest": "^30.3.0",
     "ts-jest": "^29.4.9",
     "typescript": "^5.9.3"
+  },
+  "optionalDependencies": {
+    "log4js": "^6.9.1"
   },
   "overrides": {
     "undici": "npm:@favware/skip-dependency@1.2.2"

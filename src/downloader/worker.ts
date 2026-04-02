@@ -28,8 +28,6 @@ const asyncPipeline = asyncOptions.then(options => {
   const pipeline: PipelineExecutor =
     new PipelineExecutorImpl(options, options.req, options);
 
-  options.configureLogger(options.localRoot, options.logSubDir || '');
-
   const init = pipeline.init(pipeline);
   if (init && (init as Promise<void>).then) {
     return init.then(() => pipeline);
