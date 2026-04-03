@@ -49,10 +49,10 @@ export interface InitLifeCycleFunc {
    * The init life cycle would be called:
    *
    * Each time a downloader initialized,
-   * after configureLogger but before addInitialResource.
+   * after logger initialization but before addInitialResource.
    *
    * Each time a worker initialized,
-   * after configureLogger but before parentPort?.addListener.
+   * before parentPort?.addListener.
    *
    * The init life cycle could be async,
    * in main thread the addInitialResource should wait for init completed,

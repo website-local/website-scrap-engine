@@ -1,3 +1,55 @@
+0.9.0
+============
+
+**BREAKING CHANGE** — see Breaking Changes and Migration sections below.
+
+Feature
+------------
+* **logger: make logger implementation configurable (#204)** — Replace hardcoded log4js with a pluggable `Logger` interface. Consumers provide a factory via `DownloadOptions.createLogger`. Default implementation writes to `console`. Built-in log4js adapter at `lib/logger/log4js-adapter.js` for backward compatibility.
+* **life-cycle: add statusChange listener hook (#102)** — New `statusChange` array on `ProcessingLifeCycle` allows consumers to observe resource progression through the pipeline. Default listener logs skipped/discarded resources and errors.
+* **life-cycle: add existingResource callback for local file handling (#150)** — Optional `existingResource` callback on `ProcessingLifeCycle` to decide what to do when a local file already exists (skip, overwrite, if-modified-since, skipSave).
+* **life-cycle: expose submit resource to init hook (#1131)** — `InitLifeCycleFunc` receives an optional `submit` callback to add URLs to the download queue during initialization.
+
+Fix
+------------
+* **download: enable warnForNonHtml by default, improve warning (#993)** — `warnForNonHtml` is now enabled by default. Warning message includes `res.type` for clarity.
+
+Breaking Changes
+------------
+* `DownloadOptions.configureLogger` replaced by `createLogger?: (options: StaticDownloadOptions) => Logger`. The default is `createDefaultLogger` (console-based).
+* `log4js` moved from `dependencies` to `optionalDependencies`. Consumers who need file-based logging must `npm install log4js` and use the built-in adapter:
+  ```typescript
+  import {createLog4jsLogger} from 'website-scrap-engine/lib/logger/log4js-adapter.js';
+  const options = {
+    createLogger: (opts) => createLog4jsLogger(opts.localRoot, opts.logSubDir),
+  };
+  ```
+* Public `logger` namespace exports are typed as `CategoryLogger` instead of log4js `Logger`. Method signatures are compatible (`.trace()`, `.debug()`, `.info()`, `.warn()`, `.error()`, `.isTraceEnabled()`), but consumers using log4js-specific properties will need to update.
+* Worker log message protocol: `WorkerLog.logger` (category string) replaced by `WorkerLog.logType` (LogType string). Affects custom worker implementations only.
+* `ProcessingLifeCycle` gains a required `statusChange: StatusChangeFunc[]` field. Consumers building the life cycle from scratch must add `statusChange: []`.
+* `warnForNonHtml` is now enabled by default (was opt-in).
+
+New Exports
+------------
+* `Logger` interface — the pluggable logger contract
+* `LogType` type — discriminated union of log categories (`io.http.request`, `system.error`, etc.)
+* `CategoryLogger` interface — the per-category proxy type (what `logger.error`, `logger.skip` etc. are)
+* `createDefaultLogger()` — factory for the console-based default logger
+* `logger.setLogger(instance)` — configure the logger instance at runtime
+* `logger.getLogger()` — retrieve the current logger instance
+
+Misc
+------------
+* docs: rewrite README with usage examples, architecture details, and adapter helpers
+* build(deps): bump picomatch, @typescript-eslint/eslint-plugin, @typescript-eslint/parser, handlebars, ts-jest
+
+0.8.8
+============
+
+Misc
+------------
+* npm: bump version
+
 0.8.7
 ============
 
