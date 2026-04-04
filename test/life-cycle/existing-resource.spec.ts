@@ -1,6 +1,6 @@
-import {describe, expect, jest, test, beforeEach} from '@jest/globals';
-import {createResource, ResourceType} from '../../src/resource.js';
+import {beforeEach, describe, expect, jest, test} from '@jest/globals';
 import type {Resource} from '../../src/resource.js';
+import {createResource, ResourceType} from '../../src/resource.js';
 import type {
   DownloadResource,
   ExistingResourceContext,
@@ -483,7 +483,7 @@ describe('existingResource: context object', () => {
     expect(cb).toHaveBeenCalledTimes(1);
     const ctx: ExistingResourceContext = cb.mock.calls[0][0];
     expect(ctx.stage).toBe('download');
-    expect(ctx.localPath).toContain('/test/root');
+    expect(ctx.localPath).toMatch(/[\\/]test[\\/]root/);
     expect(ctx.localPath).toContain('example.com');
     expect(ctx.stat).toBe(fakeStat);
     expect(ctx.res).toBe(res);
@@ -506,7 +506,7 @@ describe('existingResource: context object', () => {
     expect(cb).toHaveBeenCalledTimes(1);
     const ctx: ExistingResourceContext = cb.mock.calls[0][0];
     expect(ctx.stage).toBe('saveToDisk');
-    expect(ctx.localPath).toContain('/test/root');
+    expect(ctx.localPath).toMatch(/[\\/]test[\\/]root/);
     expect(ctx.localPath).toContain('example.com');
     expect(ctx.stat).toBe(fakeStat);
     expect(ctx.res).toBe(res);
