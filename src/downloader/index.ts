@@ -4,5 +4,7 @@ export {MultiThreadDownloader} from './multi.js';
 export {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 export {SingleThreadDownloader} from './single.js';
 export * as types from './types.js';
+export {getWorkerChannels} from './worker-channel.js';
+export type {WorkerChannels} from './worker-channel.js';
 export {WorkerPool} from './worker-pool.js';
 export * as workerType from './worker-type.js';

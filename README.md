@@ -239,6 +239,15 @@ Use multi-thread processing when post-download work (HTML/CSS parsing, link disc
 
 Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses a 2-pass water-fill algorithm to balance tasks across workers by load.
 
+Custom worker implementations should use `workerData.workerChannels.taskPort`
+for task/result messages and `workerData.workerChannels.logPort` for worker
+logs. The default `parentPort` is reserved for lightweight worker control
+messages.
+
+On close, custom workers should close both transferred ports and send a
+`{type: 'closed'}` control message on `parentPort` so the pool can drain queued
+logs before disposal completes.
+
 ## Logging
 
 The library exposes dedicated logger categories through a pluggable logger

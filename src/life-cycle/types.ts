@@ -52,7 +52,7 @@ export interface InitLifeCycleFunc {
    * after logger initialization but before addInitialResource.
    *
    * Each time a worker initialized,
-   * before parentPort?.addListener.
+   * before the worker starts processing task port messages.
    *
    * The init life cycle could be async,
    * in main thread the addInitialResource should wait for init completed,

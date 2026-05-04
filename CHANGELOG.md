@@ -10,6 +10,7 @@ Feature
 Changed
 ------------
 * **runtime: modernize internals (#1397)** — Remove the `mkdirp` and `css-url-parser` runtime dependencies, use built-in recursive `fs.promises.mkdir`, use `node:stream/promises.pipeline`, vendor CSS URL parsing as typed ESM, raise the TypeScript target to `es2022`, and use `Map` for worker-pool in-flight tasks.
+* **worker: split task and log MessagePorts (#491)** — Worker task/result payloads and log payloads now use dedicated `MessageChannel` ports. The default `parentPort` is reserved for lightweight control messages, including graceful worker close so queued logs can drain before disposal finishes.
 
 Breaking Changes
 ------------
@@ -17,11 +18,13 @@ Breaking Changes
 * `CreateResourceArgument.generateSavePathFn` and the exported `GenerateSavePathFn` type are removed. Use `lifeCycle.generateSavePath.push(...)` for new code, or `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an old full-generator function.
 * `PipelineExecutor.createResource` can now return `void` when a `generateSavePath` hook discards the resource. Direct callers should check the result before using the returned resource.
 * `StaticDownloadOptions.waitForInitBeforeIdle` is removed. It was deprecated since `0.8.2` and was no longer read by the runtime.
+* Custom worker implementations must read `workerData.workerChannels.taskPort` for tasks/results and `workerData.workerChannels.logPort` for logs. `parentPort` no longer carries task completion or log messages.
 
 New Exports
 ------------
 * `GenerateSavePathContext`, `GenerateSavePathResult`, `GenerateSavePathFunc` — types for the save-path lifecycle stage
 * `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` — compatibility wrapper for old full save-path generators
+* `downloader.getWorkerChannels()` and `WorkerChannels` — helper and type for custom worker scripts using the split worker transport
 
 0.9.0
 ============
