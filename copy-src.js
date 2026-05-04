@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {mkdirp as mkdir} from 'mkdirp';
 
 const readDir = dir => fs.promises.readdir(path.join(dirname, dir), {
   withFileTypes: true
@@ -42,7 +41,7 @@ while (dir.length) {
     } else if (dirent.isFile() && !dirent.name.endsWith('.ts')) {
       if (!fs.existsSync(nextDir = path.join(dirname, 'lib', currentDir))) {
         console.debug(new Date().toLocaleString(), 'mkdir', nextDir);
-        mkdir.mkdirpSync(nextDir);
+        await fs.promises.mkdir(nextDir, {recursive: true});
       }
       srcFile = path.join(dirname, 'src', currentDir, dirent.name);
       destFile = path.join(nextDir, dirent.name);
