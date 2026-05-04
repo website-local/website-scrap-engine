@@ -27,6 +27,10 @@ export const defaultStatusListener = (
       if (err && (err as {name?: string}).name === 'HTTPError' &&
         (err as {response?: {statusCode?: number}})?.response?.statusCode === 404) {
         notFound.error(res.url, res.downloadLink, res.refUrl);
+      } else if (err &&
+        (err as {name?: string}).name === 'LocalUrlMountNotFoundError' &&
+        (err as {statusCode?: number})?.statusCode === 404) {
+        notFound.error(res.url, res.downloadLink, res.refUrl);
       } else if (err) {
         error.error(cause, res.url, res.downloadLink, res.refUrl, err);
       } else {

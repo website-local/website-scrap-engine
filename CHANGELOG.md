@@ -5,6 +5,7 @@
 
 Feature
 ------------
+* **life-cycle: add local URL mount download adapter** — New `lifeCycle.adapter.localUrlMounts()` / `lifeCycle.localUrlMounts()` helper mounts static local directories over HTTP(S) URL prefixes during the download lifecycle, with priority/longest-prefix matching, HTML index resolution, case handling, and configurable miss behavior.
 * **life-cycle: add generateSavePath stage (#731)** — New `generateSavePath` hook array runs after type detection and before `createResource`, allowing composable save-path transforms and hook-based resource discard before the `Resource` object is assembled.
 
 Changed
@@ -22,6 +23,8 @@ Breaking Changes
 
 New Exports
 ------------
+* `lifeCycle.localUrlMounts()` and `lifeCycle.adapter.localUrlMounts()` — optional download lifecycle adapter for static local URL mounts
+* `LocalUrlMount*` types, `LocalUrlMountNotFoundError`, and `LocalUrlMountFileSizeError`
 * `GenerateSavePathContext`, `GenerateSavePathResult`, `GenerateSavePathFunc` — types for the save-path lifecycle stage
 * `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` — compatibility wrapper for old full save-path generators
 * `downloader.getWorkerChannels()` and `WorkerChannels` — helper and type for custom worker scripts using the split worker transport

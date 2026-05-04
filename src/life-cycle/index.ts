@@ -6,6 +6,23 @@ export {
   beforeRetryHook, getRetry, requestForResource, downloadResource
 } from './download-resource.js';
 export {
+  LocalUrlMountFileSizeError,
+  LocalUrlMountNotFoundError,
+  localUrlMounts
+} from './local-url-mount.js';
+export type {
+  LocalUrlMount,
+  LocalUrlMountCacheOptions,
+  LocalUrlMountCaseMode,
+  LocalUrlMountContentTypeOptions,
+  LocalUrlMountIndexOptions,
+  LocalUrlMountLimits,
+  LocalUrlMountMeta,
+  LocalUrlMountNotFound,
+  LocalUrlMountOptions,
+  LocalUrlMountSearchMode
+} from './local-url-mount.js';
+export {
   streamingDownloadToFile,
   downloadStreamingResource,
   downloadStreamingResourceWithHook

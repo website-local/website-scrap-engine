@@ -17,6 +17,24 @@ import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio, CheerioStatic} from '../types.js';
 import type URI from 'urijs';
 
+export {
+  LocalUrlMountFileSizeError,
+  LocalUrlMountNotFoundError,
+  localUrlMounts
+} from './local-url-mount.js';
+export type {
+  LocalUrlMount,
+  LocalUrlMountCacheOptions,
+  LocalUrlMountCaseMode,
+  LocalUrlMountContentTypeOptions,
+  LocalUrlMountIndexOptions,
+  LocalUrlMountLimits,
+  LocalUrlMountMeta,
+  LocalUrlMountNotFound,
+  LocalUrlMountOptions,
+  LocalUrlMountSearchMode
+} from './local-url-mount.js';
+
 export interface SkipProcessFunc {
   (url: string, element: Cheerio | null, parent: Resource | null): boolean;
 }

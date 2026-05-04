@@ -90,6 +90,7 @@ The library provides adapter functions in `lifeCycle.adapter` for common customi
 | `dropResource(fn)` | processBeforeDownload | Mark matching resources as discard-only (replace link but don't download) |
 | `preProcess(fn)` | processBeforeDownload | Inspect/modify resources before download |
 | `requestRedirect(fn)` | processBeforeDownload | Rewrite the download URL |
+| `localUrlMounts(mounts)` | download | Read matched HTTP(S) URL prefixes from local directories before HTTP fallback |
 | `redirectFilter(fn)` | processAfterDownload | Rewrite or discard redirect URLs |
 | `processHtml(fn)` | processAfterDownload | Transform the parsed HTML (cheerio `$`) |
 | `processHtmlAsync(fn)` | processAfterDownload | Async version of `processHtml` |
@@ -110,6 +111,32 @@ lc.processBeforeDownload.push(lifeCycle.adapter.dropResource(
   (res) => res.type === ResourceType.Binary && res.url.endsWith('.png')
 ));
 ```
+
+### Local URL Mounts
+
+Use `lifeCycle.adapter.localUrlMounts()` to mount static local directories over
+HTTP(S) URL prefixes during the download stage. Add it before
+`downloadResource` so local hits short-circuit network fetches while misses can
+fall back to HTTP.
+
+```ts
+const lc = lifeCycle.defaultLifeCycle();
+
+lc.download.unshift(lifeCycle.adapter.localUrlMounts([
+  {
+    root: '/mnt/e/example-overlay',
+    urlPrefix: 'https://example.com/assets/',
+    priority: 10,
+    notFound: 'fallback',
+  },
+]));
+```
+
+Matching is static prefix routing: higher `priority` wins, and equal priority
+uses the longest URL prefix. For dynamic routing, regexp matching, or custom
+overlay logic, use a lifecycle function to rewrite `res.downloadLink` before
+download. Mounted source directories must not overlap the scrape output path;
+that aliasing is undefined behavior and is not checked.
 
 ### Custom Save Paths
 
