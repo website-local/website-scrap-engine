@@ -38,6 +38,7 @@ function makeLifeCycle(
     init: [],
     linkRedirect: [],
     detectResourceType: [],
+    generateSavePath: [],
     createResource,
     processBeforeDownload: [],
     download: [],

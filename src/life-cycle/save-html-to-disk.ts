@@ -68,7 +68,7 @@ export async function saveHtmlToDisk(
     const redirectResource = await pipeline.createResource(ResourceType.Html,
       res.depth, res.redirectedUrl, res.url, localRoot,
       undefined, res.refSavePath);
-    if (redirectResource.replacePath) {
+    if (redirectResource?.replacePath) {
       const relativePath: string = escapePath(redirectResource.replacePath);
       const savePath = decodeURI(res.savePath);
       await writeFile(path.join(localRoot, savePath),
@@ -76,6 +76,9 @@ export async function saveHtmlToDisk(
       const redirectedResource = await pipeline.createResource(ResourceType.Html,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
         res.encoding, undefined, ResourceType.Html);
+      if (!redirectedResource) {
+        return;
+      }
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
       const body: ResourceBody = getResourceBodyFromHtml(res, options);
       await writeFile(path.join(localRoot, redirectedSavePath), body, res.encoding, mtime);

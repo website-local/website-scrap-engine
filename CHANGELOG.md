@@ -1,3 +1,23 @@
+0.10.0
+============
+
+**BREAKING CHANGE** — see Breaking Changes below.
+
+Feature
+------------
+* **life-cycle: add generateSavePath stage (#731)** — New `generateSavePath` hook array runs after type detection and before `createResource`, allowing composable save-path transforms and hook-based resource discard before the `Resource` object is assembled.
+
+Breaking Changes
+------------
+* `ProcessingLifeCycle.generateSavePath` changes from a single optional generator to `GenerateSavePathFunc[]`. Consumers building the life cycle from scratch must add `generateSavePath: []`.
+* `CreateResourceArgument.generateSavePathFn` and the exported `GenerateSavePathFn` type are removed. Use `lifeCycle.generateSavePath.push(...)` for new code, or `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an old full-generator function.
+* `PipelineExecutor.createResource` can now return `void` when a `generateSavePath` hook discards the resource. Direct callers should check the result before using the returned resource.
+
+New Exports
+------------
+* `GenerateSavePathContext`, `GenerateSavePathResult`, `GenerateSavePathFunc` — types for the save-path lifecycle stage
+* `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` — compatibility wrapper for old full save-path generators
+
 0.9.0
 ============
 
@@ -369,4 +389,3 @@ Misc
 0.1.0
 ============
 Initial release.
-

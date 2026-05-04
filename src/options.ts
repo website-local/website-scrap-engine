@@ -281,6 +281,7 @@ const defaultOptions: DownloadOptions = {
   createResource,
   detectResourceType: [],
   download: [],
+  generateSavePath: [],
   // hack: force cast
   encoding: {} as DownloadOptions['encoding'],
   linkRedirect: [],

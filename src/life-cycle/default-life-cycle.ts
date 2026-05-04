@@ -22,6 +22,7 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
   init: [],
   linkRedirect: [skipLinks],
   detectResourceType: [detectResourceType],
+  generateSavePath: [],
   createResource,
   processBeforeDownload: [],
   download: [
@@ -41,4 +42,3 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
   dispose: [],
   statusChange: [defaultStatusListener]
 });
-

@@ -89,6 +89,13 @@ async function processHtmlDoc(
           linkType, depth, link, refUrl,
           res.localRoot, options.encoding[linkType],
           savePath, res.type);
+        if (!resource) {
+          if (skip.isTraceEnabled()) {
+            skip.trace('skip generateSavePath',
+              originalLink, link, linkType, refUrl);
+          }
+          continue;
+        }
         resource = await pipeline.processBeforeDownload(resource, elem, res, options);
         if (!resource) {
           if (skip.isTraceEnabled()) {
@@ -169,4 +176,3 @@ export async function processHtml(
   }
   return res;
 }
-

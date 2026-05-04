@@ -15,7 +15,7 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 - URL deduplication with configurable search-param stripping
 - Configurable retry with exponential backoff, jitter, and `Retry-After` header support
 - Local `file://` source support for re-processing previously saved sites
-- Configurable logging via log4js with dedicated categories (`skip`, `retry`, `error`, `notFound`, etc.)
+- Pluggable logging with dedicated categories (`skip`, `retry`, `error`, `notFound`, etc.)
 
 ## Installation
 
@@ -93,6 +93,7 @@ The library provides adapter functions in `lifeCycle.adapter` for common customi
 | `redirectFilter(fn)` | processAfterDownload | Rewrite or discard redirect URLs |
 | `processHtml(fn)` | processAfterDownload | Transform the parsed HTML (cheerio `$`) |
 | `processHtmlAsync(fn)` | processAfterDownload | Async version of `processHtml` |
+| `wrapLegacyGenerateSavePath(fn)` | generateSavePath | Adapt an old full save-path generator to the hook array |
 
 ```ts
 import {lifeCycle} from 'website-scrap-engine';
@@ -108,6 +109,24 @@ lc.linkRedirect.push(lifeCycle.adapter.skipProcess(
 lc.processBeforeDownload.push(lifeCycle.adapter.dropResource(
   (res) => res.type === ResourceType.Binary && res.url.endsWith('.png')
 ));
+```
+
+### Custom Save Paths
+
+Use `lifeCycle.generateSavePath` to transform where resources are written before
+the `Resource` object is created. The first hook receives the built-in save path;
+each later hook receives the previous hook's output. Return `undefined` to
+discard the resource before download.
+
+```ts
+const lc = lifeCycle.defaultLifeCycle();
+
+lc.generateSavePath.push((savePath, ctx) => {
+  if (ctx.uri.hostname() === 'cdn.example.com') {
+    return savePath.replace('cdn.example.com', 'assets');
+  }
+  return savePath;
+});
 ```
 
 ## Architecture
@@ -129,19 +148,22 @@ URL
 2. detectResourceType -> determine type (Html, Css, Binary, Svg, SiteMap, etc.)
  |
  v
-3. createResource ----> build a Resource with save paths and relative replacement paths
+3. generateSavePath --> compute/transform the local save path
  |
  v
-4. processBeforeDownload -> filter/modify resources; link replacement in parent happens after this
+4. createResource ----> build a Resource with relative replacement paths
  |
  v
-5. download ----------> fetch resource via HTTP (loop ends early once body is set)
+5. processBeforeDownload -> filter/modify resources; link replacement in parent happens after this
  |
  v
-6. processAfterDownload -> parse content, discover child resources via submit() callback
+6. download ----------> fetch resource via HTTP (loop ends early once body is set)
  |
  v
-7. saveToDisk --------> write to local filesystem
+7. processAfterDownload -> parse content, discover child resources via submit() callback
+ |
+ v
+8. saveToDisk --------> write to local filesystem
  |
  v
 dispose (once per downloader shutdown / worker exit)
@@ -155,7 +177,8 @@ Consumers extend the pipeline by prepending or appending functions to any stage 
 |---|---|
 | linkRedirect | `skipLinks` - filters out non-HTTP URI schemes (mailto, javascript, data, etc.) |
 | detectResourceType | `detectResourceType` - infers type from element/context |
-| createResource | `createResource` - builds Resource with URL resolution, save path, and replace path |
+| generateSavePath | none by default - an empty array uses the built-in URL-to-path mapping |
+| createResource | `createResource` - builds Resource with resolved URL, save path, and replace path |
 | download | `downloadResource`, `downloadStreamingResource`, `readOrCopyLocalResource` |
 | processAfterDownload | `processRedirectedUrl`, `processHtml`, `processHtmlMetaRefresh`, `processSvg`, `processCss`, `processSiteMap` |
 | saveToDisk | `saveHtmlToDisk`, `saveResourceToDisk` |
@@ -192,7 +215,7 @@ Override via `options.sources` with an array of `{selector, attr, type}` definit
 ### Key Abstractions
 
 - **`Resource`** (`src/resource.ts`) - Central data object carrying URL, save path, replacement path, body, and metadata. `RawResource` is the serializable subset used for cross-thread communication.
-- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution. `createAndProcessResource()` runs stages 1-4 in one call.
+- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution. `createAndProcessResource()` runs stages 1-5 in one call.
 - **`AbstractDownloader`** (`src/downloader/main.ts`) - Base class with PQueue-based concurrency, URL deduplication, and the download loop.
 - **`SingleThreadDownloader`** (`src/downloader/single.ts`) - Runs all pipeline stages in the main thread.
 - **`MultiThreadDownloader`** (`src/downloader/multi.ts`) - Downloads in main thread, sends to worker pool for post-processing.
@@ -203,22 +226,24 @@ Use multi-thread processing when post-download work (HTML/CSS parsing, link disc
 
 **Main thread:**
 - Runs the download queue with PQueue concurrency control
-- Executes stages 1-5 (linkRedirect through download)
+- Executes stages 1-6 (linkRedirect through download)
 - Transfers downloaded resources to worker threads
 - Receives discovered child resources back and enqueues non-duplicates
 
 **Worker threads:**
 - Receive downloaded resources from the main thread
-- Execute stages 6-7 (processAfterDownload + saveToDisk)
+- Execute stages 7-8 (processAfterDownload + saveToDisk)
 - Parse HTML/CSS/SVG, discover child resources
-- Run stages 1-4 on discovered children to prepare them
+- Run stages 1-5 on discovered children to prepare them
 - Send prepared child resources back to the main thread as `RawResource[]`
 
 Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses a 2-pass water-fill algorithm to balance tasks across workers by load.
 
 ## Logging
 
-The library uses log4js with dedicated logger categories:
+The library exposes dedicated logger categories through a pluggable logger
+interface. The default logger writes to `console`; a log4js adapter is available
+for file-based logging.
 
 | Logger | Purpose |
 |---|---|
@@ -232,7 +257,7 @@ The library uses log4js with dedicated logger categories:
 | `mkdir` | Directory creation |
 | `adjustConcurrency` | Runtime concurrency changes |
 
-Configure logging via `options.configureLogger` and `options.logSubDir`.
+Configure logging via `options.createLogger` and `options.logSubDir`.
 
 ## Key Dependencies
 
