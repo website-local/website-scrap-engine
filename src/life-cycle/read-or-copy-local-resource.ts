@@ -43,7 +43,7 @@ export async function readOrCopyLocalResource(
       }
     }
   }
-  if (res.type ===  ResourceType.StreamingBinary) {
+  if (res.type === ResourceType.StreamingBinary) {
     const fileDestPath = path.join(res.localRoot ?? options.localRoot, res.savePath);
     await mkdirRetry(path.dirname(fileDestPath));
     await promises.copyFile(fileSrcPath, fileDestPath);
@@ -69,7 +69,7 @@ export async function readOrCopyLocalResource(
   res.downloadTime =
     res.finishTimestamp - res.downloadStartTimestamp;
 
-  if (res.type ===  ResourceType.StreamingBinary) {
+  if (res.type === ResourceType.StreamingBinary) {
     return;
   }
   return res as DownloadResource;

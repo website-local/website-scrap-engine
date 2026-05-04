@@ -38,13 +38,6 @@ export interface DownloadError extends Partial<Error> {
   event?: string;
 }
 
-/**
- * workaround for retry premature close on node 12
- * retry on empty body
- *
- * @param url
- * @param options
- */
 export async function getRetry(
   url: string,
   options: OptionsInit
@@ -63,7 +56,6 @@ export async function getRetry(
       }
       break;
     } catch (e) {
-      // force cast for typescript 4.4
       err = e as DownloadError | void;
       if (err && err.message === 'premature close') {
         if (err.retryLimitExceeded) {

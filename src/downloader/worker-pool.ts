@@ -37,7 +37,7 @@ function defaultWorkerFactory(
 export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly workers: WorkerInfo[] = [];
   readonly pendingTasks: PendingPromiseWithBody<R>[] = [];
-  readonly workingTasks: Record<number, PendingPromise> = {};
+  readonly workingTasks: Map<number, PendingPromise> = new Map();
   readonly ready: Promise<void>;
   taskIdCounter = 0;
 
@@ -96,8 +96,9 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   complete(info: WorkerInfo, message: WorkerMessage): void {
     --info.load;
     setImmediate(() => this.nextTask());
-    const pending: PendingPromise | undefined = this.workingTasks[message.taskId];
-    delete this.workingTasks[message.taskId];
+    const pending: PendingPromise | undefined =
+      this.workingTasks.get(message.taskId);
+    this.workingTasks.delete(message.taskId);
     if (!pending) return;
     pending.resolve(message);
   }
@@ -188,10 +189,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
             taskId: task.taskId,
             body: task.body
           }, task.transferList);
-          this.workingTasks[task.taskId] = task as PendingPromise;
+          this.workingTasks.set(task.taskId, task as PendingPromise);
           ++sorted[i].load;
         } catch (e) {
-          delete this.workingTasks[task.taskId];
+          this.workingTasks.delete(task.taskId);
           task.reject(e);
         }
       }
@@ -208,12 +209,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       task.reject(new Error('disposed'));
     }
     this.pendingTasks.length = 0;
-    for (const taskId in this.workingTasks) {
-      // noinspection JSUnfilteredForInLoop
-      this.workingTasks[taskId].reject(new Error('disposed'));
-      // noinspection JSUnfilteredForInLoop
-      delete this.workingTasks[taskId];
+    for (const pending of this.workingTasks.values()) {
+      pending.reject(new Error('disposed'));
     }
+    this.workingTasks.clear();
     return numbers;
   }
 }

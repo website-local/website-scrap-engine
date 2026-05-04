@@ -21,9 +21,7 @@
   },
   "dependencies": {
     "cheerio": "^1.2.0",
-    "css-url-parser": "^1.1.4",
     "got": "^13.0.0",
-    "mkdirp": "^3.0.1",
     "p-queue": "^8.1.1",
     "srcset": "^5.0.3",
     "urijs": "^1.19.11"

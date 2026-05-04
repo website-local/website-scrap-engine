@@ -130,13 +130,6 @@ export interface StaticDownloadOptions {
   skipReplacePathError?: boolean;
 
   /**
-   * Wait for this.init in method onIdle.
-   * See https://github.com/website-local/website-scrap-engine/issues/152
-   * @deprecated since 0.8.2
-   */
-  waitForInitBeforeIdle?: boolean;
-
-  /**
    * Set last modified time of local saved file with value from the
    * Last-Modified http header, if available in response.
    *

@@ -35,9 +35,7 @@ export interface DownloaderWithMeta {
 }
 
 export interface PendingPromise<T = unknown, E = unknown> {
-  // workaround for typescript 4.1.2
-  resolve: ((value?: T | PromiseLike<T>) => void) |
-    ((value: T | PromiseLike<T>) => void) ;
+  resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: E) => void;
 }
 

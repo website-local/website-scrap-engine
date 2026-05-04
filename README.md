@@ -265,7 +265,6 @@ Configure logging via `options.createLogger` and `options.logSubDir`.
 - **got** - HTTP client with retry logic
 - **p-queue** - Download concurrency control
 - **urijs** - URL resolution and path generation
-- **css-url-parser** - CSS `url()` extraction
 - **srcset** - `srcset` attribute parsing
 
 ## License

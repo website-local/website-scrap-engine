@@ -1,8 +1,7 @@
 import path from 'node:path';
 import type {WriteStream} from 'node:fs';
 import {constants, createWriteStream, promises as fs} from 'node:fs';
-import {pipeline} from 'node:stream';
-import {promisify} from 'node:util';
+import {pipeline} from 'node:stream/promises';
 import type {RequestError, Response} from 'got';
 import got, {HTTPError} from 'got';
 import type {Resource} from '../resource.js';
@@ -18,8 +17,6 @@ import {error as errorLogger, retry as retryLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {isUrlHttp} from '../util.js';
-
-const promisifyPipeline = promisify(pipeline);
 
 export function isBytesAccepted(acceptRange?: string): boolean {
   if (!acceptRange) {
@@ -55,14 +52,12 @@ export async function streamingDownloadToFile(
   try {
     await fs.access(savePath, constants.W_OK);
   } catch (e) {
-    // force cast for typescript 4.4
     if (e && (e as {code?: string | void}).code === 'ENOENT') {
       await mkdirRetry(path.dirname(savePath));
     } else {
       throw e;
     }
   }
-  // force cast for typescript
   const options = Object.assign({}, requestOptions, {
     isStream: true
   }) as RequestOptions & {
@@ -124,7 +119,7 @@ export async function streamingDownloadToFile(
 
         try {
           // Download body directly to file
-          await promisifyPipeline(request, fileWriteStream);
+          await pipeline(request, fileWriteStream);
         } catch {
           // The same error is caught below.
           // See request.once('error')

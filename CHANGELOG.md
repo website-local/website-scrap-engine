@@ -7,11 +7,16 @@ Feature
 ------------
 * **life-cycle: add generateSavePath stage (#731)** — New `generateSavePath` hook array runs after type detection and before `createResource`, allowing composable save-path transforms and hook-based resource discard before the `Resource` object is assembled.
 
+Changed
+------------
+* **runtime: modernize internals (#1397)** — Remove the `mkdirp` and `css-url-parser` runtime dependencies, use built-in recursive `fs.promises.mkdir`, use `node:stream/promises.pipeline`, vendor CSS URL parsing as typed ESM, raise the TypeScript target to `es2022`, and use `Map` for worker-pool in-flight tasks.
+
 Breaking Changes
 ------------
 * `ProcessingLifeCycle.generateSavePath` changes from a single optional generator to `GenerateSavePathFunc[]`. Consumers building the life cycle from scratch must add `generateSavePath: []`.
 * `CreateResourceArgument.generateSavePathFn` and the exported `GenerateSavePathFn` type are removed. Use `lifeCycle.generateSavePath.push(...)` for new code, or `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an old full-generator function.
 * `PipelineExecutor.createResource` can now return `void` when a `generateSavePath` hook discards the resource. Direct callers should check the result before using the returned resource.
+* `StaticDownloadOptions.waitForInitBeforeIdle` is removed. It was deprecated since `0.8.2` and was no longer read by the runtime.
 
 New Exports
 ------------

@@ -1,31 +1,11 @@
 import type {ObjectEncodingOptions} from 'node:fs';
 import fs from 'node:fs';
 import {dirname} from 'node:path';
-import {mkdirp} from 'mkdirp';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
-import {error as errorLogger, mkdir as mkdirLogger} from './logger/logger.js';
+import {error as errorLogger} from './logger/logger.js';
 
-export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
-  let error: unknown | void;
-  for (let i = 0; i < retry; i++) {
-    error = undefined;
-    try {
-      await mkdirp(dir);
-    } catch (e) {
-      error = e;
-      if (i > 0) {
-        mkdirLogger.debug('mkdir', dir, 'fail', i, 'times', e);
-      } else {
-        mkdirLogger.trace('mkdir', dir, 'fail', i, 'times', e);
-      }
-      continue;
-    }
-    error = undefined;
-    return;
-  }
-  if (error) {
-    throw error;
-  }
+export const mkdirRetry = async (dir: string): Promise<void> => {
+  await fs.promises.mkdir(dir, {recursive: true});
 };
 
 export const writeFile = async (

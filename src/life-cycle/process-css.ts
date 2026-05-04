@@ -1,10 +1,10 @@
-import parseCssUrls from 'css-url-parser';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import {toString} from '../util.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
+import parseCssUrls from './parse-css-urls.js';
 
 export async function processCssText(
   cssText: string,
