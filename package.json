@@ -36,7 +36,7 @@
     "jest": "^30.3.0",
     "ts-jest": "^29.4.9",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.1"
+    "typescript-eslint": "^8.59.2"
   },
   "optionalDependencies": {
     "log4js": "^6.9.1"
