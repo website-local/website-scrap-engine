@@ -329,9 +329,8 @@ export function downloadStreamingResourceWithHook(
     if (!isUrlHttp(res.downloadLink)) {
       return res;
     }
-    let resource: DownloadResource | Resource | void = res;
     if (beforeDownload) {
-      resource = await beforeDownload(res, requestOptions, options, pipeline);
+      const resource = await beforeDownload(res, requestOptions, options, pipeline);
       if (!resource) {
         return;
       }

@@ -47,7 +47,7 @@ function toHtml(selector: string) {
   for (const part of parts) {
     const parsed = part.split(/[[\]]/);
     let tag = parsed[0];
-    let currHtml = '';
+    let currHtml: string;
     if (!tag || tag === '*') {
       tag = selector.startsWith('svg') ? 'g' : 'div';
     }

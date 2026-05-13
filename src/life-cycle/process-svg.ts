@@ -41,7 +41,6 @@ export async function processSvg(
         continue;
       }
       const originalLink: string = attrValue;
-      let replaceValue: string = originalLink;
       // skip empty links
       if (!originalLink) {
         continue;
@@ -85,7 +84,7 @@ export async function processSvg(
       if (!resource.shouldBeDiscardedFromDownload) {
         submit(resource);
       }
-      replaceValue = resource.replacePath;
+      let replaceValue = resource.replacePath;
       // historical workaround here
       if (replaceValue === '.html' || replaceValue === '/.html') {
         replaceValue = '';
