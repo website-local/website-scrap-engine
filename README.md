@@ -156,6 +156,11 @@ lc.generateSavePath.push((savePath, ctx) => {
 });
 ```
 
+Save paths must resolve inside `localRoot` when resources are written. The
+built-in HTTP(S) mapping sanitizes literal and encoded `.` / `..` path segments;
+custom `generateSavePath` hooks should return relative paths that stay within
+the configured output directory.
+
 ## Architecture
 
 ### Pipeline Life Cycle

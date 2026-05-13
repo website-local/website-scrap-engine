@@ -351,7 +351,24 @@ export function generateSavePath(
     }
   } else {
     const host: string = uri.hostname();
-    savePath = path.join(host || '', escapePath(uri.path()));
+    const uriPath = uri.path();
+    savePath = path.join(host || '',
+      ...uriPath.split('/').filter(Boolean).map(segment => {
+        // Normalize encoded dot segments before the final localRoot containment check.
+        let decodedSegment: string;
+        try {
+          decodedSegment = decodeURIComponent(segment);
+        } catch {
+          decodedSegment = segment;
+        }
+        if (decodedSegment === '.' || decodedSegment === '..') {
+          return '_';
+        }
+        return escapePath(segment);
+      }));
+    if (uriPath.endsWith('/')) {
+      savePath += path.sep;
+    }
   }
 
   if (isHtml && !savePath.endsWith('.html')) {

@@ -37,6 +37,16 @@ describe('save-html-to-disk', function () {
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
 
+  test('rejects html save paths that escape localRoot', async () => {
+    mockFs();
+    const resource = res('http://example.com', 'body');
+    resource.savePath = join('..', 'index.html');
+
+    await expect(saveHtmlToDisk(resource, fakeOpt, fakePipeline))
+      .rejects.toThrow('Resolved path escapes root');
+    expect(fs.promises.writeFile).not.toHaveBeenCalled();
+  });
+
   // https://github.com/website-local/website-scrap-engine/issues/174
   test('save regular html with last-modified header', async () => {
     const {fakeFs, fakeFsStats} = mockFs();

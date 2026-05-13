@@ -1,12 +1,13 @@
 import * as path from 'node:path';
 import type {Stats} from 'node:fs';
 import {promises} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import {error as errorLogger} from '../logger/logger.js';
-import {mkdirRetry} from '../io.js';
+import {mkdirRetry, safeJoin} from '../io.js';
 
 const FILE_PREFIX = 'file://';
 
@@ -25,7 +26,12 @@ export async function readOrCopyLocalResource(
     res.downloadStartTimestamp = Date.now();
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
   }
-  let fileSrcPath = res.downloadLink.slice(FILE_PREFIX.length);
+  let fileSrcPath: string;
+  try {
+    fileSrcPath = fileURLToPath(res.downloadLink);
+  } catch {
+    fileSrcPath = res.downloadLink.slice(FILE_PREFIX.length);
+  }
   if (!fileSrcPath) {
     return;
   }
@@ -44,7 +50,7 @@ export async function readOrCopyLocalResource(
     }
   }
   if (res.type === ResourceType.StreamingBinary) {
-    const fileDestPath = path.join(res.localRoot ?? options.localRoot, res.savePath);
+    const fileDestPath = safeJoin(res.localRoot ?? options.localRoot, res.savePath);
     await mkdirRetry(path.dirname(fileDestPath));
     await promises.copyFile(fileSrcPath, fileDestPath);
   } else {

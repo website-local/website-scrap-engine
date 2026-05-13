@@ -1,11 +1,23 @@
 import type {ObjectEncodingOptions} from 'node:fs';
 import fs from 'node:fs';
-import {dirname} from 'node:path';
+import {dirname, join, resolve, sep} from 'node:path';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
 import {error as errorLogger} from './logger/logger.js';
 
 export const mkdirRetry = async (dir: string): Promise<void> => {
   await fs.promises.mkdir(dir, {recursive: true});
+};
+
+export const safeJoin = (root: string, relativePath: string): string => {
+  const filePath = join(root, relativePath);
+  const resolvedRoot = resolve(root);
+  const resolvedPath = resolve(filePath);
+  // Compare resolved paths so custom save paths cannot traverse outside root.
+  if (resolvedPath !== resolvedRoot &&
+    !resolvedPath.startsWith(resolvedRoot + sep)) {
+    throw new Error('Resolved path escapes root: ' + relativePath);
+  }
+  return filePath;
 };
 
 export const writeFile = async (

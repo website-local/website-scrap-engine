@@ -2,7 +2,8 @@ import {describe, expect, test} from '@jest/globals';
 // noinspection ES6PreferShortImport
 import {
   isBytesAccepted,
-  isSameRangeStart
+  isSameRangeStart,
+  shouldWaitForRequestError
 } from '../../src/life-cycle/download-streaming-resource.js';
 
 describe('isBytesAccepted', function () {
@@ -54,5 +55,21 @@ describe('isSameRangeStart', function () {
 
   test('returns false for missing space separator', () => {
     expect(isSameRangeStart(0, 'bytes')).toBe(false);
+  });
+});
+
+describe('shouldWaitForRequestError', function () {
+  test('returns true for request-originated stream failures', () => {
+    expect(shouldWaitForRequestError({name: 'RequestError'})).toBe(true);
+    expect(shouldWaitForRequestError({name: 'TimeoutError'})).toBe(true);
+  });
+
+  test('returns false for destination write failures', () => {
+    const err = Object.assign(new Error('no space left on device'), {
+      code: 'ENOSPC',
+      name: 'Error'
+    });
+
+    expect(shouldWaitForRequestError(err)).toBe(false);
   });
 });

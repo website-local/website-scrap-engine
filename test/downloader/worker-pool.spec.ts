@@ -84,9 +84,26 @@ describe('worker-pool', function () {
     await pool.ready;
     const task1 = pool.submitTask([1, 2]);
     const task2 = pool.submitTask([2, 2]);
+    const task1Rejected = expect(task1).rejects.toThrow('disposed');
+    const task2Rejected = expect(task2).rejects.toThrow('disposed');
     await pool.dispose();
-    await expect(task1).rejects.toThrow('disposed');
-    await expect(task2).rejects.toThrow('disposed');
+    await task1Rejected;
+    await task2Rejected;
+  }, 10000);
+
+  test('pool rejects in-flight tasks when worker exits', async () => {
+
+    const pool = new WorkerPool(1,
+      join(__dirname, 'exit-on-task-worker.js'), {});
+    try {
+      await pool.ready;
+      await expect(pool.submitTask([1, 2]))
+        .rejects.toThrow('exited with code 1');
+      expect(pool.workingTasks.size).toBe(0);
+      expect(pool.workers[0].load).toBe(0);
+    } finally {
+      await pool.dispose();
+    }
   }, 10000);
 
   test('pool rejects task and log payloads on parentPort', async () => {

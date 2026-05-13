@@ -44,6 +44,7 @@ export interface PendingPromiseWithBody<R = unknown, E = unknown, B = unknown>
   taskId: number;
   body: B;
   transferList?: Transferable[];
+  workerId?: number;
 }
 
 export enum WorkerMessageType {

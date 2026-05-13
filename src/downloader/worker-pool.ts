@@ -48,6 +48,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly workingTasks: Map<number, PendingPromise> = new Map();
   readonly ready: Promise<void>;
   taskIdCounter = 0;
+  private _isDisposing = false;
 
   constructor(
     public coreSize: number,
@@ -81,6 +82,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         msg => this.takeLog(this.workers[i], msg as LogWorkerMessage));
       this.workers[i].worker.addListener('error',
         err => this.workerOnError(this.workers[i], err as Error));
+      this.workers[i].worker.addListener('exit',
+        exitCode => this.workerOnExit(this.workers[i], exitCode));
       ready.push(new Promise(resolve => {
         this.workers[i].worker.addListener('online', resolve);
       }));
@@ -90,6 +93,31 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   workerOnError(info: WorkerInfo, err: Error): void {
     errorLogger.error('worker error', info.id, err);
+    this.rejectWorkerTasks(info, err);
+  }
+
+  workerOnExit(info: WorkerInfo, exitCode: number): void {
+    if (this._isDisposing) {
+      return;
+    }
+    if (exitCode !== 0) {
+      this.rejectWorkerTasks(info,
+        new Error(`worker ${info.id} exited with code ${exitCode}`));
+    }
+  }
+
+  rejectWorkerTasks(info: WorkerInfo, err: Error): void {
+    // A worker crash has no Complete message, so reject tasks still assigned to it.
+    info.load = 0;
+    for (const [taskId, pending] of this.workingTasks) {
+      const task = pending as PendingPromiseWithBody<R>;
+      if (task.workerId !== info.id) {
+        continue;
+      }
+      this.workingTasks.delete(taskId);
+      task.reject(err);
+    }
+    setImmediate(() => this.nextTask());
   }
 
   onControlMessage(info: WorkerInfo, message: WorkerControlMessage): void {
@@ -231,6 +259,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
           } else {
             sorted[i].taskPort.postMessage(message);
           }
+          task.workerId = sorted[i].id;
           this.workingTasks.set(task.taskId, task as PendingPromise);
           ++sorted[i].load;
         } catch (e) {
@@ -245,6 +274,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   async dispose(): Promise<number[]> {
+    this._isDisposing = true;
     const shouldDrainPorts = this.pendingTasks.length === 0 &&
       this.workingTasks.size === 0;
     if (!shouldDrainPorts) {
@@ -276,12 +306,6 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   private async terminateWorkers(): Promise<number[]> {
-    const numbers = await Promise.all(
-      this.workers.map(info => info.worker.terminate()));
-    for (const info of this.workers) {
-      info.taskPort.close();
-      info.logPort.close();
-    }
     for (const task of this.pendingTasks) {
       task.reject(new Error('disposed'));
     }
@@ -290,6 +314,12 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       pending.reject(new Error('disposed'));
     }
     this.workingTasks.clear();
+    const numbers = await Promise.all(
+      this.workers.map(info => info.worker.terminate()));
+    for (const info of this.workers) {
+      info.taskPort.close();
+      info.logPort.close();
+    }
     return numbers;
   }
 }

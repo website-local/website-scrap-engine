@@ -12,7 +12,7 @@ import type {
   DownloadResourceFunc,
   RequestOptions
 } from './types.js';
-import {mkdirRetry} from '../io.js';
+import {mkdirRetry, safeJoin} from '../io.js';
 import {error as errorLogger, retry as retryLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
@@ -44,11 +44,17 @@ export function isSameRangeStart(rangeStart: number, contentRange?: string): boo
   return +ranges[0] === rangeStart;
 }
 
+export function shouldWaitForRequestError(error: unknown): boolean {
+  return error instanceof HTTPError ||
+    (error as {name?: string} | undefined)?.name === 'RequestError' ||
+    (error as {name?: string} | undefined)?.name === 'TimeoutError';
+}
+
 export async function streamingDownloadToFile(
   res: Resource & { downloadStartTimestamp: number },
   requestOptions: RequestOptions
 ): Promise<Response | void> {
-  const savePath = path.join(res.localRoot, decodeURI(res.savePath));
+  const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
   try {
     await fs.access(savePath, constants.W_OK);
   } catch (e) {
@@ -120,9 +126,11 @@ export async function streamingDownloadToFile(
         try {
           // Download body directly to file
           await pipeline(request, fileWriteStream);
-        } catch {
-          // The same error is caught below.
-          // See request.once('error')
+        } catch (e) {
+          // Request errors also arrive on request.once('error'); write errors do not.
+          if (!shouldWaitForRequestError(e)) {
+            reject(e);
+          }
           return;
         }
 
@@ -226,7 +234,7 @@ export async function optionallySetLastModifiedTime(
 
   // void and NaN check
   if (mtime) {
-    const savePath = path.join(res.localRoot, decodeURI(res.savePath));
+    const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
     try {
       await fs.utimes(savePath, mtime, mtime);
     } catch (e) {

@@ -130,7 +130,13 @@ describe('process-html', function () {
   test('inline-css', async function () {
     const html = load(`<html lang="en">
 <head>
-<style>div {background-image: url("https://cdn.example.com/img.webp")}</style>
+<style>
+/* url("https://cdn.example.com/comment.webp") */
+div {
+  background-image: url("https://cdn.example.com/img.webp");
+  content: "https://cdn.example.com/img.webp";
+}
+</style>
 <title></title>
 </head>
 <body><div>
@@ -146,6 +152,8 @@ describe('process-html', function () {
     expect(html('style').text()).toBeTruthy();
     expect(html('span').attr('style')!.includes('../../cdn.example.com/img2.webp')).toBeTruthy();
     expect(html('style').text()!.includes('../../cdn.example.com/img.webp')).toBeTruthy();
+    expect(html('style').text()!.includes('https://cdn.example.com/comment.webp')).toBeTruthy();
+    expect(html('style').text()!.includes('content: "https://cdn.example.com/img.webp"')).toBeTruthy();
   });
 
   test('srcset', async function () {

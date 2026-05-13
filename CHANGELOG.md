@@ -13,6 +13,13 @@ Changed
 * **runtime: modernize internals (#1397)** — Remove the `mkdirp` and `css-url-parser` runtime dependencies, use built-in recursive `fs.promises.mkdir`, use `node:stream/promises.pipeline`, vendor CSS URL parsing as typed ESM, raise the TypeScript target to `es2022`, and use `Map` for worker-pool in-flight tasks.
 * **worker: split task and log MessagePorts (#491)** — Worker task/result payloads and log payloads now use dedicated `MessageChannel` ports. The default `parentPort` is reserved for lightweight control messages, including graceful worker close so queued logs can drain before disposal finishes.
 
+Fix
+------------
+* **resource: constrain disk writes to localRoot** — Sanitize literal and encoded dot segments in built-in HTTP(S) save paths, decode local `file://` URLs correctly, and reject save, HTML, streaming, and local-file copy paths whose resolved destination escapes `localRoot`.
+* **worker-pool: reject in-flight tasks on worker exit** — Clear crashed worker load and reject tasks assigned to a failed worker instead of leaving callers waiting indefinitely.
+* **process-css: rewrite parsed URL tokens only** — Replace CSS resource references at parser-reported positions so matching text in comments or string literals is preserved while duplicate resource processing is still avoided.
+* **download-streaming-resource: reject destination write errors** — Treat write-side pipeline failures as terminal download failures instead of waiting for a request-side error event that may never arrive.
+
 Breaking Changes
 ------------
 * `ProcessingLifeCycle.generateSavePath` changes from a single optional generator to `GenerateSavePathFunc[]`. Consumers building the life cycle from scratch must add `generateSavePath: []`.

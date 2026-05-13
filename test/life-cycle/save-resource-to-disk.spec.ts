@@ -27,6 +27,16 @@ describe('save-resource-to-disk', function () {
     expect(fs.promises.writeFile).toHaveBeenCalledTimes(1);
   });
 
+  test('rejects save paths that escape localRoot', async () => {
+    mockFs();
+    const resource = res('http://example.com/test.bin', 'body');
+    resource.savePath = join('..', 'test.bin');
+
+    await expect(saveResourceToDisk(resource, fakeOpt, fakePipeline))
+      .rejects.toThrow('Resolved path escapes root');
+    expect(fs.promises.writeFile).not.toHaveBeenCalled();
+  });
+
   // https://github.com/website-local/website-scrap-engine/issues/174
   test('save resource with last-modified header', async () => {
     const {fakeFs, fakeFsStats} = mockFs();

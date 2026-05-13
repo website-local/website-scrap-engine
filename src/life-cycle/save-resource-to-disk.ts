@@ -1,7 +1,6 @@
-import path from 'node:path';
 import type {DownloadResource} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
-import {writeFile} from '../io.js';
+import {safeJoin, writeFile} from '../io.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 
 export async function saveResourceToDisk(
@@ -18,11 +17,11 @@ export async function saveResourceToDisk(
     if (res.redirectedSavePath) {
       if (res.redirectedSavePath !== res.savePath) {
         const redirectedSavePath = decodeURI(res.redirectedSavePath);
-        await writeFile(path.join(localRoot, redirectedSavePath), res.body,
+        await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
           res.encoding, mtime);
       }
       const savePath = decodeURI(res.savePath);
-      await writeFile(path.join(localRoot, savePath), res.body, res.encoding, mtime);
+      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime);
       return;
     }
     const redirectResource = await pipeline.createResource(res.type,
@@ -31,7 +30,7 @@ export async function saveResourceToDisk(
     // maybe we can try module:fs/promises.symlink first
     if (redirectResource?.replacePath) {
       const savePath = decodeURI(res.savePath);
-      await writeFile(path.join(localRoot, savePath), res.body, res.encoding, mtime);
+      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime);
       const redirectedResource = await pipeline.createResource(res.type,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
         res.encoding, undefined, res.type);
@@ -39,12 +38,12 @@ export async function saveResourceToDisk(
         return;
       }
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
-      await writeFile(path.join(localRoot, redirectedSavePath), res.body,
+      await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
         res.encoding, mtime);
       return;
     }
   }
-  const filePath: string = path.join(localRoot, decodeURI(res.savePath));
+  const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
   await writeFile(filePath, res.body, res.encoding, mtime);
   return;
 }
