@@ -254,6 +254,13 @@ export async function downloadStreamingResource(
   if (res.type !== ResourceType.StreamingBinary) {
     return res;
   }
+  // Only http(s) links are downloadable via got.stream(). A non-http link
+  // (e.g. file://) must fall through unchanged so the next download handler
+  // (readOrCopyLocalResource) can pick it up. Mirrors the same guard in
+  // downloadStreamingResourceWithHook.
+  if (!isUrlHttp(res.downloadLink)) {
+    return res;
+  }
   if (!res.downloadStartTimestamp) {
     res.downloadStartTimestamp = Date.now();
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;

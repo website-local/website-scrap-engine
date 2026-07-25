@@ -1,4 +1,5 @@
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import type {WorkerFactory} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
 import type {RawResource, Resource} from '../resource.js';
@@ -38,7 +39,13 @@ export class MultiThreadDownloader extends AbstractDownloader {
     const overrideOptions = options as Partial<MultiThreadDownloaderOptions>;
     this._pool = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
       // worker script should be compiled to .js
-      overrideOptions?.pathToWorker || path.resolve(__dirname, 'worker.js'),
+      // Resolve relative to this module's own URL: the compiled output is ESM,
+      // where `__dirname` is undefined. `__dirname` only type-checks here
+      // because @types/node declares it as a global; it would throw a
+      // ReferenceError at runtime. fileURLToPath(import.meta.url) is the
+      // ESM-safe equivalent (same pattern as read-or-copy-local-resource.ts).
+      overrideOptions?.pathToWorker ||
+        path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'worker.js'),
       {pathToOptions: this.pathToOptions, overrideOptions},
       overrideOptions?.maxLoad || -1,
       this._workerFactory

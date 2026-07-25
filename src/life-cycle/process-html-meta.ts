@@ -87,7 +87,15 @@ export async function processHtmlMetaRefresh(
       if (!resource.shouldBeDiscardedFromDownload) {
         submit(resource);
       }
-      elem.attr('content', attrValue.replace(originalLink, resource.replacePath));
+      // Use a positional splice rather than String.prototype.replace: the
+      // replacement string may contain '$' sequences ($&, $1, ...) that
+      // replace() would interpret and corrupt the rewritten path.
+      const linkStart = attrValue.indexOf(originalLink);
+      if (linkStart !== -1) {
+        elem.attr('content',
+          attrValue.slice(0, linkStart) + resource.replacePath +
+          attrValue.slice(linkStart + originalLink.length));
+      }
     }
   }
 

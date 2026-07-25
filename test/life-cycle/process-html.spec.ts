@@ -11,6 +11,9 @@ import {load} from 'cheerio';
 import type {DownloadOptions} from '../../src/options.js';
 import {resHtml} from './save-mock-fs.js';
 import {processHtml} from '../../src/life-cycle/process-html.js';
+import {
+  processHtmlMetaRefresh
+} from '../../src/life-cycle/process-html-meta.js';
 
 /**
  * Get a copy of default life cycle
@@ -209,6 +212,25 @@ div {
         expect(innerPage(selector).attr(attr)).toBe('../static/test.bin');
       }
     }
+  });
+
+  // meta refresh rewrite must not mis-handle '$' sequences in the replace path.
+  // '$$' survives save-path sanitization (unlike '&', which becomes '_'), so
+  // it reaches replacePath verbatim. String.prototype.replace would collapse
+  // '$$' into a single '$' in the replacement string and corrupt the path.
+  test('meta-refresh-dollar-in-replace-path', async function () {
+    const html = load(`<html lang="en"><head>
+<meta http-equiv="refresh" content="0; url=https://example.com/a$$b.html">
+</head><body></body></html>`);
+    const res = resHtml('https://example.com/dir01/index.html', '');
+    res.meta.doc = html;
+    const processed = await processHtmlMetaRefresh(
+      res, () => {}, testPipeline.options, testPipeline);
+    expect(processed).toBeTruthy();
+    const content = html('meta[http-equiv="refresh"]').attr('content');
+    // '$$' must survive verbatim; the old replace()-based rewrite would have
+    // collapsed it to '$' (producing '../a$b.html').
+    expect(content).toBe('0; url=../a$$b.html');
   });
 
 });

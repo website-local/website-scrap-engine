@@ -1,10 +1,15 @@
 import {describe, expect, test} from '@jest/globals';
 // noinspection ES6PreferShortImport
 import {
+  downloadStreamingResource,
   isBytesAccepted,
   isSameRangeStart,
   shouldWaitForRequestError
 } from '../../src/life-cycle/download-streaming-resource.js';
+import type {Resource} from '../../src/resource.js';
+import {ResourceType} from '../../src/resource.js';
+import type {RequestOptions} from '../../src/life-cycle/types.js';
+import type {StaticDownloadOptions} from '../../src/options.js';
 
 describe('isBytesAccepted', function () {
   test('returns false for undefined', () => {
@@ -71,5 +76,22 @@ describe('shouldWaitForRequestError', function () {
     });
 
     expect(shouldWaitForRequestError(err)).toBe(false);
+  });
+});
+
+describe('downloadStreamingResource', function () {
+  // A non-http downloadLink (e.g. file://) must not be handed to got.stream();
+  // it should fall through unchanged to the next (local) download handler.
+  test('falls through for non-http downloadLink', async () => {
+    const res = {
+      type: ResourceType.StreamingBinary,
+      downloadLink: 'file:///tmp/does-not-matter.bin',
+      createTimestamp: Date.now()
+    } as unknown as Resource;
+    const result = await downloadStreamingResource(
+      res, {} as RequestOptions, {} as StaticDownloadOptions);
+    // returned verbatim, no download timestamps set (got.stream not invoked)
+    expect(result).toBe(res);
+    expect(res.downloadStartTimestamp).toBeUndefined();
   });
 });
