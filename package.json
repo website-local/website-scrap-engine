@@ -32,7 +32,7 @@
     "@types/node": "^26.1.2",
     "@types/urijs": "^1.19.26",
     "eslint": "^10.8.0",
-    "globals": "^17.8.0",
+    "globals": "^17.9.0",
     "jest": "^30.4.2",
     "ts-jest": "^29.4.12",
     "typescript": "^6.0.3",
