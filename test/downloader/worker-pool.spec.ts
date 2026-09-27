@@ -1,6 +1,7 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {Worker} from 'node:worker_threads';
 import {setLogger} from '../../src/logger/logger.js';
 import {createDefaultLogger} from '../../src/logger/default-logger.js';
 // noinspection ES6PreferShortImport
@@ -57,6 +58,7 @@ describe('worker-pool', function () {
       // noinspection JSUnusedAssignment
       expect(error).toBeTruthy();
       expect(error?.message).toBe('Test worker error');
+      await expect(pool.submitTask([1, 2])).rejects.toThrow('Test worker error');
     } finally {
       await pool.dispose();
     }
@@ -89,6 +91,56 @@ describe('worker-pool', function () {
     await pool.dispose();
     await task1Rejected;
     await task2Rejected;
+    await expect(pool.submitTask([3, 4])).rejects.toThrow('disposed');
+  }, 10000);
+
+  test.each([0, 1])(
+    'pool rejects queued and future tasks after worker exit %s', async exitCode => {
+      const pool = new WorkerPool(1,
+        join(__dirname, 'exit-on-task-worker.js'), {exitCode}, 1);
+      try {
+        await pool.ready;
+        const results = await Promise.allSettled([
+          pool.submitTask([1, 2]),
+          pool.submitTask([3, 4])
+        ]);
+        for (const result of results) {
+          expect(result.status).toBe('rejected');
+          if (result.status === 'rejected') {
+            expect(result.reason.message).toContain(`exited with code ${exitCode}`);
+          }
+        }
+        expect(pool.workingTasks.size).toBe(0);
+        expect(pool.pendingTasks).toHaveLength(0);
+        await expect(pool.submitTask([5, 6]))
+          .rejects.toThrow(`exited with code ${exitCode}`);
+      } finally {
+        await pool.dispose();
+      }
+    }, 10000);
+
+  test('pool dispatches queued work to surviving workers', async () => {
+    let workersCreated = 0;
+    const pool = new WorkerPool(2,
+      join(__dirname, 'delay-calc-worker.js'), {}, 1,
+      (filename, options) => new Worker(workersCreated++ === 0 ?
+        join(__dirname, 'exit-on-task-worker.js') : filename, options));
+    try {
+      await pool.ready;
+      const results = await Promise.allSettled([
+        pool.submitTask([1, 2]),
+        pool.submitTask([2, 3]),
+        pool.submitTask([4, 5])
+      ]);
+      expect(results[0].status).toBe('rejected');
+      expect(results[1]).toMatchObject({status: 'fulfilled', value: {body: 5}});
+      expect(results[2]).toMatchObject({status: 'fulfilled', value: {body: 9}});
+      expect(pool.workingTasks.size).toBe(0);
+      expect(pool.pendingTasks).toHaveLength(0);
+      expect((await pool.submitTask([6, 7])).body).toBe(13);
+    } finally {
+      await pool.dispose();
+    }
   }, 10000);
 
   test('pool rejects in-flight tasks when worker exits', async () => {

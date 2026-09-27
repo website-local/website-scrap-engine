@@ -616,7 +616,9 @@ export function createResource({
   const resource: Resource = {
     type,
     depth,
-    encoding: encoding || (type === ResourceType.Binary ? null : 'utf8'),
+    encoding: encoding === undefined ?
+      (type === ResourceType.Binary || type === ResourceType.StreamingBinary ?
+        null : 'utf8') : encoding,
     url,
     rawUrl,
     downloadLink,

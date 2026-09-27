@@ -156,6 +156,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!savePathResult) {
       return undefined;
     }
+    const resourceEncoding = encoding === undefined ?
+      this.options.encoding[type] : encoding;
     const arg: CreateResourceArgument = {
       type,
       depth,
@@ -164,7 +166,9 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       refUrl,
       refSavePath: savePathResult.refSavePath,
       localRoot: localRoot ?? this.options.localRoot,
-      encoding: encoding ?? this.options.encoding[type] ?? 'utf8',
+      encoding: resourceEncoding === undefined ?
+        (type === ResourceType.Binary || type === ResourceType.StreamingBinary ?
+          null : 'utf8') : resourceEncoding,
       keepSearch,
       skipReplacePathError: this.options.skipReplacePathError,
       savePath: savePathResult.savePath,

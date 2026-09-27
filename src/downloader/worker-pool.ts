@@ -49,6 +49,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly ready: Promise<void>;
   taskIdCounter = 0;
   private _isDisposing = false;
+  private readonly _unavailableWorkers = new Set<WorkerInfo>();
+  private _lastWorkerError?: Error;
 
   constructor(
     public coreSize: number,
@@ -100,13 +102,16 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     if (this._isDisposing) {
       return;
     }
-    if (exitCode !== 0) {
-      this.rejectWorkerTasks(info,
-        new Error(`worker ${info.id} exited with code ${exitCode}`));
-    }
+    this.rejectWorkerTasks(info,
+      new Error(`worker ${info.id} exited with code ${exitCode}`));
   }
 
   rejectWorkerTasks(info: WorkerInfo, err: Error): void {
+    if (this._unavailableWorkers.has(info)) {
+      return;
+    }
+    this._unavailableWorkers.add(info);
+    this._lastWorkerError = err;
     // A worker crash has no Complete message, so reject tasks still assigned to it.
     info.load = 0;
     for (const [taskId, pending] of this.workingTasks) {
@@ -116,6 +121,12 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       }
       this.workingTasks.delete(taskId);
       task.reject(err);
+    }
+    if (!this.workers.some(worker => !this._unavailableWorkers.has(worker))) {
+      for (const task of this.pendingTasks) {
+        task.reject(err);
+      }
+      this.pendingTasks.length = 0;
     }
     setImmediate(() => this.nextTask());
   }
@@ -171,6 +182,13 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   submitTask(
     taskBody: T,
     transferList?: Transferable[]): Promise<R> {
+    if (this._isDisposing) {
+      return Promise.reject(new Error('disposed'));
+    }
+    if (!this.workers.some(worker => !this._unavailableWorkers.has(worker))) {
+      return Promise.reject(this._lastWorkerError ||
+        new Error('No workers available'));
+    }
     return new Promise<R>((resolve, reject) => {
       const task: PendingPromiseWithBody<R> = {
         taskId: ++this.taskIdCounter,
@@ -185,12 +203,16 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   nextTask(): void {
-    if (!this.pendingTasks.length) {
+    if (this._isDisposing || !this.pendingTasks.length) {
       return;
     }
-    const sorted = this.workers.slice().sort(
-      (a, b) => a.load - b.load);
+    const sorted = this.workers
+      .filter(worker => !this._unavailableWorkers.has(worker))
+      .sort((a, b) => a.load - b.load);
     const n = sorted.length;
+    if (!n) {
+      return;
+    }
     let remaining = this.pendingTasks.length;
 
     // Cap by maxLoad capacity

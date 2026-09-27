@@ -84,30 +84,30 @@ export async function streamingDownloadToFile(
           options.headers = {};
         }
         options.headers.range = `bytes=${rangeStart}-`;
-        fileWriteStream = createWriteStream(savePath, {
-          flags: 'a',
-          start: rangeStart
-        });
       }
       const request = got.stream(res.downloadLink, options);
       request.retryCount = retryCount;
 
       request.once('response', async (response: Response) => {
         response.retryCount = retryCount;
+        if (response.statusCode === 304) {
+          // Drain the response without opening or modifying the cached file.
+          request.once('end', () => resolve(response));
+          request.resume();
+          return;
+        }
         res.meta.headers = response.headers;
         if (rangeIsSupported === undefined) {
           if (isBytesAccepted(response.headers['accept-ranges'])) {
             rangeIsSupported = true;
           }
         }
-        if (rangeIsSupported && fileWriteStream && rangeStart &&
+        if (rangeIsSupported && rangeStart &&
           (response.statusCode !== 206 ||
             !isSameRangeStart(rangeStart, response.headers['content-range']))) {
           errorLogger.warn('Unexpected response for range',
             rangeStart, response.headers['content-range'], response.statusCode);
           rangeIsSupported = false;
-          fileWriteStream.destroy();
-          fileWriteStream = undefined;
           rangeStart = undefined;
         }
 
@@ -118,9 +118,9 @@ export async function streamingDownloadToFile(
         }
         // Download body
         if (!fileWriteStream) {
-          fileWriteStream = createWriteStream(savePath, {
-            flags: 'w'
-          });
+          fileWriteStream = createWriteStream(savePath,
+            rangeIsSupported && rangeStart ?
+              {flags: 'a', start: rangeStart} : {flags: 'w'});
         }
 
         try {
@@ -128,7 +128,8 @@ export async function streamingDownloadToFile(
           await pipeline(request, fileWriteStream);
         } catch (e) {
           // Request errors also arrive on request.once('error'); write errors do not.
-          if (!shouldWaitForRequestError(e)) {
+          // Got closes the previous stream when retrying.
+          if (!isRetry && !shouldWaitForRequestError(e)) {
             reject(e);
           }
           return;
@@ -153,7 +154,7 @@ export async function streamingDownloadToFile(
             rangeStart = undefined;
           }
           fileWriteStream.destroy();
-        } else {
+        } else if (!rangeIsSupported) {
           rangeStart = undefined;
         }
         fileWriteStream = undefined;
@@ -212,8 +213,8 @@ export async function streamingDownloadToFile(
       request.once('error', onError);
 
       request.once('retry', (newRetryCount: number) => {
-        destroyStream();
         isRetry = true;
+        destroyStream();
         makeRequest(newRetryCount);
       });
 
@@ -265,8 +266,11 @@ export async function downloadStreamingResource(
     res.downloadStartTimestamp = Date.now();
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
   }
-  await streamingDownloadToFile(
+  const response = await streamingDownloadToFile(
     res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+  if (response?.statusCode === 304) {
+    return;
+  }
 
   await optionallySetLastModifiedTime(res, options);
   /// Not needed before
@@ -360,18 +364,18 @@ export function downloadStreamingResourceWithHook(
       res.downloadStartTimestamp = Date.now();
       res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
     }
-    if (!downloadError) {
-      await streamingDownloadToFile(
+    try {
+      const response = await streamingDownloadToFile(
         res as (Resource & { downloadStartTimestamp: number }), requestOptions);
-      await optionallySetLastModifiedTime(res, options);
-    } else {
-      try {
-        await streamingDownloadToFile(
-          res as (Resource & { downloadStartTimestamp: number }), requestOptions);
-        await optionallySetLastModifiedTime(res, options);
-      } catch (e) {
-        await downloadError(e, res, requestOptions, options, pipeline);
+      if (response?.statusCode === 304) {
+        return;
       }
+      await optionallySetLastModifiedTime(res, options);
+    } catch (e) {
+      if (!downloadError) {
+        throw e;
+      }
+      await downloadError(e, res, requestOptions, options, pipeline);
     }
     res.finishTimestamp = Date.now();
     res.downloadTime =

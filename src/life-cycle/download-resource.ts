@@ -49,6 +49,9 @@ export async function getRetry(
     try {
       optionsClone = Object.assign({}, options);
       res = (await got(url, optionsClone)) as Response<Buffer | string>;
+      if (res?.statusCode === 304) {
+        return res;
+      }
       if (!res || !res.body || !res.body.length) {
         logger.retry.warn(i, url, 'manually retry on empty response or body',
           res && res.body);
@@ -118,6 +121,9 @@ export async function requestForResource(
       return undefined;
     }
     throw e;
+  }
+  if (response?.statusCode === 304) {
+    return undefined;
   }
   if (!response) {
     const resource = res as Resource;

@@ -36,7 +36,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     if (workerCount < 1) {
       workerCount = 1;
     }
-    const overrideOptions = options as Partial<MultiThreadDownloaderOptions>;
+    const workerOptions = options as Partial<MultiThreadDownloaderOptions>;
     this._pool = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
       // worker script should be compiled to .js
       // Resolve relative to this module's own URL: the compiled output is ESM,
@@ -44,10 +44,10 @@ export class MultiThreadDownloader extends AbstractDownloader {
       // because @types/node declares it as a global; it would throw a
       // ReferenceError at runtime. fileURLToPath(import.meta.url) is the
       // ESM-safe equivalent (same pattern as read-or-copy-local-resource.ts).
-      overrideOptions?.pathToWorker ||
+      workerOptions.pathToWorker ||
         path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'worker.js'),
-      {pathToOptions: this.pathToOptions, overrideOptions},
-      overrideOptions?.maxLoad || -1,
+      {pathToOptions: this.pathToOptions, overrideOptions: this._overrideOptions},
+      workerOptions.maxLoad || -1,
       this._workerFactory
     );
     for (const info of this.pool.workers) {

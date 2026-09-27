@@ -1,7 +1,12 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import type {RequestError, RetryObject} from 'got';
 // noinspection ES6PreferShortImport
-import {calculateFastDelay} from '../src/options.js';
+import {
+  calculateFastDelay,
+  defaultDownloadOptions,
+  mergeOverrideOptions
+} from '../src/options.js';
+import {defaultLifeCycle} from '../src/life-cycle/default-life-cycle.js';
 
 jest.mock('log4js', () => ({
   configure: jest.fn(),
@@ -55,6 +60,45 @@ function makeRetryObject(overrides: {
     computedValue: 0,
   } as unknown as RetryObject;
 }
+
+describe('mergeOverrideOptions', () => {
+  test('preserves cloneable overrides when merging module request hooks', () => {
+    const beforeRequest = () => {};
+    const base = defaultDownloadOptions({
+      ...defaultLifeCycle(),
+      localRoot: 'root',
+      req: {
+        headers: {'x-base': 'base'},
+        hooks: {beforeRequest: [beforeRequest]}
+      },
+      meta: Object.freeze({base: true})
+    });
+    const overrides = Object.freeze({
+      concurrency: 2,
+      meta: Object.freeze({override: true}),
+      req: Object.freeze({
+        headers: Object.freeze({'x-override': 'override'}),
+        retry: Object.freeze({limit: 0})
+      })
+    });
+    const original = structuredClone(overrides);
+
+    const merged = mergeOverrideOptions(base, overrides);
+
+    expect(overrides).toEqual(original);
+    expect(structuredClone(overrides)).toEqual(original);
+    expect(merged.meta).toEqual({base: true, override: true});
+    expect(merged.req.headers).toMatchObject({
+      'x-base': 'base', 'x-override': 'override'
+    });
+    expect(merged.req.hooks?.beforeRequest).toContain(beforeRequest);
+    expect(merged.req.hooks?.beforeRetry?.length).toBeGreaterThan(0);
+    expect(merged.req.retry).toMatchObject({limit: 0});
+    expect(base.concurrency).toBe(12);
+    expect(base.meta).toEqual({base: true});
+    expect(base.req.headers).toEqual({'x-base': 'base'});
+  });
+});
 
 describe('calculateFastDelay', function () {
   test('returns 0 when attemptCount exceeds limit', () => {

@@ -5,5 +5,5 @@ const {taskPort} = workerData.workerChannels;
 parentPort.postMessage({type: 'ready'});
 
 taskPort.addListener('message', () => {
-  process.exit(1);
+  process.exit(workerData.exitCode ?? 1);
 });

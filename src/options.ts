@@ -371,8 +371,9 @@ export function mergeOverrideOptions(
   if (!overrideOptions) {
     return opt;
   }
+  const merged: DownloadOptions = Object.assign({}, opt, overrideOptions);
   if (opt.meta && overrideOptions.meta) {
-    overrideOptions.meta = Object.assign(opt.meta, overrideOptions.meta);
+    merged.meta = Object.assign({}, opt.meta, overrideOptions.meta);
   }
   if (opt.req && overrideOptions.req) {
     const options = got.defaults.options;
@@ -382,7 +383,7 @@ export function mergeOverrideOptions(
     // Will try to find a better way as there is no public api for this
     // See https://github.com/website-local/website-scrap-engine/issues/1112
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    overrideOptions.req = (mergedOptions as any)._internals;
+    merged.req = (mergedOptions as any)._internals;
   }
-  return checkDownloadOptions(Object.assign(opt, overrideOptions));
+  return checkDownloadOptions(merged);
 }
