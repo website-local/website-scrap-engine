@@ -5,7 +5,7 @@ import type {Resource} from '../resource.js';
 import {generateSavePath, ResourceType} from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
 import * as logger from '../logger/logger.js';
-import {isUrlHttp, sleep} from '../util.js';
+import {isUrlHttp} from '../util.js';
 import URI from 'urijs';
 
 /** Take logs before retry */
@@ -42,54 +42,8 @@ export async function getRetry(
   url: string,
   options: OptionsInit
 ): Promise<Response<Buffer | string> | void> {
-  let res: Response<Buffer | string> | void = void 0;
-  let err: DownloadError | void = void 0, optionsClone: OptionsInit;
-  for (let i = 0; i < 25; i++) {
-    err = void 0;
-    try {
-      optionsClone = Object.assign({}, options);
-      res = (await got(url, optionsClone)) as Response<Buffer | string>;
-      if (res?.statusCode === 304) {
-        return res;
-      }
-      if (!res || !res.body || !res.body.length) {
-        logger.retry.warn(i, url, 'manually retry on empty response or body',
-          res && res.body);
-        continue;
-      }
-      break;
-    } catch (e) {
-      err = e as DownloadError | void;
-      if (err && err.message === 'premature close') {
-        if (err.retryLimitExceeded) {
-          throw e;
-        }
-        logger.retry.warn(i, url, 'manually retry on premature close',
-          err.name, err.code, err.event, err.message);
-        await sleep(i * 200);
-        continue;
-      }
-      // these events might be accidentally unhandled
-      if (err && !err.retryLimitExceeded &&
-        (err.name === 'RequestError' || err.name === 'TimeoutError') &&
-        // RequestError: Cannot read property 'request' of undefined
-        // at Object.exports.default (got\dist\source\core\utils\timed-out.js:56:23)
-        // error.code === undefined
-        (err.code === 'ETIMEDOUT' || err.code === undefined)) {
-        logger.retry.warn(i, url, `manually retry on ${err.event} timeout`,
-          err.name, err.code, err.message);
-        await sleep(i * 300);
-        continue;
-      }
-      throw e;
-    }
-  }
-  if (err) {
-    logger.error.error(url, 'no more retries on premature close or timeout',
-      err.message, err.name, err);
-    throw err;
-  }
-  return res;
+  // Got owns retry limits and hooks; successful empty bodies are valid responses.
+  return (await got(url, {...options})) as Response<Buffer | string>;
 }
 
 export async function requestForResource(
@@ -209,7 +163,8 @@ export async function downloadResource(
     }
     if (options.meta.detectIncompleteHtml &&
       (typeof downloadedResource.body === 'string' ||
-        Buffer.isBuffer(downloadedResource.body))) {
+        Buffer.isBuffer(downloadedResource.body)) &&
+      downloadedResource.body.length > 0) {
       if (!downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
         logger.error.info('Detected incomplete html, try again',
           downloadedResource.downloadLink);
