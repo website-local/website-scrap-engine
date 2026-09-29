@@ -1,3 +1,37 @@
+0.11.0
+============
+
+**BREAKING CHANGE** — Node.js 20.19.0 or newer is now required.
+
+Performance
+------------
+* **process-css: remove repeated URL scans** — Deduplicate URLs with a `Set` while preserving first-seen order and every match position used for rewriting.
+* **existing-resource: use asynchronous metadata checks** — Reuse one `fs.promises.stat()` result per download/save phase for the hook and timestamp comparison. Check again before saving to observe files changed during the download.
+
+Fix
+------------
+* **download: honor configured retries and accept empty responses** — Let Got enforce retry limits, methods, and hooks for transport failures. Successful empty HTTP 200/204 and HEAD responses now complete after one request instead of entering an extra 25-attempt loop; empty HTML also bypasses incomplete-HTML retries.
+* **download: preserve cached files on HTTP 304** — Stop buffered and streaming downloads without retrying or overwriting the existing file when the server reports that it is unchanged.
+* **resource: preserve binary encoding** — Keep explicit `null` request encoding so binary content is saved without text conversion.
+* **worker: preserve configuration across threads** — Pass static overrides to workers and merge options without mutating the caller's request configuration. Resolve the default worker entry point correctly in ESM.
+* **worker-pool: stop dispatching to failed workers** — Reject affected tasks, clear failed-worker load, and let queued work proceed on healthy workers or reject promptly when none remain.
+* **process-html: preserve literal meta-refresh paths** — Keep dollar sequences such as `$$` unchanged when replacing a refresh URL.
+* **download-streaming-resource: allow local-file fallback** — Pass non-HTTP resources through to the local-file download handler.
+* **npm: include public URI declarations** — Ship the existing `@types/urijs` dependency so TypeScript consumers can resolve the URI types used by the resource and lifecycle APIs.
+
+Breaking Changes
+------------
+* The minimum Node.js version increases from `18.17.0` to `20.19.0`, aligning the package with its existing runtime dependencies and the Node 20 development-tooling minimum. CI covers the minimum version and Node 20, 22, and 24.
+* Applications relying on automatic retries of successful empty responses must implement that policy explicitly. Transport retries use `req.retry`.
+
+Test
+------------
+* Add regression coverage for retry limits and hooks, empty and conditional responses, binary persistence, real worker startup and configuration, failed workers, repeated CSS URLs, and local files changed during downloads.
+
+Misc
+------------
+* Update development dependencies and pin patched versions for previously identified dependency advisories.
+
 0.10.0
 ============
 

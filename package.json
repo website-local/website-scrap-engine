@@ -1,12 +1,12 @@
 {
   "name": "website-scrap-engine",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Configurable website scraper in typescript",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('lib',{force:true,recursive:true})\"",
@@ -20,6 +20,7 @@
     "postinstall": "node -e \"var f='fake-undici.d.ts',t='node_modules/cheerio/node_modules/undici/index.d.ts';try{require('fs').copyFileSync(f,t)}catch(e){}\""
   },
   "dependencies": {
+    "@types/urijs": "^1.19.26",
     "cheerio": "^1.2.0",
     "got": "^13.0.0",
     "p-queue": "^9.3.3",
@@ -30,7 +31,6 @@
     "@eslint/js": "^10.0.1",
     "@jest/globals": "^30.5.2",
     "@types/node": "^26.6.2",
-    "@types/urijs": "^1.19.26",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
     "jest": "^30.5.2",

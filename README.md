@@ -23,7 +23,8 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 npm install website-scrap-engine
 ```
 
-Requires Node.js >= 18.17.0.
+Requires Node.js >= 20.19.0. Development tooling supports Node.js 20.19+,
+22.13+, or 24+.
 
 ## Usage
 
