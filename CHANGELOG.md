@@ -30,7 +30,7 @@ Test
 
 Misc
 ------------
-* Update development dependencies and pin patched versions for previously identified dependency advisories.
+* Update development dependencies, including security fixes in `brace-expansion` 5.0.9 and `js-yaml` 3.15.2.
 
 0.10.0
 ============
