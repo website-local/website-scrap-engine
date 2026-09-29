@@ -12,19 +12,16 @@ import type {
 import type {StaticDownloadOptions} from '../../src/options.js';
 import type {Stats} from 'node:fs';
 
-const mockExistsSync = jest.fn().mockReturnValue(false);
-const mockStatSync = jest.fn();
+const mockStat = jest.fn<(path: string) => Promise<Stats>>();
 
 jest.unstable_mockModule('node:fs', () => {
   const mod = {
-    existsSync: mockExistsSync,
-    statSync: mockStatSync,
     // needed by other transitive imports
     realpath: jest.fn(),
     promises: {
       writeFile: jest.fn(),
       utimes: jest.fn(),
-      stat: jest.fn(),
+      stat: mockStat,
       access: jest.fn(),
     },
     default: {},
@@ -104,8 +101,8 @@ function makeResource(url?: string): Resource {
 
 describe('existingResource: download stage', () => {
   beforeEach(() => {
-    mockExistsSync.mockReset().mockReturnValue(false);
-    mockStatSync.mockReset();
+    mockStat.mockReset().mockRejectedValue(
+      Object.assign(new Error('ENOENT'), {code: 'ENOENT'}));
   });
 
   test('no callback — proceeds normally', async () => {
@@ -116,7 +113,7 @@ describe('existingResource: download stage', () => {
     const result = await pipeline.download(res);
     expect(result).toBeDefined();
     expect(result!.body).toBe('<html></html>');
-    expect(mockExistsSync).not.toHaveBeenCalled();
+    expect(mockStat).not.toHaveBeenCalled();
   });
 
   test('file does not exist — proceeds normally', async () => {
@@ -136,8 +133,7 @@ describe('existingResource: download stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeResource();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.download(res);
     expect(result).toBeUndefined();
@@ -155,8 +151,7 @@ describe('existingResource: download stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeResource();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.download(res);
     expect(result).toBeDefined();
@@ -169,8 +164,7 @@ describe('existingResource: download stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeResource();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.download(res);
     expect(result).toBeDefined();
@@ -194,20 +188,20 @@ describe('existingResource: download stage', () => {
     const origHeaders = {referer: 'https://example.com/'};
     const origOptions: RequestOptions = {headers: origHeaders};
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     await pipeline.download(res, origOptions);
 
     expect(capturedOptions).toBeDefined();
     expect(capturedOptions!.headers).toHaveProperty(
       'if-modified-since', fakeStat.mtime.toUTCString());
+    expect(mockStat).toHaveBeenCalledTimes(1);
     // Original should NOT be mutated
     expect(origHeaders).not.toHaveProperty('if-modified-since');
     expect(capturedOptions!.headers).toHaveProperty('referer', 'https://example.com/');
   });
 
-  test('ifModifiedSince — statSync fails for mtime, omits header', async () => {
+  test('ifModifiedSince — unavailable metadata omits the header', async () => {
     const cb = jest.fn<ExistingResourceFunc>().mockReturnValue('ifModifiedSince');
     let capturedOptions: RequestOptions | undefined;
     const lc = makeLifeCycle(cb);
@@ -221,30 +215,24 @@ describe('existingResource: download stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeResource();
 
-    let callCount = 0;
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) return fakeStat;
-      throw new Error('ENOENT');
-    });
+    mockStat.mockRejectedValue(
+      Object.assign(new Error('ENOENT'), {code: 'ENOENT'}));
 
     await pipeline.download(res, {});
 
     expect(capturedOptions).toBeDefined();
     expect(capturedOptions!.headers?.['if-modified-since']).toBeUndefined();
+    expect(cb).not.toHaveBeenCalled();
   });
 
-  test('TOCTOU — statSync throws after existsSync, proceeds normally', async () => {
+  test('metadata lookup fails — proceeds normally', async () => {
     const cb = jest.fn<ExistingResourceFunc>();
     const lc = makeLifeCycle(cb);
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeResource();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockImplementation(() => {
-      throw Object.assign(new Error('ENOENT'), {code: 'ENOENT'});
-    });
+    mockStat.mockRejectedValue(
+      Object.assign(new Error('EACCES'), {code: 'EACCES'}));
 
     const result = await pipeline.download(res);
     expect(result).toBeDefined();
@@ -257,8 +245,7 @@ describe('existingResource: download stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeResource();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue({
+    mockStat.mockResolvedValue({
       ...fakeStat,
       isFile: () => false,
     });
@@ -275,20 +262,41 @@ describe('existingResource: download stage', () => {
     const res = makeResource();
     res.shouldBeDiscardedFromDownload = true;
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.download(res);
     expect(result).toBeUndefined();
     expect(cb).not.toHaveBeenCalled();
-    expect(mockExistsSync).not.toHaveBeenCalled();
+    expect(mockStat).not.toHaveBeenCalled();
+  });
+
+  test('waits for metadata before deciding whether to download', async () => {
+    const cb = jest.fn<ExistingResourceFunc>().mockReturnValue('skip');
+    const lc = makeLifeCycle(cb);
+    const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
+    const res = makeResource();
+    let resolveStat!: (stat: Stats) => void;
+    mockStat.mockReturnValue(new Promise(resolve => {
+      resolveStat = resolve;
+    }));
+
+    const pending = pipeline.download(res);
+    expect(mockStat).toHaveBeenCalledTimes(1);
+    expect(cb).not.toHaveBeenCalled();
+    expect(res.body).toBeUndefined();
+
+    resolveStat(fakeStat);
+    expect(await pending).toBeUndefined();
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(res.body).toBeUndefined();
+    expect(res.shouldBeDiscardedFromDownload).toBe(true);
   });
 });
 
 describe('existingResource: saveToDisk stage', () => {
   beforeEach(() => {
-    mockExistsSync.mockReset().mockReturnValue(false);
-    mockStatSync.mockReset();
+    mockStat.mockReset().mockRejectedValue(
+      Object.assign(new Error('ENOENT'), {code: 'ENOENT'}));
   });
 
   function makeDownloaded(): DownloadResource {
@@ -307,7 +315,7 @@ describe('existingResource: saveToDisk stage', () => {
 
     const result = await pipeline.saveToDisk(res);
     expect(result).toBeUndefined();
-    expect(mockExistsSync).not.toHaveBeenCalled();
+    expect(mockStat).not.toHaveBeenCalled();
   });
 
   test('file does not exist — proceeds normally', async () => {
@@ -328,8 +336,7 @@ describe('existingResource: saveToDisk stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeDownloaded();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.saveToDisk(res);
     expect(result).toBeUndefined();
@@ -344,8 +351,7 @@ describe('existingResource: saveToDisk stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeDownloaded();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.saveToDisk(res);
     expect(result).toBeUndefined();
@@ -360,8 +366,7 @@ describe('existingResource: saveToDisk stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeDownloaded();
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     await pipeline.saveToDisk(res);
     expect(saveFn).toHaveBeenCalledTimes(1);
@@ -380,8 +385,7 @@ describe('existingResource: saveToDisk stage', () => {
       mtime: new Date('2025-01-29T00:00:00Z'),
     } as unknown as Stats;
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(newerStat);
+    mockStat.mockResolvedValue(newerStat);
 
     const result = await pipeline.saveToDisk(res);
     expect(result).toBeUndefined();
@@ -401,8 +405,7 @@ describe('existingResource: saveToDisk stage', () => {
       mtime: new Date('2025-01-01T00:00:00Z'),
     } as unknown as Stats;
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(olderStat);
+    mockStat.mockResolvedValue(olderStat);
 
     await pipeline.saveToDisk(res);
     expect(saveFn).toHaveBeenCalledTimes(1);
@@ -417,8 +420,7 @@ describe('existingResource: saveToDisk stage', () => {
     const res = makeDownloaded();
     delete res.meta.headers!['last-modified'];
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     await pipeline.saveToDisk(res);
     expect(saveFn).toHaveBeenCalledTimes(1);
@@ -435,15 +437,15 @@ describe('existingResource: saveToDisk stage', () => {
       'last-modified': 'Wed, 15 Jan 2025 10:00:00 GMT'
     };
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.saveToDisk(res);
     expect(result).toBeUndefined();
     expect(saveFn).not.toHaveBeenCalled();
+    expect(mockStat).toHaveBeenCalledTimes(1);
   });
 
-  test('ifModifiedSince — TOCTOU during save-stage stat, proceeds with save', async () => {
+  test('ifModifiedSince — saves a file deleted during download', async () => {
     const cb = jest.fn<ExistingResourceFunc>().mockReturnValue('ifModifiedSince');
     const saveFn = jest.fn<SaveToDiskFunc>().mockReturnValue(undefined);
     const lc = makeLifeCycle(cb);
@@ -451,23 +453,42 @@ describe('existingResource: saveToDisk stage', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeDownloaded();
 
-    let statCallCount = 0;
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockImplementation(() => {
-      statCallCount++;
-      if (statCallCount <= 1) return fakeStat;
-      throw Object.assign(new Error('ENOENT'), {code: 'ENOENT'});
-    });
+    res.meta.headers = {'last-modified': 'Wed, 01 Jan 2025 00:00:00 GMT'};
+    mockStat.mockResolvedValueOnce(fakeStat).mockRejectedValueOnce(
+      Object.assign(new Error('ENOENT'), {code: 'ENOENT'}));
 
+    await pipeline.download(res);
     await pipeline.saveToDisk(res);
     expect(saveFn).toHaveBeenCalledTimes(1);
+    expect(mockStat).toHaveBeenCalledTimes(2);
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  test('ifModifiedSince — preserves a file updated during download', async () => {
+    const cb = jest.fn<ExistingResourceFunc>().mockReturnValue('ifModifiedSince');
+    const saveFn = jest.fn<SaveToDiskFunc>().mockReturnValue(undefined);
+    const lc = makeLifeCycle(cb);
+    lc.saveToDisk = [saveFn];
+    const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
+    const res = makeDownloaded();
+    const updatedStat = {...fakeStat, mtime: new Date('2025-01-29T00:00:00Z')};
+    mockStat.mockResolvedValueOnce(fakeStat).mockResolvedValueOnce(updatedStat);
+
+    await pipeline.download(res);
+    await pipeline.saveToDisk(res);
+
+    expect(saveFn).not.toHaveBeenCalled();
+    expect(mockStat).toHaveBeenCalledTimes(2);
+    expect(cb.mock.calls.map(([ctx]) => ctx.stage))
+      .toEqual(['download', 'saveToDisk']);
+    expect(cb.mock.calls[1][0].stat).toBe(updatedStat);
   });
 });
 
 describe('existingResource: context object', () => {
   beforeEach(() => {
-    mockExistsSync.mockReset().mockReturnValue(false);
-    mockStatSync.mockReset();
+    mockStat.mockReset().mockRejectedValue(
+      Object.assign(new Error('ENOENT'), {code: 'ENOENT'}));
   });
 
   test('download stage passes correct context', async () => {
@@ -476,8 +497,7 @@ describe('existingResource: context object', () => {
     const pipeline = new PipelineExecutorImpl(lc, {}, fakeOpt);
     const res = makeResource('https://example.com/page');
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     await pipeline.download(res);
 
@@ -499,8 +519,7 @@ describe('existingResource: context object', () => {
     res.body = '<html></html>';
     res.meta.headers = {'last-modified': 'Wed, 22 Jan 2025 12:00:00 GMT'};
 
-    mockExistsSync.mockReturnValue(true);
-    mockStatSync.mockReturnValue(fakeStat);
+    mockStat.mockResolvedValue(fakeStat);
 
     await pipeline.saveToDisk(res as DownloadResource);
 

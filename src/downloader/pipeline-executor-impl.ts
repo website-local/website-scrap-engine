@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {existsSync, statSync} from 'node:fs';
+import {promises as fs} from 'node:fs';
 import type {Stats} from 'node:fs';
 import URI from 'urijs';
 import type {StaticDownloadOptions} from '../options.js';
@@ -305,19 +305,16 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       options = this.options;
     }
     if (this.lifeCycle.existingResource) {
-      const action = this._checkExistingResource(res, 'download');
-      if (action === 'skip') {
+      const existing = await this._checkExistingResource(res, 'download');
+      if (existing?.action === 'skip') {
         res.shouldBeDiscardedFromDownload = true;
         return undefined;
       }
-      if (action === 'ifModifiedSince') {
-        const mtime = this._getExistingFileMtime(res);
-        if (mtime) {
-          requestOptions = Object.assign({}, requestOptions);
-          requestOptions.headers = Object.assign({}, requestOptions.headers, {
-            'if-modified-since': mtime
-          });
-        }
+      if (existing?.action === 'ifModifiedSince') {
+        requestOptions = Object.assign({}, requestOptions);
+        requestOptions.headers = Object.assign({}, requestOptions.headers, {
+          'if-modified-since': existing.stat.mtime.toUTCString()
+        });
       }
     }
     let downloadedResource: DownloadResource | Resource | void = res;
@@ -369,25 +366,15 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       options = this.options;
     }
     if (this.lifeCycle.existingResource) {
-      const action = this._checkExistingResource(res, 'saveToDisk');
-      if (action === 'skip' || action === 'skipSave') {
+      const existing = await this._checkExistingResource(res, 'saveToDisk');
+      if (existing?.action === 'skip' || existing?.action === 'skipSave') {
         return undefined;
       }
-      if (action === 'ifModifiedSince') {
+      if (existing?.action === 'ifModifiedSince') {
         const remoteLastMod = res.meta?.headers?.['last-modified'];
-        if (remoteLastMod) {
-          const localPath = path.join(
-            res.localRoot ?? this.options.localRoot,
-            decodeURI(res.savePath)
-          );
-          try {
-            const localMtime = statSync(localPath).mtime;
-            if (new Date(remoteLastMod as string) <= localMtime) {
-              return undefined;
-            }
-          } catch {
-            // file removed between check and stat, proceed with save
-          }
+        if (remoteLastMod &&
+          new Date(remoteLastMod as string) <= existing.stat.mtime) {
+          return undefined;
         }
       }
     }
@@ -431,37 +418,26 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     }
   }
 
-  private _checkExistingResource(
+  private async _checkExistingResource(
     res: Resource, stage: ExistingResourceStage
-  ): ExistingResourceAction | void {
+  ): Promise<{action: ExistingResourceAction; stat: Stats} | void> {
     const localPath = path.join(
       res.localRoot ?? this.options.localRoot,
       decodeURI(res.savePath)
     );
-    if (!existsSync(localPath)) return undefined;
     let stat: Stats;
     try {
-      stat = statSync(localPath);
+      stat = await fs.stat(localPath);
     } catch {
-      // TOCTOU: file deleted between existsSync and statSync
       return undefined;
     }
     if (!stat.isFile()) return undefined;
-    return this.lifeCycle.existingResource!({
-      res, stage, localPath, stat, options: this.options
-    });
-  }
-
-  private _getExistingFileMtime(res: Resource): string | undefined {
-    const localPath = path.join(
-      res.localRoot ?? this.options.localRoot,
-      decodeURI(res.savePath)
-    );
-    try {
-      return statSync(localPath).mtime.toUTCString();
-    } catch {
-      return undefined;
-    }
+    return {
+      action: this.lifeCycle.existingResource!({
+        res, stage, localPath, stat, options: this.options
+      }),
+      stat
+    };
   }
 
   private _resolveUri(
