@@ -34,13 +34,10 @@ function captureStart(match: RegExpExecArray, captureIndex: number): number {
  * Ignores duplicate urls and embedded data resources.
  */
 export default function parseCssUrls(cssText: string): string[] {
-  return parseCssUrlMatches(cssText)
-    .map(match => match.url)
-    .filter((url, index, urls) => urls.indexOf(url) === index);
+  return [...new Set(parseCssUrlMatches(cssText).map(match => match.url))];
 }
 
 export function parseCssUrlMatches(cssText: string): CssUrlMatch[] {
-  const urls: string[] = [];
   const matches: CssUrlMatch[] = [];
   // Preserve text length so match offsets still point into the original CSS.
   const uncommentedCssText = cssText.replace(commentRegexp,
@@ -52,9 +49,6 @@ export function parseCssUrlMatches(cssText: string): CssUrlMatch[] {
     if (!url || captureIndex === undefined ||
       embeddedRegexp.test(url.trim())) {
       continue;
-    }
-    if (!urls.includes(url)) {
-      urls.push(url);
     }
     const start = captureStart(match, captureIndex);
     matches.push({

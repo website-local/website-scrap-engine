@@ -36,4 +36,21 @@ describe('parseCssUrls', () => {
       }
     ]);
   });
+
+  test('keeps every repeated match and deduplicates in first-seen order', () => {
+    const cssText = '@import "b.css"; /* url(ignored.png) */ ' +
+      '.a { x: url("a.png"); y: url(a.png); z: url("b.css"); }';
+    const urls = ['b.css', 'a.png', 'a.png', 'b.css'];
+    const starts = [
+      cssText.indexOf('b.css'),
+      cssText.indexOf('a.png'),
+      cssText.lastIndexOf('a.png'),
+      cssText.lastIndexOf('b.css')
+    ];
+
+    expect(parseCssUrlMatches(cssText)).toEqual(urls.map((url, index) => ({
+      url, start: starts[index], end: starts[index] + url.length
+    })));
+    expect(parseCssUrls(cssText)).toEqual(['b.css', 'a.png']);
+  });
 });
