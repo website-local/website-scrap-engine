@@ -12,11 +12,27 @@ import {
   generateSavePath,
   normalizeResource,
   prepareResourceForClone,
+  replacementUri,
   resolveFileUrl,
   ResourceType,
   urlOfSavePath
 } from '../src/resource.js';
 import URI from 'urijs';
+
+test('replacement path fast path matches URIjs, including fallback and directory cases', () => {
+  const paths = ['a', 'a/', 'a/b', 'a/b/', 'a/c.html', 'a/b/c.html', 'z/q.html',
+    'a/x%20y', 'a/b#c', 'a/b?c', 'a/../b', 'a/路径', 'C:\\a\\b', '',
+    'a/.hidden', 'a//b', '/a/b', 'a/a:b', 'a/a%2fb', 'a/a%23b', 'a/foo..bar'];
+  for (let index = 0; index < 40; index++) {
+    paths.push('host/dir-' + index % 5 + '/page-' + index + '.html');
+  }
+  for (const savePath of paths) {
+    for (const refSavePath of paths) {
+      const expected = URI(urlOfSavePath(savePath)).relativeTo(urlOfSavePath(refSavePath));
+      expect(replacementUri(savePath, refSavePath).toString()).toBe(expected.toString());
+    }
+  }
+});
 
 describe('resource', function () {
   test('html-to-html-resource', () => {

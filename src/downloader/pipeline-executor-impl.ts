@@ -1,5 +1,6 @@
 import {currentCrawlContext, throwIfCancelled, markResourceDownloaded, markResourceSkipped} from '../crawl-context.js';
 import {normalizeResource} from '../resource.js';
+import {fullSavePathHooks} from '../life-cycle/save-path-hook-state.js';
 import {checkResourceBody, accountBufferedBody} from '../resource-limits.js';
 import path from 'node:path';
 import {promises as fs} from 'node:fs';
@@ -222,8 +223,11 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   ): AsyncResult<SavePathState | void> {
     const isHtml = type === ResourceType.Html;
     const localSrcRoot = this.options.localSrcRoot;
-    let savePath = replacePathHasError ? rawUrl : builtinGenerateSavePath(
-      uri, isHtml, keepSearch, localSrcRoot);
+    const firstHook = this.lifeCycle.generateSavePath?.[0];
+    // A full generator overwrites this input; transforming hooks still receive
+    // the built-in path, including when they precede a legacy adapter.
+    let savePath = replacePathHasError ? rawUrl : firstHook && fullSavePathHooks.has(firstHook) ? '' :
+      builtinGenerateSavePath(uri, isHtml, keepSearch, localSrcRoot);
     let resultRefSavePath = refSavePath || builtinGenerateSavePath(
       URI(refUrl), refType === ResourceType.Html, false, localSrcRoot);
 

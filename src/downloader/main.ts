@@ -70,8 +70,8 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     return uri.toString();
   }
 
-  protected retainRedirectAlias(url: string): void {
-    const key = this.canonicalUrl(url);
+  protected retainRedirectAlias(url: string, parsed?: URI): void {
+    const key = this.canonicalUrl(url, parsed);
     this.retainedAliases.add(key);
     this.queuedUrl.add(key);
   }
@@ -233,7 +233,10 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
         if (!succeeded) this.releaseFailedReservation(url);
         else {
           this.signal.throwIfAborted();
-          if (progress.downloaded && resource.redirectedUrl) this.retainRedirectAlias(resource.redirectedUrl);
+          if (progress.downloaded && resource.redirectedUrl) {
+            this.retainRedirectAlias(resource.redirectedUrl,
+              resource.uri.toString() === resource.redirectedUrl ? resource.uri : undefined);
+          }
         }
       } catch (error) {
         succeeded = false;

@@ -42,6 +42,7 @@ Crawl control and reliability
 Fixes and performance
 ------------
 
+* Calculate relative replacement paths directly for ordinary local filenames, with URIjs fallback for encoded and unusual paths. Reuse matching parsed response URLs and skip unused default path generation before the built-in legacy full-path adapter.
 * Use Got's public option snapshots instead of private history-bearing internals. Preserve hook/agent configuration without mutation and wrap Got 16 binary responses as Buffer views without copying bytes.
 * Retain content-length validation, bounded transport retries and range-resume behavior; await previous streams before retrying and remove legacy manual retry timers.
 * Normalize resources between lifecycle hooks so URL mutations and cloned objects cannot pass stale URI fields to subsequent hooks. Preserve binary view bounds and explicit encodings.

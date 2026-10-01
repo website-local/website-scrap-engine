@@ -1,5 +1,9 @@
 # Profile-guided follow-up — 2026-10-01
 
+The subsequent [engine-only investigation](engine-performance-followup.md)
+keeps MDN source constant between variants and assesses the requested all-suite
+comparison against 0.9.1. That performance target remains unmet.
+
 Committed the engine fixes as `5e15fc3` and MDN's direct single-thread import
 as `9d5359c`. Fresh profiles identified a further MDN cleanup improvement,
 committed in mdn-local as `a15c59c`. No worker-pool startup or lifetime change

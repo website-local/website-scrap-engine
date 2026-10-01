@@ -1,4 +1,5 @@
 import {load} from 'cheerio';
+import {fullSavePathHooks} from './save-path-hook-state.js';
 import type {Resource, ResourceEncoding} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {
@@ -175,10 +176,12 @@ export function wrapLegacyGenerateSavePath(
   legacyFn: (uri: URI, isHtml?: boolean, keepSearch?: boolean,
     localSrcRoot?: string) => string
 ): GenerateSavePathFunc {
-  return (_savePath, ctx) => legacyFn(
+  const hook: GenerateSavePathFunc = (_savePath, ctx) => legacyFn(
     ctx.uri,
     ctx.type === ResourceType.Html,
     !ctx.options.deduplicateStripSearch,
     ctx.options.localSrcRoot
   );
+  fullSavePathHooks.add(hook);
+  return hook;
 }

@@ -461,6 +461,23 @@ export const urlOfSavePath = (savePath: string): string => {
   return `file:///${savePath}`;
 };
 
+/** @internal Avoid URL parsing for already-normalized, unescaped local paths. */
+export function replacementUri(savePath: string, refSavePath: string): URI {
+  // URIjs must handle encoded characters, query/hash delimiters, dot segments,
+  // drive letters and other paths whose URL normalization changes their meaning.
+  const simplePath = /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*(?:\/[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)*\/?$/;
+  if (simplePath.test(savePath) && simplePath.test(refSavePath)) {
+    if (savePath === refSavePath) return URI('');
+    const base = refSavePath.endsWith('/') ? refSavePath : path.posix.dirname(refSavePath);
+    const directory = savePath.endsWith('/') ? savePath : path.posix.dirname(savePath);
+    let relative = path.posix.relative('/' + base, '/' + directory);
+    if (relative) relative += '/';
+    relative += savePath.endsWith('/') ? (relative ? '' : './') : path.posix.basename(savePath);
+    return URI(relative);
+  }
+  return URI(urlOfSavePath(savePath)).relativeTo(urlOfSavePath(refSavePath));
+}
+
 /**
  * Check an absolute uri
  * @param uri {@link RawResource.uri}
@@ -653,7 +670,7 @@ export function createResourceWithUris({
   }
 
   const replaceUri = replacePathHasError ? URI(rawUrl) :
-    URI(urlOfSavePath(savePath)).relativeTo(urlOfSavePath(refSavePath));
+    replacementUri(savePath, refSavePath);
 
   // recover hash
   if (uri.hash()) {

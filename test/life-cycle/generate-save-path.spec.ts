@@ -256,3 +256,23 @@ test('cached reference parsing does not share mutable state between resources', 
   expect(second!.url).toBe('https://example.com/second');
   expect(second!.refUri).not.toBe(first!.refUri);
 });
+
+test('legacy full generators preserve transforming hook order and reference paths', async () => {
+  const legacy = wrapLegacyGenerateSavePath(() => 'custom/page.html');
+  const inputs: string[] = [];
+  const transform: GenerateSavePathFunc = async (savePath, context) => {
+    inputs.push(savePath);
+    expect(context.refSavePath).toBe(normalize('example.com/base.html'));
+    return savePath;
+  };
+  for (const hooks of [[legacy, transform], [transform, legacy, transform]]) {
+    const pipeline = new PipelineExecutorImpl(makeLifeCycle(hooks), {}, fakeOpt);
+    const res = await pipeline.createResource(ResourceType.Html, 1, '/page',
+      'https://example.com/base.html', undefined, undefined,
+      normalize('example.com/base.html'), ResourceType.Html);
+    expect(res!.savePath).toBe('custom/page.html');
+    expect(res!.refSavePath).toBe(normalize('example.com/base.html'));
+    expect(res!.replacePath).toBe('../custom/page.html');
+  }
+  expect(inputs).toEqual(['custom/page.html', normalize('example.com/page.html'), 'custom/page.html']);
+});
