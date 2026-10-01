@@ -168,3 +168,21 @@ a guarantee about arbitrary hooks or indefinitely long crawls. Worker heaps are
 not sampled independently; successful exits establish that those isolates ended.
 The workload uses a deterministic download hook, so HTTP failure behavior remains
 covered by the separate transport, lifecycle, and stalled-origin harnesses.
+
+## Avoiding a redundant bounded-read copy
+
+The bounded local reader now returns a single chunk directly when it owns its
+entire backing buffer. It still concatenates multiple chunks and compacts slices,
+so a small file does not retain an oversized stream buffer during processing or
+worker transport. The change avoids one 64 KiB copy per file in the local fixture
+(3 MiB across 48 files) without weakening the incremental byte checks.
+
+Five alternating samples with the 8 MiB budget enabled in both versions compared
+`20ad94a` with this change. Single-thread median total time fell from 64.9 to
+57.3 ms (-11.8%); worker mode changed from 585.6 to 575.7 ms (-1.7%). All output
+hashes matched. The build/typecheck and 13 resource-limit/local-source tests pass
+on Node 24. A minimum-Node local fixture check validates exact output on Node
+22.13. [Raw samples and source fingerprint](evidence/read-copy-performance.json)
+make the comparison reviewable. This is an allocation reduction and a measured
+local-workload improvement, not evidence that byte accounting is free or that
+every crawl becomes faster.

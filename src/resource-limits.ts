@@ -55,6 +55,10 @@ export async function readResourceFile(
     if (accounting) await accounting;
     chunks.push(chunk);
   }
-  const body = Buffer.concat(chunks, size);
+  // Reuse an owned single chunk, but compact slices so small files do not retain
+  // a full stream read buffer through processing or worker transfer.
+  const only = chunks.length === 1 ? chunks[0] : undefined;
+  const body = only && only.byteOffset === 0 && only.byteLength === only.buffer.byteLength ?
+    only : Buffer.concat(chunks, size);
   return encoding === null ? body : body.toString(encoding);
 }
