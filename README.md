@@ -11,7 +11,9 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 - `srcset`, Open Graph meta tags, inline styles, and SVG `xlink:href` support
 - Automatic URL-to-relative-path rewriting so saved sites work offline
 - Streaming download support for large binary resources
-- PQueue-based concurrency with runtime adjustment
+- Bounded scheduling with optional runtime concurrency adjustment
+- Per-resource outcomes, explicit retries, and cancellation with awaited cleanup
+- Staged file publication and crawl-local output conflict detection
 - URL deduplication with configurable search-param stripping
 - Configurable retry with exponential backoff, jitter, and `Retry-After` header support
 - Local `file://` source support for re-processing previously saved sites
@@ -63,13 +65,14 @@ export default defaultDownloadOptions({
 **Step 2: Create and run the downloader**
 
 ```ts
-import path from 'path';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {downloader} from 'website-scrap-engine';
 
 const {SingleThreadDownloader} = downloader;
 
 const d = new SingleThreadDownloader(
-  'file://' + path.resolve('my-options.js')
+  pathToFileURL(path.resolve('my-options.js')).href
 );
 await d.start();
 await d.onIdle();
@@ -81,11 +84,20 @@ For CPU-intensive workloads, use `MultiThreadDownloader` instead (see [Multi-Thr
 You can also pass override options as the second argument to the downloader constructor, which are merged into the options module's export:
 
 ```ts
-new SingleThreadDownloader('file://' + path.resolve('my-options.js'), {
+new SingleThreadDownloader(pathToFileURL(path.resolve('my-options.js')).href, {
   localRoot: '/different/path',
   concurrency: 8,
 });
 ```
+
+### Crawl limits and outcomes
+
+For large crawls, configure queue, discovery, resource-size and aggregate-body
+limits rather than relying on concurrency alone. `outcomes` records each URL's
+last attempt; `bufferedBytes` and `peakBufferedBytes` report body reservations.
+The byte budget excludes DOMs, metadata, stream buffers and temporary hook
+allocations, so allow additional memory headroom. See the
+[migration guide's scheduling and output details](MIGRATION-0.10.0.md).
 
 ### Adapter Helpers
 

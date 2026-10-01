@@ -1,58 +1,50 @@
 0.10.0 (unreleased)
 ============
 
-**BREAKING CHANGE** — Requires Node.js 22.13.0 or newer. See
+**BREAKING CHANGE** — Requires Node.js 22.13.0 or newer. Read
 [MIGRATION-0.10.0.md](MIGRATION-0.10.0.md) before upgrading from 0.9.1.
 
-Feature
+Breaking changes
 ------------
-* **downloader: expose consistent resource outcomes** — Track accepted attempts, acquisition, confirmed publications, skipping, failure, and cancellation across both downloader modes without retaining bodies. Count successful streams and local copies, and preserve explicit retry history.
-* **worker: own file publication in the parent** — Clean staged task output after worker crashes, timeouts, and forced cancellation before settling the attempt; preserve confirmed publication counts after a later crash.
-* **output: reject conflicting destinations** — Reserve paths per crawl and reject distinct URLs targeting the same output with `ERR_OUTPUT_CONFLICT`. Release unpublished failures while retaining ownership of confirmed files for same-URL retries.
-* **downloader: bound per-parent discovery** — Add `maxDiscoveredResources`, validate child bodies before worker cloning, and reject late submissions. Children submitted before a later parent failure remain independently eligible for processing.
-* **perf: avoid redundant output directory creation** — Create only missing directories while preserving containment checks, concurrent creation, and staged publication.
-* **perf: reuse owned chunks in bounded local reads** — Avoid copying a single full read buffer while compacting slices to prevent oversized backing-buffer retention.
-* **fix: back off concurrency on stalled downloads** — Replace inverted opt-in adjustment with bounded gradual growth and backoff, elapsed-time sampling, and reset on resume. Validate timer periods and preserve custom-policy metadata.
-* **downloader: account for aggregate buffered bodies** — Add `maxBufferedBytes`, current/peak reservation statistics, and parent-owned worker byte credits. Reject overflow, transfer child credits without double counting, and retain transferred-body reservations until failed workers exit.
-* **tooling: update compatible lint dependencies** — Use globals 17.13 and typescript-eslint 8.71 while retaining TypeScript 6 and Node 22 type definitions.
-* **install: remove declaration-copy postinstall** — Resolve the development Undici shim through TypeScript configuration, supporting clean and hoisted installs without modifying dependencies.
-* **tests: check complete TypeScript suite** — Run a separate source/test type check before Jest; retain Jest after measured Vitest and native-runner audits.
-* **Got 16: preserve Buffer responses** — Wrap binary responses without copying bytes, keeping Buffer-based hooks and incomplete-HTML retry checks working.
-* **redirects: preserve successful reservations** — A concurrent target failure no longer releases another request’s successful alias; aliases follow the same fragment/query normalization as admissions.
-* **resources: enforce optional byte limits** — `maxResourceBytes` limits HTTP bodies after decompression, local sources, and hook-provided bodies; oversized transfers preserve cached destinations and report `ERR_RESOURCE_SIZE_LIMIT` in both downloader modes.
-* **downloader: handle failed attempts consistently** — Exclude failed processing/saves from download counts and release failed URL reservations after task settlement for explicit retries. Falsy worker throws are reported as errors.
-* **scheduling: bound admissions and concurrency** — Add optional `maxResources`, `maxQueuedResources`, and `maxConcurrency` limits, with observable admission rejections that do not block recursive discovery.
-* **life-cycle: add save-path hooks (#731)** — Run composable `generateSavePath` hooks after type detection and before resource creation. Transform the default path or return `undefined` to discard a resource.
-* **worker: separate task and log channels (#491)** — Use dedicated MessagePorts for tasks/results and logs, with shutdown control on `parentPort` so queued logs can drain.
-* **worker: bound stalled tasks** — Optional `workerPool.taskTimeout` retires workers that stop replying. Message-decoding failures reject assigned tasks, while healthy workers continue queued work without replaying failed tasks.
-* **worker: cancel cooperatively** — Disposal aborts worker pipeline signals and awaits active hooks, with `workerPool.shutdownTimeout` bounding the grace period before termination.
-* **save: stage buffered output** — Buffered writes publish by rename after successful writing and a cancellation check, preserving cached destinations on write failure or cancellation before publication.
-* **save: contain buffered output** — Reject symlinked directories beneath `localRoot`; replacing destination-file symlinks leaves their former targets untouched.
-* **local files: stage streaming copies** — Local-file and URL-mount copies preserve destinations on failure/cancellation, enforce output containment, and honor the existing-resource save policy before publication.
-* **HTTP: stage streamed downloads** — Publish completed streams after the save-policy check, preserve cached bytes/timestamps on failure or 304, and wait for old streams to close before range retries. Remove legacy manual retry timers.
 
-Breaking Changes
-------------
-* Count successful streamed/local-copy acquisitions in `downloadedCount`; failed and cancelled attempts remain excluded. Streaming error hooks now propagate failure and do not run success hooks. Supplied empty-string bodies no longer trigger a new request.
-* Make log4js an optional peer dependency. File-logging adapter users must install `log4js` explicitly; default installations omit its dependency tree.
-* Raise the Node.js minimum from 18.17.0 to 22.13.0; upgrade Got from 13 to 16 and `p-queue` from 8 to 9. Got options use public snapshots instead of private internals.
-* Require normalized `Resource.uri`, `refUri`, and `replaceUri` instances. Worker snapshots preserve cloneable nested metadata and reject unsupported values.
-* Normalize returned resources between individual lifecycle hooks, so URL changes and cloned resources cannot pass stale URI fields to the next hook.
-* Downloader workers exchange validated `WireResource` snapshots in both directions. Custom workers must omit URI/DOM instances and return a resource array; malformed child batches are rejected before admission.
-* Replace the optional full `ProcessingLifeCycle.generateSavePath` callback with a required `GenerateSavePathFunc[]`. Add `generateSavePath: []` when constructing a lifecycle manually; use `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an existing generator.
-* Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`. Pipeline callers may now receive `void` from `createResource` when a hook discards the resource.
-* Custom workers must use `workerData.workerChannels.taskPort` for tasks/results and `logPort` for logs. `parentPort` now carries control messages. Worker factories must forward both transferred ports.
-* Every worker envelope requires `version: 1` (`WORKER_PROTOCOL_VERSION`). Missing or incompatible versions retire the worker and reject its tasks.
-* Change `WorkerPool.workingTasks` from a record to a `Map`, replace `onMessage` with separate message handlers, and require task/log ports when constructing `WorkerInfoImpl` or implementing `WorkerInfo`.
-* Remove the deprecated `waitForInitBeforeIdle` option and the retry argument from `io.mkdirRetry`. Directory creation now makes one recursive filesystem call.
-* Downloaders now wait for `start()`; it returns a promise. `dispose()` cancels and awaits cleanup by default, with an explicit drain mode. New work is rejected while closing.
-* `WorkerPool.ready` waits for initialized workers, with a configurable 30-second startup deadline. Custom workers must announce readiness; failed initialization rejects startup and cleans up the pool.
-* Successful empty HTTP responses, including 200, 204, and HEAD, complete without extra retries. Applications needing retries for empty responses must implement that policy explicitly; transport retries still use `req.retry`.
+* Drop Node 18 and 20; upgrade Got 13 to 16 and p-queue 8 to 9.
+* Downloaders wait for an explicit, awaitable `start()`. `dispose()` cancels and awaits cleanup by default; use its explicit drain mode to finish accepted work.
+* Require normalized `Resource.uri`, `refUri`, and `replaceUri`. Worker tasks/results use validated `WireResource` snapshots, preserve cloneable nested metadata, and exclude URI/DOM instances.
+* Custom workers use versioned task/log channels and control messages on `parentPort`, announce readiness, and handle shutdown. Worker factories must forward all supplied transferred ports, including the publication/accounting channel.
+* Replace the full save-path callback with composable `GenerateSavePathFunc[]` hooks. Manually constructed lifecycles need `generateSavePath: []`; the legacy-generator adapter supports migration. Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`; pipeline resource creation can return `void` when a hook discards a resource.
+* Count successful streamed/local-copy acquisitions in `downloadedCount`, while excluding failed/cancelled attempts. Streaming error hooks propagate failure and do not run success hooks afterward.
+* Successful empty HTTP responses finish without extra retries; supplied empty-string bodies are treated as content. Implement an explicit empty-response retry policy when required.
+* Distinct canonical URLs targeting the same output within a crawl fail with `ERR_OUTPUT_CONFLICT`. Confirmed output retains ownership across later failure and same-URL retry.
+* Make log4js an optional peer: file-logging adapter users must install it explicitly; default consumers omit its dependency tree.
+* Change `WorkerPool.workingTasks` to a Map and split task/log handlers. Remove `waitForInitBeforeIdle` and the retry argument from `io.mkdirRetry`. See the migration guide for custom pool interfaces.
+* Reject discovery submissions after their parent task completes. The opt-in concurrency controller now backs off on stalls and grows gradually within bounds; adjustment periods must fit Node's positive-integer timer range.
 
-Validation
+Crawl control and reliability
 ------------
-* Cover hook composition and resource discard, split worker transport and log draining, and empty-response behavior. Run runtime smoke checks on every supported CI Node version.
-* Reject worker completions for tasks owned by another worker; ignore duplicate results and malformed log envelopes. Consumer logger failures no longer interrupt worker log delivery.
+
+* Expose readonly per-attempt resource outcomes for acquisition, confirmed publication, skipping, failure and cancellation. Failed URL reservations release after settlement for explicit retries; successful redirect aliases survive concurrent target failures.
+* Add optional `maxResources`, `maxQueuedResources`, `maxConcurrency`, `maxDiscoveredResources`, `maxResourceBytes` and `maxBufferedBytes`. Report exceeded limits rather than blocking recursive discovery. Current/peak byte statistics describe logical body reservations, not total process memory.
+* Keep worker byte credits in the parent, transfer child credits without double charging, and await failed-worker exit before releasing transferred bodies—even before the first worker RPC. Previously acknowledged children remain eligible after a later parent failure.
+* Bound worker initialization and optional task deadlines; validate message versions, ownership, payloads and duplicate completions. Retire failed workers while healthy workers continue undispatched tasks without replaying failed work.
+* Scope logging and cancellation to each crawl. Worker disposal supports cooperative cancellation followed by forced termination after the configured grace period.
+* Stage buffered, HTTP-streamed and local-copy output on the destination volume, then publish by per-file rename after save-policy and cancellation checks. Preserve cached files/timestamps on failed writes, skipped saves and 304 responses; recheck directory containment and symlinks before publication.
+* Let the parent own worker task staging and publication, including cleanup after crashes, timeouts, forced cancellation and allocation races. Preserve confirmed publication counts after later failure.
+
+Fixes and performance
+------------
+
+* Use Got's public option snapshots instead of private history-bearing internals. Preserve hook/agent configuration without mutation and wrap Got 16 binary responses as Buffer views without copying bytes.
+* Retain content-length validation, bounded transport retries and range-resume behavior; await previous streams before retrying and remove legacy manual retry timers.
+* Normalize resources between lifecycle hooks so URL mutations and cloned objects cannot pass stale URI fields to subsequent hooks. Preserve binary view bounds and explicit encodings.
+* Avoid redundant output-directory creation while retaining containment checks. Reuse a single owned chunk in bounded local reads, but compact slices to avoid retaining oversized backing buffers.
+* Avoid accounting RPC for empty child bodies and unchanged worker body sizes.
+
+Tooling and validation
+------------
+
+* Retain TypeScript 6.0.3, Node 22 typings and Jest after compiler/runner audits; update compatible lint dependencies. `npm test` now checks the complete source/test TypeScript suite before Jest.
+* Remove the declaration-copy postinstall. Keep the development Undici shim through TypeScript configuration; consumers retain Cheerio's declared dependency graph.
+* Add deterministic worker/transport/outcome/budget regressions, repeated-crawl stress checks, strict packed-consumer fixtures and reproducible alternating crawl/queue benchmarks. CI covers Node 22.13, latest 22, 24 and 26.
 
 0.9.1
 ============
