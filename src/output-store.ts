@@ -1,6 +1,14 @@
 import {recordResourcePublication, currentCrawlContext} from './crawl-context.js';
-import {promises as fs} from 'node:fs';
+import {promises as fs, constants, lstat as lstatCallback} from 'node:fs';
+import {promisify} from 'node:util';
 import {basename, dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
+
+const lstat = promisify(lstatCallback);
+
+// Windows needs the explicit destination check. On supported platforms, the
+// kernel can reject symlinks atomically with opening the output file.
+export const noFollowWriteFlags = process.platform !== 'win32' && constants.O_NOFOLLOW ?
+  constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW : undefined;
 
 async function checkDirectories(root: string, parent: string, create: boolean): Promise<void> {
   // root is canonical. If resolving the entire parent path leaves it unchanged,
@@ -125,7 +133,8 @@ export interface PublicationStore {
 }
 
 export async function createFilePublication(
-  destination: string, signal?: AbortSignal, localRoot?: string
+  destination: string, signal?: AbortSignal, localRoot?: string,
+  writerRejectsSymlinks = false
 ): Promise<FilePublication> {
   signal?.throwIfAborted();
   const context = currentCrawlContext();
@@ -152,12 +161,14 @@ export async function createFilePublication(
       reservationPath!.toLowerCase() : reservationPath!, context.publicationOwner);
   if (context?.directWrites) {
     try {
-      // A direct writer must not follow an existing destination symlink.
-      const stat = await fs.lstat(destination).catch(error => {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-        return undefined;
-      });
-      if (stat?.isSymbolicLink()) throw new Error('Output destination must not be a symlink: ' + destination);
+      if (!writerRejectsSymlinks) {
+        // A direct writer must not follow an existing destination symlink.
+        const stat = await lstat(destination).catch(error => {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          return undefined;
+        });
+        if (stat?.isSymbolicLink()) throw new Error('Output destination must not be a symlink: ' + destination);
+      }
     } catch (error) { release?.(false); throw error; }
     let published = false;
     let closed = false;
@@ -211,11 +222,12 @@ export async function publishFile(
   write: (stagingPath: string, direct?: boolean) => Promise<void | boolean>,
   signal?: AbortSignal,
   localRoot?: string,
-  beforePublish?: () => Promise<boolean>
+  beforePublish?: () => Promise<boolean>,
+  writerRejectsSymlinks = false
 ): Promise<boolean> {
   const store = currentCrawlContext()?.publicationStore;
   const publication = await (store ? store.create(destination, signal, localRoot) :
-    createFilePublication(destination, signal, localRoot));
+    createFilePublication(destination, signal, localRoot, writerRejectsSymlinks));
   try {
     signal?.throwIfAborted();
     if (publication.direct && beforePublish && !await beforePublish()) return false;

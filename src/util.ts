@@ -102,3 +102,8 @@ export const weakAssign = <T, U>(target: T, source: U): T & U => {
  */
 export const isUrlHttp = (url: string): boolean =>
   url.startsWith('http://') || url.startsWith('https://');
+
+/** Preserve synchronous lifecycle results without adding a microtask per hook. */
+export function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
+  return !!value && typeof (value as PromiseLike<T>).then === 'function';
+}

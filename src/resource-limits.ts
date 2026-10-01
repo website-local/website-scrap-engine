@@ -1,8 +1,11 @@
-import {createReadStream, promises as fs} from 'node:fs';
+import {createReadStream, readFile as readFileCallback} from 'node:fs';
+import {promisify} from 'node:util';
 import {Transform} from 'node:stream';
 import type {Resource, ResourceEncoding} from './resource.js';
 import type {ResourceBody} from './resource.js';
 import {currentCrawlContext} from './crawl-context.js';
+
+const readFile = promisify(readFileCallback);
 
 export class ResourceSizeError extends Error {
   readonly code = 'ERR_RESOURCE_SIZE_LIMIT';
@@ -44,7 +47,10 @@ export async function readResourceFile(
   source: string, encoding: ResourceEncoding, limit?: number, signal?: AbortSignal
 ): Promise<string | Buffer> {
   const account = currentCrawlContext()?.bufferAccount;
-  if (limit === undefined && !account) return fs.readFile(source, {encoding, signal});
+  if (limit === undefined && !account) {
+    const options = {encoding, signal};
+    return readFile(source, options);
+  }
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of createReadStream(source, {signal,

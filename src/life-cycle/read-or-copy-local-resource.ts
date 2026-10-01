@@ -51,24 +51,29 @@ export async function readOrCopyLocalResource(
       }
     }
   }
-  try {
-    if (!stats) {
-      stats = await promises.stat(fileSrcPath);
-    }
-    if (stats) {
+  const readStats = async () => {
+    try {
+      stats ??= await promises.stat(fileSrcPath);
       res.meta.headers = {
         'last-modified': stats.mtime.toISOString(),
         'content-length': stats.size.toString()
       };
+    } catch (e) {
+      errorLogger.warn('stat ' + fileSrcPath, e);
     }
-  } catch (e) {
-    errorLogger.warn('stat ' + fileSrcPath, e);
-  }
+  };
   if (res.type === ResourceType.StreamingBinary) {
+    await readStats();
     await copyResourceToDisk(fileSrcPath, res, options, pipeline);
   } else {
-    res.body = await readResourceFile(fileSrcPath, res.encoding, options.maxResourceBytes,
-      pipeline?.signal);
+    // Reading bytes does not depend on file metadata. Await both operations so
+    // headers are complete before hooks run, without serial filesystem latency.
+    const metadata = readStats();
+    try {
+      res.body = await readResourceFile(fileSrcPath, res.encoding, options.maxResourceBytes, pipeline?.signal);
+    } finally {
+      await metadata;
+    }
   }
   res.finishTimestamp = Date.now();
   res.downloadTime =

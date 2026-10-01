@@ -6,6 +6,9 @@ import path from 'node:path';
 // A fresh process fails if the single-thread entry graph imports worker code.
 register('data:text/javascript,' + encodeURIComponent(`
 export async function resolve(specifier, context, nextResolve) {
+  if (specifier === 'cheerio') {
+    throw new Error('Single-thread entry eagerly imported the HTML parser');
+  }
   const resolved = await nextResolve(specifier, context);
   if (/\\/(?:multi|worker[^/]*|logger-worker)\\.js$/.test(resolved.url)) {
     throw new Error('Single-thread entry imported worker code: ' + resolved.url);

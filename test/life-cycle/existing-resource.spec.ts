@@ -11,13 +11,18 @@ import type {
 } from '../../src/life-cycle/types.js';
 import type {StaticDownloadOptions} from '../../src/options.js';
 import type {Stats} from 'node:fs';
+import {constants} from 'node:fs';
 
 const mockStat = jest.fn<(path: string) => Promise<Stats>>();
 
 jest.unstable_mockModule('node:fs', () => {
   const mod = {
+    constants,
     // needed by other transitive imports
     realpath: jest.fn(),
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
+    lstat: jest.fn(),
     createReadStream: jest.fn(),
     createWriteStream: jest.fn(),
     promises: {

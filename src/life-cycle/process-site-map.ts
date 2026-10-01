@@ -1,4 +1,4 @@
-import {load} from 'cheerio';
+import {load} from '../cheerio.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {Resource} from '../resource.js';

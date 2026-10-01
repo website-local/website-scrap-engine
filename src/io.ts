@@ -4,8 +4,18 @@ import fs from 'node:fs';
 import {join, resolve, sep} from 'node:path';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
 import {error as errorLogger} from './logger/logger.js';
-import {publishFile} from './output-store.js';
+import {noFollowWriteFlags, publishFile} from './output-store.js';
 import {accountBufferedBody} from './resource-limits.js';
+
+const writeFileBytes = (target: string, data: string | Uint8Array,
+  options?: ObjectEncodingOptions & {flag?: number}): Promise<void> =>
+  new Promise((resolve, reject) => {
+    // Node accepts numeric open flags; the Node 22 WriteFileOptions type omits them.
+    fs.writeFile(target, data, (options ?? {}) as fs.WriteFileOptions, error => {
+      if (error?.code === 'ELOOP') error.message = 'Output destination must not be a symlink: ' + target;
+      if (error) reject(error); else resolve();
+    });
+  });
 
 export const mkdirRetry = async (dir: string): Promise<void> => {
   await fs.promises.mkdir(dir, {recursive: true});
@@ -49,11 +59,13 @@ export const writeFile = async (
     // not likely happen
     throw new TypeError('Type of data not supported.');
   }
-  await publishFile(filePath, async stagingPath => {
-    if (options) {
-      await fs.promises.writeFile(stagingPath, fileData, options);
+  await publishFile(filePath, async (stagingPath, direct) => {
+    if (direct && noFollowWriteFlags !== undefined) {
+      await writeFileBytes(stagingPath, fileData, {...options, flag: noFollowWriteFlags});
+    } else if (options) {
+      await writeFileBytes(stagingPath, fileData, options);
     } else {
-      await fs.promises.writeFile(stagingPath, fileData);
+      await writeFileBytes(stagingPath, fileData);
     }
     if (typeof mtime === 'number' && Number.isFinite(mtime)) {
       try {
@@ -62,5 +74,5 @@ export const writeFile = async (
         errorLogger.warn('skipping utimes ' + filePath, e);
       }
     }
-  }, currentCrawlContext()?.signal, localRoot);
+  }, currentCrawlContext()?.signal, localRoot, undefined, noFollowWriteFlags !== undefined);
 };

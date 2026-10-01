@@ -19,6 +19,21 @@ import {
 } from '../src/resource.js';
 import URI from 'urijs';
 
+test('download links match URI fragment removal without changing resource URIs', () => {
+  for (const url of ['https://example.org/a?x=1#part', 'https://example.org/a?#',
+    'https://example.org/a%23b?x=%3F#x', 'https://user:pass@[::1]:8080/a?b#c',
+    'file:///root/a?x=1#part', 'file:///root/a%3Fb%23c#', 'https://example.org/a']) {
+    const uri = URI(url);
+    const expected = uri.clone().hash('');
+    if (uri.protocol() === 'file') expected.search('');
+    const res = createResource({type: ResourceType.Binary, depth: 0, url,
+      refUrl: 'https://example.org/', refSavePath: 'example.org/index.html',
+      savePath: 'example.org/a', localRoot: 'output', keepSearch: true});
+    expect(res.downloadLink).toBe(expected.toString());
+    expect(res.uri.toString()).toBe(uri.toString());
+  }
+});
+
 test('replacement path fast path matches URIjs, including fallback and directory cases', () => {
   const paths = ['a', 'a/', 'a/b', 'a/b/', 'a/c.html', 'a/b/c.html', 'z/q.html',
     'a/x%20y', 'a/b#c', 'a/b?c', 'a/../b', 'a/路径', 'C:\\a\\b', '',

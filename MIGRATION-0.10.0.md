@@ -4,6 +4,18 @@ Version 0.10.0 requires Node.js 22.13.0 or newer and changes the save-path and
 custom-worker APIs. The Node 24 publishing environment is separate from this
 runtime minimum.
 
+Pipeline `linkRedirect`, `detectResourceType`, and `processBeforeDownload` now
+return synchronous values when their hooks are synchronous, as permitted by
+`PipelineExecutor`'s `AsyncResult` contract. Use `await` rather than calling
+`.then()` directly on a concrete executor's result. Async hooks still run in
+order and retain cancellation and short-circuit behavior.
+
+Direct buffered/streamed writes on supported platforms use `O_NOFOLLOW` to
+reject destination symlinks at open time. Windows and generic publication
+writers retain the explicit destination check. Streaming output now uses a
+256 KiB write buffer instead of Node's default 64 KiB; this trades up to an
+additional 192 KiB per active output stream for fewer small writes.
+
 ## Dependency installation
 
 `log4js` is now an optional peer instead of an automatically installed optional

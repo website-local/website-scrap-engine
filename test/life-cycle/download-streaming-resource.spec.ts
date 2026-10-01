@@ -1,5 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import {createServer} from 'node:http';
+import {getEventListeners} from 'node:events';
 import {promises as fs} from 'node:fs';
 import {join} from 'node:path';
 import {withCrawlContext} from '../../src/crawl-context.js';
@@ -42,9 +43,37 @@ test('direct streaming checks response-dependent save policy before opening outp
       url, refUrl: url, localRoot: root, savePath: 'asset'}), downloadStartTimestamp: Date.now()};
     const context = {directWrites: true, signal: new AbortController().signal, logger: createDefaultLogger()};
     await withCrawlContext(context, () => streamingDownloadToFile(res,
-      {retry: {limit: 0}, timeout: {request: 2000}}, pipeline, options));
+      {retry: {limit: 0}, timeout: {request: 2000}, signal: context.signal}, pipeline, options));
+    expect(getEventListeners(context.signal, 'abort')).toHaveLength(0);
     expect(await fs.readFile(destination, 'utf8')).toBe('cached');
     expect((await fs.stat(destination)).mtimeMs).toBe(before.mtimeMs);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    await fs.rm(root, {recursive: true, force: true});
+  }
+});
+
+test.each([200, 304])('completed stream (%i) releases its crawl abort listener', async status => {
+  const root = await fs.mkdtemp(join(process.cwd(), '.wse-stream-listeners-'));
+  const server = createServer((_request, response) => {
+    response.setHeader('Connection', 'close');
+    response.statusCode = status;
+    response.end('complete');
+  });
+  try {
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing server address');
+    const url = 'http://127.0.0.1:' + address.port + '/asset';
+    const res = {...createResource({type: ResourceType.StreamingBinary, depth: 0,
+      url, refUrl: url, localRoot: root, savePath: 'asset'}), downloadStartTimestamp: Date.now()};
+    const context = {directWrites: true, signal: new AbortController().signal, logger: createDefaultLogger()};
+    await withCrawlContext(context, () => streamingDownloadToFile(res,
+      {retry: {limit: 0}, timeout: {request: 2000}, signal: context.signal}));
+    expect(getEventListeners(context.signal, 'abort')).toHaveLength(0);
+    if (status === 200) expect(await fs.readFile(join(root, 'asset'), 'utf8')).toBe('complete');
+    else await expect(fs.stat(join(root, 'asset'))).rejects.toMatchObject({code: 'ENOENT'});
   } finally {
     server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));

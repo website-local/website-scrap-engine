@@ -376,7 +376,7 @@ export function generateSavePath(
   keepSearch?: boolean,
   localSrcRoot?: string
 ): string {
-  if (uri.is('relative') && uri.protocol() !== 'file') {
+  if (!uri.hostname() && uri.is('relative') && uri.protocol() !== 'file') {
     throw new Error('generateSavePath: uri can not be relative: '
       + uri.toString());
   }
@@ -405,7 +405,7 @@ export function generateSavePath(
         // Normalize encoded dot segments before the final localRoot containment check.
         let decodedSegment: string;
         try {
-          decodedSegment = decodeURIComponent(segment);
+          decodedSegment = segment.includes('%') ? decodeURIComponent(segment) : segment;
         } catch {
           decodedSegment = segment;
         }
@@ -466,7 +466,7 @@ export function replacementUri(savePath: string, refSavePath: string): URI {
   // URIjs must handle encoded characters, query/hash delimiters, dot segments,
   // drive letters and other paths whose URL normalization changes their meaning.
   const simplePath = /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*(?:\/[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)*\/?$/;
-  if (simplePath.test(savePath) && simplePath.test(refSavePath)) {
+  if (simplePath.test(savePath) && (savePath === refSavePath || simplePath.test(refSavePath))) {
     if (savePath === refSavePath) return URI('');
     const base = refSavePath.endsWith('/') ? refSavePath : path.posix.dirname(refSavePath);
     const directory = savePath.endsWith('/') ? savePath : path.posix.dirname(savePath);
@@ -641,10 +641,10 @@ export function createResourceWithUris({
       url = refUri.protocol() + '://' + refUri.host() + url;
     }
   }
-  let uri = resolvedUri ?? URI(url);
+  let uri = resolvedUri ?? (url === refUrl ? refUri.clone() : URI(url));
 
   if (savePath === undefined) {
-    if (!replacePathHasError && uri.is('relative')) {
+    if (!replacePathHasError && !uri.hostname() && uri.is('relative')) {
       uri = uri.absoluteTo(refUri);
       url = uri.toString();
     }
@@ -661,12 +661,14 @@ export function createResourceWithUris({
       false, localSrcRoot);
   }
 
-  let downloadLink: string;
+  // URI serialization already normalizes the URL. Dropping its fragment does
+  // not require cloning and rebuilding all URI components.
+  let downloadLink = uri.toString();
+  const fragment = downloadLink.indexOf('#');
+  if (fragment !== -1) downloadLink = downloadLink.slice(0, fragment);
   if (uri.protocol() === 'file') {
-    // file downloadLink contains no search
-    downloadLink = uri.clone().search('').hash('').toString();
-  } else {
-    downloadLink = uri.clone().hash('').toString();
+    const search = downloadLink.indexOf('?');
+    if (search !== -1) downloadLink = downloadLink.slice(0, search);
   }
 
   const replaceUri = replacePathHasError ? URI(rawUrl) :

@@ -1,4 +1,4 @@
-import {load} from 'cheerio';
+import {load} from '../cheerio.js';
 import {fullSavePathHooks} from './save-path-hook-state.js';
 import type {Resource, ResourceEncoding} from '../resource.js';
 import {ResourceType} from '../resource.js';

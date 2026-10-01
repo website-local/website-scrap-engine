@@ -1,5 +1,5 @@
 import {expect, jest} from '@jest/globals';
-import {promises} from 'node:fs';
+import fs, {promises} from 'node:fs';
 import {relative, resolve} from 'node:path';
 import type {Stats} from 'node:fs';
 import type {
@@ -82,6 +82,14 @@ export function mockFs(): {
   fakeFsStats: Record<string, number>
   } {
   const fakeFs: Record<string, string> = {};
+  jest.spyOn(fs, 'writeFile').mockImplementation((path: fs.PathOrFileDescriptor,
+    data: string | NodeJS.ArrayBufferView, options: fs.WriteFileOptions | fs.NoParamCallback,
+    callback?: fs.NoParamCallback) => {
+    if (typeof path === 'number') throw new TypeError('Mock requires a file path');
+    const done = typeof options === 'function' ? options : callback!;
+    void promises.writeFile(path, data, typeof options === 'function' ? undefined : options)
+      .then(() => done(null), done);
+  });
   jest.spyOn(promises, 'writeFile').mockClear()
     .mockImplementation((path, data) => {
       if (typeof data === 'string' ||

@@ -1,6 +1,6 @@
 import {markResourceDownloaded} from '../crawl-context.js';
 import type {WriteStream} from 'node:fs';
-import {createWriteStream, promises as fs} from 'node:fs';
+import {constants, createWriteStream, promises as fs} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
 import type {Response} from 'got';
 import got, {HTTPError, RequestError} from 'got';
@@ -13,7 +13,7 @@ import type {
   RequestOptions
 } from './types.js';
 import {safeJoin} from '../io.js';
-import {publishFile} from '../output-store.js';
+import {noFollowWriteFlags, publishFile} from '../output-store.js';
 import {limitResourceStream} from '../resource-limits.js';
 import {error as errorLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
@@ -66,7 +66,7 @@ export async function streamingDownloadToFile(
       direct && executor ? async () => {
         skipped = !await executor.shouldSaveResource(res);
         return !skipped;
-      } : undefined);
+      } : undefined, !!direct && noFollowWriteFlags !== undefined);
     if (response && response.statusCode !== 304) {
       markResourceDownloaded();
       res.redirectedUrl = response.url;
@@ -80,7 +80,7 @@ export async function streamingDownloadToFile(
     if (!response) return true;
     if (response?.statusCode === 304) return false;
     return executor ? executor.shouldSaveResource(res) : true;
-  });
+  }, noFollowWriteFlags !== undefined);
   return response;
 }
 
@@ -89,7 +89,8 @@ async function streamToStagingFile(
   requestOptions: RequestOptions,
   savePath: string,
   maxResourceBytes?: number,
-  beforeWrite?: () => Promise<boolean>
+  beforeWrite?: () => Promise<boolean>,
+  rejectSymlinks = false
 ): Promise<Response> {
   const options = Object.assign({}, requestOptions, {
     isStream: true, headers: {...requestOptions.headers}
@@ -97,6 +98,7 @@ async function streamToStagingFile(
     isStream?: true
   };
   let fileWriteStream: WriteStream | void;
+  let activeRequest: ReturnType<typeof got.stream> | undefined;
 
   const activePumps = new Set<Promise<void>>();
   let finished = false;
@@ -117,6 +119,7 @@ async function streamToStagingFile(
           options.headers.range = `bytes=${rangeStart}-`;
         }
         const request = got.stream(res.downloadLink, options);
+        activeRequest = request;
         request.retryCount = retryCount;
 
         request.once('response', async (response: Response) => {
@@ -161,9 +164,12 @@ async function streamToStagingFile(
           }
           // Download body
           if (!fileWriteStream) {
-            fileWriteStream = createWriteStream(savePath,
-              rangeIsSupported && rangeStart ?
-                {flags: 'a', start: rangeStart} : {flags: 'w'});
+            const flags = rejectSymlinks ? noFollowWriteFlags! : undefined;
+            // Numeric open flags are supported at runtime but missing from Node 22 typings.
+            fileWriteStream = createWriteStream(savePath, (rangeIsSupported && rangeStart ?
+              {flags: flags === undefined ? 'a' : (flags & ~constants.O_TRUNC) | constants.O_APPEND,
+                start: rangeStart, highWaterMark: 256 * 1024} :
+              {flags: flags ?? 'w', highWaterMark: 256 * 1024}) as Parameters<typeof createWriteStream>[1]);
           }
 
           const pumping = maxResourceBytes === undefined ? pipeline(request, fileWriteStream) :
@@ -242,6 +248,9 @@ async function streamToStagingFile(
   } finally {
     finished = true;
     await Promise.allSettled(activePumps);
+    // Got streams disable autoDestroy. Release their abort listener after EOF,
+    // rather than retaining completed requests until the downloader is disposed.
+    activeRequest?.destroy();
   }
 }
 

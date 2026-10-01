@@ -52,6 +52,7 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
     return;
   }
   const collectedResource: WireResource[] = [];
+  const discoveredUrls = new Set<string>();
   let error: Error | unknown | void;
   let redirectedUrl: string | undefined;
   let discovery: ReturnType<typeof createDiscoverySubmit> | undefined;
@@ -66,6 +67,15 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
     const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
     discovery = createDiscoverySubmit(resource => {
       const wire = prepareResourceForClone(resource);
+      // The parent admits only the first eligible resource for a URL. Avoid
+      // transferring and reconstructing repeated bodyless links from one task.
+      // Keep validation/discovery counting above this filter, and retain the
+      // original stream when byte credits or depth rejection can affect admission.
+      if (pipeline.options.maxBufferedBytes === undefined && wire.body === undefined &&
+        wire.depth <= pipeline.options.maxDepth) {
+        if (discoveredUrls.has(wire.url)) return;
+        discoveredUrls.add(wire.url);
+      }
       const reserved = currentCrawlContext()?.bufferAccount?.reserveChild(resourceBodyBytes(wire.body, wire.encoding));
       if (reserved) return reserved.then(() => { collectedResource.push(wire); });
       collectedResource.push(wire);

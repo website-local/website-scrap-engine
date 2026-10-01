@@ -1,4 +1,5 @@
 import {currentCrawlContext, throwIfCancelled, markResourceDownloaded, markResourceSkipped} from '../crawl-context.js';
+import {prepareHtmlParser} from '../cheerio.js';
 import {fullSavePathHooks} from '../life-cycle/save-path-hook-state.js';
 import {checkResourceBody, accountBufferedBody} from '../resource-limits.js';
 import path from 'node:path';
@@ -101,43 +102,51 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     return await this.processBeforeDownload(r, element, parent, this.options);
   }
 
-  async linkRedirect(
+  private runHooks<T, H>(
+    initial: T,
+    hooks: H[],
+    invoke: (hook: H, value: T) => AsyncResult<T | void>,
+    validate?: (value: T) => void
+  ): AsyncResult<T | void> {
+    const run = (index: number, value: T | void): AsyncResult<T | void> => {
+      this.signal?.throwIfAborted();
+      throwIfCancelled();
+      if (value === undefined) return;
+      if (validate) validate(value);
+      for (; index < hooks.length; index++) {
+        this.signal?.throwIfAborted();
+        throwIfCancelled();
+        const result = invoke(hooks[index], value);
+        if (this._isPromiseLike(result)) return result.then(value => run(index + 1, value));
+        if (result === undefined) return;
+        value = result;
+        if (validate) validate(value);
+      }
+      this.signal?.throwIfAborted();
+      throwIfCancelled();
+      return value;
+    };
+    try { return run(0, initial); }
+    catch (error) { return Promise.reject(error); }
+  }
+
+  linkRedirect(
     url: string,
     element: Cheerio | null,
     parent: Resource | null
-  ): Promise<string | void> {
-    let redirectedUrl: string | void = url;
-    for (const linkRedirectFunc of this.lifeCycle.linkRedirect) {
-      this.signal?.throwIfAborted();
-      throwIfCancelled();
-      const result = linkRedirectFunc(redirectedUrl as string, element, parent, this.options, this);
-      redirectedUrl = this._isPromiseLike(result) ? await result : result;
-      if (redirectedUrl === undefined) {
-        return undefined;
-      }
-    }
-    return redirectedUrl;
+  ): AsyncResult<string | void> {
+    return this.runHooks(url, this.lifeCycle.linkRedirect,
+      (fn, value) => fn(value, element, parent, this.options, this));
   }
 
-  async detectResourceType(
+  detectResourceType(
     url: string,
     type: ResourceType,
     element: Cheerio | null,
     parent: Resource | null
-  ): Promise<ResourceType | void> {
-
-    let detectedType: ResourceType | void = type;
-    for (const detectResourceTypeFunc of this.lifeCycle.detectResourceType) {
-      this.signal?.throwIfAborted();
-      throwIfCancelled();
-      const result = detectResourceTypeFunc(url, detectedType as ResourceType,
-        element, parent, this.options, this);
-      detectedType = this._isPromiseLike(result) ? await result : result;
-      if (detectedType === undefined) {
-        return undefined;
-      }
-    }
-    return detectedType;
+  ): AsyncResult<ResourceType | void> {
+    return this.runHooks(type, this.lifeCycle.detectResourceType,
+      (fn, value) => fn(url, value, element, parent, this.options, this));
   }
 
   createResource(
@@ -203,7 +212,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     // Custom resource factories keep their existing one-argument contract.
     const resource = this.lifeCycle.createResource === builtinCreateResource ?
       createResourceWithUris(arg,
-        uri.toString() === resolvedUrl ? uri.clone() : URI(resolvedUrl), refUri) :
+        uri.toString() === resolvedUrl ?
+          this.lifeCycle.generateSavePath?.length ? uri.clone() : uri : URI(resolvedUrl), refUri) :
       this.lifeCycle.createResource(arg);
     return this.checkResource(resource);
   }
@@ -303,32 +313,15 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     return !!value && typeof (value as PromiseLike<T>).then === 'function';
   }
 
-  async processBeforeDownload(
+  processBeforeDownload(
     res: Resource,
     element: Cheerio | null,
     parent: Resource | null,
-    options?: StaticDownloadOptions
-  ): Promise<Resource | void> {
-    this.signal?.throwIfAborted();
-    throwIfCancelled();
-    if (!options) {
-      options = this.options;
-    }
-    let processedResource: Resource | void = this.checkResource(res);
-    for (const processBeforeDownload of this.lifeCycle.processBeforeDownload) {
-      this.signal?.throwIfAborted();
-      throwIfCancelled();
-      const result = processBeforeDownload(processedResource as DownloadResource,
-        element, parent, options, this);
-      processedResource = this._isPromiseLike(result) ? await result : result;
-      if (processedResource === undefined) {
-        return undefined;
-      }
-      this.checkResource(processedResource);
-    }
-    this.signal?.throwIfAborted();
-    throwIfCancelled();
-    return processedResource;
+    options: StaticDownloadOptions = this.options
+  ): AsyncResult<Resource | void> {
+    return this.runHooks(res, this.lifeCycle.processBeforeDownload,
+      (fn, value) => fn(value, element, parent, options, this),
+      value => { this.checkResource(value); });
   }
 
   async download(
@@ -404,6 +397,10 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   ): Promise<DownloadResource | void> {
     this.signal?.throwIfAborted();
     throwIfCancelled();
+    if (res.type === ResourceType.Html || res.type === ResourceType.Svg || res.type === ResourceType.SiteMap) {
+      const loading = prepareHtmlParser();
+      if (loading) await loading;
+    }
     if (!options) {
       options = this.options;
     }
@@ -568,7 +565,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     }
 
     let uri = URI(url);
-    if (!replacePathHasError && uri.is('relative')) {
+    if (!replacePathHasError && !uri.hostname() && uri.is('relative')) {
       uri = uri.absoluteTo(refUri);
       url = uri.toString();
     }
