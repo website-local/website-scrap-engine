@@ -431,3 +431,13 @@ The runtime performance audit records the policy tradeoffs and regression eviden
 Build/typecheck and affected tests pass (403 tests across full/focused runs), with
 stalled-origin recovery passing in both modes on Node 22.13/24/26. Aggregate bytes,
 stress and final release validation remain open.
+
+## Aggregate-byte ledger foundation
+
+A parent-owned ledger now supports exact admission, monotonic task-body high-water
+reservations, separately reserved child bodies, transfer into child tasks without
+double charging, and idempotent release. Failed growth/transfer preserves earlier
+credits, and counters stay within the configured safe-integer limit. The build,
+complete source/test typecheck and four focused accounting tests pass on Node 24.
+This is an internal foundation; crawl/worker integration and the public option
+are not yet implemented, so it does not yet impose a runtime buffer limit.
