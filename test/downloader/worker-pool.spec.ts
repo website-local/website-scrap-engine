@@ -13,6 +13,39 @@ import {WorkerPool} from '../../src/downloader/worker-pool.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe('worker-pool', function () {
+  test('dispatch callbacks identify the owner after successful transport', async () => {
+    const pool = new WorkerPool(1, join(__dirname, 'delay-calc-worker.js'), {});
+    try {
+      await pool.ready;
+      let taskId = 0;
+      const dispatched = jest.fn((worker: Worker) => {
+        expect(pool.workingTasks.has(taskId)).toBe(true);
+        expect(worker).toBe(pool.workers[0].worker);
+      });
+      const result = await pool.submitTask([1, 2], undefined, id => { taskId = id; }, dispatched);
+      expect(result.body).toBe(3);
+      expect(dispatched).toHaveBeenCalledTimes(1);
+      dispatched.mockClear();
+      await expect(pool.submitTask([() => {}], undefined, undefined, dispatched)).rejects.toThrow();
+      expect(dispatched).not.toHaveBeenCalled();
+    } finally { await pool.dispose(); }
+  });
+
+  test('dispatch callback failure retires its worker and keeps undispatched work progressing', async () => {
+    const pool = new WorkerPool(2, join(__dirname, 'delay-calc-worker.js'), {});
+    try {
+      await pool.ready;
+      const tasks = [pool.submitTask([1, 2], undefined, undefined, () => {
+        throw new Error('dispatch observer failed');
+      }), ...Array.from({length: 3}, () => pool.submitTask([2, 3]))];
+      const results = await Promise.allSettled(tasks);
+      expect(results[0]).toMatchObject({status: 'rejected', reason: {message: 'dispatch observer failed'}});
+      expect(results.slice(1)).toEqual(Array.from({length: 3}, () =>
+        expect.objectContaining({status: 'fulfilled', value: expect.objectContaining({body: 5})})));
+      expect((await pool.submitTask([3, 4])).body).toBe(7);
+    } finally { await pool.dispose(); }
+  });
+
   test('pool would work correctly', async () => {
     const cases: number[][] = [];
     for (let i = 0; i < 100; i++) {

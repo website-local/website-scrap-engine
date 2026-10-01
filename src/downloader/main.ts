@@ -1,6 +1,9 @@
 import {withCrawlContext, createResourceProgress} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
 import {PublicationReservations} from '../publication-reservations.js';
+import type { BufferReservation} from '../buffer-budget.js';
+import {BufferBudget} from '../buffer-budget.js';
+import {resourceBodyBytes} from '../resource-limits.js';
 import {adjust, resetAdjustment} from './adjust-concurrency.js';
 import PQueue from 'p-queue';
 import URI from 'urijs';
@@ -30,6 +33,9 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   private _closing?: Promise<void>;
   private _startGeneration = 0;
   private _admittedCount = 0;
+  private bufferBudget?: BufferBudget;
+  get bufferedBytes(): number { return this.bufferBudget?.used ?? 0; }
+  get peakBufferedBytes(): number { return this.bufferBudget?.peak ?? 0; }
   private readonly resourceOutcomes = new Map<string, ResourceOutcome>();
   get outcomes(): ReadonlyMap<string, ResourceOutcome> { return this.resourceOutcomes; }
   private readonly notifications = new Set<Promise<void>>();
@@ -86,6 +92,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     this._initOptions = this._asyncOptions.then(options => {
       options = mergeOverrideOptions(options, this._overrideOptions);
       this._options = options;
+      if (options.maxBufferedBytes !== undefined) this.bufferBudget = new BufferBudget(options.maxBufferedBytes);
       // https://github.com/website-local/website-scrap-engine/issues/1113
       this.queue.concurrency = options.concurrency;
       this._pipeline = new PipelineExecutorImpl(options, options.req, options, this.signal);
@@ -172,7 +179,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     }
   }
 
-  protected _addProcessedResource(res: RawResource): boolean | void {
+  protected _addProcessedResource(res: RawResource, credit?: BufferReservation): boolean | void {
     if (this._state === 'closing' || this._state === 'closed' || this.signal.aborted) {
       return false;
     }
@@ -197,6 +204,9 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
         {code: 'ERR_CRAWL_LIMIT', limit}), 'admitting resource', resource);
       return false;
     }
+    const bytes = this.bufferBudget ? resourceBodyBytes(resource.body, resource.encoding) : 0;
+    const bufferReservation = this.bufferBudget ? credit && credit.childBytes >= bytes ? credit.takeChild(bytes) :
+      this.bufferBudget.reserve(bytes) : undefined;
     delete resource.meta.error;
     delete resource.meta.errorCause;
     ++this._admittedCount;
@@ -209,7 +219,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
         publishedFiles: progress.publishedFiles}));
     record('queued');
     void this.queue.add(() => withCrawlContext({...this.context, resourceProgress: progress,
-      publicationOwner: url}, async () => {
+      publicationOwner: url, bufferAccount: bufferReservation}, async () => {
       let succeeded = false;
       record('running');
       try {
@@ -225,6 +235,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
         this.releaseFailedReservation(url);
         throw error;
       } finally {
+        bufferReservation?.release();
         let status: ResourceOutcome['status'];
         if (this.signal.aborted) status = 'cancelled';
         else if (!succeeded) status = 'failed';

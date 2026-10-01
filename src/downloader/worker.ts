@@ -1,5 +1,6 @@
 import {WorkerPublicationClient} from './worker-publication.js';
 import {createDiscoverySubmit} from './discovery.js';
+import {resourceBodyBytes} from '../resource-limits.js';
 import {parentPort, workerData} from 'node:worker_threads';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
@@ -54,14 +55,23 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
   let discovery: ReturnType<typeof createDiscoverySubmit> | undefined;
   try {
     const pipeline = await asyncPipeline;
+    if (pipeline.options.maxBufferedBytes !== undefined) {
+      if (!publications) throw new Error('Buffered-byte accounting requires the parent publication channel');
+      currentCrawlContext()!.bufferAccount = publications.bufferForTask(msg.taskId);
+    }
     controller.signal.throwIfAborted();
     const res = msg.body;
     const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
     discovery = createDiscoverySubmit(resource => {
-      collectedResource.push(prepareResourceForClone(resource));
+      const wire = prepareResourceForClone(resource);
+      const reserved = currentCrawlContext()?.bufferAccount?.reserveChild(resourceBodyBytes(wire.body, wire.encoding));
+      if (reserved) return reserved.then(() => { collectedResource.push(wire); });
+      collectedResource.push(wire);
     }, controller.signal, pipeline.options.maxDiscoveredResources, pipeline.options.maxResourceBytes);
     const processedResource: DownloadResource | void =
       await pipeline.processAfterDownload(downloadResource, discovery.submit);
+    const flushing = discovery.flush();
+    if (flushing) await flushing;
     if (!processedResource) {
       await pipeline.notifyStatusChange(downloadResource, 'processAfterDownload');
     } else if (await pipeline.saveToDisk(processedResource)) {
@@ -105,6 +115,16 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
     }
   } finally {
     discovery?.close();
+    try {
+      const flushing = discovery?.flush();
+      if (flushing) await flushing;
+    } catch (failure) {
+      if (!error) {
+        const details = failure as Error & {code?: string; limit?: number; actual?: number};
+        error = {name: details?.name, message: details?.message ?? String(failure),
+          code: details?.code, limit: details?.limit, actual: details?.actual};
+      }
+    }
     const message: DownloadWorkerMessage = {
       version: WORKER_PROTOCOL_VERSION,
       taskId: msg.taskId,

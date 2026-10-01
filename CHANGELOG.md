@@ -12,6 +12,7 @@ Feature
 * **downloader: bound per-parent discovery** — Add `maxDiscoveredResources`, validate child bodies before worker cloning, and reject late submissions. Children submitted before a later parent failure remain independently eligible for processing.
 * **perf: avoid redundant output directory creation** — Create only missing directories while preserving containment checks, concurrent creation, and staged publication.
 * **fix: back off concurrency on stalled downloads** — Replace inverted opt-in adjustment with bounded gradual growth and backoff, elapsed-time sampling, and reset on resume. Validate timer periods and preserve custom-policy metadata.
+* **downloader: account for aggregate buffered bodies** — Add `maxBufferedBytes`, current/peak reservation statistics, and parent-owned worker byte credits. Reject overflow, transfer child credits without double counting, and retain transferred-body reservations until failed workers exit.
 * **tooling: update compatible lint dependencies** — Use globals 17.13 and typescript-eslint 8.71 while retaining TypeScript 6 and Node 22 type definitions.
 * **install: remove declaration-copy postinstall** — Resolve the development Undici shim through TypeScript configuration, supporting clean and hoisted installs without modifying dependencies.
 * **tests: check complete TypeScript suite** — Run a separate source/test type check before Jest; retain Jest after measured Vitest and native-runner audits.

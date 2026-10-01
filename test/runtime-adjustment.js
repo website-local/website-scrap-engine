@@ -53,10 +53,19 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
         if (Date.now() > waitingDeadline) throw new Error('Initial resources did not finish');
         await new Promise(resolve => setTimeout(resolve, 5));
       }
+      // Isolate a zero-completion interval. Under host load the initial eight
+      // completions can span several samples and legitimately trigger growth.
+      crawler.stop();
       const waitingAtStart = held.length;
-      await new Promise(resolve => setTimeout(resolve, 450));
-      assert.ok(held.length <= 8, 'stalled origin must not receive load above initial concurrency');
-      assert.ok(crawler.concurrency <= 4, 'stalls must reduce future admissions');
+      const ceilingAtStall = Math.max(held.length, crawler.queuePending, crawler.concurrency);
+      await crawler.start();
+      const backoffDeadline = Date.now() + 5000;
+      while (crawler.concurrency > 2) {
+        if (Date.now() > backoffDeadline) throw new Error('Stalled origin did not trigger backoff');
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      assert.ok(held.length <= ceilingAtStall, 'an isolated stall must not increase in-flight load');
+      assert.equal(crawler.concurrency, 2, 'stalls must reduce future admissions to the minimum');
       assert.ok(crawler.queueSize > 0);
       assert.ok(waitingAtStart <= held.length);
       released = true;

@@ -173,6 +173,13 @@ Optional scheduling limits are positive integers:
   HTTP data, local reads/copies, and bodies supplied at admission or hook boundaries.
   String bodies are measured using their resource encoding. Exact-limit bodies
   are accepted; oversized resources fail with `ERR_RESOURCE_SIZE_LIMIT`.
+- `maxBufferedBytes` caps aggregate body reservations within a downloader. It
+  includes supplied queued bodies, buffered HTTP/local reads, active task-body
+  high-water marks, generated output passed to `io.writeFile`, and child bodies
+  awaiting worker-result delivery/admission. Omitted means unlimited. A resource
+  admission that cannot reserve its supplied body returns `false`; growth during
+  processing fails that attempt with `ERR_BUFFER_BUDGET` and numeric `limit` and
+  `actual` fields. It never waits for queue capacity held by the parent task.
 
 Total and queue limits are unlimited when omitted. Admission rejects immediately
 with `false` and an error status whose `res.meta.error.code` is `ERR_CRAWL_LIMIT`
@@ -204,6 +211,31 @@ The per-resource byte limit is optional. It is not a process-memory limit: parse
 objects, temporary copies, and generated HTML serialization can consume additional
 memory. Worker errors now preserve standard error name/message/stack and primitive
 `code`, `limit`, and `actual` fields in a plain transport record.
+
+`downloader.bufferedBytes` and `peakBufferedBytes` expose current and peak reserved
+bytes (zero when accounting is disabled). Each active task retains its largest
+observed body reservation until it settles; replacing a body with a smaller one
+does not immediately free capacity. Child credits transfer into accepted child
+tasks without double charging; duplicate/rejected children release their unused
+credits when the parent settles. Failures, retries, cancellation and worker exit
+release the appropriate reservations. Even a worker that never sends its first
+accounting request must exit before the parent releases its transferred body.
+
+Workers obtain byte credits through the parent publication channel. Supplied
+child bodies may be retained while their credit requests are pending, but are
+returned to the parent only after acknowledgement. Failed child credit requests
+fail the parent attempt while already acknowledged children remain eligible;
+worker-side byte-budget failures may therefore surface after a synchronous
+`submit` call returns. Custom workers that allocate/transform bodies must implement
+equivalent accounting to obtain the built-in worker guarantees.
+
+This is a logical body-reservation budget, not an exact live-memory ceiling.
+Streaming resources do not reserve their entire file size. Stream buffers, DOMs,
+metadata, codec/transport copies, simultaneous body representations, and temporary
+allocations inside custom hooks are outside it. A custom hook's new body is checked
+at the next pipeline boundary, after the hook has allocated it. Use it together
+with `maxResourceBytes`, discovery/queue limits and bounded concurrency, and allow
+additional memory headroom. Separate downloaders have independent budgets.
 
 Buffered saves now write a temporary file beside the destination and publish it
 by rename. Failures and cancellation observed before publication leave the prior

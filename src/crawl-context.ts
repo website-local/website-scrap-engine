@@ -1,5 +1,6 @@
 import type {PublicationStore} from './output-store.js';
 import type {PublicationReservations} from './publication-reservations.js';
+import type {BufferAccount} from './buffer-budget.js';
 import {AsyncLocalStorage} from 'node:async_hooks';
 import type {Logger} from './logger/types.js';
 
@@ -20,6 +21,7 @@ export interface CrawlContext {
   publicationStore?: PublicationStore;
   publicationReservations?: PublicationReservations;
   publicationOwner?: string;
+  bufferAccount?: BufferAccount;
 }
 
 const contexts = new AsyncLocalStorage<CrawlContext>();

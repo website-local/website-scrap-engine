@@ -2,6 +2,7 @@ import {MessageChannel, Worker} from 'node:worker_threads';
 import type {Transferable} from 'node:worker_threads';
 import {WorkerPublicationCoordinator} from './worker-publication.js';
 import {DiscoveryLimitError} from './discovery.js';
+import {BufferReservation} from '../buffer-budget.js';
 import type {WorkerChannels} from './worker-channel.js';
 import {currentCrawlContext} from '../crawl-context.js';
 import path from 'node:path';
@@ -131,7 +132,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
         const result = await this.pool.submitTask(body, transfers, id => {
           taskId = id;
           this.publications.register(id, currentCrawlContext() ?? this.context);
-        });
+        }, worker => { this.publications.assign(taskId!, worker); });
         completed = true;
         return result;
       } finally {
@@ -185,7 +186,9 @@ export class MultiThreadDownloader extends AbstractDownloader {
     if (msg.error) {
       this.handleError(msg.error, 'post-process', res);
     }
-    children.forEach(resource => this._addProcessedResource(resource));
+    const credit = currentCrawlContext()?.bufferAccount;
+    children.forEach(resource => this._addProcessedResource(resource,
+      credit instanceof BufferReservation ? credit : undefined));
     if (msg.error) return false;
     if (msg.redirectedUrl) {
       res.redirectedUrl = msg.redirectedUrl;

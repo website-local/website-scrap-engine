@@ -6,6 +6,12 @@ export class BufferBudgetError extends Error {
   }
 }
 
+/** Worker implementations use acknowledged parent RPC for the same operations. */
+export interface BufferAccount {
+  observeBody(bytes: number): void | Promise<void>;
+  reserveChild(bytes: number): void | Promise<void>;
+}
+
 /** Parent-thread ledger. Workers request reservations; they never mutate counters. */
 export class BufferBudget {
   private _used = 0;
@@ -43,6 +49,7 @@ function validateBytes(bytes: number): void {
 export class BufferReservation {
   private closed = false;
   private children = 0;
+  get childBytes(): number { return this.children; }
   constructor(private readonly budget: BufferBudget, private body: number) {}
 
   observeBody(bytes: number): void {

@@ -226,6 +226,13 @@ test('automatic adjustment backs off while an HTTP origin is stalled in both mod
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
 
+test('aggregate body reservations bound admission, processing and worker discovery', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-buffer-budget.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 50000});
+}, 55000);
+
 test('oversized custom-worker discovery batches reject before decoding children', async () => {
   const crawler = new Downloader(pathToFileURL(path.join(projectRoot,
     'test/downloader/budget-options.js')).href,

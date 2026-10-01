@@ -3,9 +3,10 @@ import {createFilePublication} from '../output-store.js';
 import type {FilePublication, PublicationStore} from '../output-store.js';
 import {withCrawlContext} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
+import type {BufferAccount} from '../buffer-budget.js';
 import {WORKER_PROTOCOL_VERSION} from './types.js';
 
-type Operation = 'create' | 'publish' | 'release';
+type Operation = 'create' | 'publish' | 'release' | 'buffer-body' | 'buffer-child';
 interface Request {
   version: number;
   requestId: number;
@@ -14,13 +15,14 @@ interface Request {
   destination?: string;
   localRoot?: string;
   token?: number;
+  bytes?: number;
 }
 interface Reply {
   version: number;
   requestId: number;
   ok: boolean;
   value?: {token: number; stagingPath: string};
-  error?: {message: string; code?: string};
+  error?: {message: string; code?: string; limit?: number; actual?: number};
 }
 interface Connection {
   worker: Worker;
@@ -74,6 +76,13 @@ export class WorkerPublicationCoordinator {
       handles: new Map(), operations: new Set()});
   }
 
+  assign(taskId: number, worker: Worker): void {
+    const lease = this.leases.get(taskId);
+    const connection = [...this.connections].find(connection => connection.worker === worker);
+    if (!lease || !connection) throw new Error('Publication task dispatch has no registered worker');
+    lease.connection = connection;
+  }
+
   finish(taskId: number, failed: boolean): Promise<void> {
     const lease = this.leases.get(taskId);
     if (!lease) return Promise.resolve();
@@ -109,12 +118,14 @@ export class WorkerPublicationCoordinator {
     connection.lastRequest = request.requestId;
     const lease = this.leases.get(request.taskId);
     const reply = (value?: Reply['value'], error?: unknown) => {
-      const details = error as {message?: unknown; code?: unknown} | undefined;
+      const details = error as {message?: unknown; code?: unknown; limit?: unknown; actual?: unknown} | undefined;
       try {
         connection.port.postMessage({version: WORKER_PROTOCOL_VERSION, requestId: request.requestId,
           ok: error === undefined, value, error: error === undefined ? undefined : {
             message: typeof details?.message === 'string' ? details.message : String(error),
-            code: typeof details?.code === 'string' ? details.code : undefined
+            code: typeof details?.code === 'string' ? details.code : undefined,
+            limit: typeof details?.limit === 'number' ? details.limit : undefined,
+            actual: typeof details?.actual === 'number' ? details.actual : undefined
           }} satisfies Reply);
       } catch (error) { this.channelFailed(connection.worker, error as Error); }
     };
@@ -136,6 +147,14 @@ export class WorkerPublicationCoordinator {
   }
 
   private async execute(lease: Lease, request: Request): Promise<Reply['value']> {
+    if (request.operation === 'buffer-body' || request.operation === 'buffer-child') {
+      if (!Number.isSafeInteger(request.bytes) || request.bytes! < 0 || !lease.context.bufferAccount) {
+        throw new TypeError('Invalid buffered-byte reservation request');
+      }
+      if (request.operation === 'buffer-body') await lease.context.bufferAccount.observeBody(request.bytes!);
+      else await lease.context.bufferAccount.reserveChild(request.bytes!);
+      return;
+    }
     if (request.operation === 'create') {
       if (typeof request.destination !== 'string' ||
         request.localRoot !== undefined && typeof request.localRoot !== 'string') {
@@ -182,7 +201,7 @@ export class WorkerPublicationClient {
       this.pending.delete(reply.requestId);
       if (reply.ok) pending.resolve(reply.value);
       else pending.reject(Object.assign(new Error(reply.error?.message ?? 'Publication failed'),
-        {code: reply.error?.code}));
+        {code: reply.error?.code, limit: reply.error?.limit, actual: reply.error?.actual}));
     });
     port.on('messageerror', () => this.close());
     port.on('close', () => this.close());
@@ -229,5 +248,22 @@ export class WorkerPublicationClient {
           return cleaning;
         }};
     }};
+  }
+
+  bufferForTask(taskId: number): BufferAccount {
+    let highWater = -1;
+    return {
+      observeBody: bytes => {
+        if (!Number.isSafeInteger(bytes) || bytes < 0) throw new TypeError('Invalid buffered-byte reservation');
+        if (bytes <= highWater) return;
+        return this.request(taskId, 'buffer-body', {bytes}).then(() => {
+          highWater = Math.max(highWater, bytes);
+        });
+      },
+      reserveChild: bytes => {
+        if (bytes === 0) return;
+        return this.request(taskId, 'buffer-child', {bytes}).then(() => undefined);
+      }
+    };
   }
 }

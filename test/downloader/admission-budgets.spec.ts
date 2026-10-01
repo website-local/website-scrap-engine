@@ -92,7 +92,7 @@ describe('crawl admission budgets', () => {
 
   test('rejects invalid budgets and conflicting concurrency bounds', () => {
     for (const key of ['maxResources', 'maxQueuedResources', 'maxConcurrency', 'maxResourceBytes',
-      'maxDiscoveredResources']) {
+      'maxDiscoveredResources', 'maxBufferedBytes']) {
       for (const value of [0, -1, 1.5, NaN, Infinity]) {
         expect(() => defaultDownloadOptions({...defaultLifeCycle(), [key]: value}))
           .toThrow(RangeError);

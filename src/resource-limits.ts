@@ -1,6 +1,8 @@
 import {createReadStream, promises as fs} from 'node:fs';
 import {Transform} from 'node:stream';
 import type {Resource, ResourceEncoding} from './resource.js';
+import type {ResourceBody} from './resource.js';
+import {currentCrawlContext} from './crawl-context.js';
 
 export class ResourceSizeError extends Error {
   readonly code = 'ERR_RESOURCE_SIZE_LIMIT';
@@ -20,6 +22,15 @@ export function checkResourceBody(res: Resource, limit?: number): void {
     Buffer.byteLength(res.body, res.encoding ?? 'utf8') : res.body.byteLength, limit);
 }
 
+export function resourceBodyBytes(body: ResourceBody | undefined, encoding: ResourceEncoding): number {
+  return body === undefined ? 0 : typeof body === 'string' ? Buffer.byteLength(body, encoding ?? 'utf8') :
+    body.byteLength;
+}
+
+export function accountBufferedBody(body: ResourceBody | undefined, encoding: ResourceEncoding): void | Promise<void> {
+  return currentCrawlContext()?.bufferAccount?.observeBody(resourceBodyBytes(body, encoding));
+}
+
 export function limitResourceStream(limit: number, offset = 0): Transform {
   let size = offset;
   return new Transform({transform(chunk: Buffer, _encoding, callback) {
@@ -32,13 +43,16 @@ export function limitResourceStream(limit: number, offset = 0): Transform {
 export async function readResourceFile(
   source: string, encoding: ResourceEncoding, limit?: number, signal?: AbortSignal
 ): Promise<string | Buffer> {
-  if (limit === undefined) return fs.readFile(source, {encoding, signal});
+  const account = currentCrawlContext()?.bufferAccount;
+  if (limit === undefined && !account) return fs.readFile(source, {encoding, signal});
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of createReadStream(source, {signal,
-    highWaterMark: Math.min(65536, limit + 1)})) {
+    highWaterMark: limit === undefined ? 65536 : Math.min(65536, limit + 1)})) {
     size += chunk.length;
     checkResourceSize(size, limit);
+    const accounting = account?.observeBody(size);
+    if (accounting) await accounting;
     chunks.push(chunk);
   }
   const body = Buffer.concat(chunks, size);

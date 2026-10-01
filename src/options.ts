@@ -82,6 +82,8 @@ export interface StaticDownloadOptions {
   maxDiscoveredResources?: number;
   /** Maximum downloaded bytes per resource, including decompressed HTTP data. */
   maxResourceBytes?: number;
+  /** Aggregate task-body/child-body reservation budget; not a process-heap limit. */
+  maxBufferedBytes?: number;
 
   /**
    * If url search params should be stripped.
@@ -337,7 +339,7 @@ export function defaultDownloadOptions(
     merged.concurrency = 12;
   }
   for (const key of ['concurrency', 'minConcurrency', 'maxConcurrency',
-    'maxResources', 'maxQueuedResources', 'maxDiscoveredResources', 'maxResourceBytes',
+    'maxResources', 'maxQueuedResources', 'maxDiscoveredResources', 'maxResourceBytes', 'maxBufferedBytes',
     'adjustConcurrencyPeriod'] as const) {
     const value = merged[key];
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {

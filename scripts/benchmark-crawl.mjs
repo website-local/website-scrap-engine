@@ -13,6 +13,9 @@ const entries = process.argv.slice(2);
 if (!entries.length) entries.push(new URL('../lib/index.js', import.meta.url).pathname);
 const samples = Number(process.env.WSE_BENCH_SAMPLES ?? 5);
 assert.ok(Number.isSafeInteger(samples) && samples > 0);
+const maxBufferedBytes = process.env.WSE_BENCH_BUFFER_BYTES === undefined ? undefined :
+  Number(process.env.WSE_BENCH_BUFFER_BYTES);
+assert.ok(maxBufferedBytes === undefined || Number.isSafeInteger(maxBufferedBytes) && maxBufferedBytes > 0);
 const variants = await Promise.all(entries.map(async entry => {
   const url = pathToFileURL(path.resolve(entry)).href;
   return {entry: url, api: await import(url)};
@@ -84,6 +87,7 @@ async function run(variant, workload, mode, sample) {
 import {lifeCycle, options} from ${JSON.stringify(entry)};
 export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   localRoot: ${JSON.stringify(output)}, initialUrl: [], concurrency: 8, workerCount: 2, maxDepth: 2,
+  maxBufferedBytes: ${maxBufferedBytes ?? 'undefined'},
   req: {retry: {limit: 0}, timeout: {request: 10000}},
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})
 });
@@ -163,6 +167,7 @@ try {
   console.log(JSON.stringify({node: process.version, platform: process.platform, arch: process.arch,
     entries: variants.map(variant => variant.entry), samples, concurrency: 8, workerCount: 2,
     documents, binaryCount, binaryBytes: 65536, streamingBytes: bytes.length,
+    maxBufferedBytes,
     warmupsPerCase: 1, gcExposed: !!global.gc, results}, null, 2));
 } finally {
   clearTimeout(deadline);

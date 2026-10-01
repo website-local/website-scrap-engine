@@ -1,4 +1,4 @@
-import type {Transferable} from 'node:worker_threads';
+import type {Transferable, Worker} from 'node:worker_threads';
 import type {DownloadOptions} from '../options.js';
 import type {WireResource} from '../resource.js';
 
@@ -45,6 +45,7 @@ export interface PendingPromiseWithBody<R = unknown, E = unknown, B = unknown>
   body: B;
   transferList?: Transferable[];
   workerId?: number;
+  onDispatched?: (worker: Worker) => void;
 }
 
 export enum WorkerMessageType {

@@ -36,7 +36,7 @@ lc.saveToDisk = [async (res, opt, pipeline) => {
   }, pipeline.signal, res.localRoot);
 }];
 export default options.defaultDownloadOptions({...lc, localRoot: ${JSON.stringify(output)},
-  initialUrl: [], concurrency: 1, workerCount: 1,
+  initialUrl: [], concurrency: 1, workerCount: 1, maxBufferedBytes: 64,
   workerPool: {taskTimeout: ${mode === 'timeout' ? 1500 : 'undefined'}, shutdownTimeout: 50},
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})
 });
@@ -77,6 +77,8 @@ export default options.defaultDownloadOptions({...lc, localRoot: ${JSON.stringif
       }
       if (mode === 'cancel') await crawler.dispose();
       await crawler.onIdle();
+      assert.equal(crawler.bufferedBytes, 0, 'worker failure/cancellation releases byte reservations');
+      assert.ok(crawler.peakBufferedBytes <= 64);
       assert.equal(await fs.readFile(path.join(output, 'asset.bin'), 'utf8'), 'cached');
       assert.deepEqual((await fs.readdir(output)).filter(name => name.startsWith('.wse-stage-')), []);
       assert.equal(crawler.downloadedCount, 0);

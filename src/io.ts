@@ -5,6 +5,7 @@ import {join, resolve, sep} from 'node:path';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
 import {error as errorLogger} from './logger/logger.js';
 import {publishFile} from './output-store.js';
+import {accountBufferedBody} from './resource-limits.js';
 
 export const mkdirRetry = async (dir: string): Promise<void> => {
   await fs.promises.mkdir(dir, {recursive: true});
@@ -31,6 +32,8 @@ export const writeFile = async (
   localRoot?: string
 ): Promise<void> => {
   throwIfCancelled();
+  const accounting = accountBufferedBody(data, encoding);
+  if (accounting) await accounting;
   let fileData: Uint8Array | string;
   let options: ObjectEncodingOptions | void = void 0;
   if (typeof data === 'string') {

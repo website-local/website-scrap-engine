@@ -8,6 +8,7 @@ import * as logger from '../logger/logger.js';
 import {isUrlHttp} from '../util.js';
 import URI from 'urijs';
 import {ResourceSizeError} from '../resource-limits.js';
+import {currentCrawlContext} from '../crawl-context.js';
 
 /** Take logs before retry */
 export const beforeRetryHook: BeforeRetryHook = (
@@ -45,17 +46,25 @@ export async function getRetry(
   maxResourceBytes?: number
 ): Promise<Response<Buffer | string> | void> {
   // Got owns retry limits and hooks; successful empty bodies are valid responses.
-  const limitController = maxResourceBytes === undefined ? undefined : new AbortController();
+  const account = currentCrawlContext()?.bufferAccount;
+  const limitController = maxResourceBytes === undefined && !account ? undefined : new AbortController();
   const request = got(url, {...options, signal: limitController ?
     options.signal ? AbortSignal.any([options.signal, limitController.signal]) : limitController.signal :
     options.signal});
-  let sizeError: ResourceSizeError | undefined;
-  if (maxResourceBytes !== undefined) {
+  let sizeError: unknown;
+  if (maxResourceBytes !== undefined || account) {
+    const failed = (error: unknown) => {
+      sizeError ??= error;
+      limitController!.abort(error);
+    };
     request.on('downloadProgress', ({transferred}) => {
-      if (transferred > maxResourceBytes) {
-        sizeError = new ResourceSizeError(maxResourceBytes, transferred);
-        limitController!.abort(sizeError);
-      }
+      try {
+        if (maxResourceBytes !== undefined && transferred > maxResourceBytes) {
+          throw new ResourceSizeError(maxResourceBytes, transferred);
+        }
+        const accounting = account?.observeBody(transferred);
+        if (accounting) void accounting.catch(failed);
+      } catch (error) { failed(error); }
     });
   }
   try {

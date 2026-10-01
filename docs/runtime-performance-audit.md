@@ -124,7 +124,8 @@ on a stalled origin, not a claimed optimal throughput curve. Deterministic tests
 cover stalls before the first completion, slowdown/recovery, bounds, unequal
 sampling periods, counters beyond 32 bits, independent crawls and pause/reset.
 The real-process HTTP harness lets eight requests complete, stalls the origin,
-and verifies no growth beyond initial in-flight load, reduced future admissions,
+and verifies no growth beyond the load at the start of an isolated zero-completion
+interval, reduced future admissions,
 and completion of all 48 resources after recovery in both modes. It passes on
 Node 24.18, 22.13 and 26.10. The full suite passed 401 tests before the last two
 integration cases; a subsequent build/typecheck and all 25 affected tests pass,

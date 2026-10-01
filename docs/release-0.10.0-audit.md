@@ -441,3 +441,34 @@ credits, and counters stay within the configured safe-integer limit. The build,
 complete source/test typecheck and four focused accounting tests pass on Node 24.
 This is an internal foundation; crawl/worker integration and the public option
 are not yet implemented, so it does not yet impose a runtime buffer limit.
+
+## Aggregate buffering integration
+
+maxBufferedBytes now controls a crawl-local ledger for queued supplied bodies,
+buffered network/local reads, task-body high-water marks, generated output through
+io.writeFile, and worker child-body credits. Parent RPC owns accounting; worker
+exit cannot abandon counters. Children receive transferred credits at admission
+without double charging; unused duplicate/queue-rejected credits release with
+their parent. Overflow is an observable ERR_BUFFER_BUDGET failure, never a wait
+on capacity occupied by the producer. Current/peak reserved bytes are exposed.
+
+These are logical reservations, not an exact heap ceiling. DOMs, metadata,
+stream buffers, codec/transport copies, simultaneous body representations and
+temporary custom-hook allocations are excluded. Body replacements retain a
+high-water mark until settlement. Custom worker allocations need equivalent
+accounting. The migration guide describes these limits and error timing.
+
+The implementation also binds task leases at dispatch so timeout before the
+first worker RPC still waits for worker exit before releasing its body. Dispatch
+callback failure retires that worker and lets other queued work continue on
+healthy workers. Discovery flush drains requests added while earlier requests
+are pending; acknowledged earlier children remain eligible after later failures.
+Zero-byte child bodies and unchanged worker body sizes avoid accounting RPC.
+
+Build, source/test typecheck and all 413 tests pass on Node 24.18.0. Twenty-four
+real-process cases cover queued/concurrent overflow, HTTP/local reads, streamed
+files, transformed/generated bodies, child credit transfer, duplicates, queue
+rejection, retries and cancellation in both modes. These plus a worker timing out
+before its first RPC pass on Node 22.13.0 and 26.10.0. Forced-publication failure
+tests also verify byte reservations release after exit. Final performance,
+stress, packed consumers and the complete Node matrix remain release gates.

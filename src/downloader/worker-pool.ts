@@ -301,7 +301,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   submitTask(
     taskBody: T,
-    transferList?: Transferable[], onAccepted?: (taskId: number) => void): Promise<R> {
+    transferList?: Transferable[], onAccepted?: (taskId: number) => void,
+    onDispatched?: (worker: Worker) => void): Promise<R> {
     if (this._isDisposing) {
       return Promise.reject(this._lastWorkerError || new Error('disposed'));
     }
@@ -315,7 +316,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         resolve,
         reject,
         body: taskBody,
-        transferList
+        transferList,
+        onDispatched
       };
       onAccepted?.(task.taskId);
       this.pendingTasks.push(task);
@@ -406,6 +408,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
           task.workerId = sorted[i].id;
           this.workingTasks.set(task.taskId, task as PendingPromise);
           ++sorted[i].load;
+          task.onDispatched?.(sorted[i].worker);
           if (this._taskTimeout !== undefined) {
             const info = sorted[i];
             this._taskTimers.set(task.taskId, setTimeout(() => {
@@ -414,6 +417,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
             }, this._taskTimeout));
           }
         } catch (e) {
+          if (task.workerId !== undefined) {
+            this.rejectWorkerTasks(sorted[i], e instanceof Error ? e : new Error(String(e)));
+            break;
+          }
           this.workingTasks.delete(task.taskId);
           task.reject(e);
         }

@@ -36,3 +36,34 @@ test('oversized discovered bodies are rejected before transport or queue admissi
     .toThrow(expect.objectContaining({code: 'ERR_RESOURCE_SIZE_LIMIT'}));
   expect(accepted).toBe(0);
 });
+
+test('asynchronous child reservations settle before flush reports a rejection', async () => {
+  const accepted: Resource[] = [];
+  let index = 0;
+  const discovery = createDiscoverySubmit(async res => {
+    if (++index === 2) throw new Error('reservation failed');
+    await Promise.resolve();
+    accepted.push(res);
+  }, new AbortController().signal);
+  discovery.submit([resource(), resource()]);
+  discovery.close();
+  await expect(discovery.flush()).rejects.toThrow('reservation failed');
+  expect(accepted).toHaveLength(1);
+});
+
+test('flush also awaits children submitted while earlier reservations are in flight', async () => {
+  const release: (() => void)[] = [];
+  const discovery = createDiscoverySubmit(() => new Promise<void>(resolve => { release.push(resolve); }),
+    new AbortController().signal);
+  discovery.submit(resource());
+  let settled = false;
+  const flushing = Promise.resolve(discovery.flush()).then(() => { settled = true; });
+  discovery.submit(resource());
+  release[0]();
+  await new Promise(resolve => setImmediate(resolve));
+  expect(settled).toBe(false);
+  discovery.close();
+  release[1]();
+  await flushing;
+  expect(settled).toBe(true);
+});
