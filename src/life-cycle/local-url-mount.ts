@@ -241,7 +241,7 @@ export function localUrlMounts(
   ): Promise<DownloadResource | Resource | void> => {
     void requestOptions;
     void pipeline;
-    if (res.body) {
+    if (res.body !== undefined) {
       return res as DownloadResource;
     }
     if (!isUrlHttp(res.downloadLink)) {

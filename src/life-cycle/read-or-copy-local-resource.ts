@@ -18,7 +18,7 @@ export async function readOrCopyLocalResource(
   options: StaticDownloadOptions,
   pipeline?: PipelineExecutor
 ): Promise<DownloadResource | Resource | void> {
-  if (res.body) {
+  if (res.body !== undefined) {
     return res as DownloadResource;
   }
   if (!res.downloadLink.startsWith(FILE_PREFIX)) {

@@ -310,3 +310,24 @@ upstream dependency change or a separately justified parser replacement.
 Balanced crawl benchmarks, Got retained-heap/worker stress, and the remaining
 resource/output architecture work are still release gates. Packed installation
 and declaration checks must be repeated after those runtime changes.
+
+## Consistent resource outcomes
+
+Accepted resources now have immutable last-attempt snapshots in `outcomes`, keyed
+by canonical admission URL. Acquisition and confirmed publication counts flow
+through a per-task crawl context and validated optional worker progress records.
+The map stores scalar data only. Successful streams/local copies now contribute
+to downloadedCount; failed/cancelled attempts do not. Pre-download skips and 304
+remain distinct from save-policy skips after body acquisition. The latter count
+consistently in buffered and streaming paths. Queued and active cancellation,
+concurrent success/failure isolation, redirects, and partial publication failures
+have explicit terminal states. Retry snapshots increment their attempt counter.
+
+A streaming error callback no longer swallows failures or invokes the success
+callback afterward. Supplied empty strings are recognized as bodies across the
+download chain. Build and all 380 tests pass on Node 24.18.0. The complete source/
+test typecheck, forty real-process outcome scenarios, and ten failure/retry cases
+pass on Node 22.13.0. Three additional boundary tests reject negative/infinite
+worker publication counts and nonboolean skip flags. Custom direct filesystem
+writes require their own reporting; worker crash/forced-termination publication
+ownership and destination reservations remain separate release gates.

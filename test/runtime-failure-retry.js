@@ -61,12 +61,17 @@ export default options.defaultDownloadOptions({...lc,
         await crawler.onIdle();
         assert.equal(crawler.downloadedCount, 0, `${Downloader.name}/${stage} failed count`);
         assert.ok(first.meta.errorCause);
+        assert.equal(crawler.outcomes.get(url).status, 'failed');
+        assert.equal(crawler.outcomes.get(url).attempt, 1);
         if (stage === 'process-size') assert.equal(first.meta.error.code, 'ERR_RESOURCE_SIZE_LIMIT');
         assert.equal(crawler.queuedUrl.has(url), false, 'failed reservation released');
         await assert.rejects(fs.stat(path.join(output, '127.0.0.1', 'file.bin')), {code: 'ENOENT'});
         assert.equal(crawler.addProcessedResource(make()), true, 'explicit retry admitted');
         await crawler.onIdle();
         assert.equal(crawler.downloadedCount, 1);
+        assert.equal(crawler.outcomes.get(url).status, 'saved');
+        assert.equal(crawler.outcomes.get(url).attempt, 2);
+        assert.equal(crawler.outcomes.get(url).publishedFiles, 1);
         assert.equal(crawler.addProcessedResource(make()), false, 'success remains deduplicated');
         assert.equal(await fs.readFile(path.join(output, '127.0.0.1', 'file.bin'), 'utf8'), 'complete');
       } finally { await crawler.dispose(); }

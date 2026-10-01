@@ -8,6 +8,7 @@ import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {promisify} from 'node:util';
 import type {MultiThreadDownloader} from '../../src/downloader/multi.js';
+import {ResourceType} from '../../src/resource.js';
 
 const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
 let root: string;
@@ -161,3 +162,37 @@ test('failed downloads, processing, and saves can be retried in both modes', asy
     path.join(buildRoot, 'index.js')
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
+
+
+test('resource outcomes agree across buffered, streaming, local and worker paths', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-outcomes.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 50000});
+}, 55000);
+
+
+test.each([
+  {publishedFiles: -1, skipped: false},
+  {publishedFiles: Infinity, skipped: false},
+  {publishedFiles: 0, skipped: 'false'}
+])('rejects invalid worker publication metadata: %j', async progress => {
+  const crawler = new Downloader(pathToFileURL(path.join(projectRoot,
+    'test/downloader/budget-options.js')).href,
+  {concurrency: 1, workerCount: 1, localRoot: root});
+  try {
+    await crawler.init;
+    jest.spyOn(crawler.pool, 'submitTask').mockResolvedValue({version: 1,
+      taskId: 1, type: 1, body: [], progress} as never);
+    const url = 'https://example.test/invalid-progress';
+    const resource = await crawler.pipeline.createResource(ResourceType.Binary, 0, url, url);
+    if (!resource) throw new Error('Resource was discarded');
+    resource.body = Buffer.from('body');
+    expect(crawler.addProcessedResource(resource)).toBe(true);
+    await crawler.start();
+    await crawler.onIdle();
+    expect(resource.meta.error).toMatchObject({message: 'Worker result.progress is invalid'});
+    expect(crawler.outcomes.get(url)).toMatchObject({status: 'failed', publishedFiles: 0});
+    expect(crawler.downloadedCount).toBe(0);
+  } finally { await crawler.dispose(); }
+}, 10000);

@@ -258,3 +258,30 @@ continuing into later stages. Failed initialization is safe to dispose.
 
 Logging and cancellation are scoped to each crawl's asynchronous context, so
 creating a second downloader no longer replaces the first downloader's logger.
+
+## Resource outcomes and download counts
+
+`downloader.outcomes` is a read-only typed map of immutable snapshots, keyed using
+the same fragment/query normalization as admission. It records the latest accepted
+attempt and its terminal state without retaining bodies or DOMs. Failed explicit
+retries replace the previous snapshot and increment `attempt`.
+
+`downloadedCount` now includes successful HTTP streams and local streaming copies,
+which previously returned void without being counted. It excludes failed and
+cancelled attempts. A body successfully acquired but skipped by the save policy
+still counts, matching buffered behavior; pre-download skips and HTTP 304 do not.
+The outcome's `downloaded` flag describes acquisition independently of final
+success, and `publishedFiles` can be nonzero on a later failure. Publication is
+atomic per file; the outcome does not claim a multi-file transaction.
+
+Built-in workers return an optional validated `progress` object with a nonnegative
+safe-integer `publishedFiles` and boolean `skipped`. Custom workers may supply it to
+report publications/save-policy skips. Omitted progress yields `processed` for
+successful buffered work. Malformed progress fails the attempt.
+
+The streaming `downloadError` hook now observes an error and then propagates it;
+`afterDownload` is not called for a failed transfer. Returning from the error hook
+no longer silently turns the failure into completion. Implement recovery in a
+download hook that returns a replacement resource, or explicitly resubmit after
+failure. Supplied empty-string bodies are also treated as acquired content instead
+of triggering another request; remove `body` when a fresh download is intended.

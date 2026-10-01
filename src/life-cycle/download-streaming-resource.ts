@@ -1,3 +1,4 @@
+import {markResourceDownloaded} from '../crawl-context.js';
 import type {WriteStream} from 'node:fs';
 import {createWriteStream, promises as fs} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
@@ -61,6 +62,10 @@ export async function streamingDownloadToFile(
   let response: Response | void = undefined;
   await publishFile(savePath, async staging => {
     response = await streamToStagingFile(res, requestOptions, staging, options?.maxResourceBytes);
+    if (response && response.statusCode !== 304) {
+      markResourceDownloaded();
+      res.redirectedUrl = response.url;
+    }
     if (response?.statusCode !== 304 && options) {
       await optionallySetLastModifiedTime(res, options, staging);
     }
@@ -244,7 +249,7 @@ export async function downloadStreamingResource(
   options: StaticDownloadOptions,
   executor?: PipelineExecutor
 ): Promise<Resource | DownloadResource | void> {
-  if (res.body) {
+  if (res.body !== undefined) {
     return res as DownloadResource;
   }
   if (res.type !== ResourceType.StreamingBinary) {
@@ -333,7 +338,7 @@ export function downloadStreamingResourceWithHook(
     options: StaticDownloadOptions,
     pipeline: PipelineExecutor
   ) => {
-    if (res.body) {
+    if (res.body !== undefined) {
       return res as DownloadResource;
     }
     if (res.type !== ResourceType.StreamingBinary) {
@@ -347,7 +352,7 @@ export function downloadStreamingResourceWithHook(
       if (!resource) {
         return;
       }
-      if (resource.body) {
+      if (resource.body !== undefined) {
         return resource as DownloadResource;
       }
       if (resource.shouldBeDiscardedFromDownload) {
@@ -369,6 +374,8 @@ export function downloadStreamingResourceWithHook(
         throw e;
       }
       await downloadError(e, res, requestOptions, options, pipeline);
+      // The error hook observes a failure; it supplies no replacement response.
+      throw e;
     }
     res.finishTimestamp = Date.now();
     res.downloadTime =

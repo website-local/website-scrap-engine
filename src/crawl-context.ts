@@ -1,10 +1,20 @@
 import {AsyncLocalStorage} from 'node:async_hooks';
 import type {Logger} from './logger/types.js';
 
+export interface ResourceProgress {
+  downloaded: boolean;
+  publishedFiles: number;
+  skipped: boolean;
+}
+
+export const createResourceProgress = (): ResourceProgress =>
+  ({downloaded: false, publishedFiles: 0, skipped: false});
+
 /** Internal services scoped to one crawl, including asynchronous hook work. */
 export interface CrawlContext {
   logger: Logger;
   signal: AbortSignal;
+  resourceProgress?: ResourceProgress;
 }
 
 const contexts = new AsyncLocalStorage<CrawlContext>();
@@ -19,4 +29,19 @@ export function currentCrawlContext(): CrawlContext | undefined {
 
 export function throwIfCancelled(): void {
   contexts.getStore()?.signal.throwIfAborted();
+}
+
+export function markResourceDownloaded(): void {
+  const progress = contexts.getStore()?.resourceProgress;
+  if (progress) progress.downloaded = true;
+}
+
+export function markResourceSkipped(): void {
+  const progress = contexts.getStore()?.resourceProgress;
+  if (progress) progress.skipped = true;
+}
+
+export function recordResourcePublication(): void {
+  const progress = contexts.getStore()?.resourceProgress;
+  if (progress) ++progress.publishedFiles;
 }

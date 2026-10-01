@@ -1,3 +1,4 @@
+import {currentCrawlContext} from '../crawl-context.js';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import type {WorkerFactory, WorkerPoolOptions} from './worker-pool.js';
@@ -113,6 +114,17 @@ export class MultiThreadDownloader extends AbstractDownloader {
       if (!Array.isArray(msg.body)) throw new TypeError('Worker result.body must be a resource array');
       // Validate the whole batch before admitting any children.
       children = msg.body.map(decodeResourceFromClone);
+      if (msg.progress !== undefined) {
+        if (!msg.progress || !Number.isSafeInteger(msg.progress.publishedFiles) ||
+          msg.progress.publishedFiles < 0 || typeof msg.progress.skipped !== 'boolean') {
+          throw new TypeError('Worker result.progress is invalid');
+        }
+        const progress = currentCrawlContext()?.resourceProgress;
+        if (progress) {
+          progress.publishedFiles += msg.progress.publishedFiles;
+          progress.skipped ||= msg.progress.skipped;
+        }
+      }
       if (msg.redirectedUrl !== undefined && typeof msg.redirectedUrl !== 'string') {
         throw new TypeError('Worker result.redirectedUrl must be a string');
       }
@@ -130,9 +142,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
     children.forEach(resource => this._addProcessedResource(resource));
     if (msg.error) return false;
     if (msg.redirectedUrl) {
-      this.retainRedirectAlias(msg.redirectedUrl);
+      res.redirectedUrl = msg.redirectedUrl;
     }
-    this.downloadedUrl.add(res.url);
   }
 
   protected async cancelActiveWork(): Promise<void> {

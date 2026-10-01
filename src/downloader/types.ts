@@ -89,8 +89,20 @@ export interface WorkerClosedMessage extends WorkerControlMessage {
 }
 
 export interface DownloadWorkerMessage extends WorkerMessage<WireResource[]> {
+  /** Built-in workers report confirmed publications and save-policy skips. */
+  progress?: {publishedFiles: number; skipped: boolean};
   /**
    * Available if processed redirect url differs from url
    */
   redirectedUrl?: string;
+}
+
+/** Last attempt for one canonical admission URL; never retains bodies or DOMs. */
+export interface ResourceOutcome {
+  readonly status: 'queued' | 'running' | 'saved' | 'processed' | 'skipped' | 'failed' | 'cancelled';
+  readonly attempt: number;
+  readonly url: string;
+  /** A body was acquired, including when later processing failed. */
+  readonly downloaded: boolean;
+  readonly publishedFiles: number;
 }

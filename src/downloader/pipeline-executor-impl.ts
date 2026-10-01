@@ -1,4 +1,4 @@
-import {currentCrawlContext, throwIfCancelled} from '../crawl-context.js';
+import {currentCrawlContext, throwIfCancelled, markResourceDownloaded, markResourceSkipped} from '../crawl-context.js';
 import {normalizeResource} from '../resource.js';
 import {checkResourceBody} from '../resource-limits.js';
 import path from 'node:path';
@@ -362,7 +362,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       throwIfCancelled();
       this.normalizeResource(downloadedResource);
       // if downloaded, end loop and return
-      if ((downloadedResource as Resource)?.body) {
+      if (downloadedResource.body !== undefined) {
+        markResourceDownloaded();
         return downloadedResource as DownloadResource;
       }
     }
@@ -437,12 +438,14 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (this.lifeCycle.existingResource) {
       const existing = await this._checkExistingResource(res, 'saveToDisk');
       if (existing?.action === 'skip' || existing?.action === 'skipSave') {
+        markResourceSkipped();
         return false;
       }
       if (existing?.action === 'ifModifiedSince') {
         const remoteLastMod = res.meta?.headers?.['last-modified'];
         if (remoteLastMod &&
           new Date(remoteLastMod as string) <= existing.stat.mtime) {
+          markResourceSkipped();
           return false;
         }
       }

@@ -1,3 +1,4 @@
+import {recordResourcePublication} from './crawl-context.js';
 import {promises as fs} from 'node:fs';
 import {dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
 
@@ -51,6 +52,7 @@ export async function publishFile(
     if (canonicalRoot !== undefined) await checkDirectories(canonicalRoot, parent, false);
     signal?.throwIfAborted();
     await fs.rename(stagingPath, destination);
+    recordResourcePublication();
     return true;
   } finally {
     await fs.rm(stagingDirectory, {recursive: true, force: true});

@@ -141,7 +141,7 @@ export async function downloadResource(
   requestOptions: RequestOptions,
   options: StaticDownloadOptions
 ): Promise<DownloadResource | Resource | void> {
-  if (res.body) {
+  if (res.body !== undefined) {
     return res as DownloadResource;
   }
   if (res.type === ResourceType.StreamingBinary) {

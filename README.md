@@ -287,6 +287,35 @@ On close, custom workers should close both transferred ports and send a
 `{type: 'closed'}` control message on `parentPort` so the pool can drain queued
 logs before disposal completes.
 
+## Resource outcomes
+
+`downloader.outcomes` exposes the latest attempt for each canonical admission URL.
+Each snapshot contains `status`, `attempt`, `url`, `downloaded`, and `publishedFiles`.
+Snapshots are replaced at queue transitions and completion; they do not retain
+resource bodies or parsed documents. Explicit retries increment `attempt` at the
+same key. Rejected admissions do not create attempts.
+
+| Status | Meaning |
+| --- | --- |
+| `queued` / `running` | Accepted work has not yet settled |
+| `saved` | Successful work with at least one confirmed file publication |
+| `processed` | A body completed the pipeline without a confirmed publication or save-policy skip |
+| `skipped` | No body was acquired, or the existing-resource save policy declined publication |
+| `failed` | Downloading, processing, saving, or worker validation failed |
+| `cancelled` | The crawl was cancelled before the attempt settled |
+
+`downloaded` records body acquisition, including supplied bodies and bodies whose
+later processing failed. `publishedFiles` counts confirmed publication operations;
+a failed attempt can have a nonzero count if an earlier output was already saved.
+`downloadedCount` counts successfully completed body acquisitions, including HTTP
+streams and local copies, and excludes failed/cancelled attempts. Save-policy
+skips after acquisition still count; pre-download skips and HTTP 304 do not.
+
+Custom hooks that write directly through their own filesystem code cannot report
+confirmed publications automatically. Built-in writers and `io.writeFile` do so.
+Custom workers can return `progress: {publishedFiles, skipped}`; without it their
+successful buffered work is reported as `processed`.
+
 ## Logging
 
 The library exposes dedicated logger categories through a pluggable logger

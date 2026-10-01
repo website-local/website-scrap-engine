@@ -15,7 +15,7 @@ import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
 import type {WorkerTaskMessage} from './worker-type.js';
 import {getWorkerChannels} from './worker-channel.js';
-import {withCrawlContext} from '../crawl-context.js';
+import {withCrawlContext, createResourceProgress, currentCrawlContext} from '../crawl-context.js';
 import {getLogger} from '../logger/logger.js';
 
 const {pathToOptions, overrideOptions}: {
@@ -118,7 +118,11 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
       type: WorkerMessageType.Complete,
       body: collectedResource,
       error,
-      redirectedUrl
+      redirectedUrl,
+      progress: {
+        publishedFiles: currentCrawlContext()?.resourceProgress?.publishedFiles ?? 0,
+        skipped: currentCrawlContext()?.resourceProgress?.skipped ?? false
+      }
     };
     if (!closing) taskPort.postMessage(message);
   }
@@ -127,7 +131,7 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
 
 taskPort.addListener('message', (msg: WorkerTaskMessage<WireResource>) => {
   if (closing) return;
-  const task = withCrawlContext(context, () => processTask(msg));
+  const task = withCrawlContext({...context, resourceProgress: createResourceProgress()}, () => processTask(msg));
   active.add(task);
   void task.then(() => active.delete(task), () => {
     active.delete(task);

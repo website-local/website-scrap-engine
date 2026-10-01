@@ -6,6 +6,7 @@
 
 Feature
 ------------
+* **downloader: expose consistent resource outcomes** — Track accepted attempts, acquisition, confirmed publications, skipping, failure, and cancellation across both downloader modes without retaining bodies. Count successful streams and local copies, and preserve explicit retry history.
 * **tooling: update compatible lint dependencies** — Use globals 17.13 and typescript-eslint 8.71 while retaining TypeScript 6 and Node 22 type definitions.
 * **install: remove declaration-copy postinstall** — Resolve the development Undici shim through TypeScript configuration, supporting clean and hoisted installs without modifying dependencies.
 * **tests: check complete TypeScript suite** — Run a separate source/test type check before Jest; retain Jest after measured Vitest and native-runner audits.
@@ -25,6 +26,7 @@ Feature
 
 Breaking Changes
 ------------
+* Count successful streamed/local-copy acquisitions in `downloadedCount`; failed and cancelled attempts remain excluded. Streaming error hooks now propagate failure and do not run success hooks. Supplied empty-string bodies no longer trigger a new request.
 * Make log4js an optional peer dependency. File-logging adapter users must install `log4js` explicitly; default installations omit its dependency tree.
 * Raise the Node.js minimum from 18.17.0 to 22.13.0; upgrade Got from 13 to 16 and `p-queue` from 8 to 9. Got options use public snapshots instead of private internals.
 * Require normalized `Resource.uri`, `refUri`, and `replaceUri` instances. Worker snapshots preserve cloneable nested metadata and reject unsupported values.

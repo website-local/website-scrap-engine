@@ -1,4 +1,4 @@
-import {withCrawlContext} from '../crawl-context.js';
+import {withCrawlContext, createResourceProgress} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
 import PQueue from 'p-queue';
 import URI from 'urijs';
@@ -10,7 +10,7 @@ import {checkResourceBody} from '../resource-limits.js';
 import {skip} from '../logger/logger.js';
 import {createDefaultLogger} from '../logger/default-logger.js';
 import {importDefaultFromPath} from '../util.js';
-import type {DownloaderStats, DownloaderWithMeta} from './types.js';
+import type {DownloaderStats, DownloaderWithMeta, ResourceOutcome} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {InitSubmitFunc, ResourceStatus} from '../life-cycle/types.js';
 
@@ -28,6 +28,8 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   private _closing?: Promise<void>;
   private _startGeneration = 0;
   private _admittedCount = 0;
+  private readonly resourceOutcomes = new Map<string, ResourceOutcome>();
+  get outcomes(): ReadonlyMap<string, ResourceOutcome> { return this.resourceOutcomes; }
   private readonly notifications = new Set<Promise<void>>();
   protected readonly abortController = new AbortController();
   protected context: CrawlContext = {
@@ -196,15 +198,40 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     delete resource.meta.errorCause;
     ++this._admittedCount;
     this.queuedUrl.add(url);
-    void this.queue.add(() => withCrawlContext(this.context, async () => {
+    const progress = createResourceProgress();
+    const attempt = (this.resourceOutcomes.get(url)?.attempt ?? 0) + 1;
+    const admittedUrl = resource.url;
+    const record = (status: ResourceOutcome['status']) => this.resourceOutcomes.set(url,
+      Object.freeze({status, attempt, url: admittedUrl, downloaded: progress.downloaded,
+        publishedFiles: progress.publishedFiles}));
+    record('queued');
+    void this.queue.add(() => withCrawlContext({...this.context, resourceProgress: progress}, async () => {
+      let succeeded = false;
+      record('running');
       try {
         this.signal.throwIfAborted();
-        if (await this.downloadAndProcessResource(resource) === false) {
-          this.releaseFailedReservation(url);
+        succeeded = await this.downloadAndProcessResource(resource) !== false;
+        if (!succeeded) this.releaseFailedReservation(url);
+        else {
+          this.signal.throwIfAborted();
+          if (progress.downloaded && resource.redirectedUrl) this.retainRedirectAlias(resource.redirectedUrl);
         }
       } catch (error) {
+        succeeded = false;
         this.releaseFailedReservation(url);
         throw error;
+      } finally {
+        let status: ResourceOutcome['status'];
+        if (this.signal.aborted) status = 'cancelled';
+        else if (!succeeded) status = 'failed';
+        else if (progress.publishedFiles) status = 'saved';
+        else if (!progress.downloaded || progress.skipped) status = 'skipped';
+        else status = 'processed';
+        if (status !== 'failed' && status !== 'cancelled' && progress.downloaded) {
+          this.downloadedUrl.add(admittedUrl);
+        }
+        if (status === 'cancelled') this.releaseFailedReservation(url);
+        record(status);
       }
     })).catch(error => {
       this.handleError(error, this.signal.aborted ? 'cancelled' : 'processing resource', resource);
