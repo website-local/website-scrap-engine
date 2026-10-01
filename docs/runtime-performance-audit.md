@@ -135,3 +135,36 @@ This remains an opt-in heuristic with explicit tuning tradeoffs. Slow downloads
 can reflect large resources rather than congestion, and completed-resource rate
 does not measure bytes, latency, or server capacity. Fixed concurrency and custom
 policies remain available. No default crawl speedup is claimed from this change.
+
+## Aggregate buffering and repeated-crawl stress
+
+At `20ad94a`, a five-sample alternating comparison against `21483e2` (before the
+buffering integration, same dependency tree) showed default total-time changes
+from -1.0% to +9.5%, with no case exceeding the 10% investigation threshold. With
+an 8 MiB budget enabled in the candidate, changes ranged from -11.7% to +10.8%.
+The baseline predates the option and ignores it. The +10.8% case was local reads
+in single-thread mode: accounting switches that path from readFile to chunked
+reads so growth can be checked before retaining further chunks. Its single-chunk
+copy is being investigated separately. These local samples do not justify claiming
+a throughput gain from accounting. Both comparisons validated identical output
+hashes across every case. [Raw evidence](evidence/buffering-and-stress.json) records
+both comparisons and the stress samples below.
+
+`node --expose-gc scripts/stress-crawl.mjs` runs six rounds of concurrent single-
+and multi-thread crawlers, each with 200 resources, two workers in the multi-thread
+crawler, body growth from 64 to 80 bytes, nested metadata/URI validation, a 4 KiB
+byte budget, intentional processing failures followed by explicit retries, and
+queued cancellation before disposal. Each runtime saves 2,400 files, completes
+72 retry attempts and cancels 240 queued resources. The harness checks output
+counts/selected exact bytes, terminal outcomes, zero final reserved bytes, bounded
+peak reservations, and actual worker exit on every round.
+
+The full stress run passes on Node 22.13.0, 24.18.0 and 26.10.0. It creates and
+disposes new pools across rounds, rather than measuring only a persistent warm
+pool. Parent retained heap is sampled after explicit GC; the allowed growth from
+round two to the final round is 12 MiB to tolerate configuration-module retention
+in Node's ESM cache and runtime/GC noise. This is a bounded regression probe, not
+a guarantee about arbitrary hooks or indefinitely long crawls. Worker heaps are
+not sampled independently; successful exits establish that those isolates ended.
+The workload uses a deterministic download hook, so HTTP failure behavior remains
+covered by the separate transport, lifecycle, and stalled-origin harnesses.
