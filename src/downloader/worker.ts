@@ -15,29 +15,35 @@ import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
 import type {WorkerTaskMessage} from './worker-type.js';
 import {getWorkerChannels} from './worker-channel.js';
+import {withCrawlContext} from '../crawl-context.js';
+import {getLogger} from '../logger/logger.js';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,
   overrideOptions?: Partial<StaticDownloadOptions>
 } = workerData;
 const {taskPort, logPort} = getWorkerChannels();
+const controller = new AbortController();
+const context = {signal: controller.signal, logger: getLogger()};
+const active = new Set<Promise<void>>();
+let closing = false;
 
 const asyncOptions: Promise<DownloadOptions> = importDefaultFromPath(pathToOptions);
 
-const asyncPipeline = asyncOptions.then(options => {
+const asyncPipeline = asyncOptions.then(options => withCrawlContext(context, () => {
   options = mergeOverrideOptions(options, overrideOptions);
 
   const pipeline: PipelineExecutor =
-    new PipelineExecutorImpl(options, options.req, options);
+    new PipelineExecutorImpl(options, options.req, options, controller.signal);
 
   const init = pipeline.init(pipeline);
   if (init && (init as Promise<void>).then) {
     return init.then(() => pipeline);
   }
   return pipeline;
-});
+}));
 
-taskPort.addListener('message', async (msg: WorkerTaskMessage<WireResource>) => {
+async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> {
   if (msg?.version !== WORKER_PROTOCOL_VERSION ||
     !Number.isSafeInteger(msg.taskId) || msg.taskId <= 0) {
     parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
@@ -49,9 +55,11 @@ taskPort.addListener('message', async (msg: WorkerTaskMessage<WireResource>) => 
   let redirectedUrl: string | undefined;
   try {
     const pipeline = await asyncPipeline;
+    controller.signal.throwIfAborted();
     const res = msg.body;
     const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
+      controller.signal.throwIfAborted();
       if (Array.isArray(resources)) {
         for (let i = 0; i < resources.length; i++) {
           collectedResource.push(prepareResourceForClone(resources[i]));
@@ -104,9 +112,20 @@ taskPort.addListener('message', async (msg: WorkerTaskMessage<WireResource>) => 
       error,
       redirectedUrl
     };
-    taskPort.postMessage(message);
+    if (!closing) taskPort.postMessage(message);
   }
 
+}
+
+taskPort.addListener('message', (msg: WorkerTaskMessage<WireResource>) => {
+  if (closing) return;
+  const task = withCrawlContext(context, () => processTask(msg));
+  active.add(task);
+  void task.then(() => active.delete(task), () => {
+    active.delete(task);
+    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
+      type: WorkerControlMessageType.Failed, error: 'Worker task response failed'});
+  });
 });
 
 parentPort?.addListener('message', msg => {
@@ -115,17 +134,27 @@ parentPort?.addListener('message', msg => {
       type: WorkerControlMessageType.Failed, error: 'Worker protocol version mismatch'});
     return;
   }
-  if (msg?.type !== WorkerControlMessageType.Close) {
+  if (msg?.type !== WorkerControlMessageType.Close &&
+    msg?.type !== WorkerControlMessageType.Cancel) {
     return;
   }
-  taskPort.close();
-  logPort.close();
-  parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});
+  if (closing) return;
+  closing = true;
+  if (msg.type === WorkerControlMessageType.Cancel) controller.abort(new Error('Worker disposed'));
+  void (async () => {
+    try { await asyncPipeline; } catch { /* Failed initialization still closes channels. */ }
+    await Promise.allSettled(active);
+    taskPort.close();
+    logPort.close();
+    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});
+  })();
 });
 
 void asyncPipeline.then(() => {
+  if (closing) return;
   parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Ready});
 }, error => {
+  if (closing) return;
   parentPort?.postMessage({
     version: WORKER_PROTOCOL_VERSION,
     type: WorkerControlMessageType.Failed,

@@ -43,7 +43,7 @@ export interface WorkerPoolOptions {
   startupTimeout?: number;
   /** Deadline from dispatch to completion; omitted means no task deadline. */
   taskTimeout?: number;
-  /** Grace period for closing idle worker channels. Defaults to 1000ms. */
+  /** Grace period for worker cancellation/closing. Defaults to 1000ms. */
   shutdownTimeout?: number;
 }
 
@@ -265,6 +265,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   complete(info: WorkerInfo, message: WorkerMessage): void {
+    if (this._isDisposing) return;
     if (message?.type === WorkerMessageType.Complete &&
       !this.checkVersion(info, message.version)) return;
     if (message?.type !== WorkerMessageType.Complete ||
@@ -432,11 +433,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     for (const startup of this._starting.values()) {
       startup.reject(new Error('disposed'));
     }
-    const shouldDrainPorts = this.pendingTasks.length === 0 &&
-      this.workingTasks.size === 0;
-    if (!shouldDrainPorts) {
-      return this.terminateWorkers();
-    }
+    const cancel = !this._initialized || this.workingTasks.size > 0;
+    this.rejectDisposedTasks();
     const closed = this.workers.map(info => {
       if (this._terminations.has(info) || info.worker.threadId === -1) return;
       return new Promise<void>(resolve => {
@@ -460,14 +458,14 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         info.logPort.once('close', onLogClose);
         info.worker.once('exit', finish);
         info.worker.postMessage({version: WORKER_PROTOCOL_VERSION,
-          type: WorkerControlMessageType.Close});
+          type: cancel ? WorkerControlMessageType.Cancel : WorkerControlMessageType.Close});
       });
     });
     await Promise.all(closed);
     return this.terminateWorkers();
   }
 
-  private async terminateWorkers(): Promise<number[]> {
+  private rejectDisposedTasks(): void {
     for (const taskId of this._taskTimers.keys()) this.clearTaskTimer(taskId);
     for (const task of this.pendingTasks) {
       task.reject(new Error('disposed'));
@@ -478,6 +476,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     }
     this.workingTasks.clear();
     for (const info of this.workers) info.load = 0;
+  }
+
+  private async terminateWorkers(): Promise<number[]> {
+    this.rejectDisposedTasks();
     return Promise.all(this.workers.map(info => this.terminateWorker(info)));
   }
 }

@@ -20,17 +20,26 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const optionsPath = path.join(root, 'options.mjs');
 await fs.writeFile(optionsPath, `
-import {lifeCycle, options} from ${JSON.stringify(entry)};
+import {lifeCycle, options, downloader} from ${JSON.stringify(entry)};
+import {isMainThread} from 'node:worker_threads';
+import {writeFile} from 'node:fs/promises';
 export const events = [];
 let signalHookStarted;
 export const hookStarted = new Promise(resolve => { signalHookStarted = resolve; });
+let signalWorkerHookStarted;
+export const workerHookStarted = new Promise(resolve => { signalWorkerHookStarted = resolve; });
 const lc = lifeCycle.defaultLifeCycle();
 lc.processAfterDownload.push(async (res, _submit, options, pipeline) => {
   if (options.meta.waitForCancel) {
     await new Promise(resolve => {
       pipeline.signal.addEventListener('abort', resolve, {once: true});
       signalHookStarted();
+      if (!isMainThread) downloader.getWorkerChannels().logPort.postMessage({
+        version: 1, type: 0, taskId: -1,
+        body: {level: 'info', logType: 'custom.workerWaiting', content: []}
+      });
     });
+    if (options.meta.cancelMarker) await writeFile(options.meta.cancelMarker, 'cleaned');
   }
   return res;
 });
@@ -40,7 +49,10 @@ export default options.defaultDownloadOptions({
   req: {retry: {limit: 0}, timeout: {request: 5000}},
   createLogger: ({meta}) => ({
     trace: (type, ...args) => events.push({label: meta.label, type, args}),
-    debug() {}, info: (type, ...args) => events.push({label: meta.label, type, args}),
+    debug() {}, info: (type, ...args) => {
+      events.push({label: meta.label, type, args});
+      if (type === 'custom.workerWaiting') signalWorkerHookStarted();
+    },
     warn() {}, error() {}, isTraceEnabled: () => true
   })
 });
@@ -100,7 +112,7 @@ try {
     response.setHeader('Connection', 'close');
     response.end(body);
   });
-  const {events, hookStarted} = await import(optionsUrl);
+  const {events, hookStarted, workerHookStarted} = await import(optionsUrl);
   const cooperative = new downloader.SingleThreadDownloader(optionsUrl, {
     meta: {waitForCancel: true}, localRoot: path.join(root, 'cooperative'),
     initialUrl: [`${origin}/index.html`]
@@ -110,6 +122,19 @@ try {
   await hookStarted;
   await cooperative.dispose();
   await assert.rejects(fs.stat(path.join(root, 'cooperative', '127.0.0.1', 'index.html')),
+    {code: 'ENOENT'});
+  const cancelMarker = path.join(root, 'worker-cleaned');
+  const workerCooperative = new downloader.MultiThreadDownloader(optionsUrl, {
+    meta: {waitForCancel: true, cancelMarker}, localRoot: path.join(root, 'worker-cooperative'),
+    initialUrl: [origin + '/index.html'], workerPool: {shutdownTimeout: 5000}
+  });
+  crawlers.push(workerCooperative);
+  await workerCooperative.start();
+  await workerHookStarted;
+  await workerCooperative.dispose();
+  assert.equal(await fs.readFile(cancelMarker, 'utf8'), 'cleaned');
+  assert.equal(workerCooperative.pool.workers[0].worker.threadId, -1);
+  await assert.rejects(fs.stat(path.join(root, 'worker-cooperative', '127.0.0.1', 'index.html')),
     {code: 'ENOENT'});
   const pair = ['alpha', 'beta'].map(label => new downloader.SingleThreadDownloader(optionsUrl, {
     meta: {label}, localRoot: path.join(root, label), initialUrl: [`${origin}/${label}.html`]

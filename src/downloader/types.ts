@@ -58,6 +58,7 @@ export enum WorkerControlMessageType {
   Ready = 'ready',
   Failed = 'failed',
   Close = 'close',
+  Cancel = 'cancel',
   Closed = 'closed'
 }
 

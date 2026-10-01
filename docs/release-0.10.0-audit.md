@@ -84,9 +84,19 @@ before admission. Build and all 318 tests pass on Node 24.18.0; real workers ver
 URI methods and nested metadata, and unit cases cover binary view offsets and
 malformed snapshots. Lifecycle and downloader smoke checks pass on Node 22.13.0.
 
+Worker disposal now sends `Cancel` for active/initializing pools. Built-in workers
+expose a thread-local pipeline AbortSignal, scope cancellation checks through the
+crawl context, stop accepting tasks, and await active hooks before acknowledging
+channel shutdown. Parent task promises settle immediately; pool disposal waits for
+channel closure or the configured grace deadline before termination. The real
+lifecycle harness verifies a worker hook writes a cleanup marker after cancellation
+and before disposal returns, without publishing the resource. Existing stalled
+worker/disposal tests exercise the forced fallback. Build and all 318 tests pass
+on Node 24.18.0; expanded lifecycle checks pass on Node 22.13.0.
+
 ## Remaining implementation and release gates
 
-- Cooperative worker cancellation and remaining cleanup/stress verification.
+- Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
 - Evidence-led test-runner comparison; audit TypeScript 7 without forcing an

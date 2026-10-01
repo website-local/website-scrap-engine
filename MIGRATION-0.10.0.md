@@ -65,8 +65,8 @@ until its completion message. There is no task deadline by default. A timeout or
 message-decoding failure terminates the affected worker and rejects all tasks
 assigned to it. Undispatched tasks continue on surviving workers, or reject if
 none remain. Assigned tasks are never replayed automatically: a failed worker
-may already have performed side effects. `shutdownTimeout` configures the idle
-worker close grace period (1000ms by default). All deadlines are positive integer
+may already have performed side effects. `shutdownTimeout` configures the
+worker cancellation/close grace period (1000ms by default). All deadlines are positive integer
 milliseconds, at most 2147483647.
 
 A minimal custom worker looks like:
@@ -85,7 +85,7 @@ taskPort.on('message', ({version, taskId, body}) => {
 
 parentPort.on('message', ({version, type}) => {
   if (version !== WORKER_PROTOCOL_VERSION) throw new Error('Worker protocol mismatch');
-  if (type === WorkerControlMessageType.Close) {
+  if (type === WorkerControlMessageType.Close || type === WorkerControlMessageType.Cancel) {
     taskPort.close();
     logPort.close();
     parentPort.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});
@@ -98,6 +98,15 @@ Add `version` to existing log envelopes and send them on `logPort`. Close both p
 before acknowledging shutdown so queued logs can drain. Custom worker factories
 must forward the supplied worker options, including `workerData` and
 `transferList`.
+
+When cancelled, the built-in worker aborts `pipeline.signal`, waits for active
+hooks to settle, then closes its channels. Hooks can use `finally` to clean up
+after observing the signal. The parent waits for this acknowledgement up to
+`shutdownTimeout`, then terminates the worker. Custom workers handling asynchronous
+tasks should implement the same `Cancel` behavior; the minimal echo example above
+has no asynchronous work to await. Queued/active task promises reject on disposal,
+and the disposal promise waits for worker shutdown. Task deadlines and protocol
+failures terminate workers immediately rather than granting this cleanup grace.
 
 Downloader task bodies and returned children use `resource.WireResource`.
 Use `resource.prepareResourceForClone(res)` before sending and
