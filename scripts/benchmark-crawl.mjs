@@ -107,6 +107,7 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   crawler.handleError = (...args) => { errors.push(args); originalError(...args); };
   let initialized;
   let completed;
+  const admitted = [];
   try {
     await crawler.init;
     crawler.stop(); // 0.9.1 starts automatically; both variants now admit while paused.
@@ -122,12 +123,17 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
         depth: 0, url, refUrl: url, localRoot: output
       });
       if (workload === 'local') res.downloadLink = pathToFileURL(source).href;
+      admitted.push(res);
       crawler.addProcessedResource(res);
     }
     await crawler.start();
     await crawler.onIdle();
     completed = performance.now();
     assert.deepEqual(errors, []);
+    if (crawler.options.httpTransport === 'native' && workload !== 'local') {
+      assert.ok(admitted.every(resource => resource.meta.httpTransport === 'native'),
+        'native benchmark must exercise the native transport');
+    }
     if (crawler.outcomes) assert.ok([...crawler.outcomes.values()].every(item => item.status === 'saved'));
   } finally {
     await crawler.dispose();

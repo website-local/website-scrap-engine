@@ -205,3 +205,16 @@ test('compact request snapshots retain explicit defaults and changes from init h
   expect(merged.req.decompress).toBe(true);
   expect(merged.req.headers?.['x-probe']).toBe('value');
 });
+
+test('reusing normalized options detects nested mutations and reruns init hooks', () => {
+  const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: {retry: {limit: 0}}});
+  options.req.headers!['x-changed'] = 'yes';
+  expect(mergeOverrideOptions(options).req.headers?.['x-changed']).toBe('yes');
+  Reflect.set(options.req.retry!, 'limit', 'invalid');
+  expect(() => mergeOverrideOptions(options)).toThrow();
+  const init = jest.fn();
+  const hooked = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: {hooks: {init: [init]}}});
+  const before = init.mock.calls.length;
+  mergeOverrideOptions(hooked);
+  expect(init.mock.calls.length).toBeGreaterThan(before);
+});

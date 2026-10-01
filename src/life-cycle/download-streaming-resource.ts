@@ -1,7 +1,7 @@
 import {markResourceDownloaded} from '../crawl-context.js';
 import type {WriteStream} from 'node:fs';
 import {constants, createWriteStream, promises as fs} from 'node:fs';
-import {pipeline} from 'node:stream/promises';
+import {finished as streamFinished, pipeline} from 'node:stream/promises';
 import type {Response} from 'got';
 import got, {HTTPError, RequestError} from 'got';
 import type {Resource} from '../resource.js';
@@ -19,6 +19,8 @@ import {error as errorLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {isUrlHttp} from '../util.js';
+import {canUseNativeHttp, withNativeHttp} from './native-http.js';
+import type {NativeHttpResponse} from './native-http.js';
 
 export function isBytesAccepted(acceptRange?: string): boolean {
   if (!acceptRange) {
@@ -57,16 +59,16 @@ export async function streamingDownloadToFile(
   requestOptions: RequestOptions,
   executor?: PipelineExecutor,
   options?: StaticDownloadOptions
-): Promise<Response | void> {
+): Promise<Response | NativeHttpResponse | void> {
   const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
-  let response: Response | void = undefined;
+  let response: Response | NativeHttpResponse | void = undefined;
   let skipped = false;
   await publishFile(savePath, async (staging, direct) => {
     response = await streamToStagingFile(res, requestOptions, staging, options?.maxResourceBytes,
       direct && executor ? async () => {
         skipped = !await executor.shouldSaveResource(res);
         return !skipped;
-      } : undefined, !!direct && noFollowWriteFlags !== undefined);
+      } : undefined, !!direct && noFollowWriteFlags !== undefined, options?.httpTransport === 'native');
     if (response && response.statusCode !== 304) {
       markResourceDownloaded();
       res.redirectedUrl = response.url;
@@ -90,8 +92,27 @@ async function streamToStagingFile(
   savePath: string,
   maxResourceBytes?: number,
   beforeWrite?: () => Promise<boolean>,
-  rejectSymlinks = false
-): Promise<Response> {
+  rejectSymlinks = false,
+  preferNative = false
+): Promise<Response | NativeHttpResponse> {
+  if (preferNative && canUseNativeHttp(requestOptions)) {
+    res.meta.httpTransport = 'native';
+    return withNativeHttp(res.downloadLink, requestOptions, async (response, body) => {
+      res.meta.headers = response.headers;
+      if (response.statusCode === 304 || beforeWrite && !await beforeWrite()) {
+        // Finish acquisition without opening or replacing cached output.
+        body.resume();
+        await streamFinished(body, {cleanup: true});
+        return response;
+      }
+      const output = createWriteStream(savePath, {highWaterMark: 256 * 1024,
+        flags: rejectSymlinks ? noFollowWriteFlags : 'w'} as Parameters<typeof createWriteStream>[1]);
+      if (maxResourceBytes === undefined) await pipeline(body, output);
+      else await pipeline(body, limitResourceStream(maxResourceBytes), output);
+      return response;
+    });
+  }
+  if (preferNative) res.meta.httpTransport = 'got';
   const options = Object.assign({}, requestOptions, {
     isStream: true, headers: {...requestOptions.headers}
   }) as RequestOptions & {

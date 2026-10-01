@@ -1,5 +1,8 @@
 # Checkpoint profile — 2026-10-01
 
+Follow-up: [native HTTP implementation and measurements](native-http-performance.md)
+records the subsequent optimizations, retained MDN gate and remaining regressions.
+
 Checkpoint `d2f8ca5` is committed. No further permissive mode is recommended
 from these measurements. The all-suite improvement target against 0.9.1 is
 still unmet; the remaining work includes ordinary optimization opportunities.

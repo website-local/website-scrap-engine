@@ -53,22 +53,28 @@ async function resolveRoot(root: string): Promise<string> {
 
 /** Prepare each directory once per crawl; publication still checks the live parent. */
 export class OutputDirectories {
-  private readonly roots = new Map<string, Promise<string>>();
-  private readonly parents = new Map<string, Promise<void>>();
+  private readonly roots = new Map<string, string | Promise<string>>();
+  private readonly parents = new Map<string, Promise<void> | null>();
 
-  root(root: string): Promise<string> {
+  root(root: string): string | Promise<string> {
     let pending = this.roots.get(root);
     if (!pending) {
-      pending = resolveRoot(root).catch(error => { this.roots.delete(root); throw error; });
+      pending = resolveRoot(root).then(value => {
+        this.roots.set(root, value);
+        return value;
+      }, error => { this.roots.delete(root); throw error; });
       this.roots.set(root, pending);
     }
     return pending;
   }
 
-  prepare(root: string, parent: string): Promise<void> {
+  prepare(root: string, parent: string): void | Promise<void> {
     let pending = this.parents.get(parent);
+    if (pending === null) return;
     if (!pending) {
-      pending = checkDirectories(root, parent, true).catch(error => {
+      pending = checkDirectories(root, parent, true).then(() => {
+        this.parents.set(parent, null);
+      }, error => {
         this.parents.delete(parent);
         throw error;
       });
@@ -146,10 +152,12 @@ export async function createFilePublication(
     if (!withinRoot || withinRoot === '..' || withinRoot.startsWith('..' + sep) ||
       isAbsolute(withinRoot)) throw new Error('Output destination escapes localRoot');
     // The configured root is trusted and may itself be a symlink.
-    canonicalRoot = await (directories ? directories.root(resolvedRoot) : resolveRoot(resolvedRoot));
+    const root = directories ? directories.root(resolvedRoot) : resolveRoot(resolvedRoot);
+    canonicalRoot = typeof root === 'string' ? root : await root;
     destination = join(canonicalRoot, withinRoot);
-    await (directories ? directories.prepare(canonicalRoot, dirname(destination)) :
-      checkDirectories(canonicalRoot, dirname(destination), true));
+    const preparing = directories ? directories.prepare(canonicalRoot, dirname(destination)) :
+      checkDirectories(canonicalRoot, dirname(destination), true);
+    if (preparing) await preparing;
   }
   const parent = dirname(destination);
   if (canonicalRoot === undefined) await fs.mkdir(parent, {recursive: true});

@@ -313,6 +313,24 @@ logs before disposal completes.
 
 ## Performance defaults
 
+For an opt-in native HTTP(S) transport, set this in your configuration module:
+
+```ts
+export default options.defaultDownloadOptions({
+  ...lifeCycle.defaultLifeCycle(),
+  localRoot: './output',
+  httpTransport: 'native',
+  req: {retry: {limit: 0}, timeout: {request: 200000}}
+});
+```
+
+Native mode supports GET/HEAD, redirects, gzip/deflate/Brotli decoding,
+cancellation and resource limits. Unsupported request options (including retries,
+Got hooks, custom agents and phase timeouts) automatically select Got before any
+request is sent. `resource.meta.httpTransport` reports the selected backend when
+native mode is requested. Got remains the default. See the
+[migration guide](MIGRATION-0.10.0.md#native-http-transport) for compatibility details.
+
 Downloaders write directly to output files by default. Failed or cancelled writes
 may leave partial files or overwrite a cached copy. Use `atomicWrites: true` to
 stage files and rename on success instead.

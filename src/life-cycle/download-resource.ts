@@ -9,6 +9,8 @@ import {isUrlHttp} from '../util.js';
 import URI from 'urijs';
 import {ResourceSizeError} from '../resource-limits.js';
 import {currentCrawlContext} from '../crawl-context.js';
+import {canUseNativeHttp, nativeBufferedRequest} from './native-http.js';
+import type {NativeHttpResponse} from './native-http.js';
 
 /** Take logs before retry */
 export const beforeRetryHook: BeforeRetryHook = (
@@ -102,9 +104,12 @@ export async function requestForResource(
   }
   logger.request.info(res.url, downloadLink, res.refUrl,
     res.encoding, res.type);
-  let response: Response<string | Buffer> | void;
+  let response: Response<string | Buffer> | (NativeHttpResponse & {body: Buffer}) | void;
   try {
-    response = await getRetry(downloadLink, reqOptions, options?.maxResourceBytes);
+    const native = options?.httpTransport === 'native' && canUseNativeHttp(reqOptions);
+    if (options?.httpTransport === 'native') res.meta.httpTransport = native ? 'native' : 'got';
+    response = native ? await nativeBufferedRequest(downloadLink, reqOptions, options?.maxResourceBytes) :
+      await getRetry(downloadLink, reqOptions, options?.maxResourceBytes);
   } catch (e) {
     if (e instanceof HTTPError &&
       (e as HTTPError).response.statusCode === 304) {

@@ -156,6 +156,12 @@ test('explicit lifecycle and crawl isolation in real Node processes', async () =
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
 
+test('native HTTPS uses Node certificate verification with the configured CA', async () => {
+  await promisify(execFile)(process.execPath, [path.join(projectRoot, 'test/runtime-native-http.js'),
+    path.join(buildRoot, 'index.js')], {cwd: projectRoot, timeout: 15000,
+    env: {...process.env, NODE_EXTRA_CA_CERTS: path.join(projectRoot, 'test/fixtures/native-http-cert.pem')}});
+}, 20000);
+
 test('failed downloads, processing, and saves can be retried in both modes', async () => {
   await promisify(execFile)(process.execPath, [
     path.join(projectRoot, 'test/runtime-failure-retry.js'),

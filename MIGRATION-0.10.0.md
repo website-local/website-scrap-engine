@@ -332,6 +332,32 @@ Worker resource snapshots preserve structured-clone-compatible nested metadata.
 Parsed DOMs stay local; metadata containing functions now fails explicitly rather
 than being silently omitted. Callers should use serializable metadata.
 
+## Native HTTP transport
+
+`httpTransport: 'native'` opts into Node's HTTP(S) client for buffered and streamed
+GET/HEAD requests. Got remains the default. Set the option in the configuration
+module before calling `defaultDownloadOptions`. Native configuration defaults to
+zero retries and a 200-second request deadline. Previously normalized Got options
+retain their retry and phase-timeout settings; when overriding such options, also
+set `req: {retry: {limit: 0}, timeout: {request: 200000}}` and remove inherited phase
+timeouts if your merge retains them.
+
+The native path supports headers, bounded redirects, cross-origin credential
+stripping, gzip/deflate/Brotli decoding, `decompress: false`, request deadlines,
+cancellation, HTTP status errors, save policies, atomic/direct output and decoded
+body limits. It does not retry automatically. Unsupported content encodings fail.
+Custom agents/TLS/DNS, cookies, caching, HTTP/2, non-GET/HEAD methods, phase timeouts,
+positive retry limits and Got hooks select Got before I/O. The inert `beforeRetry`
+hook is allowed with zero retries. When native mode is requested,
+`resource.meta.httpTransport` is `'native'` or `'got'` for each HTTP acquisition.
+
+`streamingDownloadToFile` can now return `NativeHttpResponse` as well as Got's
+response or void. Native responses provide status, headers, URL/redirect metadata
+and `retryCount: 0`, without Got request objects or timings. Native status failures
+use the exported `lifeCycle.NativeHttpError`, not Got's `HTTPError` class. Transport
+errors are Node errors. Native mode does not promise Got's default headers or full
+request/response API; retain Got when hooks depend on those details.
+
 ## Explicit crawl lifetime
 
 Construction and `init` no longer start downloads. `await downloader.start()`

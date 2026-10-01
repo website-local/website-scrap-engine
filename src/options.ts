@@ -28,6 +28,8 @@ export interface StaticDownloadMeta
  * Options which should not be changed at runtime, and safe for cloning
  */
 export interface StaticDownloadOptions {
+  /** Opt-in native GET/HEAD transport; unsupported request options fall back to Got. Default: got. */
+  httpTransport?: 'got' | 'native';
   /**
    * @see Resource.localRoot
    */
@@ -326,6 +328,9 @@ function cloneConfig<T>(value: T): T {
 }
 
 const requestDefaults = got.defaults.options.toJSON();
+// Weak keys retain no merge history. A private copy detects callers mutating
+// a previously normalized request object before another downloader uses it.
+const normalizedRequests = new WeakMap<RequestOptions, RequestOptions>();
 
 function snapshotOptions(options: Options, explicit: RequestOptions): RequestOptions {
   // Got takes the request URL as its first argument, never as an options key.
@@ -342,6 +347,9 @@ function snapshotOptions(options: Options, explicit: RequestOptions): RequestOpt
 export function defaultDownloadOptions(
   options: ProcessingLifeCycle & Partial<DownloadOptions>): DownloadOptions {
   const merged: DownloadOptions = {...defaultOptions, ...options};
+  if (merged.httpTransport !== undefined && merged.httpTransport !== 'got' && merged.httpTransport !== 'native') {
+    throw new TypeError('Unknown httpTransport: ' + merged.httpTransport);
+  }
   merged.meta = {...(options.meta ?? defaultOptions.meta)};
   merged.encoding = {...options.encoding};
   merged.req = cloneConfig(options.req ?? {});
@@ -385,7 +393,7 @@ export function defaultDownloadOptions(
     merged.req.ignoreInvalidCookies = true;
   }
   if (!('timeout' in merged.req) || merged.req.timeout === undefined) {
-    merged.req.timeout = {
+    merged.req.timeout = merged.httpTransport === 'native' ? {request: 200000} : {
       lookup: 1000,
       connect: 3500,
       secureConnect: 4000,
@@ -397,7 +405,7 @@ export function defaultDownloadOptions(
   }
   if (!('retry' in merged.req) || merged.req.retry === undefined) {
     merged.req.retry = {
-      limit: 25,
+      limit: merged.httpTransport === 'native' ? 0 : 25,
       maxRetryAfter: 60000,
       calculateDelay: calculateFastDelay
     };
@@ -421,7 +429,12 @@ export function defaultDownloadOptions(
     !options.adjustConcurrencyFunc) {
     merged.adjustConcurrencyFunc = adjust;
   }
-  merged.req = snapshotOptions(new Options(merged.req), merged.req);
+  const previous = options.req && normalizedRequests.get(options.req);
+  if (!previous || !isDeepStrictEqual(merged.req, previous)) {
+    merged.req = snapshotOptions(new Options(merged.req), merged.req);
+  }
+  // Init hooks are observable and must still execute at every normalization.
+  if (!merged.req.hooks?.init?.length) normalizedRequests.set(merged.req, cloneConfig(merged.req));
   return merged;
 }
 
