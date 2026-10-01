@@ -354,3 +354,20 @@ wrapper uses this handle, preserving writer/save-policy ordering, containment,
 and per-file rename behavior. This enables parent ownership without duplicating
 filesystem policy. Build and all 382 tests pass on Node 24.18.0; all twelve output
 store tests pass on Node 22.13.0. Worker RPC ownership is still being integrated.
+
+## Parent-owned worker publication
+
+The built-in multi-thread downloader now supplies a dedicated publication port.
+Parent task leases allocate staging, validate worker ownership, confirm renames,
+and count publications in the parent context. Failed transport waits for worker
+exit before removing staged files, including allocation requests still awaiting
+filesystem completion. Late or foreign requests cannot publish. Exited workers
+are removed from the coordinator's connection set. Direct custom filesystem I/O
+and initialization-hook writes remain outside the task protocol.
+
+Build and all 385 tests pass on Node 24.18.0. Five real-process cases cover task
+timeout, crash, forced cancellation, confirmed output before a later crash, and
+cancellation racing delayed staging allocation; these also pass on Node 22.13.0
+and 26.10.0. Cached bytes survive failed writes, staged paths are absent before
+settlement, and partial-success counts remain accurate. A final focused run
+checks the coordinator and multi-thread integration after cleanup review.

@@ -1,3 +1,4 @@
+import {WorkerPublicationClient} from './worker-publication.js';
 import {parentPort, workerData} from 'node:worker_threads';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
@@ -22,7 +23,8 @@ const {pathToOptions, overrideOptions}: {
   pathToOptions: string,
   overrideOptions?: Partial<StaticDownloadOptions>
 } = workerData;
-const {taskPort, logPort} = getWorkerChannels();
+const {taskPort, logPort, publicationPort} = getWorkerChannels();
+const publications = publicationPort ? new WorkerPublicationClient(publicationPort) : undefined;
 const controller = new AbortController();
 const context = {signal: controller.signal, logger: getLogger()};
 const active = new Set<Promise<void>>();
@@ -131,7 +133,8 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
 
 taskPort.addListener('message', (msg: WorkerTaskMessage<WireResource>) => {
   if (closing) return;
-  const task = withCrawlContext({...context, resourceProgress: createResourceProgress()}, () => processTask(msg));
+  const task = withCrawlContext({...context, resourceProgress: createResourceProgress(),
+    publicationStore: publications?.forTask(msg.taskId)}, () => processTask(msg));
   active.add(task);
   void task.then(() => active.delete(task), () => {
     active.delete(task);
@@ -156,6 +159,7 @@ parentPort?.addListener('message', msg => {
   void (async () => {
     try { await asyncPipeline; } catch { /* Failed initialization still closes channels. */ }
     await Promise.allSettled(active);
+    publications?.close();
     taskPort.close();
     logPort.close();
     parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});

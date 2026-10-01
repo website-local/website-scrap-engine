@@ -1,3 +1,7 @@
+import {MessageChannel, Worker} from 'node:worker_threads';
+import type {Transferable} from 'node:worker_threads';
+import {WorkerPublicationCoordinator} from './worker-publication.js';
+import type {WorkerChannels} from './worker-channel.js';
 import {currentCrawlContext} from '../crawl-context.js';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -5,7 +9,7 @@ import type {WorkerFactory, WorkerPoolOptions} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
 import type {WireResource, Resource} from '../resource.js';
 import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
-import type {DownloadWorkerMessage} from './types.js';
+import type {DownloadWorkerMessage, PendingPromiseWithBody} from './types.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import type {DownloadResource} from '../life-cycle/types.js';
 import {AbstractDownloader} from './main.js';
@@ -18,6 +22,29 @@ export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
 
 export class MultiThreadDownloader extends AbstractDownloader {
   private _pool: WorkerPool<WireResource, DownloadWorkerMessage> | undefined;
+  private readonly publications = new WorkerPublicationCoordinator(
+    (workerId, taskId) => (this._pool?.workingTasks.get(taskId) as PendingPromiseWithBody | undefined)
+      ?.workerId === workerId,
+    (worker, error) => {
+      const info = this._pool?.workers.find(info => info.worker === worker);
+      if (info) this._pool?.rejectWorkerTasks(info, error);
+    });
+  private readonly createWorker: WorkerFactory = (filename, workerOptions = {}) => {
+    const channel = new MessageChannel();
+    try {
+      const data = workerOptions.workerData as Record<string, unknown> & {workerChannels: WorkerChannels};
+      const options = {...workerOptions, workerData: {...data,
+        workerChannels: {...data.workerChannels, publicationPort: channel.port2}},
+      transferList: [...(workerOptions.transferList ?? []), channel.port2]};
+      const worker = this._workerFactory ? this._workerFactory(filename, options) : new Worker(filename, options);
+      this.publications.attach(worker, channel.port1);
+      return worker;
+    } catch (error) {
+      channel.port1.close();
+      channel.port2.close();
+      throw error;
+    }
+  };
   readonly init: Promise<void>;
   workerDispose: Promise<void>[];
 
@@ -52,7 +79,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
         path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'worker.js'),
       {pathToOptions: this.pathToOptions, overrideOptions: this._overrideOptions},
       workerOptions.maxLoad || -1,
-      this._workerFactory,
+      this.createWorker,
       workerOptions.workerPool
     );
     for (const info of this.pool.workers) {
@@ -96,6 +123,20 @@ export class MultiThreadDownloader extends AbstractDownloader {
       this.handleError(e, 'downloading resource', res);
       return false;
     }
+    const submit = async (body: WireResource, transfers?: Transferable[]): Promise<DownloadWorkerMessage> => {
+      let taskId: number | undefined;
+      let completed = false;
+      try {
+        const result = await this.pool.submitTask(body, transfers, id => {
+          taskId = id;
+          this.publications.register(id, currentCrawlContext() ?? this.context);
+        });
+        completed = true;
+        return result;
+      } finally {
+        if (taskId !== undefined) await this.publications.finish(taskId, !completed);
+      }
+    };
     let msg: DownloadWorkerMessage | void;
     let children: Resource[];
     try {
@@ -106,10 +147,10 @@ export class MultiThreadDownloader extends AbstractDownloader {
         r.body.buffer instanceof ArrayBuffer) {
         // the array buffer view fully owns the underlying ArrayBuffer
         wire.body = r.body.buffer;
-        msg = await this.pool.submitTask(wire, [wire.body]);
+        msg = await submit(wire, [wire.body]);
       } else {
         // lets clone and send it.
-        msg = await this.pool.submitTask(wire);
+        msg = await submit(wire);
       }
       if (!Array.isArray(msg.body)) throw new TypeError('Worker result.body must be a resource array');
       // Validate the whole batch before admitting any children.
@@ -154,6 +195,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
     await this._pool?.dispose();
     const workerDispose = this.workerDispose;
     this.workerDispose = [];
-    await Promise.all(workerDispose);
+    const results = await Promise.allSettled([this.publications.dispose(), ...workerDispose]);
+    const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+    if (errors.length) throw new AggregateError(errors, 'Worker cleanup failed');
   }
 }

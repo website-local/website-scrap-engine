@@ -301,7 +301,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   submitTask(
     taskBody: T,
-    transferList?: Transferable[]): Promise<R> {
+    transferList?: Transferable[], onAccepted?: (taskId: number) => void): Promise<R> {
     if (this._isDisposing) {
       return Promise.reject(this._lastWorkerError || new Error('disposed'));
     }
@@ -317,6 +317,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         body: taskBody,
         transferList
       };
+      onAccepted?.(task.taskId);
       this.pendingTasks.push(task);
       setImmediate(() => this.nextTask());
     });

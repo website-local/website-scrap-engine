@@ -1,4 +1,4 @@
-import {recordResourcePublication} from './crawl-context.js';
+import {recordResourcePublication, currentCrawlContext} from './crawl-context.js';
 import {promises as fs} from 'node:fs';
 import {dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
 
@@ -25,6 +25,10 @@ export interface FilePublication {
   publish(): Promise<void>;
   /** Prevents new publication and waits for a publication already in flight. */
   cleanup(): Promise<void>;
+}
+
+export interface PublicationStore {
+  create(destination: string, signal?: AbortSignal, localRoot?: string): Promise<FilePublication>;
 }
 
 export async function createFilePublication(
@@ -82,7 +86,9 @@ export async function publishFile(
   localRoot?: string,
   beforePublish?: () => Promise<boolean>
 ): Promise<boolean> {
-  const publication = await createFilePublication(destination, signal, localRoot);
+  const store = currentCrawlContext()?.publicationStore;
+  const publication = await (store ? store.create(destination, signal, localRoot) :
+    createFilePublication(destination, signal, localRoot));
   try {
     signal?.throwIfAborted();
     await write(publication.stagingPath);

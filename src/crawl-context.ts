@@ -1,3 +1,4 @@
+import type {PublicationStore} from './output-store.js';
 import {AsyncLocalStorage} from 'node:async_hooks';
 import type {Logger} from './logger/types.js';
 
@@ -15,6 +16,7 @@ export interface CrawlContext {
   logger: Logger;
   signal: AbortSignal;
   resourceProgress?: ResourceProgress;
+  publicationStore?: PublicationStore;
 }
 
 const contexts = new AsyncLocalStorage<CrawlContext>();

@@ -196,3 +196,11 @@ test.each([
     expect(crawler.downloadedCount).toBe(0);
   } finally { await crawler.dispose(); }
 }, 10000);
+
+
+test('parent owns worker staging cleanup and publication after worker failure', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-parent-publication.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 35000});
+}, 40000);

@@ -191,6 +191,14 @@ previous stream closes; 304 responses and skipped saves discard staging without
 changing the cached file or its timestamps. Stream retries follow Got's configured
 retry policy; legacy manual retry timers have been removed.
 
+Built-in worker task publications now allocate staging paths and confirm renames
+through a dedicated parent-owned `publicationPort`. On timeout, crash, or forced
+cancellation, task settlement waits for worker exit and parent staging cleanup.
+A completed publication remains counted if the worker subsequently crashes.
+Custom worker factories must forward this additional transferred port. Direct
+filesystem writes and custom initialization-hook writes are outside this task
+publication protocol. A rename already in progress may complete during cancellation.
+
 Custom `PipelineExecutor` implementations must provide
 `shouldSaveResource(res): Promise<boolean>`, which rechecks the existing-resource
 save policy. Built-in local copy handlers use it before publication; the default
