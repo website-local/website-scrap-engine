@@ -25,6 +25,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   private _state: DownloaderState = 'initializing';
   private _closing?: Promise<void>;
   private _startGeneration = 0;
+  private _admittedCount = 0;
   private readonly notifications = new Set<Promise<void>>();
   protected readonly abortController = new AbortController();
   protected context: CrawlContext = {
@@ -100,7 +101,10 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   set concurrency(newConcurrency: number) {
-    this.queue.concurrency = newConcurrency;
+    if (!Number.isSafeInteger(newConcurrency) || newConcurrency < 1) {
+      throw new RangeError('concurrency must be a positive safe integer');
+    }
+    this.queue.concurrency = Math.min(newConcurrency, this._options?.maxConcurrency ?? Infinity);
   }
 
   get queueSize(): number {
@@ -163,6 +167,16 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     if (this.queuedUrl.has(url)) {
       return false;
     }
+    const limit = this.options.maxResources !== undefined &&
+      this._admittedCount >= this.options.maxResources ? 'maxResources' :
+      this.options.maxQueuedResources !== undefined &&
+      this.queue.size >= this.options.maxQueuedResources ? 'maxQueuedResources' : undefined;
+    if (limit) {
+      this.handleError(Object.assign(new Error(`Crawl admission limit exceeded: ${limit}`),
+        {code: 'ERR_CRAWL_LIMIT', limit}), 'admitting resource', resource);
+      return false;
+    }
+    ++this._admittedCount;
     this.queuedUrl.add(url);
     void this.queue.add(() => withCrawlContext(this.context, async () => {
       this.signal.throwIfAborted();

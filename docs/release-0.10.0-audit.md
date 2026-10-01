@@ -143,6 +143,16 @@ structured-cloned resources, and invalid canonical fields that must reject befor
 the next hook. Build and all 356 tests pass on Node 24.18.0; all twelve regressions
 also pass on Node 22.13.0.
 
+Optional `maxResources`, `maxQueuedResources`, and `maxConcurrency` now bound
+admissions, waiting tasks, and downloader concurrency. Queue overflow is rejected
+synchronously with an observable `ERR_CRAWL_LIMIT` status, avoiding recursive
+producer deadlock and allowing later resubmission. Duplicate submissions consume
+no additional admission budget. Tests cover active-parent discovery, later queue
+resubmission, total limits, option validation, initial/setter concurrency, and
+automatic adjustment clamping. Build and all 360 tests pass on Node 24.18.0; the
+four new budget tests pass on Node 22.13.0. Byte/resource-size limits and an
+evidence-led review of the adjustment heuristic remain outstanding.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.

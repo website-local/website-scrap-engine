@@ -37,7 +37,8 @@ export function adjust(downloader: DownloaderWithMeta): void {
     concurrency -= 2;
   }
   downloader.concurrency =
-    Math.max(downloader.options.minConcurrency ?? 4, concurrency);
+    Math.min(downloader.options.maxConcurrency ?? Infinity,
+      Math.max(downloader.options.minConcurrency ?? 4, concurrency));
   logger.info('concurrency', downloader.concurrency,
     'queue size:', downloader.queueSize);
 }

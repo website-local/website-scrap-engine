@@ -72,6 +72,12 @@ export interface StaticDownloadOptions {
    * Minimum concurrency, for {@link DownloadOptions.adjustConcurrencyFunc}
    */
   minConcurrency?: number;
+  /** Hard ceiling for initial and runtime downloader concurrency. */
+  maxConcurrency?: number;
+  /** Maximum admitted resources for this crawl; omitted means unlimited. */
+  maxResources?: number;
+  /** Maximum waiting resources (active tasks excluded); omitted means unlimited. */
+  maxQueuedResources?: number;
 
   /**
    * If url search params should be stripped.
@@ -323,6 +329,19 @@ export function defaultDownloadOptions(
   }
   if (!merged.concurrency || merged.concurrency < 1) {
     merged.concurrency = 12;
+  }
+  for (const key of ['concurrency', 'minConcurrency', 'maxConcurrency',
+    'maxResources', 'maxQueuedResources'] as const) {
+    const value = merged[key];
+    if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
+      throw new RangeError(`${key} must be a positive safe integer`);
+    }
+  }
+  if (merged.maxConcurrency !== undefined) {
+    if (merged.minConcurrency !== undefined && merged.minConcurrency > merged.maxConcurrency) {
+      throw new RangeError('minConcurrency exceeds maxConcurrency');
+    }
+    merged.concurrency = Math.min(merged.concurrency, merged.maxConcurrency);
   }
   if (!merged.req.hooks) {
     merged.req.hooks = {};

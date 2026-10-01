@@ -129,6 +129,22 @@ For code that directly uses worker-pool internals:
 
 ## Other changes
 
+Optional scheduling limits are positive integers:
+
+- `maxResources` caps total resource admissions for a crawl; duplicates and rejected
+  submissions do not consume admissions.
+- `maxQueuedResources` caps waiting resources, excluding active tasks. This also
+  applies while the downloader is paused, including initial URL admission.
+- `maxConcurrency` caps initial concurrency, assignments through
+  `downloader.concurrency`, and automatic adjustment. An explicit `minConcurrency`
+  above this ceiling is rejected.
+
+Total and queue limits are unlimited when omitted. Admission rejects immediately
+with `false` and an error status whose `res.meta.error.code` is `ERR_CRAWL_LIMIT`
+and whose `limit` identifies the exceeded option. Queue-limit rejections can be
+resubmitted after capacity becomes available. Use downloader admission APIs rather
+than adding tasks directly to its exposed queue to retain these guarantees.
+
 Buffered saves now write a temporary file beside the destination and publish it
 by rename. Failures and cancellation observed before publication leave the prior
 destination intact; normal cleanup removes the temporary directory. Publication
