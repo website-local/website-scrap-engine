@@ -1,0 +1,53 @@
+{
+  "runtimeSourceCommit": "05b4597a92c4456caef25eb1a52f5b8ba44c32f8",
+  "sourceTree": "ecb3f0c0eabce30b12516c6607f98c5dd3d06d36",
+  "cleanInstall": true,
+  "testHarnessSha256": "836c654cc628e07c15f82e6ee81cf8df48ff1fa567546213dec92f906f3ac739",
+  "runtimes": [
+    {
+      "label": "minimum22",
+      "node": "v22.13.0",
+      "npm": "10.9.2",
+      "build": "passed",
+      "typecheck": "passed",
+      "suites": 36,
+      "tests": 413,
+      "runtimeSmoke": "v22.13.0: main downloader and save-path hooks passed\nv22.13.0: worker downloader and save-path hooks passed"
+    },
+    {
+      "label": "latest22",
+      "node": "v22.22.2",
+      "npm": "10.9.7",
+      "build": "passed",
+      "typecheck": "passed",
+      "suites": 36,
+      "tests": 413,
+      "runtimeSmoke": "v22.22.2: main downloader and save-path hooks passed\nv22.22.2: worker downloader and save-path hooks passed"
+    },
+    {
+      "label": "node24",
+      "node": "v24.18.0",
+      "npm": "11.16.0",
+      "build": "passed",
+      "typecheck": "passed",
+      "suites": 36,
+      "tests": 413,
+      "runtimeSmoke": "v24.18.0: main downloader and save-path hooks passed\nv24.18.0: worker downloader and save-path hooks passed"
+    },
+    {
+      "label": "node26",
+      "node": "v26.10.0",
+      "npm": "11.19.1",
+      "build": "passed",
+      "typecheck": "passed",
+      "suites": 36,
+      "tests": 413,
+      "runtimeSmoke": "v26.10.0: main downloader and save-path hooks passed\nv26.10.0: worker downloader and save-path hooks passed"
+    }
+  ],
+  "node26Retry": {
+    "initialFailure": "The controlled-stall fixture reported ETIMEDOUT at its 5-second request deadline.",
+    "fix": "Preserve all backoff/completion assertions, add failure timing diagnostics and give requests 20 seconds, exceeding the two separate 5-second phase deadlines.",
+    "otherRuntimes": "Changed fixture passed again on Node 22.13.0, 22.22.2 and 24.18.0."
+  }
+}

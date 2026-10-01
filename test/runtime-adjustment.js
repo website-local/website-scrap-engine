@@ -11,6 +11,7 @@ const {downloader, resource} = await import(entry);
 const root = await fs.mkdtemp(path.join(tmpdir(), 'wse-adjustment-'));
 let received = 0;
 let released = false;
+let releasedAt = 0;
 const held = [];
 const server = createServer((_request, response) => {
   response.setHeader('Connection', 'close');
@@ -26,6 +27,7 @@ try {
   for (const Downloader of [downloader.SingleThreadDownloader, downloader.MultiThreadDownloader]) {
     received = 0;
     released = false;
+    releasedAt = 0;
     held.length = 0;
     const output = path.join(root, Downloader.name);
     await fs.mkdir(output);
@@ -35,11 +37,19 @@ import {lifeCycle, options} from ${JSON.stringify(entry)};
 export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   localRoot: ${JSON.stringify(output)}, initialUrl: [], concurrency: 8, workerCount: 2,
   minConcurrency: 2, maxConcurrency: 16, adjustConcurrencyPeriod: 100,
-  req: {retry: {limit: 0}, timeout: {request: 5000}},
+  // Exceed both controlled 5-second phases; transport deadlines have separate tests.
+  req: {retry: {limit: 0}, timeout: {request: 20000}},
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})
 });
 `);
     const crawler = new Downloader(pathToFileURL(config).href);
+    const failures = [];
+    const originalError = crawler.handleError.bind(crawler);
+    crawler.handleError = (error, cause, res) => {
+      failures.push({url: res.url, cause, code: error?.code, message: error?.message ?? String(error),
+        started: res.downloadStartTimestamp, failedAt: Date.now(), releasedAt});
+      originalError(error, cause, res);
+    };
     try {
       await crawler.init;
       for (let index = 0; index < 48; index++) {
@@ -69,8 +79,10 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
       assert.ok(crawler.queueSize > 0);
       assert.ok(waitingAtStart <= held.length);
       released = true;
+      releasedAt = Date.now();
       held.forEach(response => response.end('body'));
       await crawler.onIdle();
+      assert.deepEqual(failures, [], Downloader.name + ' should complete after the stall is released');
       assert.equal(crawler.downloadedCount, 48);
       assert.equal(received, 48);
       assert.ok([...crawler.outcomes.values()].every(item => item.status === 'saved'));

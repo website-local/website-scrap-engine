@@ -73,8 +73,14 @@ a hostile process replacing directories concurrently.
 
 ## Remaining release gates
 
-1. Clean tracked snapshot at `05b4597`: fresh lockfile install and full build,
-   tests and runtime smoke on Node 22.13.0, 22.22.2, 24.18.0 and 26.10.0.
+1. **Passed:** clean tracked runtime snapshot at `05b4597`, fresh lockfile install,
+   build, all 413 tests and runtime smoke on Node 22.13.0, 22.22.2, 24.18.0 and
+   26.10.0. [Final source matrix](evidence/final-source-matrix.json) records the
+   runtime source tree and revised stall-test fingerprint. Node 26 initially hit
+   the fixture's 5-second request timeout; the harness allowed two separate
+   5-second phases. A 20-second request deadline isolates concurrency behavior
+   while keeping all backoff/completion assertions. The full Node 26 suite and
+   the revised fixture on the other three runtimes then passed.
 2. Refresh clean packed consumers, strict declarations, optional-log4js behavior,
    runtime harnesses and installation footprints after all runtime changes.
 3. Repeat the final release-baseline crawl comparison, investigate material
