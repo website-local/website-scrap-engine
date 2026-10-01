@@ -23,6 +23,16 @@ const resource = (name: string) => createResource({type: ResourceType.Binary,
   depth: 0, url: 'https://example.test/' + name, refUrl: 'https://example.test/', localRoot: 'output'});
 
 describe('crawl admission budgets', () => {
+  test('starting a custom adjustment policy preserves its metadata', async () => {
+    const crawler = new Crawler({concurrency: 1});
+    try {
+      await crawler._initOptions;
+      crawler.meta.firstPeriodCount = 99;
+      crawler.options.adjustConcurrencyFunc = () => {};
+      await crawler.start();
+      expect(crawler.meta.firstPeriodCount).toBe(99);
+    } finally { await crawler.dispose(); }
+  });
   test('total admissions exclude duplicates and rejected resources', async () => {
     const crawler = new Crawler({maxResources: 2});
     try {

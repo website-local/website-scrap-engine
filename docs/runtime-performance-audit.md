@@ -56,9 +56,9 @@ pause/start, concurrency changes, idle/pending state and queue cancellation are
 already integrated and tested. A replacement would recreate these semantics for
 a small dependency-size saving with no demonstrated end-to-end benefit.
 
-The opt-in built-in adjustment heuristic still increases concurrency on a stall
-and decreases it on a throughput increase. Its ceiling is enforced, but review
-and evidence for a revised policy remain open. Fixed concurrency is unchanged.
+The original opt-in adjustment increased concurrency on a stall and decreased it
+on a throughput increase. The revised policy below addresses that inversion;
+fixed concurrency remains the default.
 
 ## Got option retention checkpoint
 
@@ -107,3 +107,30 @@ tests passed on Node 24 (one 11-test suite rerun after a Jest cache-read EINVAL)
 all 15 output-store tests, including concurrent missing-directory creation, pass
 on Node 22.13. [Evidence](evidence/output-directory-performance.json) records the
 source fingerprint, raw timing samples and filesystem counts.
+
+## Opt-in concurrency control
+
+The built-in policy now uses elapsed-time-normalized completion rates. With a
+saturated queue, zero completions halves the setting; a >20% drop reduces it by
+25%. Stable/improving rates (within 5% of the preceding rate) add at most one
+slot. Rates between those thresholds hold the setting. Bounds always apply;
+without maxConcurrency, initial configured concurrency is the ceiling, raised
+only for an explicitly higher minimum. Empty/unsaturated samples invalidate the
+comparison, and start/resume resets sampling. Custom callbacks keep their own
+metadata. Zero, noninteger, nonfinite and overflowing timer periods are rejected.
+
+The evidence motivating this change is the prior controller's load amplification
+on a stalled origin, not a claimed optimal throughput curve. Deterministic tests
+cover stalls before the first completion, slowdown/recovery, bounds, unequal
+sampling periods, counters beyond 32 bits, independent crawls and pause/reset.
+The real-process HTTP harness lets eight requests complete, stalls the origin,
+and verifies no growth beyond initial in-flight load, reduced future admissions,
+and completion of all 48 resources after recovery in both modes. It passes on
+Node 24.18, 22.13 and 26.10. The full suite passed 401 tests before the last two
+integration cases; a subsequent build/typecheck and all 25 affected tests pass,
+covering 403 tests across the runs. Final matrix validation will run the full set.
+
+This remains an opt-in heuristic with explicit tuning tradeoffs. Slow downloads
+can reflect large resources rather than congestion, and completed-resource rate
+does not measure bytes, latency, or server capacity. Fixed concurrency and custom
+policies remain available. No default crawl speedup is claimed from this change.

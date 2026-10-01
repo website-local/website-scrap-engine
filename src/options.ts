@@ -157,7 +157,9 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
   req: RequestOptions;
 
   /**
-   * Adjust downloaded concurrency at runtime.
+   * Opt in to runtime concurrency adjustment. The built-in policy backs off on
+   * stalls/slowdown and increases gradually, capped at maxConcurrency or the
+   * configured initial concurrency. Custom callbacks may implement another policy.
    *
    * Note: this would not affect worker_threads
    */
@@ -335,7 +337,8 @@ export function defaultDownloadOptions(
     merged.concurrency = 12;
   }
   for (const key of ['concurrency', 'minConcurrency', 'maxConcurrency',
-    'maxResources', 'maxQueuedResources', 'maxDiscoveredResources', 'maxResourceBytes'] as const) {
+    'maxResources', 'maxQueuedResources', 'maxDiscoveredResources', 'maxResourceBytes',
+    'adjustConcurrencyPeriod'] as const) {
     const value = merged[key];
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
       throw new RangeError(`${key} must be a positive safe integer`);
@@ -346,6 +349,9 @@ export function defaultDownloadOptions(
       throw new RangeError('minConcurrency exceeds maxConcurrency');
     }
     merged.concurrency = Math.min(merged.concurrency, merged.maxConcurrency);
+  }
+  if (merged.adjustConcurrencyPeriod !== undefined && merged.adjustConcurrencyPeriod > 2147483647) {
+    throw new RangeError('adjustConcurrencyPeriod exceeds the Node timer limit');
   }
   if (!merged.req.hooks) {
     merged.req.hooks = {};

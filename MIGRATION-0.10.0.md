@@ -187,6 +187,19 @@ eventual save/processing outcome; no rollback of earlier children is attempted.
 Worker crashes can still lose a batch not yet delivered to the parent. The
 discovery count does not bound metadata size or allocations made by custom hooks.
 
+The built-in opt-in concurrency adjustment now compares completion rates using
+elapsed time. A stalled saturated queue halves its concurrency; a rate drop over
+20% reduces it by a quarter. Stable/improving rates add at most one slot per
+observation. It respects `minConcurrency` and `maxConcurrency`; without an
+explicit maximum, the configured initial concurrency is the ceiling (or an
+explicit higher minimum). An empty or unsaturated queue does not trigger growth,
+and start/resume resets sampling so paused time does not look like a slowdown.
+This is a conservative heuristic, not a latency/throughput optimizer. Use fixed
+concurrency or a custom `adjustConcurrencyFunc` for workload-specific control.
+Custom-policy metadata is preserved. `adjustConcurrencyPeriod`, when supplied,
+must be an integer from 1 to 2,147,483,647 ms; omit it to leave the built-in policy
+disabled. A supplied custom callback still uses a 60-second default period.
+
 The per-resource byte limit is optional. It is not a process-memory limit: parser
 objects, temporary copies, and generated HTML serialization can consume additional
 memory. Worker errors now preserve standard error name/message/stack and primitive

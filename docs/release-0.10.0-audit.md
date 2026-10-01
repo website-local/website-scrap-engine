@@ -421,3 +421,13 @@ across all cases. Build/typecheck and 394 tests pass on Node 24, with one suite
 rerun after a cache-read error; 15 output tests pass on Node 22.13. Final balanced
 benchmarks, aggregate buffering, stress, and complete packed/matrix validation
 remain required before declaring this release ready.
+
+The opt-in concurrency audit is now implemented: stalled/suddenly slower saturated
+queues back off, stable recovery grows gradually, elapsed time normalizes samples,
+and start/resume resets only built-in-policy state. Defaults remain fixed; without
+an explicit maximum the automatic policy does not grow beyond configured initial
+concurrency. Timer validation prevents overflow turning a long interval into 1 ms.
+The runtime performance audit records the policy tradeoffs and regression evidence.
+Build/typecheck and affected tests pass (403 tests across full/focused runs), with
+stalled-origin recovery passing in both modes on Node 22.13/24/26. Aggregate bytes,
+stress and final release validation remain open.

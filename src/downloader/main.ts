@@ -1,6 +1,7 @@
 import {withCrawlContext, createResourceProgress} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
 import {PublicationReservations} from '../publication-reservations.js';
+import {adjust, resetAdjustment} from './adjust-concurrency.js';
 import PQueue from 'p-queue';
 import URI from 'urijs';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
@@ -283,6 +284,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     withCrawlContext(this.context, () => {
       if (typeof this.options.adjustConcurrencyFunc === 'function') {
         if (this.adjustTimer) clearInterval(this.adjustTimer);
+        if (this.options.adjustConcurrencyFunc === adjust) resetAdjustment(this);
         this.adjustTimer = setInterval(
           () => this.options.adjustConcurrencyFunc?.(this),
           this.options.adjustConcurrencyPeriod || 60000);

@@ -219,6 +219,13 @@ test('discovery limits preserve earlier children when their parent fails in both
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
 
+test('automatic adjustment backs off while an HTTP origin is stalled in both modes', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-adjustment.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 35000});
+}, 40000);
+
 test('oversized custom-worker discovery batches reject before decoding children', async () => {
   const crawler = new Downloader(pathToFileURL(path.join(projectRoot,
     'test/downloader/budget-options.js')).href,
