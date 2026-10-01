@@ -1,0 +1,135 @@
+{
+  "sourceCommit": "c57bcdc",
+  "node": "24.18.0",
+  "platform": "linux-x64",
+  "workload": "tsc --project tsconfig.json --noEmit; clean tracked-source snapshot; one warmup then five samples per compiler",
+  "memoryMetric": "RUSAGE_CHILDREN.ru_maxrss (KiB): maximum process RSS, not aggregate process-tree memory",
+  "measurements": {
+    "ts6": {
+      "warmup": {
+        "exitCode": 0,
+        "peakProcessRssKiB": 582172,
+        "elapsedSeconds": 10.64618359999804
+      },
+      "samples": [
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 582540,
+          "elapsedSeconds": 7.929364700001315
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 588220,
+          "elapsedSeconds": 7.176834600002621
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 585472,
+          "elapsedSeconds": 6.678104300000996
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 590096,
+          "elapsedSeconds": 7.2509626999999455
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 583188,
+          "elapsedSeconds": 7.654214399997727
+        }
+      ]
+    },
+    "ts7": {
+      "warmup": {
+        "exitCode": 0,
+        "peakProcessRssKiB": 351236,
+        "elapsedSeconds": 1.682462699998723
+      },
+      "samples": [
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 333428,
+          "elapsedSeconds": 1.483641800001351
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 335056,
+          "elapsedSeconds": 1.5537405000031868
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 335332,
+          "elapsedSeconds": 1.4940581999981077
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 335672,
+          "elapsedSeconds": 1.5448916000023019
+        },
+        {
+          "exitCode": 0,
+          "peakProcessRssKiB": 334612,
+          "elapsedSeconds": 1.5094463999994332
+        }
+      ]
+    }
+  },
+  "installedCompilerFootprint": {
+    "ts6": {
+      "packages": [
+        "typescript"
+      ],
+      "logicalBytes": 24346827,
+      "files": 140
+    },
+    "ts7": {
+      "packages": [
+        "typescript",
+        "typescript-linux-x64"
+      ],
+      "logicalBytes": 30443488,
+      "files": 530
+    }
+  },
+  "api": {
+    "current": {
+      "version": "6.0.3",
+      "createProgram": "function",
+      "transpileModule": "function",
+      "tooling": {
+        "typescript-eslint": {
+          "version": "8.70.1",
+          "typescriptPeer": ">=4.8.4 <6.1.0"
+        },
+        "ts-jest": {
+          "version": "29.4.14",
+          "typescriptPeer": ">=4.3 <7"
+        }
+      }
+    },
+    "ts7": {
+      "version": "7.0.2",
+      "createProgram": "undefined",
+      "transpileModule": "undefined",
+      "tooling": {
+        "typescript-eslint": {
+          "version": "8.70.1",
+          "typescriptPeer": ">=4.8.4 <6.1.0"
+        },
+        "ts-jest": {
+          "version": "29.4.14",
+          "typescriptPeer": ">=4.3 <7"
+        }
+      }
+    }
+  },
+  "emit": {
+    "comparedFiles": 94,
+    "missing": [],
+    "different": [
+      "io.d.ts",
+      "logger/logger-worker.d.ts",
+      "util.d.ts"
+    ]
+  }
+}

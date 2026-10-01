@@ -164,11 +164,19 @@ Node 24.18.0; the eight real-process scenarios pass on Node 22.13.0. A complete
 registry with alias ownership, destination conflicts, streaming success counts,
 and explicit terminal outcomes remains outstanding.
 
+The [TypeScript 7 audit](typescript-7-audit.md) retains TypeScript 6.0.3 for
+0.10.0. TypeScript 7.0.2 compiled the tracked snapshot and passed runtime smoke
+checks, but locked ESLint/Jest tools require the legacy TypeScript API and exclude
+version 7. Five warmed compiler-only samples show a 7.251s versus 1.509s median,
+with lower peak process RSS for TypeScript 7. A dual setup adds about 29 MiB of
+compiler files while retaining TypeScript 6; it is not adopted for this release.
+Recorded evidence distinguishes compiler package size from full installation size.
+Test-runner selection remains a separate pending audit.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
-- Evidence-led test-runner comparison; audit TypeScript 7 without forcing an
-  unsupported compiler/API migration.
+- Evidence-led test-runner comparison and final tooling validation.
 - Clean-install graph/size report for development, ordinary consumers, and consumers
   without optional dependencies. Preserve the Undici size rationale and distinguish
   repository overrides from consumer installations.
