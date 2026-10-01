@@ -5,6 +5,9 @@ import {publishFile, createFilePublication} from '../src/output-store.js';
 import {writeFile} from '../src/io.js';
 import {createResource, ResourceType} from '../src/resource.js';
 import {saveResourceToDisk} from '../src/life-cycle/save-resource-to-disk.js';
+import {PublicationReservations} from '../src/publication-reservations.js';
+import {withCrawlContext} from '../src/crawl-context.js';
+import {createDefaultLogger} from '../src/logger/default-logger.js';
 
 let root: string;
 beforeEach(async () => { root = await fs.mkdtemp(join(process.cwd(), '.wse-output-test-')); });
@@ -136,4 +139,45 @@ test('cleanup waits for an admitted publication and repeated publication shares 
   await publishing;
   expect(await fs.readFile(destination, 'utf8')).toBe('complete');
   expect(await fs.readdir(root)).toEqual(['asset']);
+});
+
+test('destination ownership covers active writes, failures, retries and completed output', async () => {
+  const context = {publicationReservations: new PublicationReservations(),
+    signal: new AbortController().signal, logger: createDefaultLogger()};
+  const destination = join(root, 'asset');
+  const allocate = (owner: string) => withCrawlContext({...context, publicationOwner: owner},
+    () => createFilePublication(destination, undefined, root));
+  const first = await allocate('first');
+  await expect(allocate('second')).rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
+  await first.cleanup();
+  const second = await allocate('second');
+  await fs.writeFile(second.stagingPath, 'complete');
+  await second.publish();
+  await second.cleanup();
+  await expect(allocate('first')).rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
+  const retry = await allocate('second');
+  await retry.cleanup();
+  await expect(allocate('first')).rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
+  expect(await fs.readFile(destination, 'utf8')).toBe('complete');
+  expect(await fs.readdir(root)).toEqual(['asset']);
+});
+
+test('root aliases share destination ownership while independent crawls remain independent', async () => {
+  const context = {publicationReservations: new PublicationReservations(),
+    signal: new AbortController().signal, logger: createDefaultLogger()};
+  const output = join(root, 'output');
+  const alias = join(root, 'alias');
+  await fs.mkdir(output);
+  await fs.symlink(output, alias, 'dir');
+  const first = await withCrawlContext({...context, publicationOwner: 'first'},
+    () => createFilePublication(join(output, 'asset'), undefined, output));
+  await expect(withCrawlContext({...context, publicationOwner: 'second'},
+    () => createFilePublication(join(alias, 'asset'), undefined, alias)))
+    .rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
+  const independent = await withCrawlContext({...context, publicationOwner: 'second',
+    publicationReservations: new PublicationReservations()},
+  () => createFilePublication(join(alias, 'asset'), undefined, alias));
+  await independent.cleanup();
+  await first.cleanup();
+  expect(await fs.readdir(output)).toEqual([]);
 });

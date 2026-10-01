@@ -371,3 +371,18 @@ cancellation racing delayed staging allocation; these also pass on Node 22.13.0
 and 26.10.0. Cached bytes survive failed writes, staged paths are absent before
 settlement, and partial-success counts remain accurate. A final focused run
 checks the coordinator and multi-thread integration after cleanup review.
+
+## Destination reservations
+
+Crawl contexts now share a destination ownership registry, keyed by resolved
+output path and canonical admission URL. Parent-managed worker publication uses
+the same registry as local/streaming output. Conflicts fail explicitly instead
+of silently overwriting another resource. Unpublished failure releases ownership;
+confirmed publication retains it across later task failure and same-URL retry.
+The policy intentionally does not invent new filenames or mutate rewritten links.
+Reservations are crawl-local, retain no bodies, and are not a cross-process lock.
+
+Build and all 388 tests pass on Node 24.18.0, including active collisions, root
+symlink aliases, independent crawl isolation, and real-process checks in both
+downloader modes for failed writes, partial publication, conflicts, and retries.
+The real-process conflict/retry harness also passes on Node 22.13.0 and 26.10.0.

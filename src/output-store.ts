@@ -1,6 +1,6 @@
 import {recordResourcePublication, currentCrawlContext} from './crawl-context.js';
 import {promises as fs} from 'node:fs';
-import {dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
+import {basename, dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
 
 async function checkDirectories(root: string, parent: string, create: boolean): Promise<void> {
   let current = root;
@@ -50,10 +50,19 @@ export async function createFilePublication(
   const parent = dirname(destination);
   if (canonicalRoot === undefined) await fs.mkdir(parent, {recursive: true});
   signal?.throwIfAborted();
-  const stagingDirectory = await fs.mkdtemp(join(parent, '.wse-stage-'));
+  const context = currentCrawlContext();
+  const reservationPath = context?.publicationReservations ?
+    join(canonicalRoot === undefined ? await fs.realpath(parent) : parent, basename(destination)) : undefined;
+  const release = context?.publicationOwner === undefined ? undefined :
+    context.publicationReservations?.claim(process.platform === 'win32' ?
+      reservationPath!.toLowerCase() : reservationPath!, context.publicationOwner);
+  let stagingDirectory: string;
+  try { stagingDirectory = await fs.mkdtemp(join(parent, '.wse-stage-')); }
+  catch (error) { release?.(false); throw error; }
   const stagingPath = join(stagingDirectory, 'content');
   let publishing: Promise<void> | undefined;
   let cleaning: Promise<void> | undefined;
+  let published = false;
   return {
     stagingPath,
     publish() {
@@ -63,6 +72,7 @@ export async function createFilePublication(
         if (canonicalRoot !== undefined) await checkDirectories(canonicalRoot, parent, false);
         signal?.throwIfAborted();
         await fs.rename(stagingPath, destination);
+        published = true;
         recordResourcePublication();
       })();
       return publishing;
@@ -72,6 +82,7 @@ export async function createFilePublication(
         // A failed rename must not prevent removal of the staging allocation.
         await publishing?.catch(() => undefined);
         await fs.rm(stagingDirectory, {recursive: true, force: true});
+        release?.(published);
       })();
       return cleaning;
     }

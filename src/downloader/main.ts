@@ -1,5 +1,6 @@
 import {withCrawlContext, createResourceProgress} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
+import {PublicationReservations} from '../publication-reservations.js';
 import PQueue from 'p-queue';
 import URI from 'urijs';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
@@ -33,7 +34,8 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   private readonly notifications = new Set<Promise<void>>();
   protected readonly abortController = new AbortController();
   protected context: CrawlContext = {
-    logger: createDefaultLogger(), signal: this.abortController.signal
+    logger: createDefaultLogger(), signal: this.abortController.signal,
+    publicationReservations: new PublicationReservations()
   };
 
   get state(): DownloaderState { return this._state; }
@@ -205,7 +207,8 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       Object.freeze({status, attempt, url: admittedUrl, downloaded: progress.downloaded,
         publishedFiles: progress.publishedFiles}));
     record('queued');
-    void this.queue.add(() => withCrawlContext({...this.context, resourceProgress: progress}, async () => {
+    void this.queue.add(() => withCrawlContext({...this.context, resourceProgress: progress,
+      publicationOwner: url}, async () => {
       let succeeded = false;
       record('running');
       try {

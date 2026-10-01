@@ -199,6 +199,17 @@ Custom worker factories must forward this additional transferred port. Direct
 filesystem writes and custom initialization-hook writes are outside this task
 publication protocol. A rename already in progress may complete during cancellation.
 
+Within one downloader, different canonical admission URLs cannot publish to the
+same destination. The first staging allocation reserves the resolved path; a
+conflicting attempt fails with `ERR_OUTPUT_CONFLICT` instead of silently replacing
+another resource. An unpublished allocation releases ownership after cleanup.
+Confirmed output retains ownership for the crawl, including when a later hook
+fails; the same URL can retry its own output. This also applies when a redirect
+or custom save-path hook maps distinct resources onto one file. It does not
+disambiguate names or rewrite links automatically. Separate crawler instances
+and direct filesystem writes require their own coordination. Root symlink aliases
+share reservations, and Windows reservation keys are case-insensitive.
+
 Custom `PipelineExecutor` implementations must provide
 `shouldSaveResource(res): Promise<boolean>`, which rechecks the existing-resource
 save policy. Built-in local copy handlers use it before publication; the default

@@ -204,3 +204,10 @@ test('parent owns worker staging cleanup and publication after worker failure', 
     path.join(buildRoot, 'index.js')
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
+
+test('destination ownership prevents silent overwrites in both downloader modes', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-output-conflicts.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 35000});
+}, 40000);
