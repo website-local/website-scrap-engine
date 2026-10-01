@@ -1,15 +1,16 @@
 # 0.10.0 implementation and release audit
 
-This branch prepares **0.10.0**, unreleased. Runtime implementation is complete;
-final clean-snapshot, packed-consumer and release-baseline validation is in
-progress. Nothing in this audit authorizes a push, tag or publication.
+This branch prepares **0.10.0**, unreleased. Implementation and local validation
+are complete, with measured performance regressions explicitly retained as the
+cost of stronger lifecycle/publication guarantees. No push, tag or publication
+was performed. Hosted CI has not run for these final, unpushed commits.
 
 ## Requirements and implementation evidence
 
 | Requirement | Implemented result | Evidence and limits |
 | --- | --- | --- |
-| Drop Node 18/20; support 22/24/26 | Require Node >=22.13.0; CI tests the exact minimum and latest 22/24/26. Publishing uses Node 24 with npm major 12 pinned. | package.json, CI/publishing workflows; final local matrix pending below. |
-| Audit dependencies and installed size | Got 16 and p-queue 9 retained; compatible lint tooling updated; log4js is an optional peer. The default consumer avoids its eleven-package tree. | [Dependency audit](dependency-audit.md), [raw installation measurements](evidence/dependencies.json). Final package footprint refresh pending. |
+| Drop Node 18/20; support 22/24/26 | Require Node >=22.13.0; CI tests the exact minimum and latest 22/24/26. Publishing uses Node 24 with npm major 12 pinned. | package.json, CI/publishing workflows; final local matrix passed below. |
+| Audit dependencies and installed size | Got 16 and p-queue 9 retained; compatible lint tooling updated; log4js is an optional peer. The default consumer avoids its eleven-package tree. | [Dependency audit](dependency-audit.md), [raw installation measurements](evidence/dependencies.json). [Final package footprint and consumers](evidence/final-package.json) validated. |
 | Reassess Undici removal | Retain the development skip-dependency override and packaged declaration shim; remove the fragile declaration-copy postinstall. | Saves about 1.58 MiB in development. Consumers do not inherit root overrides; Cheerio still declares Undici. A parser replacement/fork is not justified by current evidence. |
 | Audit Got and its historical Options leak | Use public Options.toJSON snapshots, remove url before normalizing options, and avoid reusing Options instances. Preserve hooks/agents and handle Got 16 Uint8Array bodies with a Buffer view. | scripts/benchmark-options.mjs reproduces the old history growth when given Got 13 and checks 12,000 new merges. [Retention checkpoint](evidence/runtime-baseline.json); transport/retry tests. |
 | Audit p-queue and concurrency | Retain p-queue. Correct the opt-in controller's inverted response: bounded gradual growth, backoff on stalls/slowdown, elapsed-time sampling and reset on resume. | [Runtime audit](runtime-performance-audit.md), queue microbenchmarks, deterministic sampling tests and stalled-origin harness. Fixed concurrency remains the default; no universal throughput optimum is claimed. |
@@ -21,7 +22,7 @@ progress. Nothing in this audit authorizes a push, tag or publication.
 | Track outcomes and retries consistently | Immutable per-attempt outcome snapshots, separate acquisition/publication state, accurate stream/local success counts and released failed URL reservations. | Forty outcome scenarios, failure/retry tests, redirect-alias ownership regressions. Outcomes retain scalar state rather than bodies/DOMs. |
 | Stabilize workers | Versioned task/control/log envelopes, readiness, startup/task deadlines, ownership validation, transport failure retirement, cooperative cancellation and awaited termination. | Worker-pool, channel, lifecycle and real-process tests cover malformed/duplicate/foreign messages, failed startup, queued work, active cancellation and timeout. |
 | Publish safely and resolve output conflicts | Same-volume staging, atomic per-file rename, containment/symlink checks, parent-owned task publication and crawl-local destination reservations. | Output tests, forced-worker-failure/allocation-race harness and conflict/retry harness. Confirmed output remains counted after later failure. |
-| Improve performance based on evidence | Avoid redundant mkdir calls; reuse full owned local-read chunks while compacting slices; avoid unnecessary Buffer copies and zero-byte/unchanged-body accounting RPC. | [Runtime performance audit](runtime-performance-audit.md) and paired raw samples. Safety/readiness changes have costs; final release-baseline comparison remains required. |
+| Improve performance based on evidence | Avoid redundant mkdir calls; reuse full owned local-read chunks while compacting slices; avoid unnecessary Buffer copies and zero-byte/unchanged-body accounting RPC. | [Runtime performance audit](runtime-performance-audit.md) and paired raw samples. Safety/readiness changes have costs; [two final release comparisons](evidence/final-runtime-performance.json) quantify the regressions. |
 | Investigate architecture and stress behavior | Parent-owned publication and byte accounting, explicit task/child ownership, independent child outcomes and bounded discovery replace implicit cross-thread assumptions. | [Stress evidence](evidence/buffering-and-stress.json), scripts/stress-crawl.mjs and protocol tests. A wholesale pipeline/parser/queue rewrite is not supported by the evidence. |
 
 ## Runtime guarantees and deliberate limits
@@ -71,7 +72,7 @@ a hostile process replacing directories concurrently.
   consumer Undici types, absent optional logging peer and both downloader modes.
   That checkpoint predates the final runtime work and is not final package proof.
 
-## Remaining release gates
+## Final validation and completion review
 
 1. **Passed:** clean tracked runtime snapshot at `05b4597`, fresh lockfile install,
    build, all 413 tests and runtime smoke on Node 22.13.0, 22.22.2, 24.18.0 and
@@ -81,9 +82,34 @@ a hostile process replacing directories concurrently.
    5-second phases. A 20-second request deadline isolates concurrency behavior
    while keeping all backoff/completion assertions. The full Node 26 suite and
    the revised fixture on the other three runtimes then passed.
-2. Refresh clean packed consumers, strict declarations, optional-log4js behavior,
-   runtime harnesses and installation footprints after all runtime changes.
-3. Repeat the final release-baseline crawl comparison, investigate material
-   regressions, and record the retained safety/performance tradeoffs.
-4. Finish migration/changelog consistency checks and requirement-by-requirement
-   completion review. Keep 0.10.0 unreleased; do not push, tag or publish.
+2. **Passed:** the clean tarball from `fd07670` passes strict declarations with
+   real consumer Undici types and ten runtime harnesses on Node 22.13.0,
+   22.22.2, 24.18.0 and 26.10.0. Fresh omit-optional and explicit-log4js consumers
+   pass declaration, downloader and logging checks. The default graph contains
+   51 packages, versus 62 with log4js; npm audit reports zero known advisories.
+   [Package evidence](evidence/final-package.json) records integrity, footprints
+   and actual harness output. CI now installs the tarball outside the checkout
+   and validates declarations/smoke so parent dev dependencies cannot mask peers.
+3. **Completed with documented regressions:** two independent five-sample
+   alternating comparisons against 0.9.1 validate exact output. Several cases
+   remain slower, particularly startup-dominated worker streaming and small
+   local-file crawls. A filesystem-call probe identifies added staging and
+   containment operations; initialization measurements identify worker readiness
+   costs. Retain those guarantees and the measured directory/read-copy
+   optimizations. This release makes no general speedup claim. See the
+   [final runtime audit](runtime-performance-audit.md#final-comparison-against-091).
+4. **Reviewed:** migration guide, changelog, README and specialized audits agree
+   on the Node minimum, explicit start/disposal, normalized resources, wire
+   contract, save-path hooks, outcomes, limits, optional peer and public Got API.
+   No new direct dependency names were introduced relative to 0.9.1. TypeScript 7,
+   test-runner migration and parser/queue replacement remain evidence-based
+   deferrals, not unfinished implementation promises. `AGENTS.md` stays excluded;
+   unrelated local files were preserved and omitted from clean package snapshots.
+   Runtime/package content has not changed since the validated snapshots; later
+   commits contain validation tools, CI and audit documentation only.
+
+## Remaining release operations
+
+The implementation goal is complete. Review these commits and the performance
+tradeoffs before choosing to publish. Pushing, hosted CI, tagging and publication
+are separate operations and were not performed by this implementation task.
