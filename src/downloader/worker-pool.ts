@@ -49,6 +49,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly ready: Promise<void>;
   taskIdCounter = 0;
   private _isDisposing = false;
+  private _disposePromise?: Promise<number[]>;
   private readonly _unavailableWorkers = new Set<WorkerInfo>();
   private _lastWorkerError?: Error;
 
@@ -295,7 +296,12 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     }
   }
 
-  async dispose(): Promise<number[]> {
+  dispose(): Promise<number[]> {
+    this._disposePromise ??= this.disposeOnce();
+    return this._disposePromise;
+  }
+
+  private async disposeOnce(): Promise<number[]> {
     this._isDisposing = true;
     const shouldDrainPorts = this.pendingTasks.length === 0 &&
       this.workingTasks.size === 0;

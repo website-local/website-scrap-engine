@@ -52,8 +52,11 @@ export class MultiThreadDownloader extends AbstractDownloader {
     );
     for (const info of this.pool.workers) {
       info.worker.addListener('exit',
-        exitCode => this.workerDispose.push(
-          this.pipeline.dispose(this.pipeline, this, info, exitCode)));
+        exitCode => {
+          const disposed = Promise.resolve(this.pipeline.dispose(this.pipeline, this, info, exitCode));
+          void disposed.catch(() => undefined);
+          this.workerDispose.push(disposed);
+        });
     }
     if (this.options.initialUrl) {
       return this.addInitialResource(this.options.initialUrl);
@@ -116,9 +119,12 @@ export class MultiThreadDownloader extends AbstractDownloader {
 
   }
 
-  async dispose(): Promise<void> {
-    await super.dispose();
-    await this.pool.dispose();
+  protected async cancelActiveWork(): Promise<void> {
+    await this._pool?.dispose();
+  }
+
+  protected async disposeResources(): Promise<void> {
+    await this._pool?.dispose();
     const workerDispose = this.workerDispose;
     this.workerDispose = [];
     await Promise.all(workerDispose);

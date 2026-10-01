@@ -13,6 +13,8 @@ import type {DownloaderWithMeta} from '../downloader/types.js';
 import type {WorkerInfo} from '../downloader/worker-pool.js';
 
 export interface PipelineExecutor {
+  /** Crawl cancellation, available to cooperative custom hooks. */
+  readonly signal?: AbortSignal;
   /**
    * @see InitLifeCycleFunc
    */

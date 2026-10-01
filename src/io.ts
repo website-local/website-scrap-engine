@@ -1,3 +1,4 @@
+import {throwIfCancelled} from './crawl-context.js';
 import type {ObjectEncodingOptions} from 'node:fs';
 import fs from 'node:fs';
 import {dirname, join, resolve, sep} from 'node:path';
@@ -27,6 +28,7 @@ export const writeFile = async (
   mtime?: number | void,
   atime?: number | void
 ): Promise<void> => {
+  throwIfCancelled();
   const dir: string = dirname(filePath);
   if (!fs.existsSync(dir)) {
     await mkdirRetry(dir);
@@ -46,6 +48,7 @@ export const writeFile = async (
     // not likely happen
     throw new TypeError('Type of data not supported.');
   }
+  throwIfCancelled();
   if (options) {
     await fs.promises.writeFile(filePath, fileData, options);
   } else {

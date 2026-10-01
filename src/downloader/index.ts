@@ -8,3 +8,4 @@ export {getWorkerChannels} from './worker-channel.js';
 export type {WorkerChannels} from './worker-channel.js';
 export {WorkerPool} from './worker-pool.js';
 export * as workerType from './worker-type.js';
+export type {DownloaderState, DisposeOptions} from './main.js';

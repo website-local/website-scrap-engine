@@ -18,6 +18,7 @@ Breaking Changes
 * Custom workers must use `workerData.workerChannels.taskPort` for tasks/results and `logPort` for logs. `parentPort` now carries control messages. Worker factories must forward both transferred ports.
 * Change `WorkerPool.workingTasks` from a record to a `Map`, replace `onMessage` with separate message handlers, and require task/log ports when constructing `WorkerInfoImpl` or implementing `WorkerInfo`.
 * Remove the deprecated `waitForInitBeforeIdle` option and the retry argument from `io.mkdirRetry`. Directory creation now makes one recursive filesystem call.
+* Downloaders now wait for `start()`; it returns a promise. `dispose()` cancels and awaits cleanup by default, with an explicit drain mode. New work is rejected while closing.
 * Successful empty HTTP responses, including 200, 204, and HEAD, complete without extra retries. Applications needing retries for empty responses must implement that policy explicitly; transport retries still use `req.retry`.
 
 Validation

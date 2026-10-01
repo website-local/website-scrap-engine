@@ -68,8 +68,9 @@ const {SingleThreadDownloader} = downloader;
 const d = new SingleThreadDownloader(
   'file://' + path.resolve('my-options.js')
 );
-d.start();
-d.onIdle().then(() => d.dispose());
+await d.start();
+await d.onIdle();
+await d.dispose();
 ```
 
 For CPU-intensive workloads, use `MultiThreadDownloader` instead (see [Multi-Thread Processing](#multi-thread-processing)).

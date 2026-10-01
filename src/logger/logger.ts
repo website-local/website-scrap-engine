@@ -1,3 +1,4 @@
+import {currentCrawlContext} from '../crawl-context.js';
 import {isMainThread} from 'node:worker_threads';
 import type {CategoryLogger, Logger, LogType} from './types.js';
 import {createDefaultLogger} from './default-logger.js';
@@ -10,7 +11,7 @@ export function setLogger(logger: Logger): void {
 }
 
 export function getLogger(): Logger {
-  return _logger;
+  return currentCrawlContext()?.logger ?? _logger;
 }
 
 function createCategoryProxy(type: LogType): CategoryLogger {
@@ -18,12 +19,12 @@ function createCategoryProxy(type: LogType): CategoryLogger {
     return createWorkerCategoryLogger(type);
   }
   return {
-    trace(...contents: unknown[]) { _logger.trace(type, ...contents); },
-    debug(...contents: unknown[]) { _logger.debug(type, ...contents); },
-    info(...contents: unknown[]) { _logger.info(type, ...contents); },
-    warn(...contents: unknown[]) { _logger.warn(type, ...contents); },
-    error(...contents: unknown[]) { _logger.error(type, ...contents); },
-    isTraceEnabled() { return _logger.isTraceEnabled(); },
+    trace(...contents: unknown[]) { getLogger().trace(type, ...contents); },
+    debug(...contents: unknown[]) { getLogger().debug(type, ...contents); },
+    info(...contents: unknown[]) { getLogger().info(type, ...contents); },
+    warn(...contents: unknown[]) { getLogger().warn(type, ...contents); },
+    error(...contents: unknown[]) { getLogger().error(type, ...contents); },
+    isTraceEnabled() { return getLogger().isTraceEnabled(); },
   };
 }
 

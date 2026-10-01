@@ -129,3 +129,10 @@ describe('MultiThreadDownloader', () => {
       }
     }, 15000);
 });
+
+test('explicit lifecycle and crawl isolation in real Node processes', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-lifecycle.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 35000});
+}, 40000);

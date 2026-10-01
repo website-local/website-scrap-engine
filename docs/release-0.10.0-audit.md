@@ -25,9 +25,22 @@ issue #1112. The original reuse pattern retained 1,000 `_init` entries after
 1,000 merges; the public-snapshot path had no growing retained heap after warm-up.
 Raw local measurements are under `artifacts/wse-010-implementation/`.
 
+## Completed crawl lifetime
+
+- Queues begin paused; `start()` is awaitable and `stop()` supersedes a pending start.
+- Disposal cancels by default, settles queued wrappers, waits active work and
+  notifications, and cleans partial initialization. Explicit drain mode completes
+  accepted work without admitting further discoveries. Repeated calls share a promise.
+- Pipeline hooks receive the crawl AbortSignal. Context-scoped logging isolates
+  simultaneous downloader instances without cloning request functions or agents.
+- The real-process lifecycle harness checks both downloader implementations,
+  cancellation versus draining, queued cancellation, cooperative hook cancellation,
+  failed initialization, logger isolation, and rejection of submissions after close.
+- Build and 281 tests pass. Both lifecycle and downloader runtime checks pass on
+  Node 22.13.0; real-process tests also exercise Node 24.18.0.
+
 ## Remaining implementation and release gates
 
-- Explicit start, cancel-and-await disposal, crawl-owned services, and isolation.
 - Validated/versioned worker protocol, initialized readiness, deadlines, failures,
   message ownership, and complete cleanup.
 - Safe staged publication for all sources, uniform existing-file policy, path and

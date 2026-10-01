@@ -112,3 +112,24 @@ objects and refreshes fields when canonical strings change.
 Worker resource snapshots preserve structured-clone-compatible nested metadata.
 Parsed DOMs stay local; metadata containing functions now fails explicitly rather
 than being silently omitted. Callers should use serializable metadata.
+
+## Explicit crawl lifetime
+
+Construction and `init` no longer start downloads. `await downloader.start()`
+starts or resumes the paused queue and exposes initialization errors. `stop()`
+pauses admission to execution; it does not abort an active request. A pending
+`start()` followed by `stop()` stays paused.
+
+`dispose()` cancels queued and active work and awaits cleanup. It is idempotent:
+repeated calls return the same promise. Use `dispose({drain: true})` to finish
+already accepted work instead. Both modes reject new submissions, including
+children discovered after closure starts. `onIdle()` alone does not start a paused
+queue. The `state` property exposes the crawl's current lifecycle state.
+
+Custom hooks can observe `pipeline.signal` to stop cooperative work. Arbitrary
+user promises cannot be forcibly interrupted; disposal waits for them. Built-in
+requests receive the crawl signal, and the pipeline checks cancellation before
+continuing into later stages. Failed initialization is safe to dispose.
+
+Logging and cancellation are scoped to each crawl's asynchronous context, so
+creating a second downloader no longer replaces the first downloader's logger.
