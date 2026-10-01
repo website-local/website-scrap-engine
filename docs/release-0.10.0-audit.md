@@ -260,3 +260,15 @@ Consumers do not inherit root overrides. The broader dependency audit still need
 cold/warm installation, download-size, import-cost, and replacement assessments;
 these interim footprints are not a completed release-size audit. Evidence and
 packed consumer fixtures are under `artifacts/wse-010-implementation/install-audit/`.
+
+## Compatible development updates
+
+The version audit found compatible minor updates to globals 17.13.0 and
+typescript-eslint 8.71.0; both are applied, updating thirteen installed packages
+without adding package names. The latter still declares TypeScript >=4.8.4 <6.1,
+so the TypeScript 7 exclusion remains valid. Node typings remain on 22.20.4 to
+match the runtime minimum instead of exposing unsupported Node 26 APIs.
+Build and all 376 tests pass on Node 24.18.0; ESLint and the complete source/test
+TypeScript check pass on Node 22.13.0. npm audit reports zero known advisories
+for the updated development lock and the ordinary consumer lock at audit time.
+This is a registry advisory check, not a guarantee against unknown defects.
