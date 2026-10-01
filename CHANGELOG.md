@@ -6,6 +6,7 @@
 
 Feature
 ------------
+* **install: remove declaration-copy postinstall** — Resolve the development Undici shim through TypeScript configuration, supporting clean and hoisted installs without modifying dependencies.
 * **tests: check complete TypeScript suite** — Run a separate source/test type check before Jest; retain Jest after measured Vitest and native-runner audits.
 * **Got 16: preserve Buffer responses** — Wrap binary responses without copying bytes, keeping Buffer-based hooks and incomplete-HTML retry checks working.
 * **redirects: preserve successful reservations** — A concurrent target failure no longer releases another request’s successful alias; aliases follow the same fragment/query normalization as admissions.

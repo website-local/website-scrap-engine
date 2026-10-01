@@ -17,7 +17,6 @@
     "copy": "node copy-src.js",
     "prepack": "npm run clean && npm run build",
     "postshrinkwrap": "node package-lock-resolved.js",
-    "postinstall": "node -e \"var f='fake-undici.d.ts',t='node_modules/cheerio/node_modules/undici/index.d.ts';try{require('fs').copyFileSync(f,t)}catch(e){}\"",
     "check:tests": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
@@ -53,6 +52,7 @@
   "files": [
     ".editorconfig",
     "tsconfig.json",
+    "fake-undici.d.ts",
     "lib",
     "src"
   ],

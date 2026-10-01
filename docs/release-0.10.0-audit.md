@@ -234,3 +234,29 @@ Build and all 376 tests pass on Node 24.18.0. The complete typecheck and 58 affe
 tests pass on Node 22.13.0. The isolated Vitest conversion also passes its separate
 TypeScript check after the generic mock and Promise fixture fixes. No runner or
 other dependency has been added to the repository.
+
+## Undici shim installation fix
+
+The obsolete postinstall copy assumed Cheerio's Undici alias was nested and did
+not ship its source shim in the tarball. It is removed. TypeScript now resolves
+the existing development-only declaration shim through the project's paths;
+the tarball includes that shim alongside its published source/configuration.
+No dependency declarations or overrides changed, and no vendor files are patched.
+
+A clean locked install with scripts disabled builds successfully while the alias's
+original declaration remains untouched. A fresh no-lock install hoists the alias
+to root node_modules and passes the complete test typecheck too. Main build and
+all 376 tests pass on Node 24.18.0. Clean-development typechecking and both runtime
+downloader modes pass on Node 22.13.0. Ordinary and omit-optional packed consumers
+also pass strict declaration checks and both runtime modes on Node 22.13.0;
+their Dispatcher type is explicitly checked to be real rather than the any shim.
+The packed snapshot excludes the unrelated local shared-context sketch.
+
+Preliminary clean installed footprints are 95.33 MiB/444 packages for development,
+9.17 MiB/62 packages for ordinary consumers, and 8.67 MiB/51 packages without
+optional dependencies. The real Undici 7.30.0 package occupies 1,658,921 bytes
+versus 5,583 bytes for the existing alias, about 1.58 MiB saved only in development.
+Consumers do not inherit root overrides. The broader dependency audit still needs
+cold/warm installation, download-size, import-cost, and replacement assessments;
+these interim footprints are not a completed release-size audit. Evidence and
+packed consumer fixtures are under `artifacts/wse-010-implementation/install-audit/`.

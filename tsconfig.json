@@ -15,7 +15,12 @@
     "verbatimModuleSyntax": true,
     "types": [
       "node"
-    ]
+    ],
+    "paths": {
+      "undici": [
+        "./fake-undici.d.ts"
+      ]
+    }
   },
   "include": [
     "src"

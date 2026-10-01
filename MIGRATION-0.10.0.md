@@ -4,6 +4,19 @@ Version 0.10.0 requires Node.js 22.13.0 or newer and changes the save-path and
 custom-worker APIs. The Node 24 publishing environment is separate from this
 runtime minimum.
 
+## Dependency installation
+
+The package no longer has a postinstall script that copies declarations into a
+nested Undici directory. The repository's existing Undici size override now uses
+a TypeScript path mapping to its own declaration shim, which is included with the
+published source/configuration. Clean development installs work with lifecycle
+scripts disabled and with either nested or hoisted dependency placement.
+
+npm does not apply a dependency package's root overrides to its consumers.
+Ordinary installations therefore retain Cheerio's real Undici dependency and
+real declarations; the repository's size optimization does not claim to remove
+Undici from consumer installations.
+
 ## Save-path hooks
 
 `ProcessingLifeCycle.generateSavePath` is now an array of hooks. Each receives
