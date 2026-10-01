@@ -344,3 +344,13 @@ all forty outcome scenarios, and import without the optional logging peer pass.
 [Checkpoint evidence](evidence/node-26-checkpoint.json) records runtime and package
 integrities. This closes the initial local Node 26 verification gap, but final
 matrix/packed-consumer checks must be repeated after remaining runtime changes.
+
+## Publication handle foundation
+
+File staging now has an explicit create/publish/cleanup handle. Repeated publish
+and cleanup calls share their operations; closing an allocation prevents a late
+publication and awaits a publication already in flight. The existing publishFile
+wrapper uses this handle, preserving writer/save-policy ordering, containment,
+and per-file rename behavior. This enables parent ownership without duplicating
+filesystem policy. Build and all 382 tests pass on Node 24.18.0; all twelve output
+store tests pass on Node 22.13.0. Worker RPC ownership is still being integrated.

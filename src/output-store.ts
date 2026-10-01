@@ -18,14 +18,18 @@ async function checkDirectories(root: string, parent: string, create: boolean): 
   }
 }
 
-/** Publish one file only after its writer succeeds. Staging stays on the same volume. */
-export async function publishFile(
-  destination: string,
-  write: (stagingPath: string) => Promise<void>,
-  signal?: AbortSignal,
-  localRoot?: string,
-  beforePublish?: () => Promise<boolean>
-): Promise<boolean> {
+/** A staging allocation whose publication and cleanup can be owned by another service. */
+export interface FilePublication {
+  readonly stagingPath: string;
+  /** Starts at most once; repeated calls share the same operation. */
+  publish(): Promise<void>;
+  /** Prevents new publication and waits for a publication already in flight. */
+  cleanup(): Promise<void>;
+}
+
+export async function createFilePublication(
+  destination: string, signal?: AbortSignal, localRoot?: string
+): Promise<FilePublication> {
   signal?.throwIfAborted();
   let canonicalRoot: string | undefined;
   if (localRoot !== undefined) {
@@ -43,18 +47,50 @@ export async function publishFile(
   if (canonicalRoot === undefined) await fs.mkdir(parent, {recursive: true});
   signal?.throwIfAborted();
   const stagingDirectory = await fs.mkdtemp(join(parent, '.wse-stage-'));
+  const stagingPath = join(stagingDirectory, 'content');
+  let publishing: Promise<void> | undefined;
+  let cleaning: Promise<void> | undefined;
+  return {
+    stagingPath,
+    publish() {
+      if (cleaning) return Promise.reject(new Error('Publication has been closed'));
+      publishing ??= (async () => {
+        signal?.throwIfAborted();
+        if (canonicalRoot !== undefined) await checkDirectories(canonicalRoot, parent, false);
+        signal?.throwIfAborted();
+        await fs.rename(stagingPath, destination);
+        recordResourcePublication();
+      })();
+      return publishing;
+    },
+    cleanup() {
+      cleaning ??= (async () => {
+        // A failed rename must not prevent removal of the staging allocation.
+        await publishing?.catch(() => undefined);
+        await fs.rm(stagingDirectory, {recursive: true, force: true});
+      })();
+      return cleaning;
+    }
+  };
+}
+
+/** Publish one file only after its writer succeeds. Staging stays on the same volume. */
+export async function publishFile(
+  destination: string,
+  write: (stagingPath: string) => Promise<void>,
+  signal?: AbortSignal,
+  localRoot?: string,
+  beforePublish?: () => Promise<boolean>
+): Promise<boolean> {
+  const publication = await createFilePublication(destination, signal, localRoot);
   try {
-    const stagingPath = join(stagingDirectory, 'content');
     signal?.throwIfAborted();
-    await write(stagingPath);
+    await write(publication.stagingPath);
     signal?.throwIfAborted();
     if (beforePublish && !await beforePublish()) return false;
-    if (canonicalRoot !== undefined) await checkDirectories(canonicalRoot, parent, false);
-    signal?.throwIfAborted();
-    await fs.rename(stagingPath, destination);
-    recordResourcePublication();
+    await publication.publish();
     return true;
   } finally {
-    await fs.rm(stagingDirectory, {recursive: true, force: true});
+    await publication.cleanup();
   }
 }

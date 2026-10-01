@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import {promises as fs} from 'node:fs';
 import {join} from 'node:path';
-import {publishFile} from '../src/output-store.js';
+import {publishFile, createFilePublication} from '../src/output-store.js';
 import {writeFile} from '../src/io.js';
 import {createResource, ResourceType} from '../src/resource.js';
 import {saveResourceToDisk} from '../src/life-cycle/save-resource-to-disk.js';
@@ -110,4 +110,30 @@ describe('staged file publication', () => {
       .rejects.toThrow('escapes localRoot');
     expect(await fs.readdir(root)).toEqual([]);
   });
+});
+
+
+test('closing an unpublished allocation prevents late publication', async () => {
+  const destination = join(root, 'asset');
+  await fs.writeFile(destination, 'cached');
+  const publication = await createFilePublication(destination, undefined, root);
+  await fs.writeFile(publication.stagingPath, 'partial');
+  const cleanup = publication.cleanup();
+  expect(publication.cleanup()).toBe(cleanup);
+  await cleanup;
+  await expect(publication.publish()).rejects.toThrow('closed');
+  expect(await fs.readFile(destination, 'utf8')).toBe('cached');
+  expect(await fs.readdir(root)).toEqual(['asset']);
+});
+
+test('cleanup waits for an admitted publication and repeated publication shares its result', async () => {
+  const destination = join(root, 'asset');
+  const publication = await createFilePublication(destination, undefined, root);
+  await fs.writeFile(publication.stagingPath, 'complete');
+  const publishing = publication.publish();
+  expect(publication.publish()).toBe(publishing);
+  await publication.cleanup();
+  await publishing;
+  expect(await fs.readFile(destination, 'utf8')).toBe('complete');
+  expect(await fs.readdir(root)).toEqual(['asset']);
 });
