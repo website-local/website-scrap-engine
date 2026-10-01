@@ -133,8 +133,15 @@ Buffered saves now write a temporary file beside the destination and publish it
 by rename. Failures and cancellation observed before publication leave the prior
 destination intact; normal cleanup removes the temporary directory. Publication
 is atomic per file, not across a redirected resource's multiple output files.
-This does not promise durability after power loss. Streaming and local-copy
-publication are still being migrated as part of the unreleased implementation.
+This does not promise durability after power loss. Local streaming-file copies
+and streaming URL mounts also use staged publication and recheck the save-stage
+existing-resource policy before publishing. HTTP streaming publication is still
+being migrated as part of the unreleased implementation.
+
+Custom `PipelineExecutor` implementations must provide
+`shouldSaveResource(res): Promise<boolean>`, which rechecks the existing-resource
+save policy. Built-in local copy handlers use it before publication; the default
+executor shares that check with buffered saves.
 
 Built-in buffered saves reject symlinked directories below `localRoot`. The
 configured root itself may be a symlink; its resolved target is treated as the

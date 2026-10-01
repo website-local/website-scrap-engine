@@ -15,6 +15,8 @@ import type {WorkerInfo} from '../downloader/worker-pool.js';
 export interface PipelineExecutor {
   /** Crawl cancellation, available to cooperative custom hooks. */
   readonly signal?: AbortSignal;
+  /** Recheck the existing-resource save policy immediately before publication. */
+  shouldSaveResource(res: Resource): Promise<boolean>;
   /**
    * @see InitLifeCycleFunc
    */

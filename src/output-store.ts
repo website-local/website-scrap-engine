@@ -22,8 +22,9 @@ export async function publishFile(
   destination: string,
   write: (stagingPath: string) => Promise<void>,
   signal?: AbortSignal,
-  localRoot?: string
-): Promise<void> {
+  localRoot?: string,
+  beforePublish?: () => Promise<boolean>
+): Promise<boolean> {
   signal?.throwIfAborted();
   let canonicalRoot: string | undefined;
   if (localRoot !== undefined) {
@@ -46,9 +47,11 @@ export async function publishFile(
     signal?.throwIfAborted();
     await write(stagingPath);
     signal?.throwIfAborted();
+    if (beforePublish && !await beforePublish()) return false;
     if (canonicalRoot !== undefined) await checkDirectories(canonicalRoot, parent, false);
     signal?.throwIfAborted();
     await fs.rename(stagingPath, destination);
+    return true;
   } finally {
     await fs.rm(stagingDirectory, {recursive: true, force: true});
   }

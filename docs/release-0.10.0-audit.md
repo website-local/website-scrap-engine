@@ -116,6 +116,15 @@ concurrent directory replacement. Build and all 328 tests pass on Node 24.18.0;
 lifecycle and downloader smoke checks pass on Node 22.13.0. Streaming and local
 copy paths still require the same publication and containment integration.
 
+Local streaming-file copies and streaming URL mounts now use staged publication
+with the same output containment. `PipelineExecutor.shouldSaveResource` shares
+the buffered save-policy logic, and local copies invoke it after copying but
+before publication. Tests cover both sources with overwrite, skipSave,
+ifModifiedSince, partial-copy failure, cancellation, and symlinked output
+directories. Build and all 340 tests pass on Node 24.18.0; lifecycle and downloader
+smoke checks pass on Node 22.13.0. HTTP streaming, unified resource outcomes, and
+parent-owned cleanup for forcibly terminated writers remain outstanding.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.

@@ -12,6 +12,7 @@ Feature
 * **worker: cancel cooperatively** — Disposal aborts worker pipeline signals and awaits active hooks, with `workerPool.shutdownTimeout` bounding the grace period before termination.
 * **save: stage buffered output** — Buffered writes publish by rename after successful writing and a cancellation check, preserving cached destinations on write failure or cancellation before publication.
 * **save: contain buffered output** — Reject symlinked directories beneath `localRoot`; replacing destination-file symlinks leaves their former targets untouched.
+* **local files: stage streaming copies** — Local-file and URL-mount copies preserve destinations on failure/cancellation, enforce output containment, and honor the existing-resource save policy before publication.
 
 Breaking Changes
 ------------

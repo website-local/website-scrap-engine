@@ -1,4 +1,3 @@
-import * as path from 'node:path';
 import type {Stats} from 'node:fs';
 import {promises} from 'node:fs';
 import {fileURLToPath} from 'node:url';
@@ -7,14 +6,16 @@ import {ResourceType} from '../resource.js';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import {error as errorLogger} from '../logger/logger.js';
-import {mkdirRetry, safeJoin} from '../io.js';
+import {copyResourceToDisk} from './copy-resource-to-disk.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
 
 const FILE_PREFIX = 'file://';
 
 export async function readOrCopyLocalResource(
   res: Resource,
   requestOptions: RequestOptions,
-  options: StaticDownloadOptions
+  options: StaticDownloadOptions,
+  pipeline?: PipelineExecutor
 ): Promise<DownloadResource | Resource | void> {
   if (res.body) {
     return res as DownloadResource;
@@ -49,15 +50,6 @@ export async function readOrCopyLocalResource(
       }
     }
   }
-  if (res.type === ResourceType.StreamingBinary) {
-    const fileDestPath = safeJoin(res.localRoot ?? options.localRoot, res.savePath);
-    await mkdirRetry(path.dirname(fileDestPath));
-    await promises.copyFile(fileSrcPath, fileDestPath);
-  } else {
-    res.body = await promises.readFile(fileSrcPath, {
-      encoding: res.encoding
-    });
-  }
   try {
     if (!stats) {
       stats = await promises.stat(fileSrcPath);
@@ -70,6 +62,11 @@ export async function readOrCopyLocalResource(
     }
   } catch (e) {
     errorLogger.warn('stat ' + fileSrcPath, e);
+  }
+  if (res.type === ResourceType.StreamingBinary) {
+    await copyResourceToDisk(fileSrcPath, res, options, pipeline);
+  } else {
+    res.body = await promises.readFile(fileSrcPath, {encoding: res.encoding});
   }
   res.finishTimestamp = Date.now();
   res.downloadTime =

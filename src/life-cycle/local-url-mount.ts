@@ -10,7 +10,7 @@ import type {
   RequestOptions
 } from './types.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
-import {mkdirRetry} from '../io.js';
+import {copyResourceToDisk} from './copy-resource-to-disk.js';
 import {
   escapePath,
   isUrlHttp,
@@ -290,7 +290,7 @@ export function localUrlMounts(
       );
     }
 
-    await applyLocalFile(res, options, matched.mount, localFile);
+    await applyLocalFile(res, options, matched.mount, localFile, pipeline);
     if (res.type === ResourceType.StreamingBinary) {
       return undefined;
     }
@@ -742,16 +742,14 @@ async function applyLocalFile(
   res: Resource,
   options: StaticDownloadOptions,
   mount: CompiledLocalUrlMount,
-  localFile: LocalFileMatch
+  localFile: LocalFileMatch,
+  pipeline: PipelineExecutor
 ): Promise<void> {
   res.meta.headers = createHeaders(mount, localFile.localPath, localFile.stats);
   res.meta.localUrlMount = createMeta(
     mount, localFile.candidatePaths, localFile.localPath);
   if (res.type === ResourceType.StreamingBinary) {
-    const fileDestPath = path.join(
-      res.localRoot ?? options.localRoot, res.savePath);
-    await mkdirRetry(path.dirname(fileDestPath));
-    await fs.copyFile(localFile.localPath, fileDestPath);
+    await copyResourceToDisk(localFile.localPath, res, options, pipeline);
   } else {
     res.body = await fs.readFile(localFile.localPath, {
       encoding: res.encoding

@@ -402,19 +402,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
-    if (this.lifeCycle.existingResource) {
-      const existing = await this._checkExistingResource(res, 'saveToDisk');
-      if (existing?.action === 'skip' || existing?.action === 'skipSave') {
-        return undefined;
-      }
-      if (existing?.action === 'ifModifiedSince') {
-        const remoteLastMod = res.meta?.headers?.['last-modified'];
-        if (remoteLastMod &&
-          new Date(remoteLastMod as string) <= existing.stat.mtime) {
-          return undefined;
-        }
-      }
-    }
+    if (!await this.shouldSaveResource(res)) return undefined;
     let downloadedResource: DownloadResource | void = normalizeResource(res) as DownloadResource;
     for (const saveToDisk of this.lifeCycle.saveToDisk) {
       this.signal?.throwIfAborted();
@@ -430,6 +418,25 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     this.signal?.throwIfAborted();
     throwIfCancelled();
     return normalizeResource(downloadedResource) as DownloadResource;
+  }
+
+  async shouldSaveResource(res: Resource): Promise<boolean> {
+    this.signal?.throwIfAborted();
+    throwIfCancelled();
+    if (this.lifeCycle.existingResource) {
+      const existing = await this._checkExistingResource(res, 'saveToDisk');
+      if (existing?.action === 'skip' || existing?.action === 'skipSave') {
+        return false;
+      }
+      if (existing?.action === 'ifModifiedSince') {
+        const remoteLastMod = res.meta?.headers?.['last-modified'];
+        if (remoteLastMod &&
+          new Date(remoteLastMod as string) <= existing.stat.mtime) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   async dispose(
