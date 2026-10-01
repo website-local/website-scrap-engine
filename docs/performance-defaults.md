@@ -1,5 +1,9 @@
 # Relaxed performance defaults — 2026-10-01
 
+The subsequent [checkpoint profile](checkpoint-profile.md) compares each strict
+option, profiles the synthetic workloads, and measures a destination-check
+removal experiment. It recommends no additional permissive mode at this point.
+
 This follow-up implements the user's authorization to relax runtime checks,
 make direct writes the default, normalize resources only at worker boundaries,
 and remove worker message versioning. It improves several workloads against
