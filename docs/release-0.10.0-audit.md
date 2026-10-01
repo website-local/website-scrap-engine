@@ -177,9 +177,8 @@ The test-runner audit below subsequently retained Jest.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
 - Final tooling validation across the complete Node matrix (runner audit complete).
-- Clean-install graph/size report for development, ordinary consumers, and consumers
-  without optional dependencies. Preserve the Undici size rationale and distinguish
-  repository overrides from consumer installations.
+- Refresh packed-install measurements after remaining runtime changes (dependency
+  inventory and installation audit complete).
 - Balanced benchmarks, leak and worker stress tests, and measured optimizations.
 - Packed-package/declaration checks on Node 22.13/22/24/26, complete migration notes,
   and final requirement-by-requirement verification. No tag or publication.
@@ -290,3 +289,24 @@ when the peer is present. All three variants pass strict declaration checks and
 both downloader runtime modes on Node 22.13.0. Build and all 376 tests pass on
 Node 24.18.0. The tests and source/consumer snapshots remain separate from the
 unrelated local files excluded from packaging.
+
+## Completed dependency and installation audit
+
+The [dependency audit](dependency-audit.md) records runtime/tooling decisions,
+clean development and consumer footprints, one empty-cache install plus five
+warm reinstall samples per baseline case, compressed registry archive bytes,
+package tarball size, fresh-process imports, and duplicate dependency versions.
+Its evidence separates the baseline measurements from the final optional-peer
+footprints. The final ordinary consumer has the same registry archive integrity
+set as the baseline omit-optional installation, totaling 1,789,091 compressed
+registry bytes plus the library tarball. The final consumer advisory audit also
+reports zero known vulnerabilities.
+
+The initial >10% import timing difference was investigated with alternating runs
+and runtime resolution tracing: the gap fell to about 4% and both graphs were
+identical. No import-speed benefit is claimed for the logger removal. Cheerio's
+Undici cost remains explicit; avoiding it in consumers would need a supported
+upstream dependency change or a separately justified parser replacement.
+Balanced crawl benchmarks, Got retained-heap/worker stress, and the remaining
+resource/output architecture work are still release gates. Packed installation
+and declaration checks must be repeated after those runtime changes.

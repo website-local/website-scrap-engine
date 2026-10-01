@@ -1,0 +1,656 @@
+{
+  "auditDate": "2026-10-01",
+  "runtime": "Node 24.18.0, npm 11.16.0, Linux x64",
+  "snapshots": {
+    "baseline": "a581aec runtime/config, before compatible dev minor updates and optional-peer conversion",
+    "final": "3e588c4 package/source with documentation captured immediately before the commit"
+  },
+  "baselineInstalled": {
+    "development": {
+      "regularFiles": 10559,
+      "logicalBytes": 99961688,
+      "allocatedBytes": 115691520,
+      "installedPackages": 444,
+      "duplicatedNames": {
+        "ansi-regex": 7,
+        "ansi-styles": 3,
+        "camelcase": 2,
+        "emoji-regex": 5,
+        "entities": 3,
+        "escape-string-regexp": 2,
+        "eslint-visitor-keys": 4,
+        "fdir": 2,
+        "find-up": 2,
+        "get-stream": 2,
+        "glob": 4,
+        "hookified": 2,
+        "ignore": 2,
+        "is-stream": 2,
+        "locate-path": 2,
+        "lowercase-keys": 2,
+        "lru-cache": 5,
+        "p-limit": 2,
+        "p-locate": 2,
+        "path-scurry": 4,
+        "picomatch": 6,
+        "react-is": 2,
+        "semver": 6,
+        "signal-exit": 2,
+        "string-width": 5,
+        "strip-ansi": 7,
+        "supports-color": 2,
+        "type-fest": 3,
+        "wrap-ansi": 3
+      },
+      "note": "Installed node_modules, excluding generated caches and symlink entries. Consumer rows install the packed library without root overrides; compiler and Node typings for validation are provided externally."
+    },
+    "consumer": {
+      "regularFiles": 2062,
+      "logicalBytes": 9619714,
+      "allocatedBytes": 13058048,
+      "installedPackages": 62,
+      "duplicatedNames": {
+        "entities": 3,
+        "lowercase-keys": 2
+      },
+      "note": "Installed node_modules, excluding generated caches and symlink entries. Consumer rows install the packed library without root overrides; compiler and Node typings for validation are provided externally."
+    },
+    "consumer-no-optional": {
+      "regularFiles": 1925,
+      "logicalBytes": 9089308,
+      "allocatedBytes": 12288000,
+      "installedPackages": 51,
+      "duplicatedNames": {
+        "entities": 3,
+        "lowercase-keys": 2
+      },
+      "note": "Installed node_modules, excluding generated caches and symlink entries. Consumer rows install the packed library without root overrides; compiler and Node typings for validation are provided externally."
+    }
+  },
+  "finalInstalled": {
+    "development": {
+      "regularFiles": 10561,
+      "logicalBytes": 99996777,
+      "allocatedBytes": 115728384,
+      "installedPackages": 444,
+      "duplicatedNames": {
+        "ansi-regex": 7,
+        "ansi-styles": 3,
+        "camelcase": 2,
+        "emoji-regex": 5,
+        "entities": 3,
+        "escape-string-regexp": 2,
+        "eslint-visitor-keys": 4,
+        "fdir": 2,
+        "find-up": 2,
+        "get-stream": 2,
+        "glob": 4,
+        "hookified": 2,
+        "ignore": 2,
+        "is-stream": 2,
+        "locate-path": 2,
+        "lowercase-keys": 2,
+        "lru-cache": 5,
+        "p-limit": 2,
+        "p-locate": 2,
+        "path-scurry": 4,
+        "picomatch": 6,
+        "react-is": 2,
+        "semver": 6,
+        "signal-exit": 2,
+        "string-width": 5,
+        "strip-ansi": 7,
+        "supports-color": 2,
+        "type-fest": 3,
+        "wrap-ansi": 3
+      },
+      "note": "Installed node_modules, excluding generated caches and symlink entries. Consumer rows install the packed library without root overrides; compiler and Node typings for validation are provided externally."
+    },
+    "consumer": {
+      "regularFiles": 1925,
+      "logicalBytes": 9089666,
+      "allocatedBytes": 12288000,
+      "installedPackages": 51,
+      "duplicatedNames": {
+        "entities": 3,
+        "lowercase-keys": 2
+      },
+      "note": "Installed node_modules, excluding generated caches and symlink entries. Consumer rows install the packed library without root overrides; compiler and Node typings for validation are provided externally."
+    },
+    "consumer-no-optional": {
+      "regularFiles": 1925,
+      "logicalBytes": 9089678,
+      "allocatedBytes": 12288000,
+      "installedPackages": 51,
+      "duplicatedNames": {
+        "entities": 3,
+        "lowercase-keys": 2
+      },
+      "note": "Installed node_modules, excluding generated caches and symlink entries. Consumer rows install the packed library without root overrides; compiler and Node typings for validation are provided externally."
+    },
+    "consumer-with-peer": {
+      "regularFiles": 2062,
+      "logicalBytes": 9619830,
+      "allocatedBytes": 13058048,
+      "installedPackages": 62,
+      "duplicatedNames": {
+        "entities": 3,
+        "lowercase-keys": 2
+      },
+      "note": "Installed node_modules, excluding generated caches and symlink entries. Consumer rows install the packed library without root overrides; compiler and Node typings for validation are provided externally."
+    }
+  },
+  "baselineInstallTimingAndCompressedArchives": {
+    "method": "One empty npm-cache installation followed by five reinstallations with that cache per case; npm ci, no audit/fund requests. OS filesystem cache is not flushed. Cold timing is one observation, not a stable latency estimate. Compiler and Node typings for consumer validation remain external.",
+    "cases": {
+      "development": {
+        "samples": [
+          {
+            "seconds": 11.624,
+            "cache": "empty"
+          },
+          {
+            "seconds": 7.662,
+            "cache": "warm"
+          },
+          {
+            "seconds": 8.788,
+            "cache": "warm"
+          },
+          {
+            "seconds": 7.356,
+            "cache": "warm"
+          },
+          {
+            "seconds": 7.471,
+            "cache": "warm"
+          },
+          {
+            "seconds": 7.433,
+            "cache": "warm"
+          }
+        ],
+        "lockSha256": "74f29e0fb4861b1bbd4953ba47f77b56684f06bdf9757e017aa9fd517853b9b6",
+        "command": [
+          "npm",
+          "ci",
+          "--no-audit",
+          "--no-fund",
+          "--cache",
+          "artifacts/wse-010-implementation/install-audit/install-caches/development"
+        ],
+        "warmMedianSeconds": 7.471,
+        "registryTarballs": {
+          "uniqueArchives": 412,
+          "compressedBytes": 18522070,
+          "missing": [],
+          "note": "Compressed cache blob bytes for installed registry packages only; excludes metadata, HTTP/TLS overhead, and the local library tarball."
+        },
+        "installedPackages": 444
+      },
+      "consumer": {
+        "samples": [
+          {
+            "seconds": 3.662,
+            "cache": "empty"
+          },
+          {
+            "seconds": 2.238,
+            "cache": "warm"
+          },
+          {
+            "seconds": 3.047,
+            "cache": "warm"
+          },
+          {
+            "seconds": 3.032,
+            "cache": "warm"
+          },
+          {
+            "seconds": 2.045,
+            "cache": "warm"
+          },
+          {
+            "seconds": 1.8,
+            "cache": "warm"
+          }
+        ],
+        "lockSha256": "955488718c89d9630f8d5c10b11e970e4e2e98c0ac0065d682d0f68a76773167",
+        "command": [
+          "npm",
+          "ci",
+          "--no-audit",
+          "--no-fund",
+          "--cache",
+          "artifacts/wse-010-implementation/install-audit/install-caches/consumer"
+        ],
+        "warmMedianSeconds": 2.238,
+        "registryTarballs": {
+          "uniqueArchives": 61,
+          "compressedBytes": 1930500,
+          "missing": [],
+          "note": "Compressed cache blob bytes for installed registry packages only; excludes metadata, HTTP/TLS overhead, and the local library tarball."
+        },
+        "installedPackages": 62
+      },
+      "consumer-no-optional": {
+        "samples": [
+          {
+            "seconds": 2.952,
+            "cache": "empty"
+          },
+          {
+            "seconds": 1.229,
+            "cache": "warm"
+          },
+          {
+            "seconds": 1.33,
+            "cache": "warm"
+          },
+          {
+            "seconds": 1.228,
+            "cache": "warm"
+          },
+          {
+            "seconds": 1.436,
+            "cache": "warm"
+          },
+          {
+            "seconds": 1.807,
+            "cache": "warm"
+          }
+        ],
+        "lockSha256": "5a05d7e2f6b2659395ea842b29506d0139fcdb2981d9fab90be11b5ffe960cac",
+        "command": [
+          "npm",
+          "ci",
+          "--no-audit",
+          "--no-fund",
+          "--cache",
+          "artifacts/wse-010-implementation/install-audit/install-caches/consumer-no-optional",
+          "--omit=optional"
+        ],
+        "warmMedianSeconds": 1.33,
+        "registryTarballs": {
+          "uniqueArchives": 50,
+          "compressedBytes": 1789091,
+          "missing": [],
+          "note": "Compressed cache blob bytes for installed registry packages only; excludes metadata, HTTP/TLS overhead, and the local library tarball."
+        },
+        "installedPackages": 51
+      }
+    },
+    "node": "v24.18.0",
+    "npm": "11.16.0"
+  },
+  "baselineImports": {
+    "node": "24.18.0",
+    "method": "Fresh Node processes. First sample has an empty Node compilation cache; next five share it. OS caches are not flushed. importMs measures dynamic import only, wallSeconds also includes process startup. maxRssKiB is peak RSS of that process. Separate module imports overlap in dependencies and must not be summed.",
+    "cases": {
+      "development:./lib/index.js": {
+        "samples": [
+          {
+            "importMs": 385.1129,
+            "maxRssKiB": 63268,
+            "wallSeconds": 0.579,
+            "cache": "empty"
+          },
+          {
+            "importMs": 333.4334,
+            "maxRssKiB": 64252,
+            "wallSeconds": 0.4121,
+            "cache": "warm"
+          },
+          {
+            "importMs": 353.13890000000004,
+            "maxRssKiB": 63296,
+            "wallSeconds": 0.4227,
+            "cache": "warm"
+          },
+          {
+            "importMs": 326.84049999999996,
+            "maxRssKiB": 64132,
+            "wallSeconds": 0.4017,
+            "cache": "warm"
+          },
+          {
+            "importMs": 357.84169999999995,
+            "maxRssKiB": 63244,
+            "wallSeconds": 0.4295,
+            "cache": "warm"
+          },
+          {
+            "importMs": 335.3865,
+            "maxRssKiB": 63720,
+            "wallSeconds": 0.4079,
+            "cache": "warm"
+          }
+        ],
+        "warmMedian": {
+          "importMs": 335.3865,
+          "wallSeconds": 0.4121,
+          "maxRssKiB": 63720
+        }
+      },
+      "consumer:website-scrap-engine": {
+        "samples": [
+          {
+            "importMs": 505.92040000000003,
+            "maxRssKiB": 67204,
+            "wallSeconds": 0.7614,
+            "cache": "empty"
+          },
+          {
+            "importMs": 390.27329999999995,
+            "maxRssKiB": 68140,
+            "wallSeconds": 0.4579,
+            "cache": "warm"
+          },
+          {
+            "importMs": 452.2741,
+            "maxRssKiB": 67064,
+            "wallSeconds": 0.5284,
+            "cache": "warm"
+          },
+          {
+            "importMs": 385.85339999999997,
+            "maxRssKiB": 66968,
+            "wallSeconds": 0.4648,
+            "cache": "warm"
+          },
+          {
+            "importMs": 422.85450000000003,
+            "maxRssKiB": 67116,
+            "wallSeconds": 0.5008,
+            "cache": "warm"
+          },
+          {
+            "importMs": 370.7472,
+            "maxRssKiB": 67448,
+            "wallSeconds": 0.4423,
+            "cache": "warm"
+          }
+        ],
+        "warmMedian": {
+          "importMs": 390.27329999999995,
+          "wallSeconds": 0.4648,
+          "maxRssKiB": 67116
+        }
+      },
+      "consumer:got": {
+        "samples": [
+          {
+            "importMs": 156.2756,
+            "maxRssKiB": 51756,
+            "wallSeconds": 0.245,
+            "cache": "empty"
+          },
+          {
+            "importMs": 153.4321,
+            "maxRssKiB": 51784,
+            "wallSeconds": 0.2231,
+            "cache": "warm"
+          },
+          {
+            "importMs": 135.0218,
+            "maxRssKiB": 51764,
+            "wallSeconds": 0.2047,
+            "cache": "warm"
+          },
+          {
+            "importMs": 128.9375,
+            "maxRssKiB": 51740,
+            "wallSeconds": 0.1802,
+            "cache": "warm"
+          },
+          {
+            "importMs": 132.6674,
+            "maxRssKiB": 51676,
+            "wallSeconds": 0.1957,
+            "cache": "warm"
+          },
+          {
+            "importMs": 144.3728,
+            "maxRssKiB": 51344,
+            "wallSeconds": 0.2092,
+            "cache": "warm"
+          }
+        ],
+        "warmMedian": {
+          "importMs": 135.0218,
+          "wallSeconds": 0.2047,
+          "maxRssKiB": 51740
+        }
+      },
+      "consumer:p-queue": {
+        "samples": [
+          {
+            "importMs": 12.488199999999999,
+            "maxRssKiB": 28532,
+            "wallSeconds": 0.0745,
+            "cache": "empty"
+          },
+          {
+            "importMs": 9.559200000000004,
+            "maxRssKiB": 27964,
+            "wallSeconds": 0.0772,
+            "cache": "warm"
+          },
+          {
+            "importMs": 7.5364,
+            "maxRssKiB": 27956,
+            "wallSeconds": 0.0967,
+            "cache": "warm"
+          },
+          {
+            "importMs": 12.095699999999994,
+            "maxRssKiB": 27964,
+            "wallSeconds": 0.0662,
+            "cache": "warm"
+          },
+          {
+            "importMs": 8.9859,
+            "maxRssKiB": 27976,
+            "wallSeconds": 0.0683,
+            "cache": "warm"
+          },
+          {
+            "importMs": 8.091000000000001,
+            "maxRssKiB": 27936,
+            "wallSeconds": 0.063,
+            "cache": "warm"
+          }
+        ],
+        "warmMedian": {
+          "importMs": 8.9859,
+          "wallSeconds": 0.0683,
+          "maxRssKiB": 27964
+        }
+      },
+      "consumer:cheerio": {
+        "samples": [
+          {
+            "importMs": 329.3318,
+            "maxRssKiB": 56116,
+            "wallSeconds": 0.5342,
+            "cache": "empty"
+          },
+          {
+            "importMs": 284.337,
+            "maxRssKiB": 57012,
+            "wallSeconds": 0.3616,
+            "cache": "warm"
+          },
+          {
+            "importMs": 257.091,
+            "maxRssKiB": 57008,
+            "wallSeconds": 0.3439,
+            "cache": "warm"
+          },
+          {
+            "importMs": 287.0752,
+            "maxRssKiB": 57024,
+            "wallSeconds": 0.3492,
+            "cache": "warm"
+          },
+          {
+            "importMs": 294.23400000000004,
+            "maxRssKiB": 56444,
+            "wallSeconds": 0.3626,
+            "cache": "warm"
+          },
+          {
+            "importMs": 291.3382,
+            "maxRssKiB": 56740,
+            "wallSeconds": 0.3562,
+            "cache": "warm"
+          }
+        ],
+        "warmMedian": {
+          "importMs": 287.0752,
+          "wallSeconds": 0.3562,
+          "maxRssKiB": 57008
+        }
+      },
+      "consumer-no-optional:website-scrap-engine": {
+        "samples": [
+          {
+            "importMs": 514.9804,
+            "maxRssKiB": 67292,
+            "wallSeconds": 0.7583,
+            "cache": "empty"
+          },
+          {
+            "importMs": 411.3457,
+            "maxRssKiB": 68792,
+            "wallSeconds": 0.4797,
+            "cache": "warm"
+          },
+          {
+            "importMs": 504.9043,
+            "maxRssKiB": 66896,
+            "wallSeconds": 0.5798,
+            "cache": "warm"
+          },
+          {
+            "importMs": 452.9588,
+            "maxRssKiB": 66972,
+            "wallSeconds": 0.5297,
+            "cache": "warm"
+          },
+          {
+            "importMs": 430.9898,
+            "maxRssKiB": 68128,
+            "wallSeconds": 0.5164,
+            "cache": "warm"
+          },
+          {
+            "importMs": 493.6998,
+            "maxRssKiB": 67620,
+            "wallSeconds": 0.5763,
+            "cache": "warm"
+          }
+        ],
+        "warmMedian": {
+          "importMs": 452.9588,
+          "wallSeconds": 0.5297,
+          "maxRssKiB": 67620
+        }
+      }
+    }
+  },
+  "importVarianceInvestigation": {
+    "reason": "Initial separate batches showed >10% slower import without optional dependencies; repeat warm imports with alternating order before drawing a conclusion.",
+    "samples": {
+      "consumer": [
+        433.13730000000004,
+        451.7008,
+        412.2559,
+        415.32230000000004,
+        402.8585
+      ],
+      "consumer-no-optional": [
+        453.7113,
+        451.8608,
+        431.1367,
+        390.5875,
+        410.60429999999997
+      ]
+    },
+    "medians": {
+      "consumer": 415.32230000000004,
+      "consumer-no-optional": 431.1367
+    },
+    "sameResolvedModuleGraph": true,
+    "resolvedModuleGraphs": {
+      "consumer": {
+        "modules": 345,
+        "sha256": "97c6d25bcdc33ca62fe5fb2e91cde1f8576faa583cdaa45e105773320e091762"
+      },
+      "consumer-no-optional": {
+        "modules": 345,
+        "sha256": "97c6d25bcdc33ca62fe5fb2e91cde1f8576faa583cdaa45e105773320e091762"
+      }
+    }
+  },
+  "packedArtifact": {
+    "size": 153277,
+    "unpackedSize": 734553,
+    "shasum": "78a0e94e588ea707c62f1d8fd19d5151c4f6d205",
+    "integrity": "sha512-n0IgnRmnzVPAlREDcsMdZFmxyAIW8BtjSYOzgLeFMSpY8eV0xnAPrYMk/Xk5hGs0el/PorHeoKDtYcClY0S1kQ==",
+    "filename": "website-scrap-engine-0.10.0.tgz"
+  },
+  "undici": {
+    "consumerVersion": "7.30.0",
+    "consumerPackageBytes": 1658921,
+    "consumerFiles": 210,
+    "developmentAliasVersion": "@favware/skip-dependency@1.2.2",
+    "developmentAliasBytes": 5583,
+    "developmentAliasFiles": 7,
+    "scope": "Root development override only; not inherited by packed consumers."
+  },
+  "validation": {
+    "nodeMinimum": "22.13.0",
+    "consumerVariants": [
+      "ordinary",
+      "omit-optional",
+      "explicit-log4js-peer"
+    ],
+    "checks": [
+      "strict declaration consumer, real Undici Dispatcher type",
+      "main and worker downloader HTTP smoke",
+      "peer absence or real adapter file write"
+    ],
+    "mainNode24Tests": 376,
+    "npmAuditKnownVulnerabilities": {
+      "consumer": 0,
+      "development": 0
+    },
+    "finalConsumerNpmAudit": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 52,
+        "dev": 0,
+        "optional": 0,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 51
+      }
+    }
+  },
+  "measurementLimits": [
+    "Filesystem caches were not flushed. Empty-cache install timings have one sample; warm install medians have five.",
+    "Installed bytes include npm installed-lock metadata and exclude symlink entries and generated caches. Allocated blocks are filesystem-specific.",
+    "Registry archive bytes count unique installed tarballs, excluding registry metadata, transport overhead, and the local library tarball.",
+    "Compiler and Node types used for consumer validation are external and do not inflate consumer footprints.",
+    "Timings describe the recorded snapshot; final footprint rows incorporate the dev minor updates and optional-peer change."
+  ],
+  "finalConsumerRegistryArchivesMatchBaselineOmitOptional": true
+}
