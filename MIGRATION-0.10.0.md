@@ -57,6 +57,15 @@ The default startup deadline is 30 seconds; configure `startupTimeout` in the
 sixth `WorkerPool` constructor argument, or use `workerPool: {startupTimeout}`
 in multi-thread downloader options. A custom worker must send `Ready` explicitly.
 
+Use `workerPool: {taskTimeout: 30000}` to limit the time from dispatch to a worker
+until its completion message. There is no task deadline by default. A timeout or
+message-decoding failure terminates the affected worker and rejects all tasks
+assigned to it. Undispatched tasks continue on surviving workers, or reject if
+none remain. Assigned tasks are never replayed automatically: a failed worker
+may already have performed side effects. `shutdownTimeout` configures the idle
+worker close grace period (1000ms by default). All deadlines are positive integer
+milliseconds, at most 2147483647.
+
 A minimal custom worker looks like:
 
 ```js

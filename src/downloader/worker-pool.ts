@@ -41,11 +41,22 @@ export interface WorkerFactory {
 export interface WorkerPoolOptions {
   /** Maximum time for each worker to announce successful initialization. */
   startupTimeout?: number;
+  /** Deadline from dispatch to completion; omitted means no task deadline. */
+  taskTimeout?: number;
+  /** Grace period for closing idle worker channels. Defaults to 1000ms. */
+  shutdownTimeout?: number;
 }
 
 function defaultWorkerFactory(
   filename: string | URL, options?: WorkerOptions): Worker {
   return new Worker(filename, options);
+}
+
+function validateTimeout(name: string, value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1 || value > 2147483647) {
+    throw new RangeError(`${name} must be an integer between 1 and 2147483647`);
+  }
+  return value;
 }
 
 export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
@@ -59,6 +70,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   private readonly _unavailableWorkers = new Set<WorkerInfo>();
   private _lastWorkerError?: Error;
   private _initialized = false;
+  private readonly _taskTimeout?: number;
+  private readonly _shutdownTimeout: number;
+  private readonly _taskTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private readonly _terminations = new Map<WorkerInfo, Promise<number>>();
   private readonly _starting = new Map<WorkerInfo, {
     resolve: () => void;
     reject: (error: Error) => void;
@@ -75,11 +90,10 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     if (!Number.isSafeInteger(coreSize) || coreSize < 1) {
       throw new RangeError('coreSize must be a positive integer');
     }
-    const startupTimeout = options.startupTimeout ?? 30000;
-    if (!Number.isSafeInteger(startupTimeout) || startupTimeout < 1 ||
-      startupTimeout > 2147483647) {
-      throw new RangeError('startupTimeout must be an integer between 1 and 2147483647');
-    }
+    const startupTimeout = validateTimeout('startupTimeout', options.startupTimeout ?? 30000);
+    this._shutdownTimeout = validateTimeout('shutdownTimeout', options.shutdownTimeout ?? 1000);
+    this._taskTimeout = options.taskTimeout === undefined ? undefined :
+      validateTimeout('taskTimeout', options.taskTimeout);
     const ready: Promise<void>[] = [];
     for (let i = 0; i < coreSize; i++) {
       const taskChannel = new MessageChannel();
@@ -118,6 +132,12 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       this.workers[i].worker.addListener('exit',
         exitCode => this.workerOnExit(this.workers[i], exitCode));
       const info = this.workers[i];
+      for (const channel of [info.worker, info.taskPort, info.logPort]) {
+        channel.addListener('messageerror', error => {
+          this.rejectWorkerTasks(info, new Error(
+            `worker ${info.id} message decoding failed`, {cause: error}));
+        });
+      }
       ready.push(new Promise<void>((resolve, reject) => {
         const finish = (error?: Error) => {
           clearTimeout(timeout);
@@ -147,8 +167,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   workerOnError(info: WorkerInfo, err: Error): void {
-    errorLogger.error('worker error', info.id, err);
     this.rejectWorkerTasks(info, err);
+    try { errorLogger.error('worker error', info.id, err); } catch { /* Consumer logger. */ }
   }
 
   workerOnExit(info: WorkerInfo, exitCode: number): void {
@@ -174,6 +194,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         continue;
       }
       this.workingTasks.delete(taskId);
+      this.clearTaskTimer(taskId);
       task.reject(err);
     }
     if (!this.workers.some(worker => !this._unavailableWorkers.has(worker))) {
@@ -182,7 +203,25 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       }
       this.pendingTasks.length = 0;
     }
+    void this.terminateWorker(info).catch(() => undefined);
     setImmediate(() => this.nextTask());
+  }
+
+  private clearTaskTimer(taskId: number): void {
+    clearTimeout(this._taskTimers.get(taskId));
+    this._taskTimers.delete(taskId);
+  }
+
+  private terminateWorker(info: WorkerInfo): Promise<number> {
+    let termination = this._terminations.get(info);
+    if (!termination) {
+      termination = info.worker.terminate().finally(() => {
+        info.taskPort.close();
+        info.logPort.close();
+      });
+      this._terminations.set(info, termination);
+    }
+    return termination;
   }
 
   onControlMessage(info: WorkerInfo, message: WorkerControlMessage): void {
@@ -242,6 +281,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     --info.load;
     setImmediate(() => this.nextTask());
     this.workingTasks.delete(message.taskId);
+    this.clearTaskTimer(message.taskId);
     pending.resolve(message as R);
   }
 
@@ -350,6 +390,13 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
           task.workerId = sorted[i].id;
           this.workingTasks.set(task.taskId, task as PendingPromise);
           ++sorted[i].load;
+          if (this._taskTimeout !== undefined) {
+            const info = sorted[i];
+            this._taskTimers.set(task.taskId, setTimeout(() => {
+              this.rejectWorkerTasks(info, new Error(
+                `worker ${info.id} task ${task.taskId} timed out after ${this._taskTimeout}ms`));
+            }, this._taskTimeout));
+          }
         } catch (e) {
           this.workingTasks.delete(task.taskId);
           task.reject(e);
@@ -377,34 +424,36 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       return this.terminateWorkers();
     }
     const closed = this.workers.map(info => {
-      const closedPorts = Promise.all([
-        new Promise<void>(resolve => {
-          info.taskPort.once('close', resolve);
-        }),
-        new Promise<void>(resolve => {
-          info.logPort.once('close', resolve);
-        })
-      ]);
-      info.closed = new Promise(resolve => {
-        info.resolveClosed = resolve;
+      if (this._terminations.has(info) || info.worker.threadId === -1) return;
+      return new Promise<void>(resolve => {
+        let taskClosed = false;
+        let logClosed = false;
+        let acknowledged = false;
+        const finish = () => {
+          clearTimeout(timeout);
+          info.taskPort.removeListener('close', onTaskClose);
+          info.logPort.removeListener('close', onLogClose);
+          info.worker.removeListener('exit', finish);
+          info.resolveClosed = undefined;
+          resolve();
+        };
+        const check = () => { if (taskClosed && logClosed && acknowledged) finish(); };
+        const onTaskClose = () => { taskClosed = true; check(); };
+        const onLogClose = () => { logClosed = true; check(); };
+        const timeout = setTimeout(finish, this._shutdownTimeout);
+        info.resolveClosed = () => { acknowledged = true; check(); };
+        info.taskPort.once('close', onTaskClose);
+        info.logPort.once('close', onLogClose);
+        info.worker.once('exit', finish);
+        info.worker.postMessage({type: WorkerControlMessageType.Close});
       });
-      info.worker.postMessage({type: WorkerControlMessageType.Close});
-      let timeout: ReturnType<typeof setTimeout> | undefined;
-      return Promise.race([
-        Promise.all([info.closed, closedPorts]),
-        new Promise(resolve => {
-          info.worker.once('exit', resolve);
-        }),
-        new Promise(resolve => {
-          timeout = setTimeout(resolve, 1000);
-        })
-      ]).finally(() => clearTimeout(timeout));
     });
     await Promise.all(closed);
     return this.terminateWorkers();
   }
 
   private async terminateWorkers(): Promise<number[]> {
+    for (const taskId of this._taskTimers.keys()) this.clearTaskTimer(taskId);
     for (const task of this.pendingTasks) {
       task.reject(new Error('disposed'));
     }
@@ -413,12 +462,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       pending.reject(new Error('disposed'));
     }
     this.workingTasks.clear();
-    const numbers = await Promise.all(
-      this.workers.map(info => info.worker.terminate()));
-    for (const info of this.workers) {
-      info.taskPort.close();
-      info.logPort.close();
-    }
-    return numbers;
+    for (const info of this.workers) info.load = 0;
+    return Promise.all(this.workers.map(info => this.terminateWorker(info)));
   }
 }

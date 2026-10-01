@@ -329,4 +329,92 @@ describe('worker-pool', function () {
       setLogger(createDefaultLogger());
     }
   }, 10000);
+
+  test('deadline retires a stalled worker and settles its active and queued tasks', async () => {
+    const pool = new WorkerPool(1,
+      join(__dirname, 'task-deadline-worker.js'), {hang: true}, 2, undefined,
+      {taskTimeout: 100});
+    try {
+      await pool.ready;
+      const results = await Promise.allSettled([1, 2, 3].map(value => pool.submitTask(value)));
+      for (const result of results) {
+        expect(result.status).toBe('rejected');
+        if (result.status === 'rejected') expect(result.reason.message).toContain('timed out');
+      }
+      expect(pool.workingTasks.size).toBe(0);
+      expect(pool.pendingTasks).toHaveLength(0);
+      expect(pool.workers[0].load).toBe(0);
+      await expect(pool.submitTask(4)).rejects.toThrow('timed out');
+    } finally {
+      await pool.dispose();
+    }
+    expect(pool.workers[0].worker.threadId).toBe(-1);
+  });
+
+  test('a timeout does not replay work or disable surviving workers', async () => {
+    let count = 0;
+    const pool = new WorkerPool(2,
+      join(__dirname, 'task-deadline-worker.js'), {}, 1,
+      (filename, options) => new Worker(filename, {
+        ...options, workerData: {...options?.workerData, hang: count++ === 0}
+      }), {taskTimeout: 1000});
+    try {
+      await pool.ready;
+      const results = await Promise.allSettled([1, 2, 3].map(value => pool.submitTask(value)));
+      expect(results[0]).toMatchObject({status: 'rejected'});
+      expect(results[1]).toMatchObject({status: 'fulfilled', value: {body: 2}});
+      expect(results[2]).toMatchObject({status: 'fulfilled', value: {body: 3}});
+      expect((await pool.submitTask(4)).body).toBe(4);
+    } finally {
+      await pool.dispose();
+    }
+  });
+
+  test.each(['worker', 'taskPort', 'logPort'] as const)(
+    'decoding failure on %s rejects assigned work and cleans up', async channel => {
+      const pool = new WorkerPool(1,
+        join(__dirname, 'task-deadline-worker.js'), {hang: true});
+      try {
+        await pool.ready;
+        const task = pool.submitTask(1);
+        const rejected = expect(task).rejects.toThrow('message decoding failed');
+        pool.nextTask();
+        // Node decoding failures are runtime-dependent; inject the documented event.
+        pool.workers[0][channel].emit('messageerror', new Error('decode failed'));
+        await rejected;
+        expect(pool.workingTasks.size).toBe(0);
+        await expect(pool.submitTask(2)).rejects.toThrow('message decoding failed');
+      } finally {
+        await pool.dispose();
+      }
+      expect(pool.workers[0].worker.threadId).toBe(-1);
+    });
+
+  test('invalid deadlines fail before creating any workers', () => {
+    const factory = jest.fn(() => { throw new Error('must not spawn'); });
+    for (const key of ['startupTimeout', 'taskTimeout', 'shutdownTimeout']) {
+      for (const value of [0, -1, 0.5, NaN, Infinity, 2147483648]) {
+        expect(() => new WorkerPool(1, '', {}, -1, factory, {[key]: value}))
+          .toThrow(RangeError);
+      }
+    }
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  test('disposal clears active task deadlines and worker load', async () => {
+    const pool = new WorkerPool(1,
+      join(__dirname, 'task-deadline-worker.js'), {hang: true}, 1, undefined,
+      {taskTimeout: 100});
+    await pool.ready;
+    const task = pool.submitTask(1);
+    const rejected = expect(task).rejects.toThrow('disposed');
+    pool.nextTask();
+    expect(pool.workers[0].load).toBe(1);
+    await pool.dispose();
+    await rejected;
+    expect(pool.workers[0].load).toBe(0);
+    // A leaked timer would replace the disposal reason with a timeout.
+    await new Promise(resolve => setTimeout(resolve, 150));
+    await expect(pool.submitTask(2)).rejects.toThrow('disposed');
+  });
 });

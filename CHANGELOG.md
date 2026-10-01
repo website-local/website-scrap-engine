@@ -8,6 +8,7 @@ Feature
 ------------
 * **life-cycle: add save-path hooks (#731)** — Run composable `generateSavePath` hooks after type detection and before resource creation. Transform the default path or return `undefined` to discard a resource.
 * **worker: separate task and log channels (#491)** — Use dedicated MessagePorts for tasks/results and logs, with shutdown control on `parentPort` so queued logs can drain.
+* **worker: bound stalled tasks** — Optional `workerPool.taskTimeout` retires workers that stop replying. Message-decoding failures reject assigned tasks, while healthy workers continue queued work without replaying failed tasks.
 
 Breaking Changes
 ------------

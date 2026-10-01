@@ -56,10 +56,21 @@ The new tests cover pool failures and actual default-worker initialization failu
 Build and all 289 tests pass on Node 24.18.0; the expanded real-process lifecycle
 harness also passes on the exact Node 22.13.0 minimum.
 
+Optional `workerPool.taskTimeout` bounds dispatched tasks. Expiry retires the
+affected worker and rejects its assigned tasks; queued work continues on healthy
+workers and is never replayed from a failed worker. Message-decoding errors on
+all three channels follow the same failure path. Termination promises are shared,
+task timers are cleared on settlement/disposal, and temporary shutdown listeners
+are removed on all close/exit/deadline paths. `shutdownTimeout` controls the idle
+worker close grace period. Deadline values are validated before workers spawn.
+Build and all 296 tests pass on Node 24.18.0. Lifecycle and downloader smoke
+checks pass on Node 22.13.0. Decoding tests inject Node's documented `messageerror`
+event because actual deserialization failures depend on runtime internals.
+
 ## Remaining implementation and release gates
 
-- Versioned worker protocol, task deadlines, cooperative worker cancellation,
-  message decoding failures, and complete cleanup.
+- Versioned worker protocol, explicit resource wire contracts, cooperative worker
+  cancellation, and remaining cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
 - Evidence-led test-runner comparison; audit TypeScript 7 without forcing an
