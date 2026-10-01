@@ -331,3 +331,16 @@ pass on Node 22.13.0. Three additional boundary tests reject negative/infinite
 worker publication counts and nonboolean skip flags. Custom direct filesystem
 writes require their own reporting; worker crash/forced-termination publication
 ownership and destination reservations remain separate release gates.
+
+## Node 26 checkpoint
+
+Node 26.10.0 was downloaded from nodejs.org and checked against its official
+SHA-256 manifest. At source commit `b4f8b05`, the build, full source/test typecheck,
+all 380 Jest tests, and both runtime downloader smoke cases pass. A clean tracked
+snapshot was packed separately, excluding unrelated local source files, and
+installed into a fresh ordinary consumer under Node 26. Strict declarations
+(including ResourceOutcome and worker progress types), both downloader modes,
+all forty outcome scenarios, and import without the optional logging peer pass.
+[Checkpoint evidence](evidence/node-26-checkpoint.json) records runtime and package
+integrities. This closes the initial local Node 26 verification gap, but final
+matrix/packed-consumer checks must be repeated after remaining runtime changes.

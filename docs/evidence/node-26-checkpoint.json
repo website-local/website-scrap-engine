@@ -1,0 +1,37 @@
+{
+  "sourceCommit": "b4f8b05",
+  "node": "v26.10.0",
+  "npm": "11.19.1",
+  "platform": "Linux x64",
+  "runtimeSource": "https://nodejs.org/dist/v26.10.0",
+  "runtimeArchiveSha256": "ca70e9e349de048b9522abb3adc05b3bd6f43c5ffd3ec57916c7da292f59f022",
+  "runtimeChecksumVerifiedAgainst": "Official SHASUMS256.txt fetched over HTTPS",
+  "checks": {
+    "build": "passed",
+    "sourceAndTestTypecheck": "passed",
+    "jest": {
+      "suites": 32,
+      "tests": 380
+    },
+    "runtimeSmoke": [
+      "main downloader",
+      "worker downloader"
+    ],
+    "packedConsumer": [
+      "strict TypeScript declarations with real Undici types",
+      "ResourceOutcome and worker progress public types",
+      "main downloader",
+      "worker downloader",
+      "40 outcome scenarios",
+      "no optional log4js peer installed"
+    ]
+  },
+  "package": {
+    "size": 156409,
+    "unpackedSize": 749286,
+    "integrity": "sha512-exMMpF0FhFbatYwGZ2MPeFuuuR/6f/ZWy4eZHD5jb5/Kp92/j+t+hT/0UXmzNXfrM4nGyMolb7Uep4pRGfBxOQ==",
+    "shasum": "6b2051813d2de87d939156d3cd1a075d5d30780d"
+  },
+  "consumerLockSha256": "c807a1464c7952ac019f6994b1f9d4ea62577eec9eccbefb0d0d95ff3ea5a6e8",
+  "scope": "Checkpoint validation, not final release approval. The package was built from a clean tracked source snapshot using an installed dependency tree with a matching lock hash; the consumer was installed fresh on Node 26. The final matrix must be repeated after remaining runtime changes."
+}
