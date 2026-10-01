@@ -195,3 +195,13 @@ limit, not an aggregate heap limit; parsing and serialization can allocate more.
 Build and all 372 tests pass on Node 24.18.0. Eleven real HTTP/filesystem limit
 tests and the expanded ten-scenario failure/retry harness pass on Node 22.13.0.
 Aggregate buffered-byte accounting remains a separate release gate.
+
+## Redirect reservation ownership
+
+Successful redirect aliases now remain reserved if an independent in-flight
+request to that target later fails. Aliases use the same fragment and optional
+query stripping as ordinary admissions; failed worker results cannot reserve
+aliases. Three deterministic regressions cover returned/thrown failures and
+query normalization. Build and all 375 tests pass on Node 24.18.0; all three
+regressions also pass on Node 22.13.0. This fixes alias retention without retaining
+Resource bodies; full terminal outcomes and destination reservations remain open.

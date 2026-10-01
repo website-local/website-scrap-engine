@@ -1,6 +1,7 @@
 import {withCrawlContext} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
 import PQueue from 'p-queue';
+import URI from 'urijs';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';
@@ -43,6 +44,25 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   _initOptions: Promise<void>;
   readonly downloadedUrl: Set<string> = new Set<string>();
   readonly queuedUrl: Set<string> = new Set<string>();
+  // Alias retention is independent of an in-flight reservation. A failing
+  // request must not release another successful request's redirect target.
+  private readonly retainedAliases = new Set<string>();
+
+  private canonicalUrl(url: string): string {
+    const uri = new URI(url).hash('');
+    if (this.options.deduplicateStripSearch) uri.search('');
+    return uri.toString();
+  }
+
+  protected retainRedirectAlias(url: string): void {
+    const key = this.canonicalUrl(url);
+    this.retainedAliases.add(key);
+    this.queuedUrl.add(key);
+  }
+
+  private releaseFailedReservation(url: string): void {
+    if (!this.retainedAliases.has(url)) this.queuedUrl.delete(url);
+  }
   readonly meta: DownloaderStats = {
     currentPeriodCount: 0,
     firstPeriodCount: 0,
@@ -157,15 +177,9 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       this.notifyStatus(res, 'dispose');
       return false;
     }
-    let url: string;
     const resource = normalizeResource(res);
     checkResourceBody(resource, this.options.maxResourceBytes);
-    const uri = resource.uri.clone().hash('');
-    if (this.options.deduplicateStripSearch) {
-      url = uri.search('').toString();
-    } else {
-      url = uri.toString();
-    }
+    const url = this.canonicalUrl(resource.url);
     if (this.queuedUrl.has(url)) {
       return false;
     }
@@ -186,10 +200,10 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       try {
         this.signal.throwIfAborted();
         if (await this.downloadAndProcessResource(resource) === false) {
-          this.queuedUrl.delete(url);
+          this.releaseFailedReservation(url);
         }
       } catch (error) {
-        this.queuedUrl.delete(url);
+        this.releaseFailedReservation(url);
         throw error;
       }
     })).catch(error => {

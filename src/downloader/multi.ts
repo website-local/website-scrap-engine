@@ -128,10 +128,10 @@ export class MultiThreadDownloader extends AbstractDownloader {
       this.handleError(msg.error, 'post-process', res);
     }
     children.forEach(resource => this._addProcessedResource(resource));
-    if (msg.redirectedUrl) {
-      this.queuedUrl.add(msg.redirectedUrl);
-    }
     if (msg.error) return false;
+    if (msg.redirectedUrl) {
+      this.retainRedirectAlias(msg.redirectedUrl);
+    }
     this.downloadedUrl.add(res.url);
   }
 

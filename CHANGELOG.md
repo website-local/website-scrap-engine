@@ -6,6 +6,7 @@
 
 Feature
 ------------
+* **redirects: preserve successful reservations** — A concurrent target failure no longer releases another request’s successful alias; aliases follow the same fragment/query normalization as admissions.
 * **resources: enforce optional byte limits** — `maxResourceBytes` limits HTTP bodies after decompression, local sources, and hook-provided bodies; oversized transfers preserve cached destinations and report `ERR_RESOURCE_SIZE_LIMIT` in both downloader modes.
 * **downloader: handle failed attempts consistently** — Exclude failed processing/saves from download counts and release failed URL reservations after task settlement for explicit retries. Falsy worker throws are reported as errors.
 * **scheduling: bound admissions and concurrency** — Add optional `maxResources`, `maxQueuedResources`, and `maxConcurrency` limits, with observable admission rejections that do not block recursive discovery.

@@ -55,7 +55,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
       }
       if (processedResource && processedResource.redirectedUrl &&
         processedResource.redirectedUrl !== processedResource.url) {
-        this.queuedUrl.add(processedResource.redirectedUrl);
+        this.retainRedirectAlias(processedResource.redirectedUrl);
       }
       this.downloadedUrl.add(res.url);
     } catch (e) {
