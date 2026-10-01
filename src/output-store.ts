@@ -6,12 +6,16 @@ async function checkDirectories(root: string, parent: string, create: boolean): 
   let current = root;
   for (const part of ['', ...relative(root, parent).split(sep).filter(Boolean)]) {
     if (part) current = join(current, part);
-    if (create && part) {
+    let stat;
+    try { stat = await fs.lstat(current); }
+    catch (error) {
+      if (!create || !part || (error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       try { await fs.mkdir(current); } catch (error) {
+        // Another publication may have created this directory concurrently.
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
       }
+      stat = await fs.lstat(current);
     }
-    const stat = await fs.lstat(current);
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       throw new Error('Output directory must not be a symlink: ' + current);
     }
@@ -41,9 +45,13 @@ export async function createFilePublication(
     const withinRoot = relative(resolvedRoot, resolve(destination));
     if (!withinRoot || withinRoot === '..' || withinRoot.startsWith('..' + sep) ||
       isAbsolute(withinRoot)) throw new Error('Output destination escapes localRoot');
-    await fs.mkdir(resolvedRoot, {recursive: true});
     // The configured root is trusted and may itself be a symlink.
-    canonicalRoot = await fs.realpath(resolvedRoot);
+    try { canonicalRoot = await fs.realpath(resolvedRoot); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      await fs.mkdir(resolvedRoot, {recursive: true});
+      canonicalRoot = await fs.realpath(resolvedRoot);
+    }
     destination = join(canonicalRoot, withinRoot);
     await checkDirectories(canonicalRoot, dirname(destination), true);
   }

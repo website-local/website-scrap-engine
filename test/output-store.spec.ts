@@ -113,6 +113,18 @@ describe('staged file publication', () => {
       .rejects.toThrow('escapes localRoot');
     expect(await fs.readdir(root)).toEqual([]);
   });
+
+  test('concurrent publishers safely create shared missing directories', async () => {
+    const output = join(root, 'missing', 'output');
+    await Promise.all(Array.from({length: 16}, (_, index) =>
+      writeFile(join(output, 'shared', 'nested', String(index)), String(index),
+        'utf8', undefined, undefined, output)));
+    const directory = join(output, 'shared', 'nested');
+    expect((await fs.readdir(directory)).length).toBe(16);
+    for (let index = 0; index < 16; index++) {
+      expect(await fs.readFile(join(directory, String(index)), 'utf8')).toBe(String(index));
+    }
+  });
 });
 
 

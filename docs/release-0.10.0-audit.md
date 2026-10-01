@@ -405,3 +405,19 @@ Build and all 393 tests pass on Node 24.18.0. Tests include boundary/late calls,
 custom-worker oversized batches, and six real-process discovery/failure/body-size
 scenarios across both modes.
 The six real-process scenarios also pass on Node 22.13.0 and 26.10.0.
+
+## Runtime performance checkpoints
+
+The [runtime performance audit](runtime-performance-audit.md) adds reproducible
+five-sample alternating crawl/queue comparisons and refreshes the Got retained-
+heap check. The release baseline exposed regressions requiring investigation;
+worker startup and staged filesystem work are material costs. p-queue remains
+justified; the opt-in concurrency heuristic still needs review.
+
+An isolated output-directory optimization avoids redundant mkdir calls while
+retaining lstat/realpath containment checks and staging. Paired samples show local
+and worker-markup gains without a >10% regression in other workloads; hashes match
+across all cases. Build/typecheck and 394 tests pass on Node 24, with one suite
+rerun after a cache-read error; 15 output tests pass on Node 22.13. Final balanced
+benchmarks, aggregate buffering, stress, and complete packed/matrix validation
+remain required before declaring this release ready.
