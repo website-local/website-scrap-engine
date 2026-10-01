@@ -18,10 +18,10 @@ export async function saveResourceToDisk(
       if (res.redirectedSavePath !== res.savePath) {
         const redirectedSavePath = decodeURI(res.redirectedSavePath);
         await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
-          res.encoding, mtime);
+          res.encoding, mtime, undefined, localRoot);
       }
       const savePath = decodeURI(res.savePath);
-      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime);
+      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot);
       return;
     }
     const redirectResource = await pipeline.createResource(res.type,
@@ -30,7 +30,7 @@ export async function saveResourceToDisk(
     // maybe we can try module:fs/promises.symlink first
     if (redirectResource?.replacePath) {
       const savePath = decodeURI(res.savePath);
-      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime);
+      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot);
       const redirectedResource = await pipeline.createResource(res.type,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
         res.encoding, undefined, res.type);
@@ -39,11 +39,11 @@ export async function saveResourceToDisk(
       }
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
       await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
-        res.encoding, mtime);
+        res.encoding, mtime, undefined, localRoot);
       return;
     }
   }
   const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-  await writeFile(filePath, res.body, res.encoding, mtime);
+  await writeFile(filePath, res.body, res.encoding, mtime, undefined, localRoot);
   return;
 }

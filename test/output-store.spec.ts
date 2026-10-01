@@ -3,6 +3,8 @@ import {promises as fs} from 'node:fs';
 import {join} from 'node:path';
 import {publishFile} from '../src/output-store.js';
 import {writeFile} from '../src/io.js';
+import {createResource, ResourceType} from '../src/resource.js';
+import {saveResourceToDisk} from '../src/life-cycle/save-resource-to-disk.js';
 
 let root: string;
 beforeEach(async () => { root = await fs.mkdtemp(join(process.cwd(), '.wse-output-test-')); });
@@ -60,5 +62,52 @@ describe('staged file publication', () => {
     expect(await fs.readFile(destination)).toEqual(Buffer.from([0, 255]));
     expect((await fs.stat(destination)).mtimeMs).toBe(0);
     expect(await fs.readdir(join(root, 'nested'))).toEqual(['asset']);
+  });
+
+  test('rejects nested directory symlinks before creating files outside localRoot', async () => {
+    const output = join(root, 'output');
+    const outside = join(root, 'outside');
+    await fs.mkdir(output);
+    await fs.mkdir(outside);
+    await fs.symlink(outside, join(output, 'example.test'), 'dir');
+    const resource = {...createResource({
+      type: ResourceType.Binary, depth: 0, url: 'https://example.test/deep/asset',
+      refUrl: 'https://example.test/', localRoot: output
+    }), body: 'new'};
+    await expect(saveResourceToDisk(resource,
+      {localRoot: output} as Parameters<typeof saveResourceToDisk>[1],
+      {} as Parameters<typeof saveResourceToDisk>[2])).rejects.toThrow('symlink');
+    expect(await fs.readdir(outside)).toEqual([]);
+    expect(await fs.readdir(output)).toEqual(['example.test']);
+  });
+
+  test('allows a configured root symlink and creates nested output inside its target', async () => {
+    const output = join(root, 'output');
+    const alias = join(root, 'alias');
+    await fs.mkdir(output);
+    await fs.symlink(output, alias, 'dir');
+    await writeFile(join(alias, 'nested', 'asset'), 'new', 'utf8', undefined, undefined, alias);
+    expect(await fs.readFile(join(output, 'nested', 'asset'), 'utf8')).toBe('new');
+    expect(await fs.readdir(join(output, 'nested'))).toEqual(['asset']);
+  });
+
+  test('replaces a destination symlink without writing to its target', async () => {
+    const outside = join(root, 'outside');
+    const output = join(root, 'output');
+    await fs.mkdir(output);
+    await fs.writeFile(outside, 'keep');
+    const destination = join(output, 'asset');
+    await fs.symlink(outside, destination, 'file');
+    await writeFile(destination, 'new', 'utf8', undefined, undefined, output);
+    expect(await fs.readFile(outside, 'utf8')).toBe('keep');
+    expect(await fs.readFile(destination, 'utf8')).toBe('new');
+    expect((await fs.lstat(destination)).isSymbolicLink()).toBe(false);
+  });
+
+  test('rejects lexical escape before creating the configured root', async () => {
+    const output = join(root, 'output');
+    await expect(writeFile(join(root, 'asset'), 'new', 'utf8', undefined, undefined, output))
+      .rejects.toThrow('escapes localRoot');
+    expect(await fs.readdir(root)).toEqual([]);
   });
 });

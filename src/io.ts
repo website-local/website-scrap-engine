@@ -27,7 +27,8 @@ export const writeFile = async (
   data: ResourceBody,
   encoding: ResourceEncoding,
   mtime?: number | void,
-  atime?: number | void
+  atime?: number | void,
+  localRoot?: string
 ): Promise<void> => {
   throwIfCancelled();
   let fileData: Uint8Array | string;
@@ -58,5 +59,5 @@ export const writeFile = async (
         errorLogger.warn('skipping utimes ' + filePath, e);
       }
     }
-  }, currentCrawlContext()?.signal);
+  }, currentCrawlContext()?.signal, localRoot);
 };

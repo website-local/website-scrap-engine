@@ -136,6 +136,14 @@ is atomic per file, not across a redirected resource's multiple output files.
 This does not promise durability after power loss. Streaming and local-copy
 publication are still being migrated as part of the unreleased implementation.
 
+Built-in buffered saves reject symlinked directories below `localRoot`. The
+configured root itself may be a symlink; its resolved target is treated as the
+trusted root. A destination-file symlink is replaced, leaving its former target
+untouched. Direct `io.writeFile` callers can pass `localRoot` as the sixth argument
+to enable these checks. The output directory tree must remain under application
+control: these portable path checks do not defend against a hostile process
+concurrently replacing directories between filesystem operations.
+
 - Remove `waitForInitBeforeIdle` from options. It was deprecated and unused.
 - Call `io.mkdirRetry(dir)` without a retry argument. It now makes one recursive
   filesystem call; implement an explicit retry policy if your application needs it.

@@ -106,6 +106,16 @@ downloader smoke checks pass on Node 22.13.0. This completes only the buffered
 publication foundation: multi-file transactions, streaming/local-copy staging,
 save policy unification, and symlink containment remain to be addressed below.
 
+Buffered output containment now resolves the configured root, checks directory
+components before staging and publication, and rejects directory symlinks below
+that root. Configured root aliases are supported; destination-file symlinks are
+replaced without following their targets. Tests exercise built-in save handlers,
+nested symlink escape attempts, root aliases, final-file links, and lexical escape
+before directory creation. The documented trust assumption excludes hostile
+concurrent directory replacement. Build and all 328 tests pass on Node 24.18.0;
+lifecycle and downloader smoke checks pass on Node 22.13.0. Streaming and local
+copy paths still require the same publication and containment integration.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.

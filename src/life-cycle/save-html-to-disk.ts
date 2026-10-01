@@ -53,14 +53,14 @@ export async function saveHtmlToDisk(
           .relativeTo(urlOfSavePath(res.savePath));
         const relativePath: string = escapePath(replaceUri.toString());
         await writeFile(safeJoin(localRoot, decodeURI(res.savePath)),
-          redirectHtml(relativePath, res.encoding), res.encoding, mtime);
+          redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot);
         const body: ResourceBody = getResourceBodyFromHtml(res, options);
         await writeFile(safeJoin(localRoot, decodeURI(res.redirectedSavePath)),
-          body, res.encoding, mtime);
+          body, res.encoding, mtime, undefined, localRoot);
       } else {
         const body: ResourceBody = getResourceBodyFromHtml(res, options);
         const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-        await writeFile(filePath, body, res.encoding, mtime);
+        await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot);
       }
       return;
     }
@@ -71,7 +71,7 @@ export async function saveHtmlToDisk(
       const relativePath: string = escapePath(redirectResource.replacePath);
       const savePath = decodeURI(res.savePath);
       await writeFile(safeJoin(localRoot, savePath),
-        redirectHtml(relativePath, res.encoding), res.encoding, mtime);
+        redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot);
       const redirectedResource = await pipeline.createResource(ResourceType.Html,
         res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
         res.encoding, undefined, ResourceType.Html);
@@ -80,12 +80,12 @@ export async function saveHtmlToDisk(
       }
       const redirectedSavePath = decodeURI(redirectedResource.savePath);
       const body: ResourceBody = getResourceBodyFromHtml(res, options);
-      await writeFile(safeJoin(localRoot, redirectedSavePath), body, res.encoding, mtime);
+      await writeFile(safeJoin(localRoot, redirectedSavePath), body, res.encoding, mtime, undefined, localRoot);
       return;
     }
   }
   const body: ResourceBody = getResourceBodyFromHtml(res, options);
   const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-  await writeFile(filePath, body, res.encoding, mtime);
+  await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot);
   return;
 }

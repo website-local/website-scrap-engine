@@ -1,5 +1,7 @@
 import {expect, jest} from '@jest/globals';
 import {promises} from 'node:fs';
+import {relative, resolve} from 'node:path';
+import type {Stats} from 'node:fs';
 import type {
   CreateResourceArgument,
   Resource,
@@ -94,12 +96,17 @@ export function mockFs(): {
     });
   const fakeFsStats: Record<string, number> = {};
   jest.spyOn(promises, 'mkdtemp').mockImplementation(async prefix => `${prefix}mock`);
+  jest.spyOn(promises, 'realpath').mockImplementation(async path => resolve(path.toString()));
+  jest.spyOn(promises, 'lstat').mockImplementation(async () => ({
+    isSymbolicLink: () => false, isDirectory: () => true
+  }) as Stats);
   jest.spyOn(promises, 'rename').mockImplementation(async (from, to) => {
-    fakeFs[to.toString()] = fakeFs[from.toString()];
+    const target = relative(process.cwd(), to.toString());
+    fakeFs[target] = fakeFs[from.toString()];
     delete fakeFs[from.toString()];
     for (const suffix of ['::atime', '::mtime']) {
       if (from + suffix in fakeFsStats) {
-        fakeFsStats[to + suffix] = fakeFsStats[from + suffix];
+        fakeFsStats[target + suffix] = fakeFsStats[from + suffix];
         delete fakeFsStats[from + suffix];
       }
     }
@@ -128,6 +135,8 @@ export function mockModules(): void {
         mkdtemp: jest.fn(),
         rename: jest.fn(),
         rm: jest.fn(),
+        realpath: jest.fn(),
+        lstat: jest.fn(),
         writeFile: jest.fn(),
         utimes: jest.fn(),
       },
