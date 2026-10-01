@@ -271,6 +271,18 @@ Override via `options.sources` with an array of `{selector, attr, type}` definit
 - **`SingleThreadDownloader`** (`src/downloader/single.ts`) - Runs all pipeline stages in the main thread.
 - **`MultiThreadDownloader`** (`src/downloader/multi.ts`) - Downloads in main thread, sends to worker pool for post-processing.
 
+For single-thread-only applications, import the direct entry to keep worker
+modules out of the module graph:
+
+```ts
+import {SingleThreadDownloader} from 'website-scrap-engine/lib/downloader/single.js';
+```
+
+The combined `downloader/index.js` and package entry export both implementations,
+so importing those entries also loads the worker support modules. Neither entry
+creates a worker unless a `MultiThreadDownloader` or `WorkerPool` is constructed.
+A multi-thread downloader initializes its pool once and keeps it until disposal.
+
 ## Multi-Thread Processing
 
 Use multi-thread processing when post-download work (HTML/CSS parsing, link discovery) is CPU-intensive.

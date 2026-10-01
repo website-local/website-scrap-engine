@@ -1,5 +1,6 @@
 import type {RequestError, RetryFunction, RetryObject, TimeoutError} from 'got';
 import got, {Options} from 'got';
+import {isDeepStrictEqual} from 'node:util';
 import type {ResourceEncoding, ResourceType} from './resource.js';
 import {createResource} from './resource.js';
 import type {ProcessingLifeCycle, RequestOptions} from './life-cycle/types.js';
@@ -316,11 +317,18 @@ function cloneConfig<T>(value: T): T {
   return value;
 }
 
-function snapshotOptions(options: Options): RequestOptions {
+const requestDefaults = got.defaults.options.toJSON();
+
+function snapshotOptions(options: Options, explicit: RequestOptions): RequestOptions {
   // Got takes the request URL as its first argument, never as an options key.
   const {url, ...snapshot} = options.toJSON();
   void url;
-  return snapshot;
+  // Do not turn every Got default into an explicit per-request override. That
+  // makes Got clone and validate dozens of unchanged settings on every request.
+  // Retain supplied keys and any settings changed by init hooks.
+  const defaults = requestDefaults as Record<string, unknown>;
+  return Object.fromEntries(Object.entries(snapshot).filter(([key, value]) =>
+    Object.hasOwn(explicit, key) || !isDeepStrictEqual(value, defaults[key]))) as RequestOptions;
 }
 
 export function defaultDownloadOptions(
@@ -329,6 +337,7 @@ export function defaultDownloadOptions(
   merged.meta = {...(options.meta ?? defaultOptions.meta)};
   merged.encoding = {...options.encoding};
   merged.req = cloneConfig(options.req ?? {});
+  merged.req.headers ??= {};
   merged.initialUrl = options.initialUrl?.slice();
   for (const key of ['init', 'dispose', 'linkRedirect', 'detectResourceType',
     'generateSavePath', 'download', 'processAfterDownload',
@@ -404,11 +413,15 @@ export function defaultDownloadOptions(
     !options.adjustConcurrencyFunc) {
     merged.adjustConcurrencyFunc = adjust;
   }
-  merged.req = snapshotOptions(new Options(merged.req));
+  merged.req = snapshotOptions(new Options(merged.req), merged.req);
   return merged;
 }
 
 export function checkDownloadOptions(options: DownloadOptions): DownloadOptions {
+  return defaultDownloadOptions(validateDownloadOptions(options));
+}
+
+function validateDownloadOptions(options: DownloadOptions): DownloadOptions {
   if (!options.concurrency || options.concurrency < 1) {
     throw new TypeError('Bad concurrency: ' + options.concurrency);
   }
@@ -424,7 +437,7 @@ export function checkDownloadOptions(options: DownloadOptions): DownloadOptions 
   if (!options.saveToDisk || !options.saveToDisk.length) {
     throw new TypeError('saveToDisk life cycle is required');
   }
-  return defaultDownloadOptions(options);
+  return options;
 }
 
 export function mergeOverrideOptions(
@@ -432,7 +445,7 @@ export function mergeOverrideOptions(
   overrideOptions?: Partial<StaticDownloadOptions>): DownloadOptions {
   const opt: DownloadOptions = typeof options === 'function' ? options() : options;
   if (!overrideOptions) {
-    return checkDownloadOptions(defaultDownloadOptions(opt));
+    return validateDownloadOptions(defaultDownloadOptions(opt));
   }
   const merged: DownloadOptions = Object.assign({}, opt, overrideOptions);
   if (opt.meta && overrideOptions.meta) {
@@ -442,7 +455,7 @@ export function mergeOverrideOptions(
     const options = got.defaults.options;
     const mergedOptions = new Options(opt.req, overrideOptions.req, options);
     // Public snapshot avoids retaining Options' merge history between requests.
-    merged.req = snapshotOptions(mergedOptions);
+    merged.req = snapshotOptions(mergedOptions, {...opt.req, ...overrideOptions.req});
   }
-  return checkDownloadOptions(defaultDownloadOptions(merged));
+  return validateDownloadOptions(defaultDownloadOptions(merged));
 }

@@ -192,3 +192,16 @@ describe('configuration ownership', () => {
     expect(options.req.headers?.['x-run']).toBe('999');
   });
 });
+
+test('compact request snapshots retain explicit defaults and changes from init hooks', () => {
+  const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: {
+    decompress: true,
+    hooks: {init: [(_raw, normalized) => { normalized.http2 = true; }]}
+  }});
+  expect(options.req.decompress).toBe(true);
+  expect(options.req.http2).toBe(true);
+  const merged = mergeOverrideOptions(options, {req: {headers: {'x-probe': 'value'}}});
+  expect(merged.req.http2).toBe(true);
+  expect(merged.req.decompress).toBe(true);
+  expect(merged.req.headers?.['x-probe']).toBe('value');
+});

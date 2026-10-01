@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import {promises as fs} from 'node:fs';
-import {join} from 'node:path';
-import {publishFile, createFilePublication} from '../src/output-store.js';
+import {dirname, join} from 'node:path';
+import {publishFile, createFilePublication, StagingDirectories} from '../src/output-store.js';
 import {writeFile} from '../src/io.js';
 import {createResource, ResourceType} from '../src/resource.js';
 import {saveResourceToDisk} from '../src/life-cycle/save-resource-to-disk.js';
@@ -192,4 +192,66 @@ test('root aliases share destination ownership while independent crawls remain i
   await independent.cleanup();
   await first.cleanup();
   expect(await fs.readdir(output)).toEqual([]);
+});
+
+test('successful publication cleans extra files left by a custom writer', async () => {
+  const destination = join(root, 'asset');
+  await publishFile(destination, async staging => {
+    await fs.writeFile(staging, 'complete');
+    await fs.writeFile(join(staging, '..', 'extra'), 'scratch');
+  });
+  expect(await fs.readFile(destination, 'utf8')).toBe('complete');
+  expect(await fs.readdir(root)).toEqual(['asset']);
+});
+
+test('rejects a directory alias even when its target stays inside the root', async () => {
+  const target = join(root, 'target');
+  await fs.mkdir(target);
+  await fs.symlink(target, join(root, 'alias'), 'dir');
+  await expect(writeFile(join(root, 'alias', 'asset'), 'new', 'utf8', undefined, undefined, root))
+    .rejects.toThrow('symlink');
+  expect(await fs.readdir(target)).toEqual([]);
+});
+
+test('rechecks directory symlinks immediately before publication', async () => {
+  const parent = join(root, 'parent');
+  const moved = join(root, 'moved');
+  const target = join(root, 'target');
+  await fs.mkdir(target);
+  const publication = await createFilePublication(join(parent, 'asset'), undefined, root);
+  await fs.writeFile(publication.stagingPath, 'complete');
+  await fs.rename(parent, moved);
+  await fs.symlink(target, parent, 'dir');
+  try {
+    await expect(publication.publish()).rejects.toThrow('symlink');
+    expect(await fs.readdir(target)).toEqual([]);
+  } finally {
+    await fs.unlink(parent);
+    await fs.rename(moved, parent);
+    await publication.cleanup();
+  }
+  expect(await fs.readdir(parent)).toEqual([]);
+});
+
+test('overlapping publications share staging without deleting another writer on failure', async () => {
+  const context = {stagingDirectories: new StagingDirectories(),
+    signal: new AbortController().signal, logger: createDefaultLogger()};
+  const [failed, successful] = await withCrawlContext(context, () => Promise.all([
+    createFilePublication(join(root, 'failed'), undefined, root),
+    createFilePublication(join(root, 'successful'), undefined, root)
+  ]));
+  expect(failed.stagingPath).not.toBe(successful.stagingPath);
+  expect(dirname(failed.stagingPath)).toBe(dirname(successful.stagingPath));
+  await fs.writeFile(failed.stagingPath, 'partial');
+  await fs.writeFile(successful.stagingPath, 'complete');
+  await failed.cleanup();
+  expect(await fs.readFile(successful.stagingPath, 'utf8')).toBe('complete');
+  await successful.publish();
+  await successful.cleanup();
+  expect(await fs.readdir(root)).toEqual(['successful']);
+  const next = await withCrawlContext(context,
+    () => createFilePublication(join(root, 'next'), undefined, root));
+  expect(dirname(next.stagingPath)).not.toBe(dirname(successful.stagingPath));
+  await next.cleanup();
+  expect(await fs.readdir(root)).toEqual(['successful']);
 });

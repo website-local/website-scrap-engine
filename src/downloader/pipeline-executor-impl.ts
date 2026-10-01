@@ -14,6 +14,8 @@ import type {
 } from '../resource.js';
 import {
   checkAbsoluteUri,
+  createResource as builtinCreateResource,
+  createResourceWithUris,
   FILE_PROTOCOL_PREFIX,
   generateSavePath as builtinGenerateSavePath,
   resolveFileUrl,
@@ -46,6 +48,10 @@ type SavePathState = {savePath: string; refSavePath: string};
  * Pipeline executor
  */
 export class PipelineExecutorImpl implements PipelineExecutor {
+  // Links from one document normally share their base. Keep only the last base,
+  // and clone it so resource/hook mutations cannot affect subsequent links.
+  private refUrl?: string;
+  private refUri?: URI;
   constructor(public lifeCycle: ProcessingLifeCycle,
               public requestOptions: RequestOptions,
               public options: StaticDownloadOptions,
@@ -105,9 +111,9 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     for (const linkRedirectFunc of this.lifeCycle.linkRedirect) {
       this.signal?.throwIfAborted();
       throwIfCancelled();
-      if ((redirectedUrl =
-        await linkRedirectFunc(redirectedUrl as string,
-          element, parent, this.options, this)) === undefined) {
+      const result = linkRedirectFunc(redirectedUrl as string, element, parent, this.options, this);
+      redirectedUrl = this._isPromiseLike(result) ? await result : result;
+      if (redirectedUrl === undefined) {
         return undefined;
       }
     }
@@ -125,10 +131,10 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     for (const detectResourceTypeFunc of this.lifeCycle.detectResourceType) {
       this.signal?.throwIfAborted();
       throwIfCancelled();
-      if ((detectedType =
-          await detectResourceTypeFunc(url, detectedType as ResourceType,
-            element, parent, this.options, this))
-        === undefined) {
+      const result = detectResourceTypeFunc(url, detectedType as ResourceType,
+        element, parent, this.options, this);
+      detectedType = this._isPromiseLike(result) ? await result : result;
+      if (detectedType === undefined) {
         return undefined;
       }
     }
@@ -152,11 +158,11 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (this._isPromiseLike(savePathResult)) {
       return savePathResult.then(result => this._createResourceWithSavePath(
         result, type, depth, resolved.url, url, refUrl, localRoot, encoding,
-        resolved.keepSearch, resolved.replacePathHasError));
+        resolved.keepSearch, resolved.replacePathHasError, resolved.uri, resolved.refUri));
     }
     return this._createResourceWithSavePath(
       savePathResult, type, depth, resolved.url, url, refUrl, localRoot,
-      encoding, resolved.keepSearch, resolved.replacePathHasError);
+      encoding, resolved.keepSearch, resolved.replacePathHasError, resolved.uri, resolved.refUri);
   }
 
   private _createResourceWithSavePath(
@@ -169,7 +175,9 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     localRoot: string | undefined,
     encoding: ResourceEncoding | undefined,
     keepSearch: boolean,
-    replacePathHasError: boolean
+    replacePathHasError: boolean,
+    uri: URI,
+    refUri: URI
   ): Resource | void {
     if (!savePathResult) {
       return undefined;
@@ -192,7 +200,13 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       savePath: savePathResult.savePath,
       replacePathHasError
     };
-    return this.normalizeResource(this.lifeCycle.createResource(arg));
+    // Save-path hooks may mutate their URI; URL strings remain authoritative.
+    // Custom resource factories keep their existing one-argument contract.
+    const resource = this.lifeCycle.createResource === builtinCreateResource ?
+      createResourceWithUris(arg,
+        uri.toString() === resolvedUrl ? uri.clone() : URI(resolvedUrl), refUri) :
+      this.lifeCycle.createResource(arg);
+    return this.normalizeResource(resource);
   }
 
   generateSavePath(
@@ -302,17 +316,17 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     for (const processBeforeDownload of this.lifeCycle.processBeforeDownload) {
       this.signal?.throwIfAborted();
       throwIfCancelled();
-      if ((processedResource =
-          await processBeforeDownload(processedResource as DownloadResource,
-            element, parent, options, this))
-        === undefined) {
+      const result = processBeforeDownload(processedResource as DownloadResource,
+        element, parent, options, this);
+      processedResource = this._isPromiseLike(result) ? await result : result;
+      if (processedResource === undefined) {
         return undefined;
       }
       this.normalizeResource(processedResource);
     }
     this.signal?.throwIfAborted();
     throwIfCancelled();
-    return this.normalizeResource(processedResource);
+    return processedResource;
   }
 
   async download(
@@ -408,7 +422,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     }
     this.signal?.throwIfAborted();
     throwIfCancelled();
-    return this.normalizeResource(downloadedResource) as DownloadResource;
+    return downloadedResource as DownloadResource;
   }
 
   async saveToDisk(
@@ -440,7 +454,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     // not downloaded
     this.signal?.throwIfAborted();
     throwIfCancelled();
-    return this.normalizeResource(downloadedResource) as DownloadResource;
+    return downloadedResource as DownloadResource;
   }
 
   async shouldSaveResource(res: Resource): Promise<boolean> {
@@ -520,12 +534,17 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     type: ResourceType
   ): {
     uri: URI;
+    refUri: URI;
     url: string;
     keepSearch: boolean;
     replacePathHasError: boolean;
   } {
     let url = rawUrl;
-    const refUri: URI = URI(refUrl);
+    if (this.refUrl !== refUrl) {
+      this.refUri = URI(refUrl);
+      this.refUrl = refUrl;
+    }
+    const refUri = this.refUri!.clone();
     let replacePathHasError = false;
     let keepSearch = !this.options.deduplicateStripSearch;
 
@@ -557,7 +576,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       replacePathHasError = true;
     }
 
-    return {uri, url, keepSearch, replacePathHasError};
+    return {uri, refUri, url, keepSearch, replacePathHasError};
   }
 
 }

@@ -253,3 +253,9 @@ test('oversized custom-worker discovery batches reject before decoding children'
     expect(crawler.outcomes.get(url)?.status).toBe('failed');
   } finally { await crawler.dispose(); }
 }, 10000);
+
+test('the direct single-thread entry does not import worker modules', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-single-import.js'), buildRoot
+  ], {cwd: projectRoot, timeout: 15000});
+}, 20000);

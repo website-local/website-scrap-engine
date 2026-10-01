@@ -1,8 +1,6 @@
 import {currentCrawlContext} from '../crawl-context.js';
-import {isMainThread} from 'node:worker_threads';
 import type {CategoryLogger, Logger, LogType} from './types.js';
 import {createDefaultLogger} from './default-logger.js';
-import {createWorkerCategoryLogger} from './logger-worker.js';
 
 let _logger: Logger = createDefaultLogger();
 
@@ -15,9 +13,6 @@ export function getLogger(): Logger {
 }
 
 function createCategoryProxy(type: LogType): CategoryLogger {
-  if (!isMainThread) {
-    return createWorkerCategoryLogger(type);
-  }
   return {
     trace(...contents: unknown[]) { getLogger().trace(type, ...contents); },
     debug(...contents: unknown[]) { getLogger().debug(type, ...contents); },

@@ -90,14 +90,16 @@ a hostile process replacing directories concurrently.
    [Package evidence](evidence/final-package.json) records integrity, footprints
    and actual harness output. CI now installs the tarball outside the checkout
    and validates declarations/smoke so parent dev dependencies cannot mask peers.
-3. **Completed with documented regressions:** two independent five-sample
+3. **Historical checkpoint; performance work reopened:** two independent five-sample
    alternating comparisons against 0.9.1 validate exact output. Several cases
    remain slower, particularly startup-dominated worker streaming and small
    local-file crawls. A filesystem-call probe identifies added staging and
    containment operations; initialization measurements identify worker readiness
    costs. Retain those guarantees and the measured directory/read-copy
    optimizations. This release makes no general speedup claim. See the
-   [final runtime audit](runtime-performance-audit.md#final-comparison-against-091).
+   [original runtime audit](runtime-performance-audit.md#final-comparison-against-091).
+   The [single-thread follow-up](single-thread-performance-fixes.md) records the
+   subsequent fixes and MDN replay; the old regression table is not the candidate result.
 4. **Reviewed:** migration guide, changelog, README and specialized audits agree
    on the Node minimum, explicit start/disposal, normalized resources, wire
    contract, save-path hooks, outcomes, limits, optional peer and public Got API.

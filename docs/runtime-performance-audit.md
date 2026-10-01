@@ -1,9 +1,10 @@
 # Runtime performance audit
 
-The final release comparison below measures the completed runtime against
-0.9.1. Targeted allocation and filesystem improvements are measurable, but the
-new readiness/publication guarantees add costs: this release does not deliver a
-general crawl speedup. Earlier checkpoints are retained to explain decisions.
+The [single-thread regression follow-up](single-thread-performance-fixes.md)
+reopens the performance work recorded below and measures concrete runtime fixes
+against both 0.9.1 and this audit's release checkpoint. It includes mdn-local's
+actual lifecycle, request-option normalization, URI reuse, and staging work.
+The older tables below describe the pre-fix runtime and remain historical evidence.
 
 ## Reproducible workloads
 
@@ -72,8 +73,9 @@ Retain containment checks, parent-owned cleanup, destination reservations and
 per-file staging. The targeted directory/read-copy optimizations below reduce
 avoidable work while preserving those guarantees. Skipping validation, caching
 mutable directory trust, or restoring direct final-path writes would weaken the
-implemented contract. These measurements close the investigation with a documented
-tradeoff, not a claim of overall better throughput. Larger sustained crawls, WAN
+implemented contract. These measurements documented the original regression; they did not resolve it.
+The linked follow-up replaces that stopping point with implementation changes and
+new measurements. Larger sustained crawls, WAN
 traffic and platform-specific storage need separate performance qualification.
 
 ## Earlier release checkpoint

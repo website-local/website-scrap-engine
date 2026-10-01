@@ -1,5 +1,6 @@
 import {withCrawlContext, createResourceProgress} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
+import {StagingDirectories} from '../output-store.js';
 import {PublicationReservations} from '../publication-reservations.js';
 import type { BufferReservation} from '../buffer-budget.js';
 import {BufferBudget} from '../buffer-budget.js';
@@ -42,7 +43,8 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   protected readonly abortController = new AbortController();
   protected context: CrawlContext = {
     logger: createDefaultLogger(), signal: this.abortController.signal,
-    publicationReservations: new PublicationReservations()
+    publicationReservations: new PublicationReservations(),
+    stagingDirectories: new StagingDirectories()
   };
 
   get state(): DownloaderState { return this._state; }
@@ -59,8 +61,11 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   // request must not release another successful request's redirect target.
   private readonly retainedAliases = new Set<string>();
 
-  private canonicalUrl(url: string): string {
-    const uri = new URI(url).hash('');
+  private canonicalUrl(url: string, parsed?: URI): string {
+    if (parsed && !parsed.hash() && (!this.options.deduplicateStripSearch || !parsed.search())) {
+      return parsed.toString();
+    }
+    const uri = (parsed ? parsed.clone() : new URI(url)).hash('');
     if (this.options.deduplicateStripSearch) uri.search('');
     return uri.toString();
   }
@@ -191,7 +196,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     }
     const resource = normalizeResource(res);
     checkResourceBody(resource, this.options.maxResourceBytes);
-    const url = this.canonicalUrl(resource.url);
+    const url = this.canonicalUrl(resource.url, resource.uri);
     if (this.queuedUrl.has(url)) {
       return false;
     }

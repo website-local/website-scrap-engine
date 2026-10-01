@@ -1,4 +1,4 @@
-import type {PublicationStore} from './output-store.js';
+import type {PublicationStore, StagingDirectories} from './output-store.js';
 import type {PublicationReservations} from './publication-reservations.js';
 import type {BufferAccount} from './buffer-budget.js';
 import {AsyncLocalStorage} from 'node:async_hooks';
@@ -19,6 +19,7 @@ export interface CrawlContext {
   signal: AbortSignal;
   resourceProgress?: ResourceProgress;
   publicationStore?: PublicationStore;
+  stagingDirectories?: StagingDirectories;
   publicationReservations?: PublicationReservations;
   publicationOwner?: string;
   bufferAccount?: BufferAccount;

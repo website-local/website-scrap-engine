@@ -582,7 +582,12 @@ export function resolveFileUrl(
  * @param replacePathHasError {@link CreateResourceArgument.replacePathHasError}
  * @return the resource
  */
-export function createResource({
+export function createResource(arg: CreateResourceArgument): Resource {
+  return createResourceWithUris(arg);
+}
+
+/** @internal Reuse URI parsing performed by the built-in pipeline. */
+export function createResourceWithUris({
   type,
   depth,
   url,
@@ -597,9 +602,9 @@ export function createResource({
   savePath,
   skipReplacePathError,
   replacePathHasError = false
-}: CreateResourceArgument): Resource {
+}: CreateResourceArgument, resolvedUri?: URI, resolvedRefUri?: URI): Resource {
   rawUrl ??= url;
-  const refUri: URI = URI(refUrl);
+  const refUri: URI = resolvedRefUri ?? URI(refUrl);
   if (savePath === undefined) {
     if (url.startsWith(FILE_PROTOCOL_PREFIX) ||
       refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
@@ -619,7 +624,7 @@ export function createResource({
       url = refUri.protocol() + '://' + refUri.host() + url;
     }
   }
-  let uri = URI(url);
+  let uri = resolvedUri ?? URI(url);
 
   if (savePath === undefined) {
     if (!replacePathHasError && uri.is('relative')) {

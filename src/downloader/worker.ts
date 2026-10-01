@@ -14,7 +14,8 @@ import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {WorkerTaskMessage} from './worker-type.js';
 import {getWorkerChannels} from './worker-channel.js';
 import {withCrawlContext, createResourceProgress, currentCrawlContext} from '../crawl-context.js';
-import {getLogger} from '../logger/logger.js';
+import {setLogger} from '../logger/logger.js';
+import {createWorkerLogger} from '../logger/logger-worker.js';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,
@@ -23,7 +24,9 @@ const {pathToOptions, overrideOptions}: {
 const {taskPort, logPort, publicationPort} = getWorkerChannels();
 const publications = publicationPort ? new WorkerPublicationClient(publicationPort) : undefined;
 const controller = new AbortController();
-const context = {signal: controller.signal, logger: getLogger()};
+const logger = createWorkerLogger();
+setLogger(logger);
+const context = {signal: controller.signal, logger};
 const active = new Set<Promise<void>>();
 let closing = false;
 

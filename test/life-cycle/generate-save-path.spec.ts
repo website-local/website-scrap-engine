@@ -215,3 +215,44 @@ describe('PipelineExecutorImpl.generateSavePath', () => {
     expect(res!.savePath).toBe(join('legacy', 'example.com', 'page.html'));
   });
 });
+
+test('save-path hook URI mutations cannot redirect the resource or share mutable URI state', async () => {
+  let hookUri: GenerateSavePathContext['uri'] | undefined;
+  const pipeline = new PipelineExecutorImpl(makeLifeCycle([async (savePath, context) => {
+    hookUri = context.uri;
+    context.uri.hostname('mutated.example');
+    return savePath;
+  }]), {}, fakeOpt);
+  const res = await pipeline.createResource(ResourceType.Html, 1, '/docs/',
+    'https://example.com/index.html');
+  expect(res!.url).toBe('https://example.com/docs/');
+  expect(res!.uri.toString()).toBe(res!.url);
+  expect(res!.host).toBe('example.com');
+  hookUri!.path('/late-change');
+  expect(res!.uri.path()).toBe('/docs/');
+});
+
+test('custom resource factories retain their argument contract and normalized results', async () => {
+  const lifeCycle = makeLifeCycle();
+  lifeCycle.createResource = (...args) => {
+    expect(args).toHaveLength(1);
+    const res = createResource(args[0]);
+    res.url = 'https://custom.example/replaced';
+    return res;
+  };
+  const pipeline = new PipelineExecutorImpl(lifeCycle, {}, fakeOpt);
+  const res = await pipeline.createResource(ResourceType.Html, 1, '/docs/',
+    'https://example.com/index.html');
+  expect(res!.uri.toString()).toBe('https://custom.example/replaced');
+  expect(res!.host).toBe('custom.example');
+});
+
+test('cached reference parsing does not share mutable state between resources', async () => {
+  const pipeline = new PipelineExecutorImpl(makeLifeCycle(), {}, fakeOpt);
+  const first = await pipeline.createResource(ResourceType.Html, 1, '/first', 'https://example.com/base');
+  first!.refUri.hostname('changed.example');
+  const second = await pipeline.createResource(ResourceType.Html, 1, '/second', 'https://example.com/base');
+  expect(second!.refUri.toString()).toBe('https://example.com/base');
+  expect(second!.url).toBe('https://example.com/second');
+  expect(second!.refUri).not.toBe(first!.refUri);
+});

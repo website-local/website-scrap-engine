@@ -19,6 +19,15 @@ Breaking changes
 * Change `WorkerPool.workingTasks` to a Map and split task/log handlers. Remove `waitForInitBeforeIdle` and the retry argument from `io.mkdirRetry`. See the migration guide for custom pool interfaces.
 * Reject discovery submissions after their parent task completes. The opt-in concurrency controller now backs off on stalls and grows gradually within bounds; adjustment periods must fit Node's positive-integer timer range.
 
+Performance
+------------
+
+* Reuse URI parsing during resource creation and deduplication; reuse a private parsed reference URL across links without sharing mutable URI instances with hooks.
+* Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.
+* Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
+* Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
+* Keep worker logging imports out of the direct single-thread entry. Worker pool startup and lifetime are unchanged.
+
 Crawl control and reliability
 ------------
 

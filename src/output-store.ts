@@ -3,6 +3,18 @@ import {promises as fs} from 'node:fs';
 import {basename, dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
 
 async function checkDirectories(root: string, parent: string, create: boolean): Promise<void> {
+  // root is canonical. If resolving the entire parent path leaves it unchanged,
+  // none of its components redirects through a symlink. One native resolution
+  // avoids a separate asynchronous lstat round trip for every existing level.
+  try {
+    const canonicalParent = await fs.realpath(parent);
+    const samePath = process.platform === 'win32' ?
+      canonicalParent.toLowerCase() === parent.toLowerCase() : canonicalParent === parent;
+    if (!samePath) throw new Error('Output directory must not be a symlink: ' + parent);
+    return;
+  } catch (error) {
+    if (!create || (error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   let current = root;
   for (const part of ['', ...relative(root, parent).split(sep).filter(Boolean)]) {
     if (part) current = join(current, part);
@@ -19,6 +31,45 @@ async function checkDirectories(root: string, parent: string, create: boolean): 
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       throw new Error('Output directory must not be a symlink: ' + current);
     }
+  }
+}
+
+/** Share a private directory only while publications in the same parent overlap. */
+export class StagingDirectories {
+  private readonly active = new Map<string, {directory: Promise<string>; references: number; next: number}>();
+
+  async acquire(parent: string): Promise<{path: string; cleanup(published: boolean): Promise<void>}> {
+    let entry = this.active.get(parent);
+    if (!entry) {
+      entry = {directory: fs.mkdtemp(join(parent, '.wse-stage-')), references: 0, next: 0};
+      this.active.set(parent, entry);
+    }
+    ++entry.references;
+    const id = ++entry.next;
+    let directory: string;
+    try { directory = await entry.directory; }
+    catch (error) {
+      if (--entry.references === 0) this.active.delete(parent);
+      throw error;
+    }
+    const path = join(directory, String(id));
+    const lease = entry;
+    return {path, cleanup: async published => {
+      try {
+        if (!published) await fs.rm(path, {recursive: true, force: true});
+      } finally {
+        if (--lease.references === 0) {
+          // New publications must allocate a different directory while this one closes.
+          this.active.delete(parent);
+          try { await fs.rmdir(directory); }
+          catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+              await fs.rm(directory, {recursive: true, force: true});
+            }
+          }
+        }
+      }
+    }};
   }
 }
 
@@ -64,10 +115,11 @@ export async function createFilePublication(
   const release = context?.publicationOwner === undefined ? undefined :
     context.publicationReservations?.claim(process.platform === 'win32' ?
       reservationPath!.toLowerCase() : reservationPath!, context.publicationOwner);
-  let stagingDirectory: string;
-  try { stagingDirectory = await fs.mkdtemp(join(parent, '.wse-stage-')); }
-  catch (error) { release?.(false); throw error; }
-  const stagingPath = join(stagingDirectory, 'content');
+  let staging: Awaited<ReturnType<StagingDirectories['acquire']>>;
+  try {
+    staging = await (context?.stagingDirectories ?? new StagingDirectories()).acquire(parent);
+  } catch (error) { release?.(false); throw error; }
+  const stagingPath = staging.path;
   let publishing: Promise<void> | undefined;
   let cleaning: Promise<void> | undefined;
   let published = false;
@@ -89,7 +141,7 @@ export async function createFilePublication(
       cleaning ??= (async () => {
         // A failed rename must not prevent removal of the staging allocation.
         await publishing?.catch(() => undefined);
-        await fs.rm(stagingDirectory, {recursive: true, force: true});
+        await staging.cleanup(published);
         release?.(published);
       })();
       return cleaning;
