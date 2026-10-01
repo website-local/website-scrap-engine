@@ -386,3 +386,22 @@ Build and all 388 tests pass on Node 24.18.0, including active collisions, root
 symlink aliases, independent crawl isolation, and real-process checks in both
 downloader modes for failed writes, partial publication, conflicts, and retries.
 The real-process conflict/retry harness also passes on Node 22.13.0 and 26.10.0.
+
+## Bounded child discovery and parent failure semantics
+
+An optional positive-integer maxDiscoveredResources caps child submission count
+per parent in both modes, including duplicate/queue-rejected submissions. The
+built-in worker checks before clone/collection; the parent checks custom-worker
+result length before decoding. Supplied child bodies respect maxResourceBytes
+before cloning. Shared submission wrappers reject late calls after parent task
+completion/cancellation, avoiding silent loss in the worker path.
+
+Children submitted before a subsequent parent failure remain independently
+eligible for processing. This preserves existing behavior explicitly and avoids
+transactional child rollback or recursive queue deadlocks. Worker crashes can
+still lose an undelivered batch. Count limits do not bound arbitrary metadata,
+hook allocations, parser state, or aggregate buffering; those remain separate.
+Build and all 393 tests pass on Node 24.18.0. Tests include boundary/late calls,
+custom-worker oversized batches, and six real-process discovery/failure/body-size
+scenarios across both modes.
+The six real-process scenarios also pass on Node 22.13.0 and 26.10.0.

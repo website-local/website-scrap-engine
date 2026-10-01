@@ -211,3 +211,31 @@ test('destination ownership prevents silent overwrites in both downloader modes'
     path.join(buildRoot, 'index.js')
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
+
+test('discovery limits preserve earlier children when their parent fails in both modes', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-discovery.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 35000});
+}, 40000);
+
+test('oversized custom-worker discovery batches reject before decoding children', async () => {
+  const crawler = new Downloader(pathToFileURL(path.join(projectRoot,
+    'test/downloader/budget-options.js')).href,
+  {concurrency: 1, workerCount: 1, localRoot: root, maxDiscoveredResources: 1});
+  try {
+    await crawler.init;
+    jest.spyOn(crawler.pool, 'submitTask').mockResolvedValue({version: 1,
+      taskId: 1, type: 1, body: [null, null]} as never);
+    const url = 'https://example.test/oversized-discovery';
+    const resource = await crawler.pipeline.createResource(ResourceType.Binary, 0, url, url);
+    if (!resource) throw new Error('Resource was discarded');
+    resource.body = Buffer.from('body');
+    expect(crawler.addProcessedResource(resource)).toBe(true);
+    await crawler.start();
+    await crawler.onIdle();
+    expect(resource.meta.error).toMatchObject({code: 'ERR_DISCOVERY_LIMIT', limit: 1, actual: 2});
+    expect(crawler.outcomes.size).toBe(1);
+    expect(crawler.outcomes.get(url)?.status).toBe('failed');
+  } finally { await crawler.dispose(); }
+}, 10000);

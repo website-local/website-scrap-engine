@@ -160,6 +160,12 @@ Optional scheduling limits are positive integers:
   submissions do not consume admissions.
 - `maxQueuedResources` caps waiting resources, excluding active tasks. This also
   applies while the downloader is paused, including initial URL admission.
+- `maxDiscoveredResources` caps child submissions per parent task, including
+  duplicates and queue-rejected submissions. Exceeding it throws
+  `ERR_DISCOVERY_LIMIT` from `submit`, with numeric `limit` and `actual` fields.
+  Earlier children remain eligible if the parent subsequently fails. Built-in
+  workers check this before collecting/cloning further children, and the parent
+  checks custom-worker batch length before decoding it. Omitted means unlimited.
 - `maxConcurrency` caps initial concurrency, assignments through
   `downloader.concurrency`, and automatic adjustment. An explicit `minConcurrency`
   above this ceiling is rejected.
@@ -173,6 +179,13 @@ with `false` and an error status whose `res.meta.error.code` is `ERR_CRAWL_LIMIT
 and whose `limit` identifies the exceeded option. Queue-limit rejections can be
 resubmitted after capacity becomes available. Use downloader admission APIs rather
 than adding tasks directly to its exposed queue to retain these guarantees.
+
+Retaining a processing hook's `submit` callback beyond its parent task is no
+longer supported: submissions after completion or cancellation throw. Await
+asynchronous discovery inside the hook. Child work is independent of the parent's
+eventual save/processing outcome; no rollback of earlier children is attempted.
+Worker crashes can still lose a batch not yet delivered to the parent. The
+discovery count does not bound metadata size or allocations made by custom hooks.
 
 The per-resource byte limit is optional. It is not a process-memory limit: parser
 objects, temporary copies, and generated HTML serialization can consume additional

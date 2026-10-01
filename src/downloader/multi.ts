@@ -1,6 +1,7 @@
 import {MessageChannel, Worker} from 'node:worker_threads';
 import type {Transferable} from 'node:worker_threads';
 import {WorkerPublicationCoordinator} from './worker-publication.js';
+import {DiscoveryLimitError} from './discovery.js';
 import type {WorkerChannels} from './worker-channel.js';
 import {currentCrawlContext} from '../crawl-context.js';
 import path from 'node:path';
@@ -153,6 +154,10 @@ export class MultiThreadDownloader extends AbstractDownloader {
         msg = await submit(wire);
       }
       if (!Array.isArray(msg.body)) throw new TypeError('Worker result.body must be a resource array');
+      if (this.options.maxDiscoveredResources !== undefined &&
+        msg.body.length > this.options.maxDiscoveredResources) {
+        throw new DiscoveryLimitError(this.options.maxDiscoveredResources, msg.body.length);
+      }
       // Validate the whole batch before admitting any children.
       children = msg.body.map(decodeResourceFromClone);
       if (msg.progress !== undefined) {

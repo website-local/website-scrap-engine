@@ -1,19 +1,15 @@
 import {WorkerPublicationClient} from './worker-publication.js';
+import {createDiscoverySubmit} from './discovery.js';
 import {parentPort, workerData} from 'node:worker_threads';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
-import type {
-  DownloadResource,
-  SubmitResourceFunc
-} from '../life-cycle/types.js';
-import type {WireResource, Resource} from '../resource.js';
+import type {DownloadResource} from '../life-cycle/types.js';
+import type {WireResource} from '../resource.js';
 import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
 import {WorkerControlMessageType, WorkerMessageType, WORKER_PROTOCOL_VERSION} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
-// noinspection ES6PreferShortImport
-import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
 import type {WorkerTaskMessage} from './worker-type.js';
 import {getWorkerChannels} from './worker-channel.js';
 import {withCrawlContext, createResourceProgress, currentCrawlContext} from '../crawl-context.js';
@@ -35,7 +31,7 @@ const asyncOptions: Promise<DownloadOptions> = importDefaultFromPath(pathToOptio
 const asyncPipeline = asyncOptions.then(options => withCrawlContext(context, () => {
   options = mergeOverrideOptions(options, overrideOptions);
 
-  const pipeline: PipelineExecutor =
+  const pipeline =
     new PipelineExecutorImpl(options, options.req, options, controller.signal);
 
   const init = pipeline.init(pipeline);
@@ -55,23 +51,17 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
   const collectedResource: WireResource[] = [];
   let error: Error | unknown | void;
   let redirectedUrl: string | undefined;
+  let discovery: ReturnType<typeof createDiscoverySubmit> | undefined;
   try {
     const pipeline = await asyncPipeline;
     controller.signal.throwIfAborted();
     const res = msg.body;
     const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
-    const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
-      controller.signal.throwIfAborted();
-      if (Array.isArray(resources)) {
-        for (let i = 0; i < resources.length; i++) {
-          collectedResource.push(prepareResourceForClone(resources[i]));
-        }
-      } else {
-        collectedResource.push(prepareResourceForClone(resources));
-      }
-    };
+    discovery = createDiscoverySubmit(resource => {
+      collectedResource.push(prepareResourceForClone(resource));
+    }, controller.signal, pipeline.options.maxDiscoveredResources, pipeline.options.maxResourceBytes);
     const processedResource: DownloadResource | void =
-      await pipeline.processAfterDownload(downloadResource, submit);
+      await pipeline.processAfterDownload(downloadResource, discovery.submit);
     if (!processedResource) {
       await pipeline.notifyStatusChange(downloadResource, 'processAfterDownload');
     } else if (await pipeline.saveToDisk(processedResource)) {
@@ -114,6 +104,7 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
       }
     }
   } finally {
+    discovery?.close();
     const message: DownloadWorkerMessage = {
       version: WORKER_PROTOCOL_VERSION,
       taskId: msg.taskId,

@@ -214,7 +214,9 @@ export interface DownloadResourceFunc {
 
 export interface SubmitResourceFunc {
   /**
-   * Submit resource to pipeline
+   * Submit resources synchronously while the parent task is active. Children
+   * submitted before a later parent failure remain eligible for processing.
+   * Throws on cancellation, late submission, or a configured discovery limit.
    * @param res resource or array
    */
   (res: Resource | Resource[]): void;

@@ -1,9 +1,9 @@
 import {AbstractDownloader} from './main.js';
+import {createDiscoverySubmit} from './discovery.js';
 import type {Resource} from '../resource.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import type {
-  DownloadResource,
-  SubmitResourceFunc
+  DownloadResource
 } from '../life-cycle/types.js';
 
 export class SingleThreadDownloader extends AbstractDownloader {
@@ -36,18 +36,11 @@ export class SingleThreadDownloader extends AbstractDownloader {
       return false;
     }
 
-    const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
-      if (Array.isArray(resources)) {
-        for (let i = 0; i < resources.length; i++) {
-          this._addProcessedResource(resources[i]);
-        }
-      } else {
-        this._addProcessedResource(resources);
-      }
-    };
+    const discovery = createDiscoverySubmit(resource => { this._addProcessedResource(resource); },
+      this.signal, this.options.maxDiscoveredResources, this.options.maxResourceBytes);
     try {
       const processedResource: DownloadResource | void =
-        await this.pipeline.processAfterDownload(r, submit);
+        await this.pipeline.processAfterDownload(r, discovery.submit);
       if (!processedResource) {
         await this.pipeline.notifyStatusChange(r, 'processAfterDownload');
       } else if (await this.pipeline.saveToDisk(processedResource)) {
@@ -60,7 +53,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
     } catch (e) {
       this.handleError(e, 'post-process', res);
       return false;
-    }
+    } finally { discovery.close(); }
   }
 
 }
