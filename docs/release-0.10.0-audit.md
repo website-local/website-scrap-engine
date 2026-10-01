@@ -183,3 +183,15 @@ Test-runner selection remains a separate pending audit.
 - Balanced benchmarks, leak and worker stress tests, and measured optimizations.
 - Packed-package/declaration checks on Node 22.13/22/24/26, complete migration notes,
   and final requirement-by-requirement verification. No tag or publication.
+
+## Resource byte limits
+
+Optional `maxResourceBytes` rejects oversized buffered HTTP responses, decompressed
+HTTP streams (including resumed offsets), local files, URL mounts, and normalized
+hook bodies. Failures use `ERR_RESOURCE_SIZE_LIMIT`; worker error records preserve
+its code, limit, and actual byte count. Existing destinations survive failed
+staging and explicit retries remain possible. This is a logical resource-body
+limit, not an aggregate heap limit; parsing and serialization can allocate more.
+Build and all 372 tests pass on Node 24.18.0. Eleven real HTTP/filesystem limit
+tests and the expanded ten-scenario failure/retry harness pass on Node 22.13.0.
+Aggregate buffered-byte accounting remains a separate release gate.

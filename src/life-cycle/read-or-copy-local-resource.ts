@@ -8,6 +8,7 @@ import type {StaticDownloadOptions} from '../options.js';
 import {error as errorLogger} from '../logger/logger.js';
 import {copyResourceToDisk} from './copy-resource-to-disk.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
+import {readResourceFile} from '../resource-limits.js';
 
 const FILE_PREFIX = 'file://';
 
@@ -66,7 +67,8 @@ export async function readOrCopyLocalResource(
   if (res.type === ResourceType.StreamingBinary) {
     await copyResourceToDisk(fileSrcPath, res, options, pipeline);
   } else {
-    res.body = await promises.readFile(fileSrcPath, {encoding: res.encoding});
+    res.body = await readResourceFile(fileSrcPath, res.encoding, options.maxResourceBytes,
+      pipeline?.signal);
   }
   res.finishTimestamp = Date.now();
   res.downloadTime =

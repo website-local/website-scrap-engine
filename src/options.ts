@@ -78,6 +78,8 @@ export interface StaticDownloadOptions {
   maxResources?: number;
   /** Maximum waiting resources (active tasks excluded); omitted means unlimited. */
   maxQueuedResources?: number;
+  /** Maximum downloaded bytes per resource, including decompressed HTTP data. */
+  maxResourceBytes?: number;
 
   /**
    * If url search params should be stripped.
@@ -331,7 +333,7 @@ export function defaultDownloadOptions(
     merged.concurrency = 12;
   }
   for (const key of ['concurrency', 'minConcurrency', 'maxConcurrency',
-    'maxResources', 'maxQueuedResources'] as const) {
+    'maxResources', 'maxQueuedResources', 'maxResourceBytes'] as const) {
     const value = merged[key];
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
       throw new RangeError(`${key} must be a positive safe integer`);

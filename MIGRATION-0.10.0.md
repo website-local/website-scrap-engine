@@ -145,12 +145,21 @@ Optional scheduling limits are positive integers:
 - `maxConcurrency` caps initial concurrency, assignments through
   `downloader.concurrency`, and automatic adjustment. An explicit `minConcurrency`
   above this ceiling is rejected.
+- `maxResourceBytes` limits downloaded resource bytes, including decompressed
+  HTTP data, local reads/copies, and bodies supplied at admission or hook boundaries.
+  String bodies are measured using their resource encoding. Exact-limit bodies
+  are accepted; oversized resources fail with `ERR_RESOURCE_SIZE_LIMIT`.
 
 Total and queue limits are unlimited when omitted. Admission rejects immediately
 with `false` and an error status whose `res.meta.error.code` is `ERR_CRAWL_LIMIT`
 and whose `limit` identifies the exceeded option. Queue-limit rejections can be
 resubmitted after capacity becomes available. Use downloader admission APIs rather
 than adding tasks directly to its exposed queue to retain these guarantees.
+
+The per-resource byte limit is optional. It is not a process-memory limit: parser
+objects, temporary copies, and generated HTML serialization can consume additional
+memory. Worker errors now preserve standard error name/message/stack and primitive
+`code`, `limit`, and `actual` fields in a plain transport record.
 
 Buffered saves now write a temporary file beside the destination and publish it
 by rename. Failures and cancellation observed before publication leave the prior

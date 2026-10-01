@@ -1,5 +1,6 @@
 import {currentCrawlContext, throwIfCancelled} from '../crawl-context.js';
 import {normalizeResource} from '../resource.js';
+import {checkResourceBody} from '../resource-limits.js';
 import path from 'node:path';
 import {promises as fs} from 'node:fs';
 import type {Stats} from 'node:fs';
@@ -49,6 +50,12 @@ export class PipelineExecutorImpl implements PipelineExecutor {
               public requestOptions: RequestOptions,
               public options: StaticDownloadOptions,
               public readonly signal?: AbortSignal) {
+  }
+
+  private normalizeResource(res: RawResource): Resource {
+    const normalized = normalizeResource(res);
+    checkResourceBody(normalized, this.options.maxResourceBytes);
+    return normalized;
   }
 
   async init(
@@ -185,7 +192,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       savePath: savePathResult.savePath,
       replacePathHasError
     };
-    return normalizeResource(this.lifeCycle.createResource(arg));
+    return this.normalizeResource(this.lifeCycle.createResource(arg));
   }
 
   generateSavePath(
@@ -291,7 +298,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
-    let processedResource: Resource | void = normalizeResource(res);
+    let processedResource: Resource | void = this.normalizeResource(res);
     for (const processBeforeDownload of this.lifeCycle.processBeforeDownload) {
       this.signal?.throwIfAborted();
       throwIfCancelled();
@@ -301,11 +308,11 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         === undefined) {
         return undefined;
       }
-      normalizeResource(processedResource);
+      this.normalizeResource(processedResource);
     }
     this.signal?.throwIfAborted();
     throwIfCancelled();
-    return normalizeResource(processedResource);
+    return this.normalizeResource(processedResource);
   }
 
   async download(
@@ -342,7 +349,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       requestOptions = {...requestOptions, signal: requestOptions.signal ?
         AbortSignal.any([requestOptions.signal, signal]) : signal};
     }
-    let downloadedResource: DownloadResource | Resource | void = normalizeResource(res);
+    let downloadedResource: DownloadResource | Resource | void = this.normalizeResource(res);
     for (const download of this.lifeCycle.download) {
       this.signal?.throwIfAborted();
       throwIfCancelled();
@@ -353,7 +360,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       }
       this.signal?.throwIfAborted();
       throwIfCancelled();
-      normalizeResource(downloadedResource);
+      this.normalizeResource(downloadedResource);
       // if downloaded, end loop and return
       if ((downloadedResource as Resource)?.body) {
         return downloadedResource as DownloadResource;
@@ -379,7 +386,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
-    let downloadedResource: DownloadResource | void = normalizeResource(res) as DownloadResource;
+    let downloadedResource: DownloadResource | void = this.normalizeResource(res) as DownloadResource;
     for (const processAfterDownload of this.lifeCycle.processAfterDownload) {
       this.signal?.throwIfAborted();
       throwIfCancelled();
@@ -388,11 +395,11 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         === undefined) {
         return undefined;
       }
-      normalizeResource(downloadedResource);
+      this.normalizeResource(downloadedResource);
     }
     this.signal?.throwIfAborted();
     throwIfCancelled();
-    return normalizeResource(downloadedResource) as DownloadResource;
+    return this.normalizeResource(downloadedResource) as DownloadResource;
   }
 
   async saveToDisk(
@@ -405,7 +412,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       options = this.options;
     }
     if (!await this.shouldSaveResource(res)) return undefined;
-    let downloadedResource: DownloadResource | void = normalizeResource(res) as DownloadResource;
+    let downloadedResource: DownloadResource | void = this.normalizeResource(res) as DownloadResource;
     for (const saveToDisk of this.lifeCycle.saveToDisk) {
       this.signal?.throwIfAborted();
       throwIfCancelled();
@@ -415,18 +422,18 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         // already downloaded
         return undefined;
       }
-      normalizeResource(downloadedResource);
+      this.normalizeResource(downloadedResource);
     }
     // not downloaded
     this.signal?.throwIfAborted();
     throwIfCancelled();
-    return normalizeResource(downloadedResource) as DownloadResource;
+    return this.normalizeResource(downloadedResource) as DownloadResource;
   }
 
   async shouldSaveResource(res: Resource): Promise<boolean> {
     this.signal?.throwIfAborted();
     throwIfCancelled();
-    normalizeResource(res);
+    this.normalizeResource(res);
     if (this.lifeCycle.existingResource) {
       const existing = await this._checkExistingResource(res, 'saveToDisk');
       if (existing?.action === 'skip' || existing?.action === 'skipSave') {

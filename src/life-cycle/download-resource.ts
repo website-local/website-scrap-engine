@@ -7,6 +7,7 @@ import type {StaticDownloadOptions} from '../options.js';
 import * as logger from '../logger/logger.js';
 import {isUrlHttp} from '../util.js';
 import URI from 'urijs';
+import {ResourceSizeError} from '../resource-limits.js';
 
 /** Take logs before retry */
 export const beforeRetryHook: BeforeRetryHook = (
@@ -40,10 +41,26 @@ export interface DownloadError extends Partial<Error> {
 
 export async function getRetry(
   url: string,
-  options: OptionsInit
+  options: OptionsInit,
+  maxResourceBytes?: number
 ): Promise<Response<Buffer | string> | void> {
   // Got owns retry limits and hooks; successful empty bodies are valid responses.
-  return (await got(url, {...options})) as Response<Buffer | string>;
+  const limitController = maxResourceBytes === undefined ? undefined : new AbortController();
+  const request = got(url, {...options, signal: limitController ?
+    options.signal ? AbortSignal.any([options.signal, limitController.signal]) : limitController.signal :
+    options.signal});
+  let sizeError: ResourceSizeError | undefined;
+  if (maxResourceBytes !== undefined) {
+    request.on('downloadProgress', ({transferred}) => {
+      if (transferred > maxResourceBytes) {
+        sizeError = new ResourceSizeError(maxResourceBytes, transferred);
+        limitController!.abort(sizeError);
+      }
+    });
+  }
+  try { return (await request) as Response<Buffer | string>; } catch (error) {
+    throw sizeError ?? error;
+  }
 }
 
 export async function requestForResource(
@@ -68,7 +85,7 @@ export async function requestForResource(
     res.encoding, res.type);
   let response: Response<string | Buffer> | void;
   try {
-    response = await getRetry(downloadLink, reqOptions);
+    response = await getRetry(downloadLink, reqOptions, options?.maxResourceBytes);
   } catch (e) {
     if (e instanceof HTTPError &&
       (e as HTTPError).response.statusCode === 304) {

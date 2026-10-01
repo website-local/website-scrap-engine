@@ -18,6 +18,8 @@ jest.unstable_mockModule('node:fs', () => {
   const mod = {
     // needed by other transitive imports
     realpath: jest.fn(),
+    createReadStream: jest.fn(),
+    createWriteStream: jest.fn(),
     promises: {
       writeFile: jest.fn(),
       utimes: jest.fn(),

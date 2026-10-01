@@ -5,6 +5,7 @@ import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';
 import {normalizeResource, ResourceType} from '../resource.js';
+import {checkResourceBody} from '../resource-limits.js';
 import {skip} from '../logger/logger.js';
 import {createDefaultLogger} from '../logger/default-logger.js';
 import {importDefaultFromPath} from '../util.js';
@@ -158,6 +159,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     }
     let url: string;
     const resource = normalizeResource(res);
+    checkResourceBody(resource, this.options.maxResourceBytes);
     const uri = resource.uri.clone().hash('');
     if (this.options.deduplicateStripSearch) {
       url = uri.search('').toString();

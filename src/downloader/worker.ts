@@ -85,7 +85,13 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
     // https://github.com/website-local/website-scrap-engine/issues/340
     try {
       // should always be
-      if (e === null || typeof e !== 'object') {
+      if (e instanceof Error) {
+        const details = e as Error & {code?: unknown; limit?: unknown; actual?: unknown};
+        error = {name: e.name, message: e.message, stack: e.stack,
+          code: typeof details.code === 'string' ? details.code : undefined,
+          limit: typeof details.limit === 'number' ? details.limit : undefined,
+          actual: typeof details.actual === 'number' ? details.actual : undefined};
+      } else if (e === null || typeof e !== 'object') {
         error = new Error(String(e));
       } else if (typeof structuredClone === 'function') {
         error = structuredClone(e);

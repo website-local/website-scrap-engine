@@ -13,6 +13,7 @@ import type {
 } from './types.js';
 import {safeJoin} from '../io.js';
 import {publishFile} from '../output-store.js';
+import {limitResourceStream} from '../resource-limits.js';
 import {error as errorLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
@@ -59,7 +60,7 @@ export async function streamingDownloadToFile(
   const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
   let response: Response | void = undefined;
   await publishFile(savePath, async staging => {
-    response = await streamToStagingFile(res, requestOptions, staging);
+    response = await streamToStagingFile(res, requestOptions, staging, options?.maxResourceBytes);
     if (response?.statusCode !== 304 && options) {
       await optionallySetLastModifiedTime(res, options, staging);
     }
@@ -73,7 +74,8 @@ export async function streamingDownloadToFile(
 async function streamToStagingFile(
   res: Resource & {downloadStartTimestamp: number},
   requestOptions: RequestOptions,
-  savePath: string
+  savePath: string,
+  maxResourceBytes?: number
 ): Promise<Response> {
   const options = Object.assign({}, requestOptions, {
     isStream: true, headers: {...requestOptions.headers}
@@ -137,7 +139,8 @@ async function streamToStagingFile(
                 {flags: 'a', start: rangeStart} : {flags: 'w'});
           }
 
-          const pumping = pipeline(request, fileWriteStream);
+          const pumping = maxResourceBytes === undefined ? pipeline(request, fileWriteStream) :
+            pipeline(request, limitResourceStream(maxResourceBytes, rangeStart || 0), fileWriteStream);
           activePumps.add(pumping);
           try {
             await pumping;

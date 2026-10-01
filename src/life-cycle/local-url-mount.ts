@@ -11,6 +11,7 @@ import type {
 } from './types.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {copyResourceToDisk} from './copy-resource-to-disk.js';
+import {readResourceFile} from '../resource-limits.js';
 import {
   escapePath,
   isUrlHttp,
@@ -751,9 +752,8 @@ async function applyLocalFile(
   if (res.type === ResourceType.StreamingBinary) {
     await copyResourceToDisk(localFile.localPath, res, options, pipeline);
   } else {
-    res.body = await fs.readFile(localFile.localPath, {
-      encoding: res.encoding
-    });
+    res.body = await readResourceFile(localFile.localPath, res.encoding, options.maxResourceBytes,
+      pipeline.signal);
   }
   res.finishTimestamp = Date.now();
   res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp!;

@@ -16,7 +16,7 @@ const deadline = setTimeout(() => { throw new Error('Failure/retry checks timed 
 deadline.unref();
 try {
   for (const Downloader of [downloader.SingleThreadDownloader, downloader.MultiThreadDownloader]) {
-    for (const stage of ['download', 'process', 'save', 'process-undefined']) {
+    for (const stage of ['download', 'process', 'save', 'process-undefined', 'process-size']) {
       let requests = 0;
       server.removeAllListeners('request');
       server.on('request', (_request, response) => {
@@ -33,6 +33,7 @@ const lc = lifeCycle.defaultLifeCycle();
 let attempts = 0;
 const failOnce = res => {
   if (++attempts === 1) {
+    if (${JSON.stringify(stage)} === 'process-size') return {...res, body: Buffer.alloc(9)};
     if (${JSON.stringify(stage)} === 'process-undefined') throw undefined;
     throw new Error('first attempt failed');
   }
@@ -42,6 +43,7 @@ if (${JSON.stringify(stage)}.startsWith('process')) lc.processAfterDownload.unsh
 if (${JSON.stringify(stage)} === 'save') lc.saveToDisk.unshift(failOnce);
 export default options.defaultDownloadOptions({...lc,
   localRoot: ${JSON.stringify(output)}, initialUrl: [], concurrency: 1, workerCount: 1,
+  maxResourceBytes: ${JSON.stringify(stage)} === 'process-size' ? 8 : undefined,
   req: {retry: {limit: 0}, timeout: {request: 2000}},
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {},
     isTraceEnabled: () => false})
@@ -59,6 +61,7 @@ export default options.defaultDownloadOptions({...lc,
         await crawler.onIdle();
         assert.equal(crawler.downloadedCount, 0, `${Downloader.name}/${stage} failed count`);
         assert.ok(first.meta.errorCause);
+        if (stage === 'process-size') assert.equal(first.meta.error.code, 'ERR_RESOURCE_SIZE_LIMIT');
         assert.equal(crawler.queuedUrl.has(url), false, 'failed reservation released');
         await assert.rejects(fs.stat(path.join(output, '127.0.0.1', 'file.bin')), {code: 'ENOENT'});
         assert.equal(crawler.addProcessedResource(make()), true, 'explicit retry admitted');
