@@ -39,8 +39,9 @@ through the downloader's queue. A custom replacement would add scheduling and
 promise-settlement code for a small package-size saving. The implementation avoids
 `clear()` during cancellation because it can leave accepted task promises pending.
 Admission limits, cancellation, and the concurrency ceiling belong to the crawl
-wrapper. Balanced throughput and worker stress measurements remain separate
-release gates; this package-size audit does not claim a queue speed improvement.
+wrapper. Balanced throughput and worker stress measurements are recorded in the
+[runtime audit](runtime-performance-audit.md); installation size alone does not
+establish a queue speed improvement.
 
 URI.js is part of the normalized Resource API, not an incidental URL parser.
 Replacing it with WHATWG URL would change relative URL, mutation, and rewrite
@@ -145,8 +146,25 @@ duplicate names are confined to development tooling and are recorded in the data
 the ordinary consumer lock on 2026-10-01. Root development overrides do not protect
 consumers; the consumer check uses its own resolved dependency graph.
 
-This audit completes the dependency inventory and measured installation decision.
-Final release validation must refresh packed consumers after remaining runtime
-changes and cover the full Node 22.13/22/24/26 matrix. Resource outcomes, aggregate
-buffer budgets, forced-worker cleanup, and balanced runtime performance/stress
-work remain separate implementation gates.
+## Final packed installation refresh
+
+The clean 0.10.0 tarball contains 266 files: 178,414 compressed bytes and
+849,310 unpacked bytes. Fresh consumers install 51 packages both normally and
+with `--omit=optional`; explicitly installing log4js installs 62 packages.
+Logical node_modules size is 9,204,459 bytes normally and 9,734,615 with log4js,
+including the library and npm's hidden lockfile. Allocated filesystem size is
+12,464,128 and 13,234,176 bytes respectively. Directory allocation and symlinks
+are excluded. The omit-optional hidden lock differs by four bytes; its package
+graph is identical. The ordinary registry archive payload remains 1,789,091
+bytes, or 1,967,505 bytes including the final library tarball.
+
+The fresh ordinary consumer audit reports zero known advisories on 2026-10-01.
+Installation warns that whatwg-encoding 3.1.1 is deprecated in favor of
+@exodus/bytes. Its chain is Cheerio 1.2.0 → encoding-sniffer 0.2.1 →
+whatwg-encoding 3.1.1. Follow an upstream encoding-sniffer/Cheerio update;
+a name-level override is not an established API-compatible replacement and no
+new direct dependency or parser fork is introduced here.
+
+[Final package evidence](evidence/final-package.json) records the tarball,
+consumer checks and refreshed footprints. The [release audit](release-0.10.0-audit.md)
+records final source-matrix, buffering, worker and performance validation.

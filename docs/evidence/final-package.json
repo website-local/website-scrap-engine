@@ -1,0 +1,311 @@
+{
+  "packageSourceCommit": "fd07670",
+  "runtimeSourceCommit": "05b4597",
+  "note": "Later commits change tests, CI and audit documents only; package contents unchanged. Consumers are outside the checkout to prevent ancestor dev-dependency resolution.",
+  "pack": {
+    "name": "website-scrap-engine",
+    "version": "0.10.0",
+    "size": 178414,
+    "unpackedSize": 849310,
+    "shasum": "15b8ebc2789da056bd1434e049d6cd2f0406c6b0",
+    "integrity": "sha512-Djj3/AByltbJa4RGToL29YDn5nZNUvvo75OPeSatvQPEn1Mb5RMuMh/00zd8w1nWcKQF4kt76yLHbUxmpB6keQ==",
+    "entryCount": 266
+  },
+  "excludedLocalFiles": [
+    "AGENTS.md",
+    "src/shared-context.ts",
+    "node_modules"
+  ],
+  "declarationShimIncluded": true,
+  "checks": {
+    "minimum22": {
+      "node": "v22.13.0",
+      "consumer": "artifacts/wse-010-implementation/final-validation/consumer-default",
+      "entry": "artifacts/wse-010-implementation/final-validation/consumer-default/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": false,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v22.13.0: main downloader and save-path hooks passed\nv22.13.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-lifecycle",
+          "output": "v22.13.0: explicit startup, cancel/drain cleanup, and crawl isolation passed"
+        },
+        {
+          "script": "runtime-outcomes",
+          "output": "v22.13.0: 40 resource outcome scenarios passed"
+        },
+        {
+          "script": "runtime-failure-retry",
+          "output": "v22.13.0: failed work is not counted and explicit retries succeed in both modes"
+        },
+        {
+          "script": "runtime-parent-publication",
+          "output": "v22.13.0: parent cleans worker staging after timeout, crash, and forced cancellation"
+        },
+        {
+          "script": "runtime-output-conflicts",
+          "output": "v22.13.0: destination conflicts, failed allocation release and owner retries pass in both modes"
+        },
+        {
+          "script": "runtime-discovery",
+          "output": "v22.13.0: discovery limits and failed-parent child outcomes pass in both modes"
+        },
+        {
+          "script": "runtime-buffer-budget",
+          "output": "v22.13.0: 24 aggregate-buffer scenarios and pre-RPC worker timeout cleanup pass"
+        },
+        {
+          "script": "runtime-adjustment",
+          "output": "v22.13.0: stalled HTTP origins do not trigger concurrency growth in either mode"
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v22.13.0: package imports without the optional log4js peer"
+        }
+      ]
+    },
+    "latest22": {
+      "node": "v22.22.2",
+      "consumer": "artifacts/wse-010-implementation/final-validation/consumer-default",
+      "entry": "artifacts/wse-010-implementation/final-validation/consumer-default/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": false,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v22.22.2: main downloader and save-path hooks passed\nv22.22.2: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-lifecycle",
+          "output": "v22.22.2: explicit startup, cancel/drain cleanup, and crawl isolation passed"
+        },
+        {
+          "script": "runtime-outcomes",
+          "output": "v22.22.2: 40 resource outcome scenarios passed"
+        },
+        {
+          "script": "runtime-failure-retry",
+          "output": "v22.22.2: failed work is not counted and explicit retries succeed in both modes"
+        },
+        {
+          "script": "runtime-parent-publication",
+          "output": "v22.22.2: parent cleans worker staging after timeout, crash, and forced cancellation"
+        },
+        {
+          "script": "runtime-output-conflicts",
+          "output": "v22.22.2: destination conflicts, failed allocation release and owner retries pass in both modes"
+        },
+        {
+          "script": "runtime-discovery",
+          "output": "v22.22.2: discovery limits and failed-parent child outcomes pass in both modes"
+        },
+        {
+          "script": "runtime-buffer-budget",
+          "output": "v22.22.2: 24 aggregate-buffer scenarios and pre-RPC worker timeout cleanup pass"
+        },
+        {
+          "script": "runtime-adjustment",
+          "output": "v22.22.2: stalled HTTP origins do not trigger concurrency growth in either mode"
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v22.22.2: package imports without the optional log4js peer"
+        }
+      ]
+    },
+    "node24": {
+      "node": "v24.18.0",
+      "consumer": "artifacts/wse-010-implementation/final-validation/consumer-default",
+      "entry": "artifacts/wse-010-implementation/final-validation/consumer-default/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": false,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v24.18.0: main downloader and save-path hooks passed\nv24.18.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-lifecycle",
+          "output": "v24.18.0: explicit startup, cancel/drain cleanup, and crawl isolation passed"
+        },
+        {
+          "script": "runtime-outcomes",
+          "output": "v24.18.0: 40 resource outcome scenarios passed"
+        },
+        {
+          "script": "runtime-failure-retry",
+          "output": "v24.18.0: failed work is not counted and explicit retries succeed in both modes"
+        },
+        {
+          "script": "runtime-parent-publication",
+          "output": "v24.18.0: parent cleans worker staging after timeout, crash, and forced cancellation"
+        },
+        {
+          "script": "runtime-output-conflicts",
+          "output": "v24.18.0: destination conflicts, failed allocation release and owner retries pass in both modes"
+        },
+        {
+          "script": "runtime-discovery",
+          "output": "v24.18.0: discovery limits and failed-parent child outcomes pass in both modes"
+        },
+        {
+          "script": "runtime-buffer-budget",
+          "output": "v24.18.0: 24 aggregate-buffer scenarios and pre-RPC worker timeout cleanup pass"
+        },
+        {
+          "script": "runtime-adjustment",
+          "output": "v24.18.0: stalled HTTP origins do not trigger concurrency growth in either mode"
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v24.18.0: package imports without the optional log4js peer"
+        }
+      ]
+    },
+    "node26": {
+      "node": "v26.10.0",
+      "consumer": "artifacts/wse-010-implementation/final-validation/consumer-default",
+      "entry": "artifacts/wse-010-implementation/final-validation/consumer-default/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": false,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v26.10.0: main downloader and save-path hooks passed\nv26.10.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-lifecycle",
+          "output": "v26.10.0: explicit startup, cancel/drain cleanup, and crawl isolation passed"
+        },
+        {
+          "script": "runtime-outcomes",
+          "output": "v26.10.0: 40 resource outcome scenarios passed"
+        },
+        {
+          "script": "runtime-failure-retry",
+          "output": "v26.10.0: failed work is not counted and explicit retries succeed in both modes"
+        },
+        {
+          "script": "runtime-parent-publication",
+          "output": "v26.10.0: parent cleans worker staging after timeout, crash, and forced cancellation"
+        },
+        {
+          "script": "runtime-output-conflicts",
+          "output": "v26.10.0: destination conflicts, failed allocation release and owner retries pass in both modes"
+        },
+        {
+          "script": "runtime-discovery",
+          "output": "v26.10.0: discovery limits and failed-parent child outcomes pass in both modes"
+        },
+        {
+          "script": "runtime-buffer-budget",
+          "output": "v26.10.0: 24 aggregate-buffer scenarios and pre-RPC worker timeout cleanup pass"
+        },
+        {
+          "script": "runtime-adjustment",
+          "output": "v26.10.0: stalled HTTP origins do not trigger concurrency growth in either mode"
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v26.10.0: package imports without the optional log4js peer"
+        }
+      ]
+    },
+    "omitOptional": {
+      "node": "v24.18.0",
+      "consumer": "artifacts/wse-010-implementation/final-validation/consumer-no-optional",
+      "entry": "artifacts/wse-010-implementation/final-validation/consumer-no-optional/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": false,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v24.18.0: main downloader and save-path hooks passed\nv24.18.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v24.18.0: package imports without the optional log4js peer"
+        }
+      ]
+    },
+    "withLoggingPeer": {
+      "node": "v24.18.0",
+      "consumer": "artifacts/wse-010-implementation/final-validation/consumer-with-peer",
+      "entry": "artifacts/wse-010-implementation/final-validation/consumer-with-peer/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": true,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v24.18.0: main downloader and save-path hooks passed\nv24.18.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v24.18.0: explicitly installed log4js peer writes through the adapter"
+        }
+      ]
+    },
+    "ciSmoke": {
+      "node": "v24.18.0",
+      "consumer": "artifacts/wse-010-implementation/final-validation/ci-consumer",
+      "entry": "artifacts/wse-010-implementation/final-validation/ci-consumer/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": false,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v24.18.0: main downloader and save-path hooks passed\nv24.18.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v24.18.0: package imports without the optional log4js peer"
+        }
+      ]
+    }
+  },
+  "footprints": {
+    "consumer-default": {
+      "packages": 51,
+      "regularFiles": 1945,
+      "logicalBytes": 9204459,
+      "allocatedBytes": 12464128
+    },
+    "consumer-no-optional": {
+      "packages": 51,
+      "regularFiles": 1945,
+      "logicalBytes": 9204463,
+      "allocatedBytes": 12464128
+    },
+    "consumer-with-peer": {
+      "packages": 62,
+      "regularFiles": 2082,
+      "logicalBytes": 9734615,
+      "allocatedBytes": 13234176
+    }
+  },
+  "consumerAudit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {},
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "dependencies": {
+        "prod": 52,
+        "dev": 0,
+        "optional": 0,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 51
+      }
+    }
+  }
+}
