@@ -180,27 +180,27 @@ export interface RawResource {
 
 export interface Resource extends RawResource {
   /**
-   * If exists, this should be the {@link URI} instance
+   * Normalized {@link URI} instance
    * containing the same content of {@link RawResource.url}
    */
-  uri?: URI;
+  uri: URI;
 
   /**
-   * If exists, this should be the {@link URI} instance
+   * Normalized {@link URI} instance
    * containing the same content of {@link RawResource.refUrl}
    */
-  refUri?: URI;
+  refUri: URI;
 
   /**
-   * If exists, this should be the {@link URI} instance
+   * Normalized {@link URI} instance
    * containing the same content of {@link RawResource.replacePath}
    */
-  replaceUri?: URI;
+  replaceUri: URI;
 
   /**
    * {@link .uri}.hostname()
    */
-  host?: string;
+  host: string;
 
   /**
    * True if url of this resource should be replaced and not downloaded
@@ -209,31 +209,15 @@ export interface Resource extends RawResource {
 }
 
 export function prepareResourceForClone(res: Resource): RawResource {
-  const clone: Partial<RawResource> = {};
-  for (const key of Object.keys(res)) {
-    const value = Reflect.get(res, key);
-    if (typeof value === 'object') {
-      if (key === 'meta') {
-        const props: Record<string, unknown> = clone[key] = {};
-        for (const prop of Object.keys(value)) {
-          // headers can be cloned safely
-          if (prop === 'headers' || typeof value[prop] !== 'object') {
-            props[prop] = value[prop];
-          }
-        }
-      } else if (key === 'body' && (
-        typeof value === 'string' ||
-        value instanceof ArrayBuffer ||
-        ArrayBuffer.isView(value) ||
-        Buffer.isBuffer(value))) {
-        clone[key] = value;
-      }
-    } else {
-      Reflect.set(clone, key, value);
-    }
-  }
-  return clone as RawResource;
+  const {uri, refUri, replaceUri, host, ...raw} = res;
+  void uri; void refUri; void replaceUri; void host;
+  const {doc, ...meta} = res.meta;
+  void doc;
+  // Fail explicitly for functions and other non-cloneable metadata.
+  // Keep body ownership intact so the caller can transfer its ArrayBuffer.
+  return {...raw, meta: structuredClone(meta)};
 }
+
 /**
  * The argument type of {@link createResource}
  */
@@ -644,18 +628,11 @@ export function createResource({
 
 export function normalizeResource(res: RawResource): Resource {
   const resource = res as RawResource & Partial<Resource>;
-  if (!resource.uri) {
-    resource.uri = URI(resource.url);
-  }
-  if (!resource.refUri) {
-    resource.refUri = URI(resource.refUrl);
-  }
-  if (!resource.replaceUri) {
-    resource.replaceUri = URI(resource.replacePath);
-  }
-  if (!resource.host) {
-    resource.host = resource.uri?.hostname();
-  }
+  const uri = normalizedUri(resource.uri, resource.url, 'url');
+  const refUri = normalizedUri(resource.refUri, resource.refUrl, 'refUrl');
+  const replaceUri = normalizedUri(resource.replaceUri, resource.replacePath, 'replacePath');
+  const normalized = Object.assign(resource, {uri, refUri, replaceUri,
+    host: uri.hostname()});
   if (!resource.waitTime && resource.downloadStartTimestamp) {
     resource.waitTime = resource.downloadStartTimestamp - resource.createTimestamp;
   }
@@ -671,5 +648,12 @@ export function normalizeResource(res: RawResource): Resource {
     resource.body = Buffer.from(
       resource.body.buffer, resource.body.byteOffset, resource.body.byteLength);
   }
-  return resource;
+  return normalized;
+}
+
+function normalizedUri(current: unknown, value: string, name: string): URI {
+  if (typeof value !== 'string') {
+    throw new TypeError('Resource.' + name + ' must be a string');
+  }
+  return current instanceof URI && current.toString() === value ? current : URI(value);
 }

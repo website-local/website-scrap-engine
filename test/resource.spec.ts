@@ -356,7 +356,7 @@ describe('resource', function () {
       refType: ResourceType.Html
     };
     const resource: Resource = createResource(arg);
-    const expected: Resource = {
+    const expected: RawResource = {
       type: 2,
       depth: 1,
       encoding: 'utf8',
@@ -371,7 +371,6 @@ describe('resource', function () {
       createTimestamp: resource.createTimestamp,
       body: undefined,
       meta: {},
-      host: 'nodejs.com'
     };
     expect(prepareResourceForClone(resource)).toEqual(expected);
     resource.body = expected.body = new Uint8Array(12);
@@ -390,6 +389,8 @@ describe('resource', function () {
     };
     expected.meta = {
       headers: {aaa: 'bbb', ccc: 'ddd'},
+      testObj1: {},
+      testArr1: [1, 3, 5],
       testStr: ''
     };
     expect(prepareResourceForClone(resource)).toEqual(expected);
@@ -754,5 +755,41 @@ describe('resource', function () {
     expect(resource.replaceUri?.toString()).toBe('../aaa.html');
     expect(resource.savePath?.toString()).toBe(join('nodejs.com', 'aaa.html'));
     expect(resource.shouldBeDiscardedFromDownload).toBeFalsy();
+  });
+});
+
+describe('normalized resource boundary', () => {
+  const make = () => createResource({
+    type: ResourceType.Html, depth: 0, url: 'https://example.com/a',
+    refUrl: 'https://example.com/', localRoot: 'output'
+  });
+
+  test('repairs structured-cloned URI objects and stale fields', () => {
+    const raw = structuredClone(make());
+    raw.url = 'https://other.example/b';
+    const res = normalizeResource(raw);
+    expect(res.uri.clone().hostname()).toBe('other.example');
+    expect(res.refUri.clone().toString()).toBe(res.refUrl);
+    expect(res.replaceUri.clone().toString()).toBe(res.replacePath);
+    expect(res.host).toBe('other.example');
+    expect(normalizeResource(res).uri).toBe(res.uri);
+  });
+
+  test('round-trips nested metadata without a parsed DOM or URI instances', () => {
+    const res = make();
+    res.meta.nested = {items: [1, {value: 'two'}]};
+    const wire = prepareResourceForClone(res);
+    expect(wire).not.toHaveProperty('uri');
+    expect(wire.meta.nested).toEqual(res.meta.nested);
+    expect(wire.meta.nested).not.toBe(res.meta.nested);
+    expect(normalizeResource(structuredClone(wire)).uri.toString()).toBe(res.url);
+  });
+
+  test('rejects unsupported metadata and missing canonical strings', () => {
+    const res = make();
+    res.meta.callback = () => undefined;
+    expect(() => prepareResourceForClone(res)).toThrow();
+    expect(() => normalizeResource({...res, refUrl: undefined} as unknown as RawResource))
+      .toThrow('Resource.refUrl must be a string');
   });
 });

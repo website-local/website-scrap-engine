@@ -11,7 +11,6 @@ import {adjust} from './downloader/adjust-concurrency.js';
 import type {Logger} from './logger/types.js';
 import {createDefaultLogger} from './logger/default-logger.js';
 import type {DownloaderWithMeta} from './downloader/types.js';
-import {weakAssign} from './util.js';
 import type {SourceDefinition} from './sources.js';
 import type {CheerioOptionsInterface} from './types.js';
 
@@ -59,7 +58,7 @@ export interface StaticDownloadOptions {
    * Encoding of a resource can be changed at
    * {@link ProcessingLifeCycle.processBeforeDownload}
    */
-  encoding: Record<ResourceType, ResourceEncoding>;
+  encoding: Partial<Record<ResourceType, ResourceEncoding>>;
 
   /**
    * WorkerPool.coreSize = Math.min(
@@ -292,10 +291,36 @@ const defaultOptions: DownloadOptions = {
   statusChange: []
 };
 
+/** Copy configuration containers without cloning functions, agents, or cookie jars. */
+function cloneConfig<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(cloneConfig) as T;
+  if (value && typeof value === 'object' &&
+      Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(Object.entries(value).map(
+      ([key, item]) => [key, cloneConfig(item)])) as T;
+  }
+  return value;
+}
+
+function snapshotOptions(options: Options): RequestOptions {
+  // Got takes the request URL as its first argument, never as an options key.
+  const {url, ...snapshot} = options.toJSON();
+  void url;
+  return snapshot;
+}
+
 export function defaultDownloadOptions(
   options: ProcessingLifeCycle & Partial<DownloadOptions>): DownloadOptions {
-  const merged: DownloadOptions = weakAssign(options, defaultOptions);
-  // merged = weakAssign(merged, defaultOptions);
+  const merged: DownloadOptions = {...defaultOptions, ...options};
+  merged.meta = {...(options.meta ?? defaultOptions.meta)};
+  merged.encoding = {...options.encoding};
+  merged.req = cloneConfig(options.req ?? {});
+  merged.initialUrl = options.initialUrl?.slice();
+  for (const key of ['init', 'dispose', 'linkRedirect', 'detectResourceType',
+    'generateSavePath', 'download', 'processAfterDownload',
+    'processBeforeDownload', 'saveToDisk', 'statusChange'] as const) {
+    merged[key] = [...(options[key] ?? defaultOptions[key])] as never;
+  }
   if (!merged.concurrency || merged.concurrency < 1) {
     merged.concurrency = 12;
   }
@@ -337,11 +362,18 @@ export function defaultDownloadOptions(
   } else if (!merged.req.retry.calculateDelay) {
     merged.req.retry.calculateDelay = calculateFastDelay;
   }
+  if (merged.req.retry && !merged.req.retry.errorCodes) {
+    // Got 16 distinguishes truncated responses from socket resets. Keep strict
+    // length validation and allow the same bounded retry policy to recover.
+    merged.req.retry.errorCodes = [...(got.defaults.options.retry.errorCodes ?? []),
+      'ERR_HTTP_CONTENT_LENGTH_MISMATCH'];
+  }
   if (options.adjustConcurrencyPeriod &&
     options.adjustConcurrencyPeriod > 0 &&
     !options.adjustConcurrencyFunc) {
-    options.adjustConcurrencyFunc = adjust;
+    merged.adjustConcurrencyFunc = adjust;
   }
+  merged.req = snapshotOptions(new Options(merged.req));
   return merged;
 }
 
@@ -369,7 +401,7 @@ export function mergeOverrideOptions(
   overrideOptions?: Partial<StaticDownloadOptions>): DownloadOptions {
   const opt: DownloadOptions = typeof options === 'function' ? options() : options;
   if (!overrideOptions) {
-    return opt;
+    return checkDownloadOptions(defaultDownloadOptions(opt));
   }
   const merged: DownloadOptions = Object.assign({}, opt, overrideOptions);
   if (opt.meta && overrideOptions.meta) {
@@ -378,12 +410,8 @@ export function mergeOverrideOptions(
   if (opt.req && overrideOptions.req) {
     const options = got.defaults.options;
     const mergedOptions = new Options(opt.req, overrideOptions.req, options);
-    // New versions of got removed `mergeOptions`
-    // Instances of `Options` can not be reused, or it will result in memory leak
-    // Will try to find a better way as there is no public api for this
-    // See https://github.com/website-local/website-scrap-engine/issues/1112
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    merged.req = (mergedOptions as any)._internals;
+    // Public snapshot avoids retaining Options' merge history between requests.
+    merged.req = snapshotOptions(mergedOptions);
   }
-  return checkDownloadOptions(merged);
+  return checkDownloadOptions(defaultDownloadOptions(merged));
 }

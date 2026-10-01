@@ -1,3 +1,4 @@
+import {normalizeResource} from '../resource.js';
 import path from 'node:path';
 import {promises as fs} from 'node:fs';
 import type {Stats} from 'node:fs';
@@ -174,7 +175,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       savePath: savePathResult.savePath,
       replacePathHasError
     };
-    return this.lifeCycle.createResource(arg);
+    return normalizeResource(this.lifeCycle.createResource(arg));
   }
 
   generateSavePath(
@@ -278,7 +279,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
-    let processedResource: Resource | void = res;
+    let processedResource: Resource | void = normalizeResource(res);
     for (const processBeforeDownload of this.lifeCycle.processBeforeDownload) {
       if ((processedResource =
           await processBeforeDownload(processedResource as DownloadResource,
@@ -287,7 +288,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         return undefined;
       }
     }
-    return processedResource;
+    return normalizeResource(processedResource);
   }
 
   async download(
@@ -347,7 +348,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
-    let downloadedResource: DownloadResource | void = res;
+    let downloadedResource: DownloadResource | void = normalizeResource(res) as DownloadResource;
     for (const processAfterDownload of this.lifeCycle.processAfterDownload) {
       if ((downloadedResource = await processAfterDownload(
         downloadedResource as DownloadResource, submit, options, this))
@@ -355,7 +356,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         return undefined;
       }
     }
-    return downloadedResource;
+    return normalizeResource(downloadedResource) as DownloadResource;
   }
 
   async saveToDisk(
@@ -378,7 +379,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         }
       }
     }
-    let downloadedResource: DownloadResource | void = res;
+    let downloadedResource: DownloadResource | void = normalizeResource(res) as DownloadResource;
     for (const saveToDisk of this.lifeCycle.saveToDisk) {
       if ((downloadedResource = await saveToDisk(
         downloadedResource as DownloadResource, options, this))
@@ -388,7 +389,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       }
     }
     // not downloaded
-    return downloadedResource;
+    return normalizeResource(downloadedResource) as DownloadResource;
   }
 
   async dispose(

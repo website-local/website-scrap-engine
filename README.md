@@ -23,8 +23,7 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 npm install website-scrap-engine
 ```
 
-Requires Node.js >= 20.19.0. Development tooling supports Node.js 20.19+,
-22.13+, or 24+.
+Requires Node.js >= 22.13.0. Development tooling supports Node.js 22.13+, 24+, or 26+.
 
 Upgrading from 0.9.1? See [the 0.10.0 migration guide](MIGRATION-0.10.0.md)
 for save-path hooks, custom-worker channels, and other breaking changes.
@@ -128,7 +127,7 @@ const lc = lifeCycle.defaultLifeCycle();
 
 lc.download.unshift(lifeCycle.adapter.localUrlMounts([
   {
-    root: '/mnt/e/example-overlay',
+    root: './example-overlay',
     urlPrefix: 'https://example.com/assets/',
     priority: 10,
     notFound: 'fallback',

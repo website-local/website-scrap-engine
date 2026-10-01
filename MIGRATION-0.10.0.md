@@ -1,6 +1,6 @@
 # Upgrading from 0.9.1 to 0.10.0
 
-Version 0.10.0 requires Node.js 20.19.0 or newer and changes the save-path and
+Version 0.10.0 requires Node.js 22.13.0 or newer and changes the save-path and
 custom-worker APIs. The Node 24 publishing environment is separate from this
 runtime minimum.
 
@@ -94,3 +94,21 @@ For code that directly uses worker-pool internals:
   an application-level empty-content retry policy must be implemented separately.
 - `p-queue` is upgraded to version 9. Code accessing the exposed queue directly
   should check its version 9 APIs and Node requirement.
+
+## Request options and normalized resources
+
+Got is upgraded from 13 to 16. HTTP/2 agents, DNS caching, and cross-origin
+credential handling follow Got 16's contracts. Option merging uses public plain
+snapshots instead of `_internals`; a request URL remains a separate argument.
+Truncated responses retain strict content-length checks and use the configured
+retry limit. Explicit `retry.errorCodes` continues to override library defaults.
+
+`Resource.uri`, `refUri`, and `replaceUri` are required URI.js instances, and
+`host` is a required string (possibly empty for a local URL). Use `createResource`
+or `normalizeResource` rather than constructing a partially initialized Resource.
+Raw submissions still use strings. Normalization repairs structured-cloned URI
+objects and refreshes fields when canonical strings change.
+
+Worker resource snapshots preserve structured-clone-compatible nested metadata.
+Parsed DOMs stay local; metadata containing functions now fails explicitly rather
+than being silently omitted. Callers should use serializable metadata.

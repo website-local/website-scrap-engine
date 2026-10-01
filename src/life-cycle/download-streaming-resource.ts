@@ -2,8 +2,8 @@ import path from 'node:path';
 import type {WriteStream} from 'node:fs';
 import {constants, createWriteStream, promises as fs} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
-import type {RequestError, Response} from 'got';
-import got, {HTTPError} from 'got';
+import type {Response} from 'got';
+import got, {HTTPError, RequestError} from 'got';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {
@@ -45,7 +45,7 @@ export function isSameRangeStart(rangeStart: number, contentRange?: string): boo
 }
 
 export function shouldWaitForRequestError(error: unknown): boolean {
-  return error instanceof HTTPError ||
+  return error instanceof RequestError ||
     (error as {name?: string} | undefined)?.name === 'RequestError' ||
     (error as {name?: string} | undefined)?.name === 'TimeoutError';
 }

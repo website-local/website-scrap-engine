@@ -82,6 +82,7 @@ describe('mergeOverrideOptions', () => {
       })
     });
     const original = structuredClone(overrides);
+    const baseHeaders = {...base.req.headers};
 
     const merged = mergeOverrideOptions(base, overrides);
 
@@ -96,7 +97,7 @@ describe('mergeOverrideOptions', () => {
     expect(merged.req.retry).toMatchObject({limit: 0});
     expect(base.concurrency).toBe(12);
     expect(base.meta).toEqual({base: true});
-    expect(base.req.headers).toEqual({'x-base': 'base'});
+    expect(base.req.headers).toEqual(baseHeaders);
   });
 });
 
@@ -161,5 +162,33 @@ describe('calculateFastDelay', function () {
   test('returns 0 for non-retryable method', () => {
     const obj = makeRetryObject({attemptCount: 1, method: 'POST'});
     expect(calculateFastDelay(obj)).toBe(0);
+  });
+});
+
+describe('configuration ownership', () => {
+  test('allocates independent nested defaults and hook arrays', () => {
+    const lifecycle = defaultLifeCycle();
+    const first = defaultDownloadOptions({...lifecycle, localRoot: 'one'});
+    const second = defaultDownloadOptions({...lifecycle, localRoot: 'two'});
+    first.req.headers = {...first.req.headers, 'x-first': 'yes'};
+    first.meta.custom = true;
+    first.init.push(() => undefined);
+    expect(second.req.headers).not.toHaveProperty('x-first');
+    expect(second.meta).not.toHaveProperty('custom');
+    expect(second.init).toHaveLength(lifecycle.init.length);
+  });
+
+  test('repeated option snapshots preserve hooks without accumulating merge history', () => {
+    const hook = jest.fn();
+    let options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'out',
+      req: {hooks: {beforeRequest: [hook]}, retry: {limit: 0}}});
+    for (let index = 0; index < 1000; index++) {
+      options = mergeOverrideOptions(options, {req: {headers: {'x-run': String(index)}}});
+    }
+    expect(Object.getPrototypeOf(options.req)).toBe(Object.prototype);
+    expect(options.req).not.toHaveProperty('_init');
+    expect(options.req.hooks?.beforeRequest).toEqual([hook]);
+    expect(options.req.retry).toMatchObject({limit: 0});
+    expect(options.req.headers?.['x-run']).toBe('999');
   });
 });

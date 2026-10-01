@@ -62,8 +62,8 @@ export async function processCss(
   }
   const depth: number = res.depth + 1;
   const resources: Resource[] = [];
-  let cssText: string = toString(res.body, res.encoding ||
-    options.encoding[ResourceType.Css]);
+  let cssText: string = toString(res.body, res.encoding ??
+    options.encoding[ResourceType.Css] ?? 'utf8');
   cssText = await processCssText(cssText, res, options, pipeline, depth, resources);
   res.body = cssText;
   res.meta.cssProcessed = 1;
