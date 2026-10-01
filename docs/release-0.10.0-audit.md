@@ -205,3 +205,14 @@ aliases. Three deterministic regressions cover returned/thrown failures and
 query normalization. Build and all 375 tests pass on Node 24.18.0; all three
 regressions also pass on Node 22.13.0. This fixes alias retention without retaining
 Resource bodies; full terminal outcomes and destination reservations remain open.
+
+## Got 16 binary response regression
+
+The isolated Vitest comparison exposed a real migration bug: Got 16 returns
+Uint8Array, while getRetry promised Buffer and incomplete-HTML checks only accepted
+Buffer/string. Jest's loose byte-array equality had hidden it. Buffer.isBuffer
+assertions and an incomplete-then-complete HTTP fixture reproduced four failures.
+The wrapper now creates a Buffer view with the original buffer/offset/length,
+preserving bytes without a copy. All 376 tests and the build pass on Node 24.18.0;
+all fifteen download-resource tests pass on Node 22.13.0. This finding reinforces
+using explicit runtime contract assertions alongside byte-content comparisons.

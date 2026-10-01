@@ -65,6 +65,7 @@ describe.each(['text', 'buffer'] as const)('empty %s responses', responseType =>
     });
 
     expect(result?.statusCode).toBe(statusCode);
+    if (responseType === 'buffer') expect(Buffer.isBuffer(result?.body)).toBe(true);
     expect(result?.body).toEqual(responseType === 'buffer' ? Buffer.alloc(0) : '');
     expect(requests).toBe(1);
   });
@@ -160,4 +161,24 @@ describe.each([
         .toEqual(Buffer.alloc(0));
     }
   });
+});
+
+
+test('retries incomplete HTML with Got 16 binary responses', async () => {
+  let requests = 0;
+  const url = await listen((_request, response) => {
+    response.end(++requests === 1 ? '<html>incomplete' : '<html>complete</html>');
+  });
+  const options = defaultDownloadOptions({
+    ...defaultLifeCycle(), localRoot: root,
+    req: {retry: {limit: 0}, timeout: {request: 2000}},
+    meta: {detectIncompleteHtml: '</html>'}
+  });
+  const pipeline = new PipelineExecutorImpl(options, options.req, options);
+  const resource = await pipeline.createResource(ResourceType.Html, 0, url, url);
+  if (!resource) throw new Error('Resource was discarded');
+  const downloaded = await pipeline.download(resource);
+  expect(requests).toBe(2);
+  expect(Buffer.isBuffer(downloaded?.body)).toBe(true);
+  expect(downloaded?.body.toString()).toBe('<html>complete</html>');
 });

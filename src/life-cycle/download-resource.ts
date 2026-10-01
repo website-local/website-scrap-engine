@@ -58,7 +58,17 @@ export async function getRetry(
       }
     });
   }
-  try { return (await request) as Response<Buffer | string>; } catch (error) {
+  try {
+    const response = await request;
+    // Got 16 returns Uint8Array for responseType: 'buffer'. Preserve our Buffer
+    // contract and Buffer-based HTML checks without copying the response bytes.
+    const body: unknown = response.body;
+    if (body instanceof Uint8Array && !Buffer.isBuffer(body)) {
+      (response as Response<Buffer | string>).body =
+        Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+    }
+    return response as Response<Buffer | string>;
+  } catch (error) {
     throw sizeError ?? error;
   }
 }
