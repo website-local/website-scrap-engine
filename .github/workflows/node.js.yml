@@ -30,3 +30,11 @@ jobs:
     - run: npm run build --if-present
     - run: npm test
     - run: node test/runtime-smoke.js
+    - name: Validate installed package and declarations
+      run: |
+        consumer="$RUNNER_TEMP/wse-consumer"
+        mkdir "$consumer"
+        npm pack --ignore-scripts --pack-destination "$consumer"
+        echo '{"private":true,"type":"module"}' > "$consumer/package.json"
+        npm install --prefix "$consumer" --no-package-lock --no-audit "$consumer"/website-scrap-engine-*.tgz
+        node scripts/check-consumer.mjs "$consumer" --smoke-only
