@@ -11,6 +11,7 @@ import type {
 } from './types.js';
 import {WorkerControlMessageType, WorkerMessageType} from './types.js';
 import type {WorkerChannels} from './worker-channel.js';
+import {logLevels} from '../logger/logger-worker.js';
 
 export interface WorkerInfo {
   readonly id: number;
@@ -144,40 +145,47 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   takeLog(info: WorkerInfo, message: LogWorkerMessage): void {
-    if (!message?.body) {
+    if (message?.type !== WorkerMessageType.Log || !message.body) {
       errorLogger.warn('Invalid formatted log', info.id);
       return;
     }
     const level = message.body.level;
     const logType = message.body.logType;
-    if (!level || !logType) {
+    if (!logLevels.includes(level) || typeof logType !== 'string' ||
+      (message.body.content !== undefined && !Array.isArray(message.body.content))) {
       return;
     }
     const log = getLogger();
     const content = message.body.content;
-    if (content?.length) {
-      log[level](logType, info.id, ...content);
-    } else {
-      log[level](logType, info.id);
+    try {
+      log[level](logType, info.id, ...(content ?? []));
+    } catch {
+      // Consumer loggers must not crash message delivery or strand worker tasks.
     }
   }
 
   complete(info: WorkerInfo, message: WorkerMessage): void {
-    if (message?.type !== WorkerMessageType.Complete) {
+    if (message?.type !== WorkerMessageType.Complete ||
+      !Number.isSafeInteger(message.taskId) || message.taskId <= 0) {
       errorLogger.warn('Invalid worker task message', info.id);
       return;
     }
-    const pending: PendingPromise | undefined =
-      this.workingTasks.get(message.taskId);
+    const pending = this.workingTasks.get(message.taskId) as
+      PendingPromiseWithBody<R> | undefined;
     if (!pending) {
       errorLogger.warn('Worker completed unknown task', info.id,
+        message.taskId);
+      return;
+    }
+    if (pending.workerId !== info.id || this._unavailableWorkers.has(info)) {
+      errorLogger.warn('Worker completed task owned by another worker', info.id,
         message.taskId);
       return;
     }
     --info.load;
     setImmediate(() => this.nextTask());
     this.workingTasks.delete(message.taskId);
-    pending.resolve(message);
+    pending.resolve(message as R);
   }
 
   submitTask(

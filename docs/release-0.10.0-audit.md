@@ -41,6 +41,13 @@ Raw local measurements are under `artifacts/wse-010-implementation/`.
 
 ## Remaining implementation and release gates
 
+Worker boundary validation now checks completion ownership before changing load
+or settling tasks, validates log method names and payload arrays, and isolates
+consumer logger exceptions. Worker channel access requires two distinct actual
+MessagePorts. Deterministic regression tests cover forged/duplicate completions,
+malformed logs, and throwing loggers; build and all 283 tests pass on Node 24.18.0.
+Initialized readiness, protocol versioning, and failure deadlines remain pending.
+
 - Validated/versioned worker protocol, initialized readiness, deadlines, failures,
   message ownership, and complete cleanup.
 - Safe staged publication for all sources, uniform existing-file policy, path and

@@ -24,6 +24,7 @@ Breaking Changes
 Validation
 ------------
 * Cover hook composition and resource discard, split worker transport and log draining, and empty-response behavior. Run runtime smoke checks on every supported CI Node version.
+* Reject worker completions for tasks owned by another worker; ignore duplicate results and malformed log envelopes. Consumer logger failures no longer interrupt worker log delivery.
 
 0.9.1
 ============

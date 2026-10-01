@@ -15,7 +15,7 @@ describe('worker-pool', function () {
   test('pool would work correctly', async () => {
     const cases: number[][] = [];
     for (let i = 0; i < 100; i++) {
-      cases.push([Math.random() * 65535 | 0, Math.random() * 65535 | 0]);
+      cases.push([(i * 7919) % 65536, (i * 104729) % 65536]);
     }
     const expected = [];
     for (let i = 0; i < cases.length; i++) {
@@ -219,6 +219,60 @@ describe('worker-pool', function () {
       await pool.dispose();
       expect(logs.length).toBe(100);
     } finally {
+      setLogger(createDefaultLogger());
+    }
+  }, 10000);
+
+  test('completion belongs to its assigned worker and settles only once', async () => {
+    const pool = new WorkerPool(2,
+      join(__dirname, 'delay-calc-worker.js'), {}, 1);
+    try {
+      await pool.ready;
+      const first = pool.submitTask([2, 3]);
+      const second = pool.submitTask([4, 5]);
+      pool.nextTask();
+      const owner = pool.workers[0];
+      const other = pool.workers[1];
+      const forged = {taskId: 1, type: 1, body: 'wrong worker'};
+      pool.complete(other, forged);
+      expect(pool.workingTasks.size).toBe(2);
+      expect(pool.workers.map(worker => worker.load)).toEqual([1, 1]);
+      expect((await first).body).toBe(5);
+      pool.complete(owner, forged);
+      expect(owner.load).toBe(0);
+      expect((await second).body).toBe(9);
+      expect(pool.workingTasks.size).toBe(0);
+      expect(pool.workers.map(worker => worker.load)).toEqual([0, 0]);
+    } finally {
+      await pool.dispose();
+    }
+  }, 10000);
+
+  test('malformed logs and throwing loggers cannot interrupt task delivery', async () => {
+    const info = jest.fn(() => { throw new Error('consumer logger failed'); });
+    const isTraceEnabled = jest.fn(() => false);
+    setLogger({...createDefaultLogger(), info, isTraceEnabled});
+    const pool = new WorkerPool(1,
+      join(__dirname, 'delay-calc-worker.js'), {});
+    try {
+      await pool.ready;
+      const worker = pool.workers[0];
+      const send = (type: number, level: string, content: unknown) =>
+        pool.takeLog(worker, {type, body: {
+          level, content, logType: 'custom.test'
+        }} as never);
+      for (const level of ['__proto__', 'constructor', 'isTraceEnabled', 'missing']) {
+        expect(() => send(0, level, [])).not.toThrow();
+      }
+      expect(() => send(1, 'info', [])).not.toThrow();
+      expect(() => send(0, 'info', 'not an array')).not.toThrow();
+      expect(info).not.toHaveBeenCalled();
+      expect(isTraceEnabled).not.toHaveBeenCalled();
+      expect(() => send(0, 'info', ['valid message'])).not.toThrow();
+      expect(info).toHaveBeenCalledWith('custom.test', worker.id, 'valid message');
+      expect((await pool.submitTask([5, 6])).body).toBe(11);
+    } finally {
+      await pool.dispose();
       setLogger(createDefaultLogger());
     }
   }, 10000);
