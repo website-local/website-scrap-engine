@@ -10,6 +10,7 @@ Feature
 * **worker: separate task and log channels (#491)** — Use dedicated MessagePorts for tasks/results and logs, with shutdown control on `parentPort` so queued logs can drain.
 * **worker: bound stalled tasks** — Optional `workerPool.taskTimeout` retires workers that stop replying. Message-decoding failures reject assigned tasks, while healthy workers continue queued work without replaying failed tasks.
 * **worker: cancel cooperatively** — Disposal aborts worker pipeline signals and awaits active hooks, with `workerPool.shutdownTimeout` bounding the grace period before termination.
+* **save: stage buffered output** — Buffered writes publish by rename after successful writing and a cancellation check, preserving cached destinations on write failure or cancellation before publication.
 
 Breaking Changes
 ------------

@@ -96,6 +96,16 @@ on Node 24.18.0; expanded lifecycle checks pass on Node 22.13.0.
 
 ## Remaining implementation and release gates
 
+Buffered publication now uses a same-filesystem staging directory and renames
+only after writing and checking cancellation. Failed writes, failed renames, and
+cancellation before publication clean staging while preserving prior destinations.
+Timestamp updates apply to staging; epoch-zero timestamps are supported. Real
+filesystem tests verify these guarantees, binary view bounds, and absence of
+staging leftovers. Build and all 324 tests pass on Node 24.18.0; lifecycle and
+downloader smoke checks pass on Node 22.13.0. This completes only the buffered
+publication foundation: multi-file transactions, streaming/local-copy staging,
+save policy unification, and symlink containment remain to be addressed below.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.

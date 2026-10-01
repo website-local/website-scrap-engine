@@ -93,6 +93,18 @@ export function mockFs(): {
         'mock fs writeFile with type not supported yet');
     });
   const fakeFsStats: Record<string, number> = {};
+  jest.spyOn(promises, 'mkdtemp').mockImplementation(async prefix => `${prefix}mock`);
+  jest.spyOn(promises, 'rename').mockImplementation(async (from, to) => {
+    fakeFs[to.toString()] = fakeFs[from.toString()];
+    delete fakeFs[from.toString()];
+    for (const suffix of ['::atime', '::mtime']) {
+      if (from + suffix in fakeFsStats) {
+        fakeFsStats[to + suffix] = fakeFsStats[from + suffix];
+        delete fakeFsStats[from + suffix];
+      }
+    }
+  });
+  jest.spyOn(promises, 'rm').mockImplementation(async () => undefined);
   jest.spyOn(promises, 'utimes').mockClear()
     .mockImplementation((path, atime, mtime) => {
       fakeFsStats[path + '::atime'] = atime as number;
@@ -113,6 +125,9 @@ export function mockModules(): void {
       realpath: jest.fn(),
       promises: {
         mkdir: jest.fn(),
+        mkdtemp: jest.fn(),
+        rename: jest.fn(),
+        rm: jest.fn(),
         writeFile: jest.fn(),
         utimes: jest.fn(),
       },

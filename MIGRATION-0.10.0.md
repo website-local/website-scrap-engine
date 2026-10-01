@@ -129,6 +129,13 @@ For code that directly uses worker-pool internals:
 
 ## Other changes
 
+Buffered saves now write a temporary file beside the destination and publish it
+by rename. Failures and cancellation observed before publication leave the prior
+destination intact; normal cleanup removes the temporary directory. Publication
+is atomic per file, not across a redirected resource's multiple output files.
+This does not promise durability after power loss. Streaming and local-copy
+publication are still being migrated as part of the unreleased implementation.
+
 - Remove `waitForInitBeforeIdle` from options. It was deprecated and unused.
 - Call `io.mkdirRetry(dir)` without a retry argument. It now makes one recursive
   filesystem call; implement an explicit retry policy if your application needs it.

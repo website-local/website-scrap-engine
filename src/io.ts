@@ -1,9 +1,10 @@
-import {throwIfCancelled} from './crawl-context.js';
+import {currentCrawlContext, throwIfCancelled} from './crawl-context.js';
 import type {ObjectEncodingOptions} from 'node:fs';
 import fs from 'node:fs';
-import {dirname, join, resolve, sep} from 'node:path';
+import {join, resolve, sep} from 'node:path';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
 import {error as errorLogger} from './logger/logger.js';
+import {publishFile} from './output-store.js';
 
 export const mkdirRetry = async (dir: string): Promise<void> => {
   await fs.promises.mkdir(dir, {recursive: true});
@@ -29,10 +30,6 @@ export const writeFile = async (
   atime?: number | void
 ): Promise<void> => {
   throwIfCancelled();
-  const dir: string = dirname(filePath);
-  if (!fs.existsSync(dir)) {
-    await mkdirRetry(dir);
-  }
   let fileData: Uint8Array | string;
   let options: ObjectEncodingOptions | void = void 0;
   if (typeof data === 'string') {
@@ -48,21 +45,18 @@ export const writeFile = async (
     // not likely happen
     throw new TypeError('Type of data not supported.');
   }
-  throwIfCancelled();
-  if (options) {
-    await fs.promises.writeFile(filePath, fileData, options);
-  } else {
-    await fs.promises.writeFile(filePath, fileData);
-  }
-  // void and NaN check
-  if (mtime) {
-    if (!atime) {
-      atime = mtime;
+  await publishFile(filePath, async stagingPath => {
+    if (options) {
+      await fs.promises.writeFile(stagingPath, fileData, options);
+    } else {
+      await fs.promises.writeFile(stagingPath, fileData);
     }
-    try {
-      await fs.promises.utimes(filePath, atime, mtime);
-    } catch (e) {
-      errorLogger.warn('skipping utimes ' + filePath, e);
+    if (typeof mtime === 'number' && Number.isFinite(mtime)) {
+      try {
+        await fs.promises.utimes(stagingPath, atime ?? mtime, mtime);
+      } catch (e) {
+        errorLogger.warn('skipping utimes ' + filePath, e);
+      }
     }
-  }
+  }, currentCrawlContext()?.signal);
 };
