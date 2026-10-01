@@ -13,6 +13,7 @@ Feature
 * **save: stage buffered output** — Buffered writes publish by rename after successful writing and a cancellation check, preserving cached destinations on write failure or cancellation before publication.
 * **save: contain buffered output** — Reject symlinked directories beneath `localRoot`; replacing destination-file symlinks leaves their former targets untouched.
 * **local files: stage streaming copies** — Local-file and URL-mount copies preserve destinations on failure/cancellation, enforce output containment, and honor the existing-resource save policy before publication.
+* **HTTP: stage streamed downloads** — Publish completed streams after the save-policy check, preserve cached bytes/timestamps on failure or 304, and wait for old streams to close before range retries. Remove legacy manual retry timers.
 
 Breaking Changes
 ------------

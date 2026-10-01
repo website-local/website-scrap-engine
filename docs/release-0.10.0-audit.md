@@ -125,6 +125,17 @@ directories. Build and all 340 tests pass on Node 24.18.0; lifecycle and downloa
 smoke checks pass on Node 22.13.0. HTTP streaming, unified resource outcomes, and
 parent-owned cleanup for forcibly terminated writers remain outstanding.
 
+HTTP streams now write to staging and recheck the existing-resource save policy
+before publication. Timestamp updates target staging, preserving cached mtime on
+skipSave and 304. Failed/cancelled transfers await their file pipelines before
+cleanup; range retries await prior pipelines before reusing staging. Request
+headers are copied before adding range state, and legacy manual retry timers have
+been removed in favor of Got's configured policy. Build and all 344 tests pass on
+Node 24.18.0. All 19 conditional/streaming tests also pass on Node 22.13.0,
+including truncation, cancellation, timeout, skipSave, 304, range resume, ignored
+ranges, and interrupted retries. Registry/outcomes and parent-owned cleanup
+for forcibly terminated writers remain release gates.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.

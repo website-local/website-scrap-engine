@@ -135,8 +135,11 @@ destination intact; normal cleanup removes the temporary directory. Publication
 is atomic per file, not across a redirected resource's multiple output files.
 This does not promise durability after power loss. Local streaming-file copies
 and streaming URL mounts also use staged publication and recheck the save-stage
-existing-resource policy before publishing. HTTP streaming publication is still
-being migrated as part of the unreleased implementation.
+existing-resource policy before publishing. HTTP streams now use the same staged
+publication and policy check. Range retries reuse the staging file after the
+previous stream closes; 304 responses and skipped saves discard staging without
+changing the cached file or its timestamps. Stream retries follow Got's configured
+retry policy; legacy manual retry timers have been removed.
 
 Custom `PipelineExecutor` implementations must provide
 `shouldSaveResource(res): Promise<boolean>`, which rechecks the existing-resource

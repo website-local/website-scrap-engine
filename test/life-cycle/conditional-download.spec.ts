@@ -46,6 +46,78 @@ const variants = [
   {name: 'streaming with hooks', type: ResourceType.StreamingBinary, hooked: true}
 ];
 
+describe('staged HTTP streaming', () => {
+  test.each(['truncate', 'cancel', 'timeout'])(
+    '%s after streaming begins preserves cached bytes and timestamps', async failure => {
+      const controller = new AbortController();
+      let requests = 0;
+      let destination = '';
+      server = createServer((_request, response) => {
+        requests++;
+        response.writeHead(200, {'Connection': 'close', 'Content-Length': '1000'});
+        response.write('partial');
+        if (failure === 'timeout') return;
+        void (async () => {
+          for (let attempt = 0; attempt < 100; attempt++) {
+            const parent = path.dirname(destination);
+            const entries = await fs.readdir(parent).catch(() => []);
+            const stage = entries.find(name => name.startsWith('.wse-stage-'));
+            const stat = stage ? await fs.stat(path.join(parent, stage, 'content'))
+              .catch(() => undefined) : undefined;
+            if (stat?.size) break;
+            await delay(5);
+          }
+          if (failure === 'cancel') controller.abort(new Error('cancel stream'));
+          else response.destroy();
+        })();
+      });
+      await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+      const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/file.bin`;
+      const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
+        req: {retry: {limit: 0}, timeout: {request: failure === 'timeout' ? 100 : 2000}}});
+      const pipeline = new PipelineExecutorImpl(options, options.req, options, controller.signal);
+      const resource = await pipeline.createResource(ResourceType.StreamingBinary, 0, url, url);
+      if (!resource) throw new Error('Resource discarded');
+      destination = path.join(root, resource.savePath);
+      await fs.mkdir(path.dirname(destination), {recursive: true});
+      await fs.writeFile(destination, 'cached');
+      await fs.utimes(destination, 100, 100);
+      await expect(pipeline.download(resource)).rejects.toThrow();
+      expect(requests).toBe(1);
+      expect(await fs.readFile(destination, 'utf8')).toBe('cached');
+      expect((await fs.stat(destination)).mtimeMs).toBe(100000);
+      expect(await fs.readdir(path.dirname(destination))).toEqual(['file.bin']);
+    });
+
+  test('skipSave preserves cached mtime even when remote timestamps are preferred', async () => {
+    server = createServer((_request, response) => {
+      response.writeHead(200, {'Connection': 'close', 'Last-Modified': new Date().toUTCString()});
+      response.end('new');
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/file.bin`;
+    const stages: string[] = [];
+    const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
+      preferRemoteLastModifiedTime: true,
+      existingResource: ({stage}) => {
+        stages.push(stage);
+        return stage === 'download' ? 'overwrite' : 'skipSave';
+      }, req: {retry: {limit: 0}}});
+    const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const resource = await pipeline.createResource(ResourceType.StreamingBinary, 0, url, url);
+    if (!resource) throw new Error('Resource discarded');
+    const destination = path.join(root, resource.savePath);
+    await fs.mkdir(path.dirname(destination), {recursive: true});
+    await fs.writeFile(destination, 'cached');
+    await fs.utimes(destination, 100, 100);
+    await pipeline.download(resource);
+    expect(stages).toEqual(['download', 'saveToDisk']);
+    expect(await fs.readFile(destination, 'utf8')).toBe('cached');
+    expect((await fs.stat(destination)).mtimeMs).toBe(100000);
+    expect(await fs.readdir(path.dirname(destination))).toEqual(['file.bin']);
+  });
+});
+
 describe.each(variants)('conditional $name downloads', ({type, hooked}) => {
   test.each([false, true])(
     'preserves cached content on 304 (Last-Modified: %s)',
@@ -167,9 +239,13 @@ describe('streaming retries', () => {
           });
           response.write(bytes.subarray(0, prefixLength));
           void (async () => {
-            // Interrupt only after the prefix has reached the destination file.
+            // Interrupt after the prefix reaches staging; the destination stays unpublished.
             for (let attempt = 0; attempt < 200; attempt++) {
-              const stat = await fs.stat(destination).catch(() => undefined);
+              const parent = path.dirname(destination);
+              const entries = await fs.readdir(parent).catch(() => []);
+              const stage = entries.find(name => name.startsWith('.wse-stage-'));
+              const stat = stage ? await fs.stat(path.join(parent, stage, 'content'))
+                .catch(() => undefined) : undefined;
               if (stat?.size === prefixLength) break;
               await delay(10);
             }

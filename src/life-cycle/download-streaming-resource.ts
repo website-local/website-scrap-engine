@@ -1,6 +1,5 @@
-import path from 'node:path';
 import type {WriteStream} from 'node:fs';
-import {constants, createWriteStream, promises as fs} from 'node:fs';
+import {createWriteStream, promises as fs} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
 import type {Response} from 'got';
 import got, {HTTPError, RequestError} from 'got';
@@ -12,8 +11,9 @@ import type {
   DownloadResourceFunc,
   RequestOptions
 } from './types.js';
-import {mkdirRetry, safeJoin} from '../io.js';
-import {error as errorLogger, retry as retryLogger} from '../logger/logger.js';
+import {safeJoin} from '../io.js';
+import {publishFile} from '../output-store.js';
+import {error as errorLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {isUrlHttp} from '../util.js';
@@ -52,180 +52,171 @@ export function shouldWaitForRequestError(error: unknown): boolean {
 
 export async function streamingDownloadToFile(
   res: Resource & { downloadStartTimestamp: number },
-  requestOptions: RequestOptions
+  requestOptions: RequestOptions,
+  executor?: PipelineExecutor,
+  options?: StaticDownloadOptions
 ): Promise<Response | void> {
   const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
-  try {
-    await fs.access(savePath, constants.W_OK);
-  } catch (e) {
-    if (e && (e as {code?: string | void}).code === 'ENOENT') {
-      await mkdirRetry(path.dirname(savePath));
-    } else {
-      throw e;
+  let response: Response | void = undefined;
+  await publishFile(savePath, async staging => {
+    response = await streamToStagingFile(res, requestOptions, staging);
+    if (response?.statusCode !== 304 && options) {
+      await optionallySetLastModifiedTime(res, options, staging);
     }
-  }
+  }, requestOptions.signal, res.localRoot, async () => {
+    if (response?.statusCode === 304) return false;
+    return executor ? executor.shouldSaveResource(res) : true;
+  });
+  return response;
+}
+
+async function streamToStagingFile(
+  res: Resource & {downloadStartTimestamp: number},
+  requestOptions: RequestOptions,
+  savePath: string
+): Promise<Response> {
   const options = Object.assign({}, requestOptions, {
-    isStream: true
+    isStream: true, headers: {...requestOptions.headers}
   }) as RequestOptions & {
     isStream?: true
   };
   let fileWriteStream: WriteStream | void;
 
-  return new Promise<Response>((resolve, reject) => {
-    let rangeIsSupported: void | boolean;
-    let rangeStart: void | number;
-    const makeRequest = (retryCount: number): void => {
-      let isRetry = false;
-      if (!rangeIsSupported && options.headers) {
-        rangeStart = undefined;
-        delete options.headers.range;
-      } else if (rangeStart && rangeIsSupported) {
-        if (!options.headers) {
-          options.headers = {};
-        }
-        options.headers.range = `bytes=${rangeStart}-`;
-      }
-      const request = got.stream(res.downloadLink, options);
-      request.retryCount = retryCount;
-
-      request.once('response', async (response: Response) => {
-        response.retryCount = retryCount;
-        if (response.statusCode === 304) {
-          // Drain the response without opening or modifying the cached file.
-          request.once('end', () => resolve(response));
-          request.resume();
-          return;
-        }
-        res.meta.headers = response.headers;
-        if (rangeIsSupported === undefined) {
-          if (isBytesAccepted(response.headers['accept-ranges'])) {
-            rangeIsSupported = true;
-          }
-        }
-        if (rangeIsSupported && rangeStart &&
-          (response.statusCode !== 206 ||
-            !isSameRangeStart(rangeStart, response.headers['content-range']))) {
-          errorLogger.warn('Unexpected response for range',
-            rangeStart, response.headers['content-range'], response.statusCode);
-          rangeIsSupported = false;
+  const activePumps = new Set<Promise<void>>();
+  let finished = false;
+  try {
+    return await new Promise<Response>((resolve, reject) => {
+      let rangeIsSupported: void | boolean;
+      let rangeStart: void | number;
+      const makeRequest = (retryCount: number): void => {
+        if (finished) return;
+        let isRetry = false;
+        if (!rangeIsSupported && options.headers) {
           rangeStart = undefined;
-        }
-
-        if (response.request.isAborted) {
-          // Canceled while downloading
-          //- will throw a `CancelError` or `TimeoutError` error
-          return;
-        }
-        // Download body
-        if (!fileWriteStream) {
-          fileWriteStream = createWriteStream(savePath,
-            rangeIsSupported && rangeStart ?
-              {flags: 'a', start: rangeStart} : {flags: 'w'});
-        }
-
-        try {
-          // Download body directly to file
-          await pipeline(request, fileWriteStream);
-        } catch (e) {
-          // Request errors also arrive on request.once('error'); write errors do not.
-          // Got closes the previous stream when retrying.
-          if (!isRetry && !shouldWaitForRequestError(e)) {
-            reject(e);
+          delete options.headers.range;
+        } else if (rangeStart && rangeIsSupported) {
+          if (!options.headers) {
+            options.headers = {};
           }
-          return;
+          options.headers.range = `bytes=${rangeStart}-`;
         }
+        const request = got.stream(res.downloadLink, options);
+        request.retryCount = retryCount;
 
-        // if (request._isAboutToError) {
-        //   return;
-        // }
-
-        resolve(response);
-      });
-
-      const destroyStream = () => {
-        if (fileWriteStream) {
-          if (rangeIsSupported) {
-            if (rangeStart) {
-              rangeStart += fileWriteStream.bytesWritten;
-            } else {
-              rangeStart = fileWriteStream.bytesWritten;
-            }
-          } else {
-            rangeStart = undefined;
-          }
-          fileWriteStream.destroy();
-        } else if (!rangeIsSupported) {
-          rangeStart = undefined;
-        }
-        fileWriteStream = undefined;
-      };
-
-      const onError = (error: RequestError) => {
-        // https://developer.mozilla.org/docs/Web/HTTP/Headers/Range
-        // https://developer.mozilla.org/docs/Web/HTTP/Status/416
-        if (error instanceof HTTPError && error.response.statusCode === 416) {
-          errorLogger.warn('Unexpected response for range',
-            rangeStart, error.response.headers['content-range'],
-            error.response.statusCode);
-          rangeIsSupported = false;
-        }
-        destroyStream();
-
-        const {options} = request;
-
-        if (error instanceof HTTPError && !options.throwHttpErrors) {
-          const {response} = error;
-          resolve(response);
-          return;
-        }
-        if (!isRetry) {
-          let retry = -1;
-          if (error && error.message === 'premature close') {
-            retryLogger.warn(retryCount, res.downloadLink,
-              'manually retry on premature close',
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              error.name, error.code, (error as any).event, error.message);
-            retry = retryCount * 200;
-          }
-          // these events might be accidentally unhandled
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if (error && !(error as any).retryLimitExceeded &&
-            (error.name === 'RequestError' || error.name === 'TimeoutError') &&
-            // RequestError: Cannot read property 'request' of undefined
-            // at Object.exports.default (got\dist\source\core\utils\timed-out.js:56:23)
-            // error.code === undefined
-            (error.code === 'ETIMEDOUT' || error.code === undefined)) {
-            retryLogger.warn(retryCount, res.downloadLink,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              `manually retry on ${(error as any).event} timeout`,
-              error.name, error.code, error.message);
-            retry = retryCount * 300;
-          }
-          if (retry > 0) {
-            setTimeout(() => makeRequest(retryCount + 1), retry);
+        request.once('response', async (response: Response) => {
+          response.retryCount = retryCount;
+          if (response.statusCode === 304) {
+            // Drain the response without opening or modifying the cached file.
+            request.once('end', () => resolve(response));
+            request.resume();
             return;
           }
-        }
+          res.meta.headers = response.headers;
+          if (rangeIsSupported === undefined) {
+            if (isBytesAccepted(response.headers['accept-ranges'])) {
+              rangeIsSupported = true;
+            }
+          }
+          if (rangeIsSupported && rangeStart &&
+            (response.statusCode !== 206 ||
+              !isSameRangeStart(rangeStart, response.headers['content-range']))) {
+            errorLogger.warn('Unexpected response for range',
+              rangeStart, response.headers['content-range'], response.statusCode);
+            rangeIsSupported = false;
+            rangeStart = undefined;
+          }
 
-        reject(error);
+          if (response.request.isAborted) {
+            // Cancellation is reported through the request error event.
+            return;
+          }
+          // Download body
+          if (!fileWriteStream) {
+            fileWriteStream = createWriteStream(savePath,
+              rangeIsSupported && rangeStart ?
+                {flags: 'a', start: rangeStart} : {flags: 'w'});
+          }
+
+          const pumping = pipeline(request, fileWriteStream);
+          activePumps.add(pumping);
+          try {
+            await pumping;
+          } catch (e) {
+            // Request errors also arrive on request.once('error'); write errors do not.
+            // Got closes the previous stream when retrying.
+            if (!isRetry && !shouldWaitForRequestError(e)) {
+              reject(e);
+            }
+            return;
+          } finally {
+            activePumps.delete(pumping);
+          }
+
+          resolve(response);
+        });
+
+        const destroyStream = () => {
+          if (fileWriteStream) {
+            if (rangeIsSupported) {
+              if (rangeStart) {
+                rangeStart += fileWriteStream.bytesWritten;
+              } else {
+                rangeStart = fileWriteStream.bytesWritten;
+              }
+            } else {
+              rangeStart = undefined;
+            }
+            fileWriteStream.destroy();
+          } else if (!rangeIsSupported) {
+            rangeStart = undefined;
+          }
+          fileWriteStream = undefined;
+        };
+
+        const onError = (error: RequestError) => {
+          // https://developer.mozilla.org/docs/Web/HTTP/Headers/Range
+          // https://developer.mozilla.org/docs/Web/HTTP/Status/416
+          if (error instanceof HTTPError && error.response.statusCode === 416) {
+            errorLogger.warn('Unexpected response for range',
+              rangeStart, error.response.headers['content-range'],
+              error.response.statusCode);
+            rangeIsSupported = false;
+          }
+          destroyStream();
+
+          const {options} = request;
+
+          if (error instanceof HTTPError && !options.throwHttpErrors) {
+            const {response} = error;
+            resolve(response);
+            return;
+          }
+
+          reject(error);
+        };
+
+        request.once('error', onError);
+
+        request.once('retry', (newRetryCount: number) => {
+          isRetry = true;
+          destroyStream();
+          void Promise.allSettled(activePumps).then(() => {
+            try { makeRequest(newRetryCount); } catch (error) { reject(error); }
+          });
+        });
+
       };
 
-      request.once('error', onError);
-
-      request.once('retry', (newRetryCount: number) => {
-        isRetry = true;
-        destroyStream();
-        makeRequest(newRetryCount);
-      });
-
-    };
-
-    makeRequest(0);
-  });
+      makeRequest(0);
+    });
+  } finally {
+    finished = true;
+    await Promise.allSettled(activePumps);
+  }
 }
 
 export async function optionallySetLastModifiedTime(
-  res: Resource, options: StaticDownloadOptions
+  res: Resource, options: StaticDownloadOptions, stagingPath?: string
 ): Promise<void> {
   // https://github.com/website-local/website-scrap-engine/issues/174
   let mtime: number | void = void 0;
@@ -235,7 +226,7 @@ export async function optionallySetLastModifiedTime(
 
   // void and NaN check
   if (mtime) {
-    const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
+    const savePath = stagingPath ?? safeJoin(res.localRoot, decodeURI(res.savePath));
     try {
       await fs.utimes(savePath, mtime, mtime);
     } catch (e) {
@@ -247,7 +238,8 @@ export async function optionallySetLastModifiedTime(
 export async function downloadStreamingResource(
   res: Resource,
   requestOptions: RequestOptions,
-  options: StaticDownloadOptions
+  options: StaticDownloadOptions,
+  executor?: PipelineExecutor
 ): Promise<Resource | DownloadResource | void> {
   if (res.body) {
     return res as DownloadResource;
@@ -267,12 +259,11 @@ export async function downloadStreamingResource(
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
   }
   const response = await streamingDownloadToFile(
-    res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+    res as (Resource & { downloadStartTimestamp: number }), requestOptions, executor, options);
   if (response?.statusCode === 304) {
     return;
   }
 
-  await optionallySetLastModifiedTime(res, options);
   /// Not needed before
   // res.finishTimestamp = Date.now();
   // res.downloadTime =
@@ -366,11 +357,10 @@ export function downloadStreamingResourceWithHook(
     }
     try {
       const response = await streamingDownloadToFile(
-        res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+        res as (Resource & { downloadStartTimestamp: number }), requestOptions, pipeline, options);
       if (response?.statusCode === 304) {
         return;
       }
-      await optionallySetLastModifiedTime(res, options);
     } catch (e) {
       if (!downloadError) {
         throw e;
