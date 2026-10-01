@@ -1,12 +1,12 @@
 import {parentPort} from 'node:worker_threads';
 
-parentPort.postMessage({
+parentPort.postMessage({version: 1,
   taskId: 1,
   type: 1,
   body: 99
 });
 
-parentPort.postMessage({
+parentPort.postMessage({version: 1,
   taskId: -1,
   type: 0,
   body: {
@@ -16,4 +16,4 @@ parentPort.postMessage({
   }
 });
 
-parentPort.postMessage({type: 'ready'});
+parentPort.postMessage({version: 1, type: 'ready'});

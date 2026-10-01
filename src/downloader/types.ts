@@ -52,6 +52,8 @@ export enum WorkerMessageType {
   Complete
 }
 
+export const WORKER_PROTOCOL_VERSION = 1 as const;
+
 export enum WorkerControlMessageType {
   Ready = 'ready',
   Failed = 'failed',
@@ -60,6 +62,7 @@ export enum WorkerControlMessageType {
 }
 
 export interface WorkerMessage<T = unknown> {
+  version: typeof WORKER_PROTOCOL_VERSION;
   taskId: number;
   type: WorkerMessageType;
   body: T;
@@ -67,6 +70,7 @@ export interface WorkerMessage<T = unknown> {
 }
 
 export interface WorkerControlMessage {
+  version: typeof WORKER_PROTOCOL_VERSION;
   type: WorkerControlMessageType;
   error?: string;
 }

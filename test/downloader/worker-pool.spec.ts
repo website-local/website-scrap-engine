@@ -231,7 +231,7 @@ describe('worker-pool', function () {
       pool.nextTask();
       const owner = pool.workers[0];
       const other = pool.workers[1];
-      const forged = {taskId: 1, type: 1, body: 'wrong worker'};
+      const forged = {version: 1 as const, taskId: 1, type: 1, body: 'wrong worker'};
       pool.complete(other, forged);
       expect(pool.workingTasks.size).toBe(2);
       expect(pool.workers.map(worker => worker.load)).toEqual([1, 1]);
@@ -311,7 +311,7 @@ describe('worker-pool', function () {
       await pool.ready;
       const worker = pool.workers[0];
       const send = (type: number, level: string, content: unknown) =>
-        pool.takeLog(worker, {type, body: {
+        pool.takeLog(worker, {version: 1, type, body: {
           level, content, logType: 'custom.test'
         }} as never);
       for (const level of ['__proto__', 'constructor', 'isTraceEnabled', 'missing']) {
@@ -417,4 +417,39 @@ describe('worker-pool', function () {
     await new Promise(resolve => setTimeout(resolve, 150));
     await expect(pool.submitTask(2)).rejects.toThrow('disposed');
   });
+
+  test.each([undefined, 0, 2, '1'])(
+    'incompatible startup version %s rejects and terminates the worker', async protocolVersion => {
+      const pool = new WorkerPool(1,
+        join(__dirname, 'task-deadline-worker.js'), {protocolVersion});
+      const queued = pool.submitTask(1);
+      const settled = await Promise.allSettled([pool.ready, queued]);
+      expect(settled.map(result => result.status)).toEqual(['rejected', 'rejected']);
+      await expect(pool.ready).rejects.toThrow('protocol version mismatch');
+      await pool.dispose();
+      expect(pool.workers[0].worker.threadId).toBe(-1);
+    });
+
+  test.each(['task', 'log', 'control'])(
+    'incompatible %s version rejects active tasks', async channel => {
+      const pool = new WorkerPool(1,
+        join(__dirname, 'task-deadline-worker.js'), {hang: true});
+      try {
+        await pool.ready;
+        const rejected = expect(pool.submitTask(1)).rejects.toThrow('protocol version mismatch');
+        pool.nextTask();
+        const worker = pool.workers[0];
+        if (channel === 'task') {
+          pool.complete(worker, {version: 2, type: 1, taskId: 1, body: 42} as never);
+        } else if (channel === 'log') {
+          pool.takeLog(worker, {version: 2, type: 0} as never);
+        } else {
+          pool.onControlMessage(worker, {version: 2, type: 'closed'} as never);
+        }
+        await rejected;
+        expect(pool.workingTasks.size).toBe(0);
+      } finally {
+        await pool.dispose();
+      }
+    });
 });

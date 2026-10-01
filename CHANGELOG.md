@@ -17,6 +17,7 @@ Breaking Changes
 * Replace the optional full `ProcessingLifeCycle.generateSavePath` callback with a required `GenerateSavePathFunc[]`. Add `generateSavePath: []` when constructing a lifecycle manually; use `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an existing generator.
 * Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`. Pipeline callers may now receive `void` from `createResource` when a hook discards the resource.
 * Custom workers must use `workerData.workerChannels.taskPort` for tasks/results and `logPort` for logs. `parentPort` now carries control messages. Worker factories must forward both transferred ports.
+* Every worker envelope requires `version: 1` (`WORKER_PROTOCOL_VERSION`). Missing or incompatible versions retire the worker and reject its tasks.
 * Change `WorkerPool.workingTasks` from a record to a `Map`, replace `onMessage` with separate message handlers, and require task/log ports when constructing `WorkerInfoImpl` or implementing `WorkerInfo`.
 * Remove the deprecated `waitForInitBeforeIdle` option and the retry argument from `io.mkdirRetry`. Directory creation now makes one recursive filesystem call.
 * Downloaders now wait for `start()`; it returns a promise. `dispose()` cancels and awaits cleanup by default, with an explicit drain mode. New work is rejected while closing.

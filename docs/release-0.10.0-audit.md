@@ -67,9 +67,17 @@ Build and all 296 tests pass on Node 24.18.0. Lifecycle and downloader smoke
 checks pass on Node 22.13.0. Decoding tests inject Node's documented `messageerror`
 event because actual deserialization failures depend on runtime internals.
 
+Worker envelopes now carry the exported `WORKER_PROTOCOL_VERSION` (1). Control,
+completion, and log version mismatches retire the sending worker; built-in workers
+validate parent task/control versions too. Missing versions reject startup rather
+than silently accepting old custom workers. Build and all 303 tests pass on
+Node 24.18.0, including incompatible startup/result/log/control messages. The
+versioned custom-worker and built-in downloader smoke checks, plus lifecycle
+checks, also pass on Node 22.13.0.
+
 ## Remaining implementation and release gates
 
-- Versioned worker protocol, explicit resource wire contracts, cooperative worker
+- Explicit resource wire contracts, cooperative worker
   cancellation, and remaining cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.

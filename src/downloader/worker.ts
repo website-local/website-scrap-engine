@@ -9,7 +9,7 @@ import type {RawResource, Resource} from '../resource.js';
 import {normalizeResource, prepareResourceForClone} from '../resource.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
-import {WorkerControlMessageType, WorkerMessageType} from './types.js';
+import {WorkerControlMessageType, WorkerMessageType, WORKER_PROTOCOL_VERSION} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 // noinspection ES6PreferShortImport
 import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
@@ -38,6 +38,12 @@ const asyncPipeline = asyncOptions.then(options => {
 });
 
 taskPort.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
+  if (msg?.version !== WORKER_PROTOCOL_VERSION ||
+    !Number.isSafeInteger(msg.taskId) || msg.taskId <= 0) {
+    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
+      type: WorkerControlMessageType.Failed, error: 'Invalid worker task envelope'});
+    return;
+  }
   const collectedResource: RawResource[] = [];
   let error: Error | unknown | void;
   let redirectedUrl: string | undefined;
@@ -91,6 +97,7 @@ taskPort.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
     }
   } finally {
     const message: DownloadWorkerMessage = {
+      version: WORKER_PROTOCOL_VERSION,
       taskId: msg.taskId,
       type: WorkerMessageType.Complete,
       body: collectedResource,
@@ -103,18 +110,24 @@ taskPort.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
 });
 
 parentPort?.addListener('message', msg => {
+  if (msg?.version !== WORKER_PROTOCOL_VERSION) {
+    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
+      type: WorkerControlMessageType.Failed, error: 'Worker protocol version mismatch'});
+    return;
+  }
   if (msg?.type !== WorkerControlMessageType.Close) {
     return;
   }
   taskPort.close();
   logPort.close();
-  parentPort?.postMessage({type: WorkerControlMessageType.Closed});
+  parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});
 });
 
 void asyncPipeline.then(() => {
-  parentPort?.postMessage({type: WorkerControlMessageType.Ready});
+  parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Ready});
 }, error => {
   parentPort?.postMessage({
+    version: WORKER_PROTOCOL_VERSION,
     type: WorkerControlMessageType.Failed,
     error: error instanceof Error ? error.message : String(error)
   });

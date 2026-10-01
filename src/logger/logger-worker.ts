@@ -1,6 +1,6 @@
 import type {CategoryLogger, LogType} from './types.js';
 import type {LogWorkerMessage} from '../downloader/worker-type.js';
-import {WorkerMessageType} from '../downloader/types.js';
+import {WorkerMessageType, WORKER_PROTOCOL_VERSION} from '../downloader/types.js';
 import {getWorkerChannels} from '../downloader/worker-channel.js';
 
 export const logLevels = [
@@ -12,6 +12,7 @@ export function createWorkerCategoryLogger(type: LogType): CategoryLogger {
 
   function send<T>(level: typeof logLevels[number], content: T[]): void {
     const msg: LogWorkerMessage<T> = {
+      version: WORKER_PROTOCOL_VERSION,
       taskId: -1,
       type: WorkerMessageType.Log,
       body: {

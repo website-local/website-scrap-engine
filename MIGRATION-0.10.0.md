@@ -47,7 +47,10 @@ that previously assumed creation always succeeded.
 
 Tasks and results use `workerData.workerChannels.taskPort`; logs use
 `workerData.workerChannels.logPort`. `parentPort` carries control messages.
-The built-in worker is already updated.
+Every task, result, log, and control envelope now requires `version: 1`. Use
+`downloader.types.WORKER_PROTOCOL_VERSION` when constructing messages. A version
+mismatch retires the worker and rejects its assigned tasks. The built-in worker
+is already updated.
 
 `WorkerPool.ready` now waits for every worker's `Ready` control message, after
 configuration and pipeline initialization succeed. Send `Failed` with an `error`
@@ -73,23 +76,25 @@ import {parentPort} from 'node:worker_threads';
 import {downloader} from 'website-scrap-engine';
 
 const {taskPort, logPort} = downloader.getWorkerChannels();
-const {WorkerMessageType, WorkerControlMessageType} = downloader.types;
+const {WorkerMessageType, WorkerControlMessageType, WORKER_PROTOCOL_VERSION} = downloader.types;
 
-taskPort.on('message', ({taskId, body}) => {
-  taskPort.postMessage({taskId, type: WorkerMessageType.Complete, body});
+taskPort.on('message', ({version, taskId, body}) => {
+  if (version !== WORKER_PROTOCOL_VERSION) throw new Error('Worker protocol mismatch');
+  taskPort.postMessage({version: WORKER_PROTOCOL_VERSION, taskId, type: WorkerMessageType.Complete, body});
 });
 
-parentPort.on('message', ({type}) => {
+parentPort.on('message', ({version, type}) => {
+  if (version !== WORKER_PROTOCOL_VERSION) throw new Error('Worker protocol mismatch');
   if (type === WorkerControlMessageType.Close) {
     taskPort.close();
     logPort.close();
-    parentPort.postMessage({type: WorkerControlMessageType.Closed});
+    parentPort.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});
   }
 });
-parentPort.postMessage({type: WorkerControlMessageType.Ready});
+parentPort.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Ready});
 ```
 
-Keep the existing log-message payload, but send it on `logPort`. Close both ports
+Add `version` to existing log envelopes and send them on `logPort`. Close both ports
 before acknowledging shutdown so queued logs can drain. Custom worker factories
 must forward the supplied worker options, including `workerData` and
 `transferList`.

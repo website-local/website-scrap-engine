@@ -9,7 +9,7 @@ import type {
   WorkerControlMessage,
   WorkerMessage
 } from './types.js';
-import {WorkerControlMessageType, WorkerMessageType} from './types.js';
+import {WorkerControlMessageType, WorkerMessageType, WORKER_PROTOCOL_VERSION} from './types.js';
 import type {WorkerChannels} from './worker-channel.js';
 import {logLevels} from '../logger/logger-worker.js';
 
@@ -225,6 +225,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   onControlMessage(info: WorkerInfo, message: WorkerControlMessage): void {
+    if (message && Object.values(WorkerControlMessageType).includes(message.type) &&
+      !this.checkVersion(info, message.version)) return;
     if (message?.type === WorkerControlMessageType.Ready) {
       this._starting.get(info)?.resolve();
       return;
@@ -241,6 +243,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   takeLog(info: WorkerInfo, message: LogWorkerMessage): void {
+    if (message?.type === WorkerMessageType.Log &&
+      !this.checkVersion(info, message.version)) return;
     if (message?.type !== WorkerMessageType.Log || !message.body) {
       errorLogger.warn('Invalid formatted log', info.id);
       return;
@@ -261,6 +265,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   complete(info: WorkerInfo, message: WorkerMessage): void {
+    if (message?.type === WorkerMessageType.Complete &&
+      !this.checkVersion(info, message.version)) return;
     if (message?.type !== WorkerMessageType.Complete ||
       !Number.isSafeInteger(message.taskId) || message.taskId <= 0) {
       errorLogger.warn('Invalid worker task message', info.id);
@@ -283,6 +289,13 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     this.workingTasks.delete(message.taskId);
     this.clearTaskTimer(message.taskId);
     pending.resolve(message as R);
+  }
+
+  private checkVersion(info: WorkerInfo, version: unknown): boolean {
+    if (version === WORKER_PROTOCOL_VERSION) return true;
+    this.rejectWorkerTasks(info, new Error(
+      `worker ${info.id} protocol version mismatch: expected ${WORKER_PROTOCOL_VERSION}`));
+    return false;
   }
 
   submitTask(
@@ -379,6 +392,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         dispatched++;
         try {
           const message = {
+            version: WORKER_PROTOCOL_VERSION,
             taskId: task.taskId,
             body: task.body
           };
@@ -445,7 +459,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         info.taskPort.once('close', onTaskClose);
         info.logPort.once('close', onLogClose);
         info.worker.once('exit', finish);
-        info.worker.postMessage({type: WorkerControlMessageType.Close});
+        info.worker.postMessage({version: WORKER_PROTOCOL_VERSION,
+          type: WorkerControlMessageType.Close});
       });
     });
     await Promise.all(closed);

@@ -37,16 +37,16 @@ try {
 import {parentPort, workerData} from 'node:worker_threads';
 const {taskPort, logPort} = workerData.workerChannels;
 taskPort.on('message', ({taskId, body}) => {
-  taskPort.postMessage({taskId, type: 1, body: body + 1});
+  taskPort.postMessage({version: 1, taskId, type: 1, body: body + 1});
 });
 parentPort.on('message', ({type}) => {
   if (type === 'close') {
     taskPort.close();
     logPort.close();
-    parentPort.postMessage({type: 'closed'});
+    parentPort.postMessage({version: 1, type: 'closed'});
   }
 });
-parentPort.postMessage({type: 'ready'});
+parentPort.postMessage({version: 1, type: 'ready'});
 `);
   const pool = new downloader.WorkerPool(1, workerPath, {});
   try {
