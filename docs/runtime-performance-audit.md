@@ -1,8 +1,9 @@
-# Runtime performance audit (in progress)
+# Runtime performance audit
 
-The release still needs final measurements after remaining runtime work. These
-are measurements of `6041237` against a clean, matching-lock build of tag 0.9.1
-on Node 24.18.0. [Raw evidence](evidence/runtime-baseline.json) includes all samples.
+The final release comparison below measures the completed runtime against
+0.9.1. Targeted allocation and filesystem improvements are measurable, but the
+new readiness/publication guarantees add costs: this release does not deliver a
+general crawl speedup. Earlier checkpoints are retained to explain decisions.
 
 ## Reproducible workloads
 
@@ -25,6 +26,60 @@ are warmed, output directories are fresh, local input is cached, and networking
 uses loopback. This is not a WAN throughput or cold-storage benchmark. Filesystem
 artifacts were on `artifacts`, not the source checkout's mounted drive.
 
+## Final comparison against 0.9.1
+
+Two independent five-sample alternating runs compare clean matching-lock 0.9.1
+with the final runtime (`05b4597`, packed from `fd07670`) on Node 24.18.0.
+Both validate identical output hashes, file/request counts and successful outcomes
+for every sample. The two benchmark runs ran serially after the full consumer
+matrix. The default byte budget is disabled. [Raw samples](evidence/final-runtime-performance.json)
+include CPU, RSS, event-loop and initialization/crawl/disposal measurements.
+
+| Workload | Mode | Run 1 baseline → final ms | Change | Run 2 baseline → final ms | Change |
+| --- | --- | ---: | ---: | ---: | ---: |
+| buffered | Single | 116.1 → 148.9 | +28.3% | 105.3 → 150.6 | +43.1% |
+| buffered | Worker | 457.1 → 490.9 | +7.4% | 449.0 → 507.9 | +13.1% |
+| streamed | Single | 161.9 → 201.9 | +24.7% | 177.8 → 286.9 | +61.4% |
+| streamed | Worker | 229.2 → 576.0 | +151.3% | 208.5 → 591.5 | +183.7% |
+| local | Single | 19.5 → 45.5 | +133.3% | 17.4 → 39.4 | +126.7% |
+| local | Worker | 386.9 → 515.2 | +33.2% | 403.3 → 428.4 | +6.2% |
+| markup | Single | 408.0 → 492.9 | +20.8% | 396.2 → 461.2 | +16.4% |
+| markup | Worker | 667.7 → 786.0 | +17.7% | 614.8 → 744.9 | +21.2% |
+
+All cases exceeding 10% in the first run were repeated; local worker overhead
+varied from 33.2% to 6.2%, while the other substantial regressions persisted.
+Percentages describe short local fixtures, not a universal slowdown factor.
+
+The largest streaming-worker difference is explained by the readiness boundary:
+final median initialization alone takes 367/381 ms, versus about 3 ms in 0.9.1.
+Streaming completes in the parent and does not use the pool for body processing.
+The old lazy pool let that workload finish without waiting for worker imports;
+the new pool validates startup before start resolves. Keep that guarantee so
+initialization failures surface deterministically. Use SingleThreadDownloader for
+stream-only work. Lazy pool construction is a possible future design, but requires
+an explicit alternative readiness/error contract and is not silently restored here.
+
+For 48 local files, a parent filesystem-call probe records the baseline making
+six mkdir calls and none of the instrumented staging/containment calls. The final
+runtime makes 10 mkdir, 55 realpath, 195 lstat, 48 mkdtemp, 48 rename and 48 cleanup
+calls. This establishes concrete added filesystem work; it does not assign all
+elapsed overhead to those calls. Stream publication and markup's 96 outputs also
+use the checked staging path. Outcomes, URI normalization, ownership and worker
+RPC add other work whose individual costs are not isolated by these timings.
+Got/p-queue and runtime changes are combined in the release comparison.
+
+Retain containment checks, parent-owned cleanup, destination reservations and
+per-file staging. The targeted directory/read-copy optimizations below reduce
+avoidable work while preserving those guarantees. Skipping validation, caching
+mutable directory trust, or restoring direct final-path writes would weaken the
+implemented contract. These measurements close the investigation with a documented
+tradeoff, not a claim of overall better throughput. Larger sustained crawls, WAN
+traffic and platform-specific storage need separate performance qualification.
+
+## Earlier release checkpoint
+
+At `6041237`, [raw evidence](evidence/runtime-baseline.json) recorded:
+
 | Workload | Mode | 0.9.1 median total ms | 6041237 median total ms | Change |
 | --- | --- | ---: | ---: | ---: |
 | Buffered HTTP | Single | 136.3 | 153.8 | +12.8% |
@@ -36,12 +91,12 @@ artifacts were on `artifacts`, not the source checkout's mounted drive.
 | HTML/CSS/SVG | Single | 417.1 | 560.3 | +34.3% |
 | HTML/CSS/SVG | Worker | 757.4 | 940.4 | +24.2% |
 
-These regressions are being investigated, not accepted as a completed performance
-gate. Streaming runs perform their writes in the parent: waiting for otherwise
+This checkpoint prompted the directory and bounded-read investigations below.
+Streaming runs perform their writes in the parent: waiting for otherwise
 unused worker readiness adds startup cost (median 476.9 ms in the new worker
 streaming case). Staging, containment checks, outcome/ownership tracking, repeated
-normalization, and publication RPC are additional candidate costs. Follow-up
-measurements must isolate them before claiming an optimization. Samples are short
+normalization, and publication RPC are additional candidate costs. The later measurements below isolate specific changes; the final comparison
+does not attribute all remaining overhead to any single subsystem. Samples are short
 and subject to host load; repeat affected cases when attributing differences.
 
 ## p-queue decision
@@ -67,7 +122,7 @@ in 2,108 ms. Retained heap after warm-up changed by -2,616 bytes; hooks remained
 singletons and snapshots remained plain without `_init` history. This refreshes
 the options-retention regression evidence. It does not establish memory behavior
 for long crawls, resource registries, arbitrary hooks, or worker churn; stress
-and aggregate-buffer accounting remain separate gates.
+and aggregate-buffer accounting are validated separately below.
 
 ## Directory preparation optimization
 
@@ -95,8 +150,7 @@ dependency tree and workloads, produced these median total times:
 All output hashes matched. The strongest measured gain is worker markup; these
 short local workloads do not support a general throughput claim. Host conditions
 differ between runs, so compare paired variants within this table, not absolute
-times against the earlier release-baseline table. Final release comparisons
-remain required.
+times against the earlier release-baseline table. The final release comparison below supersedes this intermediate checkpoint.
 
 A separate parent-side filesystem-call probe for 48 local files measured mkdir
 calls falling from 96 to 13; realpath rose from 48 to 56 and lstat from 192 to 197
@@ -129,7 +183,7 @@ interval, reduced future admissions,
 and completion of all 48 resources after recovery in both modes. It passes on
 Node 24.18, 22.13 and 26.10. The full suite passed 401 tests before the last two
 integration cases; a subsequent build/typecheck and all 25 affected tests pass,
-covering 403 tests across the runs. Final matrix validation will run the full set.
+covering 403 tests across the runs. The final clean matrix passes all 413 tests on all four supported runtimes.
 
 This remains an opt-in heuristic with explicit tuning tradeoffs. Slow downloads
 can reflect large resources rather than congestion, and completed-resource rate
@@ -145,7 +199,7 @@ an 8 MiB budget enabled in the candidate, changes ranged from -11.7% to +10.8%.
 The baseline predates the option and ignores it. The +10.8% case was local reads
 in single-thread mode: accounting switches that path from readFile to chunked
 reads so growth can be checked before retaining further chunks. Its single-chunk
-copy is being investigated separately. These local samples do not justify claiming
+copy was subsequently optimized as described below. These local samples do not justify claiming
 a throughput gain from accounting. Both comparisons validated identical output
 hashes across every case. [Raw evidence](evidence/buffering-and-stress.json) records
 both comparisons and the stress samples below.
