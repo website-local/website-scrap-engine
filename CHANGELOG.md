@@ -25,6 +25,7 @@ Feature
 
 Breaking Changes
 ------------
+* Make log4js an optional peer dependency. File-logging adapter users must install `log4js` explicitly; default installations omit its dependency tree.
 * Raise the Node.js minimum from 18.17.0 to 22.13.0; upgrade Got from 13 to 16 and `p-queue` from 8 to 9. Got options use public snapshots instead of private internals.
 * Require normalized `Resource.uri`, `refUri`, and `replaceUri` instances. Worker snapshots preserve cloneable nested metadata and reject unsupported values.
 * Normalize returned resources between individual lifecycle hooks, so URL changes and cloned resources cannot pass stale URI fields to the next hook.

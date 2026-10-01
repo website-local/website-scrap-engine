@@ -6,6 +6,11 @@ runtime minimum.
 
 ## Dependency installation
 
+`log4js` is now an optional peer instead of an automatically installed optional
+dependency. If you use the file-logging adapter, run `npm install log4js` alongside
+the library. Default console logging requires no additional package. This removes
+the unused logging dependency tree from ordinary installations.
+
 The package no longer has a postinstall script that copies declarations into a
 nested Undici directory. The repository's existing Undici size override now uses
 a TypeScript path mapping to its own declaration shim, which is included with the

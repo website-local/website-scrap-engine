@@ -291,7 +291,9 @@ logs before disposal completes.
 
 The library exposes dedicated logger categories through a pluggable logger
 interface. The default logger writes to `console`; a log4js adapter is available
-for file-based logging.
+for file-based logging. Install its optional peer explicitly with `npm install log4js`
+when using `website-scrap-engine/lib/logger/log4js-adapter.js`. The default logger
+does not install or load log4js.
 
 | Logger | Purpose |
 |---|---|

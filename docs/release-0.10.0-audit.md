@@ -272,3 +272,21 @@ Build and all 376 tests pass on Node 24.18.0; ESLint and the complete source/tes
 TypeScript check pass on Node 22.13.0. npm audit reports zero known advisories
 for the updated development lock and the ordinary consumer lock at audit time.
 This is a registry advisory check, not a guarantee against unknown defects.
+
+## Optional logger dependency simplification
+
+The log4js adapter is opt-in and absent from the default import graph, but an
+optionalDependency still installed its eleven-package tree by default. It is
+now an optional peer, with the same existing package retained for development
+checks. Adapter users explicitly install log4js; the migration guide and README
+explain this breaking installation change. No new package name was introduced.
+
+The clean packed default and omit-optional consumer installs both contain 51
+packages and occupy about 8.67 MiB. Adding the explicit logging peer yields 62
+packages and 9.17 MiB. This saves about 0.51 MiB for ordinary users without any
+consumer overrides. The new packed-consumer harness checks peer absence by
+resolving from the installed package, and verifies actual adapter file output
+when the peer is present. All three variants pass strict declaration checks and
+both downloader runtime modes on Node 22.13.0. Build and all 376 tests pass on
+Node 24.18.0. The tests and source/consumer snapshots remain separate from the
+unrelated local files excluded from packaging.
