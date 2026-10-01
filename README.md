@@ -25,6 +25,9 @@ npm install website-scrap-engine
 
 Requires Node.js >= 22.13.0. Development tooling supports Node.js 22.13+, 24+, or 26+.
 
+For development, `npm test` runs lint, a complete source/test TypeScript check,
+and Jest. Run `npm run check:tests` to check test types independently.
+
 Upgrading from 0.9.1? See [the 0.10.0 migration guide](MIGRATION-0.10.0.md)
 for save-path hooks, custom-worker channels, and other breaking changes.
 

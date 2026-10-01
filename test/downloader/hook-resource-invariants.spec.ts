@@ -52,9 +52,10 @@ describe.each(stages)('%s resource invariants', stage => {
 
   test('rejects malformed hook results before calling the next hook', async () => {
     const lifeCycle = defaultLifeCycle();
-    const next = jest.fn(<T extends Resource>(resource: T) => resource);
+    const next = jest.fn();
     lifeCycle[stage] = [<T extends Resource>(resource: T): T =>
-      ({...resource, refUrl: undefined} as unknown as T), next];
+      ({...resource, refUrl: undefined} as unknown as T),
+    <T extends Resource>(resource: T): T => { next(); return resource; }];
     const options = defaultDownloadOptions({...lifeCycle, localRoot: 'output'});
     const pipeline = new PipelineExecutorImpl(options, options.req, options);
     await expect(invoke(pipeline, stage, makeResource(stage)))

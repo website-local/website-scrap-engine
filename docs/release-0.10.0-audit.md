@@ -171,12 +171,12 @@ version 7. Five warmed compiler-only samples show a 7.251s versus 1.509s median,
 with lower peak process RSS for TypeScript 7. A dual setup adds about 29 MiB of
 compiler files while retaining TypeScript 6; it is not adopted for this release.
 Recorded evidence distinguishes compiler package size from full installation size.
-Test-runner selection remains a separate pending audit.
+The test-runner audit below subsequently retained Jest.
 
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
-- Evidence-led test-runner comparison and final tooling validation.
+- Final tooling validation across the complete Node matrix (runner audit complete).
 - Clean-install graph/size report for development, ordinary consumers, and consumers
   without optional dependencies. Preserve the Undici size rationale and distinguish
   repository overrides from consumer installations.
@@ -216,3 +216,21 @@ The wrapper now creates a Buffer view with the original buffer/offset/length,
 preserving bytes without a copy. All 376 tests and the build pass on Node 24.18.0;
 all fifteen download-resource tests pass on Node 22.13.0. This finding reinforces
 using explicit runtime contract assertions alongside byte-content comparisons.
+
+## Test runner decision and full test type checking
+
+The [runner audit](test-runner-audit.md) compares the full 376-test suite under
+Jest and Vitest, including five warmed samples each, minimum-Node compatibility,
+whole development install footprints, and a smaller native-runner prototype.
+Jest remains selected: its median is 36.730s versus 40.468s for Vitest in the
+single-worker experiment. Vitest removes 254 installed packages and 11.35 MiB,
+but adds a new runner/bundler dependency and requires a separate typecheck.
+Node's native ESM mocking still requires an experimental flag at the minimum.
+
+A standalone TypeScript check exposed mock signature issues beyond runtime
+assertions. `npm run check:tests` now checks the complete source/test project and
+runs as part of `npm test`; the affected mocks use production callback types.
+Build and all 376 tests pass on Node 24.18.0. The complete typecheck and 58 affected
+tests pass on Node 22.13.0. The isolated Vitest conversion also passes its separate
+TypeScript check after the generic mock and Promise fixture fixes. No runner or
+other dependency has been added to the repository.

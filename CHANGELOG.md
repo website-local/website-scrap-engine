@@ -6,6 +6,7 @@
 
 Feature
 ------------
+* **tests: check complete TypeScript suite** — Run a separate source/test type check before Jest; retain Jest after measured Vitest and native-runner audits.
 * **Got 16: preserve Buffer responses** — Wrap binary responses without copying bytes, keeping Buffer-based hooks and incomplete-HTML retry checks working.
 * **redirects: preserve successful reservations** — A concurrent target failure no longer releases another request’s successful alias; aliases follow the same fragment/query normalization as admissions.
 * **resources: enforce optional byte limits** — `maxResourceBytes` limits HTTP bodies after decompression, local sources, and hook-provided bodies; oversized transfers preserve cached destinations and report `ERR_RESOURCE_SIZE_LIMIT` in both downloader modes.

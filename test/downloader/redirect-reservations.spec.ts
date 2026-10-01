@@ -21,16 +21,17 @@ const resource = (name: string) => createResource({type: ResourceType.Binary,
 describe('redirect reservations', () => {
   test.each([false, true])('a successful alias survives a concurrent failure (throw=%s)', async throws => {
     const crawler = new Crawler(false);
-    const aliased = Promise.withResolvers<void>();
+    let resolveAlias!: () => void;
+    const aliased = new Promise<void>(resolve => { resolveAlias = resolve; });
     try {
       await crawler._initOptions;
       crawler.work = async res => {
         if (res.url.endsWith('/source')) {
           crawler.retainAlias('https://example.test/target#fragment');
-          aliased.resolve();
+          resolveAlias();
           return;
         }
-        await aliased.promise;
+        await aliased;
         if (throws) throw new Error('target failed');
         return false;
       };

@@ -1,0 +1,214 @@
+{
+  "node": "24.18.0",
+  "snapshot": "4c5bbd7",
+  "platform": "Linux x64",
+  "samples": {
+    "jest": [
+      {
+        "seconds": 44.955,
+        "maxProcessRssKiB": 848644,
+        "warmup": true
+      },
+      {
+        "seconds": 37.022,
+        "maxProcessRssKiB": 596172,
+        "warmup": false
+      },
+      {
+        "seconds": 37.133,
+        "maxProcessRssKiB": 593532,
+        "warmup": false
+      },
+      {
+        "seconds": 36.413,
+        "maxProcessRssKiB": 587508,
+        "warmup": false
+      },
+      {
+        "seconds": 36.73,
+        "maxProcessRssKiB": 590748,
+        "warmup": false
+      },
+      {
+        "seconds": 36.73,
+        "maxProcessRssKiB": 590536,
+        "warmup": false
+      }
+    ],
+    "vitest": [
+      {
+        "seconds": 40.816,
+        "maxProcessRssKiB": 592276,
+        "warmup": true
+      },
+      {
+        "seconds": 40.6,
+        "maxProcessRssKiB": 597224,
+        "warmup": false
+      },
+      {
+        "seconds": 40.904,
+        "maxProcessRssKiB": 582248,
+        "warmup": false
+      },
+      {
+        "seconds": 40.468,
+        "maxProcessRssKiB": 590392,
+        "warmup": false
+      },
+      {
+        "seconds": 40.163,
+        "maxProcessRssKiB": 590416,
+        "warmup": false
+      },
+      {
+        "seconds": 40.377,
+        "maxProcessRssKiB": 593772,
+        "warmup": false
+      }
+    ],
+    "native": [
+      {
+        "seconds": 0.219,
+        "maxProcessRssKiB": 34140,
+        "warmup": true
+      },
+      {
+        "seconds": 0.271,
+        "maxProcessRssKiB": 33952,
+        "warmup": false
+      },
+      {
+        "seconds": 0.269,
+        "maxProcessRssKiB": 34072,
+        "warmup": false
+      },
+      {
+        "seconds": 0.219,
+        "maxProcessRssKiB": 34132,
+        "warmup": false
+      },
+      {
+        "seconds": 0.22,
+        "maxProcessRssKiB": 34028,
+        "warmup": false
+      },
+      {
+        "seconds": 0.221,
+        "maxProcessRssKiB": 34060,
+        "warmup": false
+      }
+    ]
+  },
+  "commands": {
+    "jest": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--runInBand",
+      "--cacheDirectory=artifacts/wse-010-implementation/runner-audit/jest-cache"
+    ],
+    "vitest": [
+      "node",
+      "node_modules/vitest/vitest.mjs",
+      "run"
+    ],
+    "native": [
+      "node",
+      "--test",
+      "artifacts/wse-010-implementation/runner-audit/native/parse-css.test.mjs"
+    ]
+  },
+  "method": "One warmup, five measured fresh processes per runner; alternating Jest/Vitest order, one test worker, warm filesystem and compile caches; full suite for Jest/Vitest, four compiled CSS tests only for native. No lint time. RSS is maximum single-process RSS from wait4 via Python getrusage(RUSAGE_CHILDREN), not aggregate worker memory.",
+  "summary": {
+    "jest": {
+      "medianSeconds": 36.73,
+      "medianMaxProcessRssKiB": 590748
+    },
+    "vitest": {
+      "medianSeconds": 40.468,
+      "medianMaxProcessRssKiB": 590416
+    },
+    "native": {
+      "medianSeconds": 0.221,
+      "medianMaxProcessRssKiB": 34060
+    }
+  },
+  "developmentInstallFootprints": {
+    "jest": {
+      "regularFiles": 10559,
+      "logicalBytes": 99961793,
+      "allocatedBytes": 115691520,
+      "installedPackages": 444,
+      "duplicatedNames": {
+        "ansi-regex": 7,
+        "ansi-styles": 3,
+        "camelcase": 2,
+        "emoji-regex": 5,
+        "entities": 3,
+        "escape-string-regexp": 2,
+        "eslint-visitor-keys": 4,
+        "fdir": 2,
+        "find-up": 2,
+        "get-stream": 2,
+        "glob": 4,
+        "hookified": 2,
+        "ignore": 2,
+        "is-stream": 2,
+        "locate-path": 2,
+        "lowercase-keys": 2,
+        "lru-cache": 5,
+        "p-limit": 2,
+        "p-locate": 2,
+        "path-scurry": 4,
+        "picomatch": 6,
+        "react-is": 2,
+        "semver": 6,
+        "signal-exit": 2,
+        "string-width": 5,
+        "strip-ansi": 7,
+        "supports-color": 2,
+        "type-fest": 3,
+        "wrap-ansi": 3
+      },
+      "note": "Whole development node_modules including runtime dependencies; omit .vite/.cache generated runner caches and symlink entries. Not a consumer install comparison."
+    },
+    "vitest": {
+      "regularFiles": 4801,
+      "logicalBytes": 88061766,
+      "allocatedBytes": 95879168,
+      "installedPackages": 190,
+      "duplicatedNames": {
+        "entities": 3,
+        "eslint-visitor-keys": 4,
+        "hookified": 2,
+        "ignore": 2,
+        "lowercase-keys": 2,
+        "picomatch": 3
+      },
+      "note": "Whole development node_modules including runtime dependencies; omit .vite/.cache generated runner caches and symlink entries. Not a consumer install comparison."
+    }
+  },
+  "validation": {
+    "jest": {
+      "suites": 32,
+      "tests": 376
+    },
+    "vitest": {
+      "suites": 32,
+      "tests": 376,
+      "minimumNode": "22.13.0"
+    },
+    "native": {
+      "cssTests": 4,
+      "esmMockTests": 1,
+      "minimumNode": "22.13.0",
+      "moduleMockFlag": "--experimental-test-module-mocks"
+    }
+  },
+  "lockSha256": {
+    "jest": "082be1c073c20082df9eddc2edbb827daa6fc15e9970a3e249e68ef9368b7eed",
+    "vitest": "dd578ef93eb226f9d3b6a35f717dcb2cb543c6711b99a802437944952a9d4efa"
+  },
+  "scopeNote": "Runner timings precede the separate full test typecheck added after this audit. Native timings exclude source compilation and cover four CSS tests only. Install footprints are development installs, not consumer measurements."
+}

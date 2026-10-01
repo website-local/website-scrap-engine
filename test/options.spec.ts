@@ -1,5 +1,5 @@
 import {describe, expect, jest, test} from '@jest/globals';
-import type {RequestError, RetryObject} from 'got';
+import type {BeforeRequestHook, RequestError, RetryObject} from 'got';
 // noinspection ES6PreferShortImport
 import {
   calculateFastDelay,
@@ -179,7 +179,7 @@ describe('configuration ownership', () => {
   });
 
   test('repeated option snapshots preserve hooks without accumulating merge history', () => {
-    const hook = jest.fn();
+    const hook = jest.fn<BeforeRequestHook>();
     let options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'out',
       req: {hooks: {beforeRequest: [hook]}, retry: {limit: 0}}});
     for (let index = 0; index < 1000; index++) {

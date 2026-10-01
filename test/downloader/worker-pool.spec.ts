@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {Worker} from 'node:worker_threads';
 import {setLogger} from '../../src/logger/logger.js';
 import {createDefaultLogger} from '../../src/logger/default-logger.js';
+import type {Logger} from '../../src/logger/types.js';
 // noinspection ES6PreferShortImport
 import type {WorkerInfo} from '../../src/downloader/worker-pool.js';
 // noinspection ES6PreferShortImport
@@ -302,7 +303,7 @@ describe('worker-pool', function () {
   });
 
   test('malformed logs and throwing loggers cannot interrupt task delivery', async () => {
-    const info = jest.fn(() => { throw new Error('consumer logger failed'); });
+    const info = jest.fn<Logger['info']>(() => { throw new Error('consumer logger failed'); });
     const isTraceEnabled = jest.fn(() => false);
     setLogger({...createDefaultLogger(), info, isTraceEnabled});
     const pool = new WorkerPool(1,
