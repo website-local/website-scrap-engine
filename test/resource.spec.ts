@@ -8,6 +8,7 @@ import type {
 import {
   checkAbsoluteUri,
   createResource,
+  decodeResourceFromClone,
   generateSavePath,
   normalizeResource,
   prepareResourceForClone,
@@ -782,7 +783,31 @@ describe('normalized resource boundary', () => {
     expect(wire).not.toHaveProperty('uri');
     expect(wire.meta.nested).toEqual(res.meta.nested);
     expect(wire.meta.nested).not.toBe(res.meta.nested);
-    expect(normalizeResource(structuredClone(wire)).uri.toString()).toBe(res.url);
+    expect(decodeResourceFromClone(structuredClone(wire)).uri.toString()).toBe(res.url);
+  });
+
+  test('wire decoding preserves binary view bounds and reconstructs all URI instances', () => {
+    const res = make();
+    res.body = new Uint8Array([99, 0, 255, 88]).subarray(1, 3);
+    res.meta.nested = {date: new Date(0), values: new Map([['a', 1]])};
+    res.shouldBeDiscardedFromDownload = true;
+    const decoded = decodeResourceFromClone(structuredClone(prepareResourceForClone(res)));
+    expect(decoded.body).toEqual(Buffer.from([0, 255]));
+    expect(decoded.uri.clone().toString()).toBe(res.url);
+    expect(decoded.refUri.clone().toString()).toBe(res.refUrl);
+    expect(decoded.replaceUri.clone().toString()).toBe(res.replacePath);
+    expect(decoded.meta.nested).toEqual(res.meta.nested);
+    expect(decoded.shouldBeDiscardedFromDownload).toBe(true);
+  });
+
+  test.each([
+    {uri: {}}, {refUri: {}}, {replaceUri: {}}, {host: 'stale.example'},
+    {savePath: null}, {encoding: 'invalid'}, {body: {type: 'Buffer', data: [1]}},
+    {meta: {doc: {}}}, {meta: null}, {meta: new Date()}, {depth: NaN},
+    {redirectedSavePath: 42}, {downloadTime: Infinity}, {shouldBeDiscardedFromDownload: 'yes'}
+  ])('rejects malformed resource snapshots: %j', fields => {
+    expect(() => decodeResourceFromClone({...prepareResourceForClone(make()), ...fields}))
+      .toThrow(TypeError);
   });
 
   test('rejects unsupported metadata and missing canonical strings', () => {

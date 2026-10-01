@@ -1,6 +1,6 @@
 import type {Transferable} from 'node:worker_threads';
 import type {DownloadOptions} from '../options.js';
-import type {RawResource} from '../resource.js';
+import type {WireResource} from '../resource.js';
 
 export interface DownloaderStats {
   firstPeriodCount: number;
@@ -87,7 +87,7 @@ export interface WorkerClosedMessage extends WorkerControlMessage {
   type: WorkerControlMessageType.Closed;
 }
 
-export interface DownloadWorkerMessage extends WorkerMessage<RawResource[]> {
+export interface DownloadWorkerMessage extends WorkerMessage<WireResource[]> {
   /**
    * Available if processed redirect url differs from url
    */

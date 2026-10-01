@@ -208,14 +208,78 @@ export interface Resource extends RawResource {
   shouldBeDiscardedFromDownload?: boolean;
 }
 
-export function prepareResourceForClone(res: Resource): RawResource {
+/** Resource transport shape. Runtime URI and DOM instances stay in their thread. */
+export interface WireResource extends RawResource {
+  uri?: never;
+  refUri?: never;
+  replaceUri?: never;
+  host?: never;
+  meta: RawResource['meta'] & {doc?: never};
+  shouldBeDiscardedFromDownload?: boolean;
+}
+
+export function prepareResourceForClone(res: Resource): WireResource {
   const {uri, refUri, replaceUri, host, ...raw} = res;
   void uri; void refUri; void replaceUri; void host;
   const {doc, ...meta} = res.meta;
   void doc;
   // Fail explicitly for functions and other non-cloneable metadata.
   // Keep body ownership intact so the caller can transfer its ArrayBuffer.
-  return {...raw, meta: structuredClone(meta)};
+  const wire = {...raw, meta: structuredClone(meta)};
+  assertWireResource(wire);
+  return wire;
+}
+
+/** Validate untrusted message data before introducing runtime URI instances. */
+export function decodeResourceFromClone(value: unknown): Resource {
+  assertWireResource(value);
+  return normalizeResource(value);
+}
+
+function assertWireResource(value: unknown): asserts value is WireResource {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('Worker resource must be an object');
+  }
+  const raw = value as Record<string, unknown>;
+  for (const field of ['uri', 'refUri', 'replaceUri', 'host']) {
+    if (Object.hasOwn(raw, field)) throw new TypeError(`Worker resource cannot contain ${field}`);
+  }
+  for (const field of ['url', 'rawUrl', 'downloadLink', 'refUrl', 'savePath',
+    'refSavePath', 'localRoot', 'replacePath']) {
+    if (typeof raw[field] !== 'string') throw new TypeError(`Worker resource.${field} must be a string`);
+  }
+  for (const field of ['type', 'depth', 'createTimestamp']) {
+    if (typeof raw[field] !== 'number' || !Number.isFinite(raw[field])) {
+      throw new TypeError(`Worker resource.${field} must be a finite number`);
+    }
+  }
+  for (const field of ['downloadStartTimestamp', 'waitTime', 'finishTimestamp', 'downloadTime']) {
+    if (raw[field] !== undefined &&
+      (typeof raw[field] !== 'number' || !Number.isFinite(raw[field]))) {
+      throw new TypeError(`Worker resource.${field} must be a finite number`);
+    }
+  }
+  if (raw.shouldBeDiscardedFromDownload !== undefined &&
+    typeof raw.shouldBeDiscardedFromDownload !== 'boolean') {
+    throw new TypeError('Worker resource.shouldBeDiscardedFromDownload must be a boolean');
+  }
+  if (raw.encoding !== null &&
+    (typeof raw.encoding !== 'string' || !Buffer.isEncoding(raw.encoding))) {
+    throw new TypeError('Worker resource.encoding must be null or a Buffer encoding');
+  }
+  if (!raw.meta || Object.prototype.toString.call(raw.meta) !== '[object Object]' ||
+    Object.hasOwn(raw.meta, 'doc')) {
+    throw new TypeError('Worker resource.meta must be an object without a DOM');
+  }
+  if (raw.body !== undefined && typeof raw.body !== 'string' &&
+    !(raw.body instanceof ArrayBuffer) && !ArrayBuffer.isView(raw.body)) {
+    throw new TypeError('Worker resource.body must be text or binary data');
+  }
+  for (const field of ['redirectedUrl', 'redirectedSavePath']) {
+    if (raw[field] !== undefined && typeof raw[field] !== 'string') {
+      throw new TypeError(`Worker resource.${field} must be a string`);
+    }
+  }
 }
 
 /**

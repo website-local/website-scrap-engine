@@ -75,10 +75,18 @@ Node 24.18.0, including incompatible startup/result/log/control messages. The
 versioned custom-worker and built-in downloader smoke checks, plus lifecycle
 checks, also pass on Node 22.13.0.
 
+Downloader transport now uses `WireResource` in both directions. Encoding removes
+runtime URI/host and DOM fields, retains transferable body ownership, and copies
+cloneable metadata. Decoding validates required strings, finite numeric fields,
+encoding, body representation, optional redirects/discard flags, and the metadata
+container before reconstructing URI instances. Returned child batches are decoded
+before admission. Build and all 318 tests pass on Node 24.18.0; real workers verify
+URI methods and nested metadata, and unit cases cover binary view offsets and
+malformed snapshots. Lifecycle and downloader smoke checks pass on Node 22.13.0.
+
 ## Remaining implementation and release gates
 
-- Explicit resource wire contracts, cooperative worker
-  cancellation, and remaining cleanup/stress verification.
+- Cooperative worker cancellation and remaining cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
 - Evidence-led test-runner comparison; audit TypeScript 7 without forcing an

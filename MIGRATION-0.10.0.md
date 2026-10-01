@@ -99,6 +99,16 @@ before acknowledging shutdown so queued logs can drain. Custom worker factories
 must forward the supplied worker options, including `workerData` and
 `transferList`.
 
+Downloader task bodies and returned children use `resource.WireResource`.
+Use `resource.prepareResourceForClone(res)` before sending and
+`resource.decodeResourceFromClone(body)` after receiving. Snapshots contain the
+canonical URL/path strings and cloneable metadata, without `uri`, `refUri`,
+`replaceUri`, `host`, or `meta.doc`. Decoding validates the resource fields and
+reconstructs URI instances and binary views. A malformed returned child batch is
+rejected before any child from that batch is admitted. Encoding preserves the
+body buffer for transfer and copies nested metadata; do not reuse a transferred
+buffer in the sending thread.
+
 For code that directly uses worker-pool internals:
 
 - `workingTasks` is a `Map`: use `.get(id)`, `.set(id, task)`, `.delete(id)`, and

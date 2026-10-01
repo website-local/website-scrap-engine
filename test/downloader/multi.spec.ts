@@ -65,7 +65,17 @@ describe('MultiThreadDownloader', () => {
         'import {defaultLifeCycle} from ' + JSON.stringify(lifeCycleUrl) + ';',
         'import {ResourceType} from ' + JSON.stringify(resourceUrl) + ';',
         'const lc = defaultLifeCycle();',
+        'lc.download.unshift(res => {',
+        '  res.meta.transport = {nested: [1, {value: "preserved"}]};',
+        '  return res;',
+        '});',
         'lc.processAfterDownload.push((res, submit, options, pipeline) => {',
+        '  if (res.uri.clone().toString() !== res.url ||',
+        '      res.refUri.clone().toString() !== res.refUrl ||',
+        '      res.replaceUri.clone().toString() !== res.replacePath ||',
+        '      res.meta.transport.nested[1].value !== "preserved") {',
+        '    throw new Error("Worker resource transport lost runtime invariants");',
+        '  }',
         '  if (res.type === ResourceType.Html) {',
         '    const body = res.meta.doc("body");',
         '    body.attr("data-worker", isMainThread ? "main" : "worker");',
@@ -99,12 +109,20 @@ describe('MultiThreadDownloader', () => {
       const handleError = jest.spyOn(downloader, 'handleError');
       try {
         await downloader.init;
+        const submit = jest.spyOn(downloader.pool, 'submitTask');
         downloader.start();
         await downloader.onIdle();
 
         expect(handleError).not.toHaveBeenCalled();
         expect(downloader.downloadedCount).toBe(2);
         expect(requests).toHaveLength(2);
+        expect(submit).toHaveBeenCalledTimes(2);
+        for (const [wire] of submit.mock.calls) {
+          for (const field of ['uri', 'refUri', 'replaceUri', 'host']) {
+            expect(wire).not.toHaveProperty(field);
+          }
+          expect(wire.meta).not.toHaveProperty('doc');
+        }
         for (const headers of requests) {
           expect(headers['x-base']).toBe('module');
           expect(headers['x-hook']).toBe('hook');

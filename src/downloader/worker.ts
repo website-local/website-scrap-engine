@@ -5,8 +5,8 @@ import type {
   DownloadResource,
   SubmitResourceFunc
 } from '../life-cycle/types.js';
-import type {RawResource, Resource} from '../resource.js';
-import {normalizeResource, prepareResourceForClone} from '../resource.js';
+import type {WireResource, Resource} from '../resource.js';
+import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
 import {WorkerControlMessageType, WorkerMessageType, WORKER_PROTOCOL_VERSION} from './types.js';
@@ -37,20 +37,20 @@ const asyncPipeline = asyncOptions.then(options => {
   return pipeline;
 });
 
-taskPort.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
+taskPort.addListener('message', async (msg: WorkerTaskMessage<WireResource>) => {
   if (msg?.version !== WORKER_PROTOCOL_VERSION ||
     !Number.isSafeInteger(msg.taskId) || msg.taskId <= 0) {
     parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
       type: WorkerControlMessageType.Failed, error: 'Invalid worker task envelope'});
     return;
   }
-  const collectedResource: RawResource[] = [];
+  const collectedResource: WireResource[] = [];
   let error: Error | unknown | void;
   let redirectedUrl: string | undefined;
   try {
     const pipeline = await asyncPipeline;
     const res = msg.body;
-    const downloadResource: DownloadResource = normalizeResource(res) as DownloadResource;
+    const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
       if (Array.isArray(resources)) {
         for (let i = 0; i < resources.length; i++) {

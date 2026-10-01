@@ -2,7 +2,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import type {WorkerFactory, WorkerPoolOptions} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
-import type {RawResource, Resource} from '../resource.js';
+import type {WireResource, Resource} from '../resource.js';
+import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
 import type {DownloadWorkerMessage} from './types.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import type {DownloadResource} from '../life-cycle/types.js';
@@ -15,7 +16,7 @@ export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
 }
 
 export class MultiThreadDownloader extends AbstractDownloader {
-  private _pool: WorkerPool<RawResource, DownloadWorkerMessage> | undefined;
+  private _pool: WorkerPool<WireResource, DownloadWorkerMessage> | undefined;
   readonly init: Promise<void>;
   workerDispose: Promise<void>[];
 
@@ -39,7 +40,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
       workerCount = 1;
     }
     const workerOptions = options as Partial<MultiThreadDownloaderOptions>;
-    this._pool = new WorkerPool<RawResource, DownloadWorkerMessage>(workerCount,
+    this._pool = new WorkerPool<WireResource, DownloadWorkerMessage>(workerCount,
       // worker script should be compiled to .js
       // Resolve relative to this module's own URL: the compiled output is ESM,
       // where `__dirname` is undefined. `__dirname` only type-checks here
@@ -75,7 +76,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     }
   }
 
-  get pool(): WorkerPool<RawResource, DownloadWorkerMessage> {
+  get pool(): WorkerPool<WireResource, DownloadWorkerMessage> {
     if (this._pool) {
       return this._pool;
     }
@@ -95,17 +96,25 @@ export class MultiThreadDownloader extends AbstractDownloader {
       return false;
     }
     let msg: DownloadWorkerMessage | void;
+    let children: Resource[];
     try {
+      const wire = prepareResourceForClone(r);
       if ((ArrayBuffer.isView(r.body) || Buffer.isBuffer(r.body)) &&
         r.body.byteOffset === 0 &&
         r.body.byteLength === r.body.buffer.byteLength &&
         r.body.buffer instanceof ArrayBuffer) {
         // the array buffer view fully owns the underlying ArrayBuffer
-        r.body = r.body.buffer;
-        msg = await this.pool.submitTask(r, [r.body]);
+        wire.body = r.body.buffer;
+        msg = await this.pool.submitTask(wire, [wire.body]);
       } else {
         // lets clone and send it.
-        msg = await this.pool.submitTask(r);
+        msg = await this.pool.submitTask(wire);
+      }
+      if (!Array.isArray(msg.body)) throw new TypeError('Worker result.body must be a resource array');
+      // Validate the whole batch before admitting any children.
+      children = msg.body.map(decodeResourceFromClone);
+      if (msg.redirectedUrl !== undefined && typeof msg.redirectedUrl !== 'string') {
+        throw new TypeError('Worker result.redirectedUrl must be a string');
       }
     } catch (e) {
       this.handleError(e, 'submitting resource to worker', res);
@@ -119,10 +128,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     if (msg.error) {
       this.handleError(msg.error, 'post-process', res);
     }
-    if (msg.body?.length) {
-      const body: RawResource[] = msg.body;
-      body.forEach(rawRes => this._addProcessedResource(rawRes));
-    }
+    children.forEach(resource => this._addProcessedResource(resource));
     if (msg.redirectedUrl) {
       this.queuedUrl.add(msg.redirectedUrl);
     }
