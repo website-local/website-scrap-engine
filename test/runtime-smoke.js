@@ -31,21 +31,29 @@ const deadline = setTimeout(() => {
 deadline.unref();
 
 try {
-  await io.mkdirRetry(path.join(root, 'custom-workers'), 1);
-  const workerPath = path.join(root, 'custom-workers', 'legacy.mjs');
+  await io.mkdirRetry(path.join(root, 'custom-workers'));
+  const workerPath = path.join(root, 'custom-workers', 'channels.mjs');
   await fs.writeFile(workerPath, `
-import {parentPort} from 'node:worker_threads';
-parentPort.on('message', ({taskId, body}) => {
-  parentPort.postMessage({taskId, type: 1, body: body + 1});
+import {parentPort, workerData} from 'node:worker_threads';
+const {taskPort, logPort} = workerData.workerChannels;
+taskPort.on('message', ({taskId, body}) => {
+  taskPort.postMessage({taskId, type: 1, body: body + 1});
 });
+parentPort.on('message', ({type}) => {
+  if (type === 'close') {
+    taskPort.close();
+    logPort.close();
+    parentPort.postMessage({type: 'closed'});
+  }
+});
+parentPort.postMessage({type: 'ready'});
 `);
   const pool = new downloader.WorkerPool(1, workerPath, {});
   try {
     await pool.ready;
-    assert.equal(typeof pool.onMessage, 'function');
-    assert.equal(pool.workingTasks instanceof Map, false);
+    assert.equal(pool.workingTasks instanceof Map, true);
     assert.equal((await pool.submitTask(41)).body, 42);
-    assert.deepEqual(Object.keys(pool.workingTasks), []);
+    assert.equal(pool.workingTasks.size, 0);
   } finally {
     await pool.dispose();
   }
@@ -64,8 +72,7 @@ import {isMainThread} from 'node:worker_threads';
 import path from 'node:path';
 import {lifeCycle, options, resource} from ${JSON.stringify(entryUrl)};
 const lc = lifeCycle.defaultLifeCycle();
-lc.generateSavePath = (...args) =>
-  path.join('legacy', resource.generateSavePath(...args));
+lc.generateSavePath.push(savePath => path.join('hooks', savePath));
 lc.processAfterDownload.push(res => {
   if (res.type === resource.ResourceType.Html) {
     res.meta.doc('body').attr('data-executor', isMainThread ? 'main' : 'worker');
@@ -78,7 +85,6 @@ export default options.defaultDownloadOptions({
   initialUrl: [${JSON.stringify(url)}],
   concurrency: 1,
   workerCount: 1,
-  waitForInitBeforeIdle: true,
   req: {retry: {limit: 0}, timeout: {request: 2000}},
   createLogger: () => ({
     trace() {}, debug() {}, info() {}, warn() {}, error() {},
@@ -99,12 +105,12 @@ export default options.defaultDownloadOptions({
       assert.equal(crawler.downloadedCount, 2);
       assert.equal(requests.length, 2);
       assert.ok(requests.every(request => request.header === 'compatibility'));
-      const savedRoot = path.join(outputRoot, 'legacy', '127.0.0.1');
+      const savedRoot = path.join(outputRoot, 'hooks', '127.0.0.1');
       const html = await fs.readFile(path.join(savedRoot, 'index.html'), 'utf8');
       assert.ok(html.includes(`data-executor="${mode}"`));
       assert.deepEqual(await fs.readFile(path.join(savedRoot, 'image.bin')), bytes);
       assert.deepEqual(overrides, before);
-      console.log(`${process.version}: ${mode} downloader and legacy paths passed`);
+      console.log(`${process.version}: ${mode} downloader and save-path hooks passed`);
     } finally {
       await crawler.dispose();
     }

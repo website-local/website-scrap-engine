@@ -5,6 +5,7 @@ import type {
   AsyncResult,
   DownloadResource,
   ExistingResourceFunc,
+  GenerateSavePathFunc,
   LinkRedirectFunc,
   ProcessResourceAfterDownloadFunc,
   ProcessResourceBeforeDownloadFunc,
@@ -14,6 +15,7 @@ import {toString} from '../util.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio, CheerioStatic} from '../types.js';
+import type URI from 'urijs';
 
 export {
   LocalUrlMountFileSizeError,
@@ -162,3 +164,21 @@ export const preferNewerRemote = (): ExistingResourceFunc =>
 /** Always overwrite (current default behavior, explicit) */
 export const alwaysOverwrite = (): ExistingResourceFunc =>
   () => 'overwrite';
+
+/**
+ * Wrap a legacy full save-path generator as a generateSavePath hook.
+ *
+ * @deprecated Prefer GenerateSavePathFunc hooks that transform the incoming
+ * savePath.
+ */
+export function wrapLegacyGenerateSavePath(
+  legacyFn: (uri: URI, isHtml?: boolean, keepSearch?: boolean,
+    localSrcRoot?: string) => string
+): GenerateSavePathFunc {
+  return (_savePath, ctx) => legacyFn(
+    ctx.uri,
+    ctx.type === ResourceType.Html,
+    !ctx.options.deduplicateStripSearch,
+    ctx.options.localSrcRoot
+  );
+}

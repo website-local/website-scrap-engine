@@ -58,6 +58,7 @@ function makeLifeCycle(download: DownloadResourceFunc[]): ProcessingLifeCycle {
     init: [],
     linkRedirect: [],
     detectResourceType: [],
+    generateSavePath: [],
     createResource,
     processBeforeDownload: [],
     download,

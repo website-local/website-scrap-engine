@@ -2,26 +2,10 @@ import type {ObjectEncodingOptions} from 'node:fs';
 import fs from 'node:fs';
 import {dirname, join, resolve, sep} from 'node:path';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
-import {error as errorLogger, mkdir as mkdirLogger} from './logger/logger.js';
+import {error as errorLogger} from './logger/logger.js';
 
-export const mkdirRetry = async (dir: string, retry = 3): Promise<void> => {
-  let error: unknown;
-  for (let attempt = 0; attempt < retry; attempt++) {
-    try {
-      await fs.promises.mkdir(dir, {recursive: true});
-      return;
-    } catch (e) {
-      error = e;
-      if (attempt > 0) {
-        mkdirLogger.debug('mkdir', dir, 'fail', attempt, 'times', e);
-      } else {
-        mkdirLogger.trace('mkdir', dir, 'fail', attempt, 'times', e);
-      }
-    }
-  }
-  if (error) {
-    throw error;
-  }
+export const mkdirRetry = async (dir: string): Promise<void> => {
+  await fs.promises.mkdir(dir, {recursive: true});
 };
 
 export const safeJoin = (root: string, relativePath: string): string => {

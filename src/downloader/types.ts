@@ -1,4 +1,4 @@
-import type {MessagePort} from 'node:worker_threads';
+import type {Transferable} from 'node:worker_threads';
 import type {DownloadOptions} from '../options.js';
 import type {RawResource} from '../resource.js';
 
@@ -35,9 +35,7 @@ export interface DownloaderWithMeta {
 }
 
 export interface PendingPromise<T = unknown, E = unknown> {
-  // workaround for typescript 4.1.2
-  resolve: ((value?: T | PromiseLike<T>) => void) |
-    ((value: T | PromiseLike<T>) => void) ;
+  resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: E) => void;
 }
 
@@ -45,8 +43,8 @@ export interface PendingPromiseWithBody<R = unknown, E = unknown, B = unknown>
   extends PendingPromise<R, E> {
   taskId: number;
   body: B;
+  transferList?: Transferable[];
   workerId?: number;
-  transferList?: Array<ArrayBuffer | MessagePort>;
 }
 
 export enum WorkerMessageType {
@@ -54,11 +52,33 @@ export enum WorkerMessageType {
   Complete
 }
 
+export enum WorkerControlMessageType {
+  Ready = 'ready',
+  Close = 'close',
+  Closed = 'closed'
+}
+
 export interface WorkerMessage<T = unknown> {
   taskId: number;
   type: WorkerMessageType;
   body: T;
   error?: Error | unknown | void;
+}
+
+export interface WorkerControlMessage {
+  type: WorkerControlMessageType;
+}
+
+export interface WorkerReadyMessage extends WorkerControlMessage {
+  type: WorkerControlMessageType.Ready;
+}
+
+export interface WorkerCloseMessage extends WorkerControlMessage {
+  type: WorkerControlMessageType.Close;
+}
+
+export interface WorkerClosedMessage extends WorkerControlMessage {
+  type: WorkerControlMessageType.Closed;
 }
 
 export interface DownloadWorkerMessage extends WorkerMessage<RawResource[]> {

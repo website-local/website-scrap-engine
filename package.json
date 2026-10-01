@@ -1,12 +1,12 @@
 {
   "name": "website-scrap-engine",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Configurable website scraper in typescript",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('lib',{force:true,recursive:true})\"",
@@ -23,7 +23,7 @@
     "@types/urijs": "^1.19.26",
     "cheerio": "^1.2.0",
     "got": "^13.0.0",
-    "p-queue": "^8.1.1",
+    "p-queue": "^9.3.3",
     "srcset": "^5.0.3",
     "urijs": "^1.19.11"
   },

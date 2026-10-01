@@ -1,26 +1,34 @@
-import type {MessagePort, WorkerOptions} from 'node:worker_threads';
-import {Worker} from 'node:worker_threads';
+import type {MessagePort, Transferable, WorkerOptions} from 'node:worker_threads';
+import {MessageChannel, Worker} from 'node:worker_threads';
 import type {URL} from 'node:url';
 import {error as errorLogger, getLogger} from '../logger/logger.js';
 import type {LogWorkerMessage} from './worker-type.js';
 import type {
   PendingPromise,
   PendingPromiseWithBody,
+  WorkerControlMessage,
   WorkerMessage
 } from './types.js';
-import {WorkerMessageType} from './types.js';
+import {WorkerControlMessageType, WorkerMessageType} from './types.js';
+import type {WorkerChannels} from './worker-channel.js';
 
 export interface WorkerInfo {
   readonly id: number;
   load: number;
   worker: Worker;
+  taskPort: MessagePort;
+  logPort: MessagePort;
+  closed?: Promise<void>;
+  resolveClosed?: () => void;
 }
 
 export class WorkerInfoImpl implements WorkerInfo {
   readonly id: number;
   load = 0;
 
-  constructor(public worker: Worker) {
+  constructor(public worker: Worker,
+    public taskPort: MessagePort,
+    public logPort: MessagePort) {
     this.id = worker.threadId;
   }
 }
@@ -37,7 +45,7 @@ function defaultWorkerFactory(
 export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly workers: WorkerInfo[] = [];
   readonly pendingTasks: PendingPromiseWithBody<R>[] = [];
-  readonly workingTasks: Record<number, PendingPromise> = {};
+  readonly workingTasks: Map<number, PendingPromise> = new Map();
   readonly ready: Promise<void>;
   taskIdCounter = 0;
   private _isDisposing = false;
@@ -53,10 +61,27 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   ) {
     const ready: Promise<void>[] = [];
     for (let i = 0; i < coreSize; i++) {
+      const taskChannel = new MessageChannel();
+      const logChannel = new MessageChannel();
+      const workerChannels: WorkerChannels = {
+        taskPort: taskChannel.port2,
+        logPort: logChannel.port2
+      };
+      const worker = factory(workerScript, {
+        workerData: {
+          ...workerData,
+          workerChannels
+        },
+        transferList: [taskChannel.port2, logChannel.port2]
+      });
       this.workers[i] = new WorkerInfoImpl(
-        factory(workerScript, {workerData}));
+        worker, taskChannel.port1, logChannel.port1);
       this.workers[i].worker.addListener('message',
-        msg => this.onMessage(this.workers[i], msg));
+        msg => this.onControlMessage(this.workers[i], msg));
+      this.workers[i].taskPort.addListener('message',
+        msg => this.complete(this.workers[i], msg as WorkerMessage));
+      this.workers[i].logPort.addListener('message',
+        msg => this.takeLog(this.workers[i], msg as LogWorkerMessage));
       this.workers[i].worker.addListener('error',
         err => this.workerOnError(this.workers[i], err as Error));
       this.workers[i].worker.addListener('exit',
@@ -89,12 +114,12 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     this._lastWorkerError = err;
     // A worker crash has no Complete message, so reject tasks still assigned to it.
     info.load = 0;
-    for (const [taskId, pending] of Object.entries(this.workingTasks)) {
+    for (const [taskId, pending] of this.workingTasks) {
       const task = pending as PendingPromiseWithBody<R>;
       if (task.workerId !== info.id) {
         continue;
       }
-      delete this.workingTasks[Number(taskId)];
+      this.workingTasks.delete(taskId);
       task.reject(err);
     }
     if (!this.workers.some(worker => !this._unavailableWorkers.has(worker))) {
@@ -106,12 +131,15 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     setImmediate(() => this.nextTask());
   }
 
-  onMessage(info: WorkerInfo, message: WorkerMessage): void {
-    if (message.type === WorkerMessageType.Complete) {
-      this.complete(info, message);
-    } else {
-      this.takeLog(info, message as LogWorkerMessage);
+  onControlMessage(info: WorkerInfo, message: WorkerControlMessage): void {
+    if (message?.type === WorkerControlMessageType.Ready) {
+      return;
     }
+    if (message?.type === WorkerControlMessageType.Closed) {
+      info.resolveClosed?.();
+      return;
+    }
+    errorLogger.warn('Invalid worker control message', info.id);
   }
 
   takeLog(info: WorkerInfo, message: LogWorkerMessage): void {
@@ -139,7 +167,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       return;
     }
     const pending: PendingPromise | undefined =
-      this.workingTasks[message.taskId];
+      this.workingTasks.get(message.taskId);
     if (!pending) {
       errorLogger.warn('Worker completed unknown task', info.id,
         message.taskId);
@@ -147,13 +175,13 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     }
     --info.load;
     setImmediate(() => this.nextTask());
-    delete this.workingTasks[message.taskId];
+    this.workingTasks.delete(message.taskId);
     pending.resolve(message);
   }
 
   submitTask(
     taskBody: T,
-    transferList?: Array<ArrayBuffer | MessagePort>): Promise<R> {
+    transferList?: Transferable[]): Promise<R> {
     if (this._isDisposing) {
       return Promise.reject(new Error('disposed'));
     }
@@ -244,15 +272,20 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         if (!task) break;
         dispatched++;
         try {
-          sorted[i].worker.postMessage({
+          const message = {
             taskId: task.taskId,
             body: task.body
-          }, task.transferList);
+          };
+          if (task.transferList) {
+            sorted[i].taskPort.postMessage(message, task.transferList);
+          } else {
+            sorted[i].taskPort.postMessage(message);
+          }
           task.workerId = sorted[i].id;
-          this.workingTasks[task.taskId] = task as PendingPromise;
+          this.workingTasks.set(task.taskId, task as PendingPromise);
           ++sorted[i].load;
         } catch (e) {
-          delete this.workingTasks[task.taskId];
+          this.workingTasks.delete(task.taskId);
           task.reject(e);
         }
       }
@@ -264,16 +297,54 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   async dispose(): Promise<number[]> {
     this._isDisposing = true;
+    const shouldDrainPorts = this.pendingTasks.length === 0 &&
+      this.workingTasks.size === 0;
+    if (!shouldDrainPorts) {
+      return this.terminateWorkers();
+    }
+    const closed = this.workers.map(info => {
+      const closedPorts = Promise.all([
+        new Promise<void>(resolve => {
+          info.taskPort.once('close', resolve);
+        }),
+        new Promise<void>(resolve => {
+          info.logPort.once('close', resolve);
+        })
+      ]);
+      info.closed = new Promise(resolve => {
+        info.resolveClosed = resolve;
+      });
+      info.worker.postMessage({type: WorkerControlMessageType.Close});
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      return Promise.race([
+        Promise.all([info.closed, closedPorts]),
+        new Promise(resolve => {
+          info.worker.once('exit', resolve);
+        }),
+        new Promise(resolve => {
+          timeout = setTimeout(resolve, 1000);
+        })
+      ]).finally(() => clearTimeout(timeout));
+    });
+    await Promise.all(closed);
+    return this.terminateWorkers();
+  }
+
+  private async terminateWorkers(): Promise<number[]> {
     for (const task of this.pendingTasks) {
       task.reject(new Error('disposed'));
     }
     this.pendingTasks.length = 0;
-    for (const [taskId, pending] of Object.entries(this.workingTasks)) {
+    for (const pending of this.workingTasks.values()) {
       pending.reject(new Error('disposed'));
-      delete this.workingTasks[Number(taskId)];
     }
+    this.workingTasks.clear();
     const numbers = await Promise.all(
       this.workers.map(info => info.worker.terminate()));
+    for (const info of this.workers) {
+      info.taskPort.close();
+      info.logPort.close();
+    }
     return numbers;
   }
 }

@@ -2,7 +2,6 @@ import type {OptionsInit as GotOptions} from 'got';
 import type {Stats} from 'node:fs';
 import type {
   createResource,
-  GenerateSavePathFn,
   RawResource,
   Resource,
   ResourceBody,
@@ -13,6 +12,7 @@ import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio} from '../types.js';
 import type {DownloaderWithMeta} from '../downloader/types.js';
 import type {WorkerInfo} from '../downloader/worker-pool.js';
+import type URI from 'urijs';
 
 export type AsyncResult<T> = T | Promise<T>;
 
@@ -52,7 +52,7 @@ export interface InitLifeCycleFunc {
    * after logger initialization but before addInitialResource.
    *
    * Each time a worker initialized,
-   * before parentPort?.addListener.
+   * before the worker starts processing task port messages.
    *
    * The init life cycle could be async,
    * in main thread the addInitialResource should wait for init completed,
@@ -102,6 +102,69 @@ export interface DetectResourceTypeFunc {
    parent: Resource | null,
    options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<ResourceType | void>;
+}
+
+export interface GenerateSavePathContext {
+  /**
+   * Resolved absolute URI for the resource being created.
+   */
+  readonly uri: URI;
+  /**
+   * Resource type after detectResourceType has run.
+   */
+  readonly type: ResourceType;
+  /**
+   * Depth from the initial resource.
+   */
+  readonly depth: number;
+  /**
+   * URL after linkRedirect but before URL resolution.
+   */
+  readonly rawUrl: string;
+  /**
+   * Parent resource URL used for URL resolution.
+   */
+  readonly refUrl: string;
+  /**
+   * Effective parent save path used for replacePath calculation.
+   */
+  readonly refSavePath: string;
+  /**
+   * Parent resource type, when known.
+   */
+  readonly refType?: ResourceType;
+  /**
+   * True when URL resolution/checking failed and skipReplacePathError allowed
+   * the resource to be created only for link replacement.
+   */
+  readonly replacePathHasError: boolean;
+  /**
+   * Static download options.
+   */
+  readonly options: StaticDownloadOptions;
+}
+
+export interface GenerateSavePathResult {
+  /**
+   * Save path relative to localRoot.
+   */
+  savePath: string;
+  /**
+   * Optional parent save path override for replacePath calculation.
+   */
+  refSavePath?: string;
+}
+
+export interface GenerateSavePathFunc {
+  /**
+   * Generate or transform a resource save path.
+   *
+   * The first function receives the built-in save path. Each later function
+   * receives the previous function's save path. Return undefined to discard
+   * the resource.
+   */
+  (savePath: string,
+   context: GenerateSavePathContext): AsyncResult<string | GenerateSavePathResult | void>;
 }
 
 export interface ProcessResourceBeforeDownloadFunc {
@@ -211,7 +274,7 @@ export interface ProcessingLifeCycle {
   init: InitLifeCycleFunc[];
   linkRedirect: LinkRedirectFunc[];
   detectResourceType: DetectResourceTypeFunc[];
-  generateSavePath?: GenerateSavePathFn | void;
+  generateSavePath: GenerateSavePathFunc[];
   createResource: typeof createResource;
   /**
    * link in parent resource would be replaced after this

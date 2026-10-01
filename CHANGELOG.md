@@ -1,3 +1,28 @@
+0.10.0 (unreleased)
+============
+
+**BREAKING CHANGE** — Requires Node.js 20.19.0 or newer. See
+[MIGRATION-0.10.0.md](MIGRATION-0.10.0.md) before upgrading from 0.9.1.
+
+Feature
+------------
+* **life-cycle: add save-path hooks (#731)** — Run composable `generateSavePath` hooks after type detection and before resource creation. Transform the default path or return `undefined` to discard a resource.
+* **worker: separate task and log channels (#491)** — Use dedicated MessagePorts for tasks/results and logs, with shutdown control on `parentPort` so queued logs can drain.
+
+Breaking Changes
+------------
+* Raise the Node.js minimum from 18.17.0 to 20.19.0 and upgrade `p-queue` from 8 to 9.
+* Replace the optional full `ProcessingLifeCycle.generateSavePath` callback with a required `GenerateSavePathFunc[]`. Add `generateSavePath: []` when constructing a lifecycle manually; use `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an existing generator.
+* Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`. Pipeline callers may now receive `void` from `createResource` when a hook discards the resource.
+* Custom workers must use `workerData.workerChannels.taskPort` for tasks/results and `logPort` for logs. `parentPort` now carries control messages. Worker factories must forward both transferred ports.
+* Change `WorkerPool.workingTasks` from a record to a `Map`, replace `onMessage` with separate message handlers, and require task/log ports when constructing `WorkerInfoImpl` or implementing `WorkerInfo`.
+* Remove the deprecated `waitForInitBeforeIdle` option and the retry argument from `io.mkdirRetry`. Directory creation now makes one recursive filesystem call.
+* Successful empty HTTP responses, including 200, 204, and HEAD, complete without extra retries. Applications needing retries for empty responses must implement that policy explicitly; transport retries still use `req.retry`.
+
+Validation
+------------
+* Cover hook composition and resource discard, split worker transport and log draining, and empty-response behavior. Run runtime smoke checks on every supported CI Node version.
+
 0.9.1
 ============
 

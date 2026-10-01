@@ -23,23 +23,11 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 npm install website-scrap-engine
 ```
 
-The Node.js minimum remains 18.17.0 with the existing Undici exclusion.
-Development tooling supports Node.js 20.19+, 22.13+, or 24+.
+Requires Node.js >= 20.19.0. Development tooling supports Node.js 20.19+,
+22.13+, or 24+.
 
-For Node 18, apply the exclusion in your application's root `package.json`:
-
-```json
-{
-  "overrides": {
-    "undici": "npm:@favware/skip-dependency@1.2.2"
-  }
-}
-```
-
-npm does not inherit overrides from installed dependencies. Cheerio 1.2 still
-declares Node 20.18.1+, so Node 18 installs can emit its engine warning even with
-Undici excluded; strict engine checks require Node 20.18.1+. This dependency
-constraint predates 0.9.1.
+Upgrading from 0.9.1? See [the 0.10.0 migration guide](MIGRATION-0.10.0.md)
+for save-path hooks, custom-worker channels, and other breaking changes.
 
 ## Usage
 
@@ -110,6 +98,7 @@ The library provides adapter functions in `lifeCycle.adapter` for common customi
 | `redirectFilter(fn)` | processAfterDownload | Rewrite or discard redirect URLs |
 | `processHtml(fn)` | processAfterDownload | Transform the parsed HTML (cheerio `$`) |
 | `processHtmlAsync(fn)` | processAfterDownload | Async version of `processHtml` |
+| `wrapLegacyGenerateSavePath(fn)` | generateSavePath | Adapt an old full save-path generator to the hook array |
 
 ```ts
 import {lifeCycle} from 'website-scrap-engine';
@@ -155,37 +144,32 @@ that aliasing is undefined behavior and is not checked.
 
 ### Custom Save Paths
 
-Assign the optional `lifeCycle.generateSavePath` callback to customize the full
-save path. It receives the resolved URI, HTML flag, query-preservation flag, and
-local source root. The callback also generates the parent path when the caller
-does not supply `refSavePath`.
+Use `lifeCycle.generateSavePath` to transform where resources are written before
+the `Resource` object is created. The first hook receives the built-in save path;
+each later hook receives the previous hook's output. Return `undefined` to
+discard the resource before download.
 
 ```ts
-import {resource} from 'website-scrap-engine';
-
 const lc = lifeCycle.defaultLifeCycle();
 
-lc.generateSavePath = (uri, isHtml, keepSearch, localSrcRoot) => {
-  const savePath = resource.generateSavePath(
-    uri, isHtml, keepSearch, localSrcRoot);
-  return uri.hostname() === 'cdn.example.com' ?
-    savePath.replace('cdn.example.com', 'assets') : savePath;
-};
+lc.generateSavePath.push((savePath, ctx) => {
+  if (ctx.uri.hostname() === 'cdn.example.com') {
+    return savePath.replace('cdn.example.com', 'assets');
+  }
+  return savePath;
+});
 ```
-
-Direct callers can pass the same callback as `createResource({generateSavePathFn,
-...})`. Use `dropResource()` or a `processBeforeDownload` hook to discard a resource.
 
 Save paths must resolve inside `localRoot` when resources are written. The
 built-in HTTP(S) mapping sanitizes literal and encoded `.` / `..` path segments;
-custom callbacks should return relative paths within the configured output
-directory.
+custom `generateSavePath` hooks should return relative paths that stay within
+the configured output directory.
 
 ## Architecture
 
 ### Pipeline Life Cycle
 
-Most pipeline stages are arrays of hooks executed in order. `createResource` is a single callback that returns a `Resource`. Returning `void`/`undefined` from a resource-processing hook stops processing that resource for the stage.
+Resources are processed through a sequential pipeline of hook arrays. Each stage is an array of functions executed in order. Returning `void`/`undefined` from any function discards the resource from that stage onward.
 
 ```
 init (once per downloader/worker startup)
@@ -200,19 +184,22 @@ URL
 2. detectResourceType -> determine type (Html, Css, Binary, Svg, SiteMap, etc.)
  |
  v
-3. createResource ----> build a Resource using the optional save-path callback
+3. generateSavePath --> compute/transform the local save path
  |
  v
-4. processBeforeDownload -> filter/modify resources; link replacement in parent happens after this
+4. createResource ----> build a Resource with relative replacement paths
  |
  v
-5. download ----------> fetch resource via HTTP (loop ends early once body is set)
+5. processBeforeDownload -> filter/modify resources; link replacement in parent happens after this
  |
  v
-6. processAfterDownload -> parse content, discover child resources via submit() callback
+6. download ----------> fetch resource via HTTP (loop ends early once body is set)
  |
  v
-7. saveToDisk --------> write to local filesystem
+7. processAfterDownload -> parse content, discover child resources via submit() callback
+ |
+ v
+8. saveToDisk --------> write to local filesystem
  |
  v
 dispose (once per downloader shutdown / worker exit)
@@ -226,6 +213,7 @@ Consumers extend the pipeline by prepending or appending functions to any stage 
 |---|---|
 | linkRedirect | `skipLinks` - filters out non-HTTP URI schemes (mailto, javascript, data, etc.) |
 | detectResourceType | `detectResourceType` - infers type from element/context |
+| generateSavePath | none by default - an empty array uses the built-in URL-to-path mapping |
 | createResource | `createResource` - builds Resource with resolved URL, save path, and replace path |
 | download | `downloadResource`, `downloadStreamingResource`, `readOrCopyLocalResource` |
 | processAfterDownload | `processRedirectedUrl`, `processHtml`, `processHtmlMetaRefresh`, `processSvg`, `processCss`, `processSiteMap` |
@@ -263,7 +251,7 @@ Override via `options.sources` with an array of `{selector, attr, type}` definit
 ### Key Abstractions
 
 - **`Resource`** (`src/resource.ts`) - Central data object carrying URL, save path, replacement path, body, and metadata. `RawResource` is the serializable subset used for cross-thread communication.
-- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution. `createAndProcessResource()` runs stages 1-4 in one call.
+- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution. `createAndProcessResource()` runs stages 1-5 in one call.
 - **`AbstractDownloader`** (`src/downloader/main.ts`) - Base class with PQueue-based concurrency, URL deduplication, and the download loop.
 - **`SingleThreadDownloader`** (`src/downloader/single.ts`) - Runs all pipeline stages in the main thread.
 - **`MultiThreadDownloader`** (`src/downloader/multi.ts`) - Downloads in main thread, sends to worker pool for post-processing.
@@ -274,24 +262,27 @@ Use multi-thread processing when post-download work (HTML/CSS parsing, link disc
 
 **Main thread:**
 - Runs the download queue with PQueue concurrency control
-- Executes stages 1-5 (linkRedirect through download)
+- Executes stages 1-6 (linkRedirect through download)
 - Transfers downloaded resources to worker threads
 - Receives discovered child resources back and enqueues non-duplicates
 
 **Worker threads:**
 - Receive downloaded resources from the main thread
-- Execute stages 6-7 (processAfterDownload + saveToDisk)
+- Execute stages 7-8 (processAfterDownload + saveToDisk)
 - Parse HTML/CSS/SVG, discover child resources
-- Run stages 1-4 on discovered children to prepare them
+- Run stages 1-5 on discovered children to prepare them
 - Send prepared child resources back to the main thread as `RawResource[]`
 
 Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses a 2-pass water-fill algorithm to balance tasks across workers by load.
 
-Custom workers receive tasks on `parentPort` and send completion and log messages
-on the same port. Completion messages use `WorkerMessageType.Complete`; log
-messages use `WorkerMessageType.Log`. `WorkerPool.onMessage()` dispatches them,
-and `workingTasks` remains a record indexed by task ID. Custom worker factories
-continue to receive `workerData` without requiring transferred message ports.
+Custom worker implementations should use `workerData.workerChannels.taskPort`
+for task/result messages and `workerData.workerChannels.logPort` for worker
+logs. The default `parentPort` is reserved for lightweight worker control
+messages.
+
+On close, custom workers should close both transferred ports and send a
+`{type: 'closed'}` control message on `parentPort` so the pool can drain queued
+logs before disposal completes.
 
 ## Logging
 

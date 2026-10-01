@@ -1,0 +1,96 @@
+# Upgrading from 0.9.1 to 0.10.0
+
+Version 0.10.0 requires Node.js 20.19.0 or newer and changes the save-path and
+custom-worker APIs. The Node 24 publishing environment is separate from this
+runtime minimum.
+
+## Save-path hooks
+
+`ProcessingLifeCycle.generateSavePath` is now an array of hooks. Each receives
+the current path and a context object. Hooks may be asynchronous; return a path
+to continue, or `undefined` to discard the resource before creation.
+
+```ts
+import {lifeCycle} from 'website-scrap-engine';
+
+const lc = lifeCycle.defaultLifeCycle();
+lc.generateSavePath.push((savePath, ctx) => {
+  if (ctx.uri.hostname() === 'cdn.example.com') {
+    return savePath.replace('cdn.example.com', 'assets');
+  }
+  return savePath;
+});
+```
+
+When constructing a lifecycle manually, add `generateSavePath: []`. To adapt a
+previous full-generator callback, use:
+
+```ts
+lc.generateSavePath.push(
+  lifeCycle.adapter.wrapLegacyGenerateSavePath(oldGenerator)
+);
+```
+
+The adapter ignores the incoming path and calls the old generator. Prefer a
+transform hook when combining several path customizations.
+
+The `resource.GenerateSavePathFn` type and
+`CreateResourceArgument.generateSavePathFn` property are removed. Use
+`lifeCycle.types.GenerateSavePathFunc` for hooks. For direct `resource.createResource`
+calls, calculate a path yourself and pass `savePath`.
+
+`PipelineExecutor.createResource` can now return `void`; await its result and
+check it before accessing the resource. This applies to custom pipeline code
+that previously assumed creation always succeeded.
+
+## Custom workers
+
+Tasks and results use `workerData.workerChannels.taskPort`; logs use
+`workerData.workerChannels.logPort`. `parentPort` carries control messages.
+The built-in worker is already updated. A minimal custom worker looks like:
+
+```js
+import {parentPort} from 'node:worker_threads';
+import {downloader} from 'website-scrap-engine';
+
+const {taskPort, logPort} = downloader.getWorkerChannels();
+const {WorkerMessageType, WorkerControlMessageType} = downloader.types;
+
+taskPort.on('message', ({taskId, body}) => {
+  taskPort.postMessage({taskId, type: WorkerMessageType.Complete, body});
+});
+
+parentPort.on('message', ({type}) => {
+  if (type === WorkerControlMessageType.Close) {
+    taskPort.close();
+    logPort.close();
+    parentPort.postMessage({type: WorkerControlMessageType.Closed});
+  }
+});
+parentPort.postMessage({type: WorkerControlMessageType.Ready});
+```
+
+Keep the existing log-message payload, but send it on `logPort`. Close both ports
+before acknowledging shutdown so queued logs can drain. Custom worker factories
+must forward the supplied worker options, including `workerData` and
+`transferList`.
+
+For code that directly uses worker-pool internals:
+
+- `workingTasks` is a `Map`: use `.get(id)`, `.set(id, task)`, `.delete(id)`, and
+  `.size` instead of record indexing and `Object.keys`.
+- `onMessage` is replaced by `onControlMessage`, `complete`, and `takeLog` for
+  the corresponding channels.
+- `WorkerInfo` requires `taskPort` and `logPort`; `WorkerInfoImpl` takes
+  `(worker, taskPort, logPort)`.
+
+## Other changes
+
+- Remove `waitForInitBeforeIdle` from options. It was deprecated and unused.
+- Call `io.mkdirRetry(dir)` without a retry argument. It now makes one recursive
+  filesystem call; implement an explicit retry policy if your application needs it.
+- Successful empty responses, including HTTP 200, 204, and HEAD, no longer
+  trigger additional requests. Configure `req.retry` for transport failures;
+  an application-level empty-content retry policy must be implemented separately.
+- `p-queue` is upgraded to version 9. Code accessing the exposed queue directly
+  should check its version 9 APIs and Node requirement.

@@ -9,16 +9,18 @@ import type {RawResource, Resource} from '../resource.js';
 import {normalizeResource, prepareResourceForClone} from '../resource.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
-import {WorkerMessageType} from './types.js';
+import {WorkerControlMessageType, WorkerMessageType} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 // noinspection ES6PreferShortImport
 import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
 import type {WorkerTaskMessage} from './worker-type.js';
+import {getWorkerChannels} from './worker-channel.js';
 
 const {pathToOptions, overrideOptions}: {
   pathToOptions: string,
   overrideOptions?: Partial<StaticDownloadOptions>
 } = workerData;
+const {taskPort, logPort} = getWorkerChannels();
 
 const asyncOptions: Promise<DownloadOptions> = importDefaultFromPath(pathToOptions);
 
@@ -35,7 +37,7 @@ const asyncPipeline = asyncOptions.then(options => {
   return pipeline;
 });
 
-parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
+taskPort.addListener('message', async (msg: WorkerTaskMessage<RawResource>) => {
   const collectedResource: RawResource[] = [];
   let error: Error | unknown | void;
   let redirectedUrl: string | undefined;
@@ -95,7 +97,18 @@ parentPort?.addListener('message', async (msg: WorkerTaskMessage<RawResource>) =
       error,
       redirectedUrl
     };
-    parentPort?.postMessage(message);
+    taskPort.postMessage(message);
   }
 
 });
+
+parentPort?.addListener('message', msg => {
+  if (msg?.type !== WorkerControlMessageType.Close) {
+    return;
+  }
+  taskPort.close();
+  logPort.close();
+  parentPort?.postMessage({type: WorkerControlMessageType.Closed});
+});
+
+parentPort?.postMessage({type: WorkerControlMessageType.Ready});
