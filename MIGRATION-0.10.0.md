@@ -165,6 +165,13 @@ concurrently replacing directories between filesystem operations.
 
 ## Request options and normalized resources
 
+Before-download, download, after-download, and save hook chains normalize every
+returned resource before invoking the next hook. Canonical `url`, `refUrl`, and
+`replacePath` strings determine the corresponding URI instances; changing those
+strings in a hook updates the URI fields at the next hook boundary. Returning a
+structured clone is supported. Invalid canonical fields reject the stage before
+subsequent hooks run.
+
 Got is upgraded from 13 to 16. HTTP/2 agents, DNS caching, and cross-origin
 credential handling follow Got 16's contracts. Option merging uses public plain
 snapshots instead of `_internals`; a request URL remains a separate argument.

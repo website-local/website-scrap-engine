@@ -301,6 +301,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         === undefined) {
         return undefined;
       }
+      normalizeResource(processedResource);
     }
     this.signal?.throwIfAborted();
     throwIfCancelled();
@@ -387,6 +388,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         === undefined) {
         return undefined;
       }
+      normalizeResource(downloadedResource);
     }
     this.signal?.throwIfAborted();
     throwIfCancelled();
@@ -413,6 +415,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         // already downloaded
         return undefined;
       }
+      normalizeResource(downloadedResource);
     }
     // not downloaded
     this.signal?.throwIfAborted();
@@ -423,6 +426,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   async shouldSaveResource(res: Resource): Promise<boolean> {
     this.signal?.throwIfAborted();
     throwIfCancelled();
+    normalizeResource(res);
     if (this.lifeCycle.existingResource) {
       const existing = await this._checkExistingResource(res, 'saveToDisk');
       if (existing?.action === 'skip' || existing?.action === 'skipSave') {

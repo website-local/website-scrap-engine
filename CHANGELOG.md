@@ -19,6 +19,7 @@ Breaking Changes
 ------------
 * Raise the Node.js minimum from 18.17.0 to 22.13.0; upgrade Got from 13 to 16 and `p-queue` from 8 to 9. Got options use public snapshots instead of private internals.
 * Require normalized `Resource.uri`, `refUri`, and `replaceUri` instances. Worker snapshots preserve cloneable nested metadata and reject unsupported values.
+* Normalize returned resources between individual lifecycle hooks, so URL changes and cloned resources cannot pass stale URI fields to the next hook.
 * Downloader workers exchange validated `WireResource` snapshots in both directions. Custom workers must omit URI/DOM instances and return a resource array; malformed child batches are rejected before admission.
 * Replace the optional full `ProcessingLifeCycle.generateSavePath` callback with a required `GenerateSavePathFunc[]`. Add `generateSavePath: []` when constructing a lifecycle manually; use `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an existing generator.
 * Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`. Pipeline callers may now receive `void` from `createResource` when a hook discards the resource.

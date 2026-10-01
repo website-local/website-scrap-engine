@@ -136,6 +136,13 @@ including truncation, cancellation, timeout, skipSave, 304, range resume, ignore
 ranges, and interrupted retries. Registry/outcomes and parent-owned cleanup
 for forcibly terminated writers remain release gates.
 
+Resource normalization now runs between individual before-download,
+after-download, and save hooks, matching the download chain. Save-policy checks
+also normalize their input. Twelve regressions cover every chain with URL mutation,
+structured-cloned resources, and invalid canonical fields that must reject before
+the next hook. Build and all 356 tests pass on Node 24.18.0; all twelve regressions
+also pass on Node 22.13.0.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
