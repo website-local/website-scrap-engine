@@ -47,7 +47,7 @@ describe.each(['text', 'buffer'] as const)('empty %s responses', responseType =>
     {method: 'GET', statusCode: 200},
     {method: 'GET', statusCode: 204},
     {method: 'HEAD', statusCode: 200}
-  ] as const)('$method $statusCode completes in one request', async ({
+  ] as const)('$method $statusCode retains the 25-request retry policy', async ({
     method, statusCode
   }) => {
     let requests = 0;
@@ -66,7 +66,7 @@ describe.each(['text', 'buffer'] as const)('empty %s responses', responseType =>
 
     expect(result?.statusCode).toBe(statusCode);
     expect(result?.body).toEqual(responseType === 'buffer' ? Buffer.alloc(0) : '');
-    expect(requests).toBe(1);
+    expect(requests).toBe(25);
   });
 });
 
@@ -130,7 +130,7 @@ describe.each([
   {name: 'HTML', type: ResourceType.Html},
   {name: 'binary', type: ResourceType.Binary}
 ])('empty $name resources', ({type}) => {
-  test.each([200, 204])('accepts status %i without another download', async status => {
+  test.each([200, 204])('retains existing retry behavior for status %i', async status => {
     let requests = 0;
     const url = await listen((_request, response) => {
       requests++;
@@ -150,7 +150,7 @@ describe.each([
     const downloaded = await pipeline.download(resource);
 
     expect(downloaded?.body).toEqual(Buffer.alloc(0));
-    expect(requests).toBe(1);
+    expect(requests).toBe(type === ResourceType.Html ? 50 : 25);
     if (!downloaded) throw new Error('Download was discarded');
     if (type === ResourceType.Binary) {
       const processed = await pipeline.processAfterDownload(downloaded, () => {});

@@ -1,7 +1,6 @@
 import path from 'node:path';
 import {promises as fs} from 'node:fs';
 import type {Stats} from 'node:fs';
-import URI from 'urijs';
 import type {StaticDownloadOptions} from '../options.js';
 import type {
   CreateResourceArgument,
@@ -9,21 +8,11 @@ import type {
   Resource,
   ResourceEncoding
 } from '../resource.js';
-import {
-  checkAbsoluteUri,
-  FILE_PROTOCOL_PREFIX,
-  generateSavePath as builtinGenerateSavePath,
-  resolveFileUrl,
-  ResourceType
-} from '../resource.js';
+import {ResourceType} from '../resource.js';
 import type {
-  AsyncResult,
   DownloadResource,
   ExistingResourceAction,
   ExistingResourceStage,
-  GenerateSavePathContext,
-  GenerateSavePathFunc,
-  GenerateSavePathResult,
   InitSubmitFunc,
   ProcessingLifeCycle,
   RequestOptions,
@@ -35,9 +24,6 @@ import type {PipelineExecutor} from '../life-cycle/pipeline-executor.js';
 import type {Cheerio} from '../types.js';
 import type {DownloaderWithMeta} from './types.js';
 import type {WorkerInfo} from './worker-pool.js';
-
-type Mutable<T> = {-readonly [P in keyof T]: T[P]};
-type SavePathState = {savePath: string; refSavePath: string};
 
 /**
  * Pipeline executor
@@ -126,147 +112,26 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     encoding?: ResourceEncoding,
     refSavePath?: string,
     refType?: ResourceType
-  ): AsyncResult<Resource | void> {
-    const resolved = this._resolveUri(url, refUrl, type);
-    const savePathResult = this.generateSavePath(
-      resolved.uri, type, depth, url, refUrl, resolved.keepSearch,
-      resolved.replacePathHasError, refSavePath, refType);
-    if (this._isPromiseLike(savePathResult)) {
-      return savePathResult.then(result => this._createResourceWithSavePath(
-        result, type, depth, resolved.url, url, refUrl, localRoot, encoding,
-        resolved.keepSearch, resolved.replacePathHasError));
-    }
-    return this._createResourceWithSavePath(
-      savePathResult, type, depth, resolved.url, url, refUrl, localRoot,
-      encoding, resolved.keepSearch, resolved.replacePathHasError);
-  }
-
-  private _createResourceWithSavePath(
-    savePathResult: SavePathState | void,
-    type: ResourceType,
-    depth: number,
-    resolvedUrl: string,
-    rawUrl: string,
-    refUrl: string,
-    localRoot: string | undefined,
-    encoding: ResourceEncoding | undefined,
-    keepSearch: boolean,
-    replacePathHasError: boolean
-  ): Resource | void {
-    if (!savePathResult) {
-      return undefined;
-    }
+  ): Resource {
     const resourceEncoding = encoding === undefined ?
       this.options.encoding[type] : encoding;
     const arg: CreateResourceArgument = {
       type,
       depth,
-      url: resolvedUrl,
-      rawUrl,
+      url,
       refUrl,
-      refSavePath: savePathResult.refSavePath,
+      refSavePath,
+      refType,
       localRoot: localRoot ?? this.options.localRoot,
+      localSrcRoot: this.options.localSrcRoot,
       encoding: resourceEncoding === undefined ?
         (type === ResourceType.Binary || type === ResourceType.StreamingBinary ?
           null : 'utf8') : resourceEncoding,
-      keepSearch,
+      keepSearch: !this.options.deduplicateStripSearch,
       skipReplacePathError: this.options.skipReplacePathError,
-      savePath: savePathResult.savePath,
-      replacePathHasError
+      generateSavePathFn: this.lifeCycle.generateSavePath,
     };
     return this.lifeCycle.createResource(arg);
-  }
-
-  generateSavePath(
-    uri: URI,
-    type: ResourceType,
-    depth: number,
-    rawUrl: string,
-    refUrl: string,
-    keepSearch: boolean,
-    replacePathHasError: boolean,
-    refSavePath?: string,
-    refType?: ResourceType
-  ): AsyncResult<SavePathState | void> {
-    const isHtml = type === ResourceType.Html;
-    const localSrcRoot = this.options.localSrcRoot;
-    let savePath = replacePathHasError ? rawUrl : builtinGenerateSavePath(
-      uri, isHtml, keepSearch, localSrcRoot);
-    let resultRefSavePath = refSavePath || builtinGenerateSavePath(
-      URI(refUrl), refType === ResourceType.Html, false, localSrcRoot);
-
-    if (!this.lifeCycle.generateSavePath?.length) {
-      return {savePath, refSavePath: resultRefSavePath};
-    }
-
-    const context: Mutable<GenerateSavePathContext> = {
-      uri,
-      type,
-      depth,
-      rawUrl,
-      refUrl,
-      refSavePath: resultRefSavePath,
-      refType,
-      replacePathHasError,
-      options: this.options
-    };
-
-    const hooks = this.lifeCycle.generateSavePath;
-    for (let index = 0; index < hooks.length; index++) {
-      const fn = hooks[index];
-      const result = fn(savePath, context);
-      if (this._isPromiseLike(result)) {
-        return this._continueGenerateSavePath(
-          result, hooks, index + 1, savePath, resultRefSavePath, context);
-      }
-      if (result === undefined) {
-        return undefined;
-      }
-      if (typeof result === 'string') {
-        savePath = result;
-      } else {
-        savePath = result.savePath;
-        if (result.refSavePath !== undefined) {
-          resultRefSavePath = result.refSavePath;
-          context.refSavePath = resultRefSavePath;
-        }
-      }
-    }
-    return {savePath, refSavePath: resultRefSavePath};
-  }
-
-  private async _continueGenerateSavePath(
-    pendingResult: PromiseLike<string | GenerateSavePathResult | void>,
-    hooks: GenerateSavePathFunc[],
-    index: number,
-    savePath: string,
-    refSavePath: string,
-    context: Mutable<GenerateSavePathContext>
-  ): Promise<SavePathState | void> {
-    let result: string | GenerateSavePathResult | void = await pendingResult;
-    while (true) {
-      if (result === undefined) {
-        return undefined;
-      }
-      if (typeof result === 'string') {
-        savePath = result;
-      } else {
-        savePath = result.savePath;
-        if (result.refSavePath !== undefined) {
-          refSavePath = result.refSavePath;
-          context.refSavePath = refSavePath;
-        }
-      }
-      if (index >= hooks.length) {
-        return {savePath, refSavePath};
-      }
-      result = await hooks[index](savePath, context);
-      index++;
-    }
-  }
-
-  private _isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
-    return !!value && typeof (value as PromiseLike<T>).then === 'function';
   }
 
   async processBeforeDownload(
@@ -438,52 +303,6 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       }),
       stat
     };
-  }
-
-  private _resolveUri(
-    rawUrl: string,
-    refUrl: string,
-    type: ResourceType
-  ): {
-    uri: URI;
-    url: string;
-    keepSearch: boolean;
-    replacePathHasError: boolean;
-  } {
-    let url = rawUrl;
-    const refUri: URI = URI(refUrl);
-    let replacePathHasError = false;
-    let keepSearch = !this.options.deduplicateStripSearch;
-
-    if (url.startsWith(FILE_PROTOCOL_PREFIX) ||
-      refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
-      // File downloadLink and savePath should never include search params.
-      keepSearch = false;
-      url = resolveFileUrl(url, refUrl,
-        this.options.localSrcRoot, this.options.skipReplacePathError);
-      if (!url) {
-        replacePathHasError = true;
-        url = rawUrl;
-      }
-    }
-    if (!replacePathHasError && url.startsWith('//')) {
-      url = refUri.protocol() + ':' + url;
-    } else if (!replacePathHasError && url[0] === '/') {
-      url = refUri.protocol() + '://' + refUri.host() + url;
-    }
-
-    let uri = URI(url);
-    if (!replacePathHasError && uri.is('relative')) {
-      uri = uri.absoluteTo(refUri);
-      url = uri.toString();
-    }
-    if (!replacePathHasError &&
-      checkAbsoluteUri(uri, refUri, this.options.skipReplacePathError,
-        url, refUrl, type)) {
-      replacePathHasError = true;
-    }
-
-    return {uri, url, keepSearch, replacePathHasError};
   }
 
 }

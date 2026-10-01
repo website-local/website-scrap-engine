@@ -251,13 +251,6 @@ export interface CreateResourceArgument {
    */
   url: string;
   /**
-   * {@link RawResource.rawUrl}.
-   *
-   * The pipeline passes this explicitly after resolving {@link .url}. Direct
-   * callers may omit it and use {@link .url} as the raw URL.
-   */
-  rawUrl?: string;
-  /**
    * {@link RawResource.refUrl}
    */
   refUrl: string;
@@ -267,9 +260,6 @@ export interface CreateResourceArgument {
   refSavePath?: string;
   /**
    * The {@link type} of the {@link RawResource} creating this resource.
-   *
-   * Only used when {@link .refSavePath} is omitted by direct createResource
-   * callers. The pipeline computes refSavePath before resource creation.
    */
   refType?: ResourceType;
   /**
@@ -278,10 +268,9 @@ export interface CreateResourceArgument {
   localRoot: string;
 
   /**
-   * Local source path to download from.
-   *
-   * Only used by direct createResource callers. The pipeline resolves file
-   * URLs before resource creation.
+   * Local source path to download from,
+   * if empty or undefined, file:// url would not be accepted
+   * https://github.com/website-local/website-scrap-engine/issues/126
    */
   localSrcRoot?: string;
 
@@ -299,19 +288,12 @@ export interface CreateResourceArgument {
    * true to skip replacePath processing
    * in case of parser error
    * https://github.com/website-local/website-scrap-engine/issues/107
-   *
-   * Only used by direct createResource callers. The pipeline checks this
-   * before resource creation.
    */
   skipReplacePathError?: boolean;
   /**
-   * {@link RawResource.savePath}
+   * Set this to use a custom implementation of {@link generateSavePath}
    */
-  savePath?: string;
-  /**
-   * True if URL resolution failed and skipReplacePathError allowed creation.
-   */
-  replacePathHasError?: boolean;
+  generateSavePathFn?: GenerateSavePathFn | void;
 }
 
 /**
@@ -406,6 +388,8 @@ export function generateSavePath(
   return savePath;
 }
 
+export type GenerateSavePathFn = typeof generateSavePath;
+
 export const urlOfSavePath = (savePath: string): string => {
   if (savePath.includes('\\')) {
     return `file:///${savePath.replace(/\\/g, '/')}`;
@@ -462,7 +446,7 @@ export function checkAbsoluteUri(
   return replacePathHasError;
 }
 
-export const FILE_PROTOCOL_PREFIX = 'file:///';
+const FILE_PROTOCOL_PREFIX = 'file:///';
 
 export function resolveFileUrl(
   url: string,
@@ -522,23 +506,22 @@ export function resolveFileUrl(
  * Create a resource
  * @param type {@link CreateResourceArgument.type}
  * @param depth {@link CreateResourceArgument.depth}
- * @param url {@link CreateResourceArgument.url}
- * @param rawUrl {@link CreateResourceArgument.rawUrl}
+ * @param url {@link CreateResourceArgument.rawUrl}
  * @param refUrl {@link CreateResourceArgument.refUrl}
  * @param refSavePath {@link CreateResourceArgument.refSavePath}
+ * @param refType {@link CreateResourceArgument.refType}
  * @param localRoot {@link CreateResourceArgument.localRoot}
+ * @param localSrcRoot {@link CreateResourceArgument.localSrcRoot}
  * @param encoding {@link CreateResourceArgument.encoding}
  * @param keepSearch {@link CreateResourceArgument.keepSearch}
  * @param skipReplacePathError {@link CreateResourceArgument.skipReplacePathError}
- * @param savePath {@link CreateResourceArgument.savePath}
- * @param replacePathHasError {@link CreateResourceArgument.replacePathHasError}
+ * @param generateSavePathFn {@link CreateResourceArgument.generateSavePathFn}
  * @return the resource
  */
 export function createResource({
   type,
   depth,
   url,
-  rawUrl,
   refUrl,
   refSavePath,
   refType,
@@ -546,49 +529,39 @@ export function createResource({
   localSrcRoot,
   encoding,
   keepSearch,
-  savePath,
   skipReplacePathError,
-  replacePathHasError = false
+  generateSavePathFn
 }: CreateResourceArgument): Resource {
-  rawUrl ??= url;
+  const rawUrl: string = url;
   const refUri: URI = URI(refUrl);
-  if (savePath === undefined) {
-    if (url.startsWith(FILE_PROTOCOL_PREFIX) ||
-      refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
-      // file url should never have search
-      keepSearch = false;
-      url = resolveFileUrl(url, refUrl, localSrcRoot, skipReplacePathError);
-      if (!url) {
-        replacePathHasError = true;
-        url = rawUrl;
-      }
+  let replacePathHasError = false;
+  if (url.startsWith(FILE_PROTOCOL_PREFIX) ||
+    refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
+    // file url should never have search
+    keepSearch = false;
+    url = resolveFileUrl(url, refUrl, localSrcRoot, skipReplacePathError);
+    if (!url) {
+      replacePathHasError = true;
+      url = rawUrl;
     }
-    if (!replacePathHasError && url.startsWith('//')) {
-      // url with the same protocol
-      url = refUri.protocol() + ':' + url;
-    } else if (!replacePathHasError && url[0] === '/') {
-      // absolute path
-      url = refUri.protocol() + '://' + refUri.host() + url;
-    }
+  }
+  if (!replacePathHasError && url.startsWith('//')) {
+    // url with the same protocol
+    url = refUri.protocol() + ':' + url;
+  } else if (!replacePathHasError && url[0] === '/') {
+    // absolute path
+    url = refUri.protocol() + '://' + refUri.host() + url;
   }
   let uri = URI(url);
 
-  if (savePath === undefined) {
-    if (!replacePathHasError && uri.is('relative')) {
-      uri = uri.absoluteTo(refUri);
-      url = uri.toString();
-    }
-    if (!replacePathHasError &&
-      checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type)) {
-      replacePathHasError = true;
-    }
-    savePath = replacePathHasError ? rawUrl : generateSavePath(
-      uri, type === ResourceType.Html, keepSearch, localSrcRoot);
+  if (!replacePathHasError && uri.is('relative')) {
+    uri = uri.absoluteTo(refUri);
+    url = uri.toString();
   }
 
-  if (!refSavePath) {
-    refSavePath = generateSavePath(refUri, refType === ResourceType.Html,
-      false, localSrcRoot);
+  if (!replacePathHasError &&
+    checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type)) {
+    replacePathHasError = true;
   }
 
   let downloadLink: string;
@@ -599,6 +572,15 @@ export function createResource({
     downloadLink = uri.clone().hash('').toString();
   }
 
+  const implGenerateSavePath = generateSavePathFn || generateSavePath;
+
+  // make savePath and replaceUri
+  const savePath = replacePathHasError ? rawUrl : implGenerateSavePath(
+    uri, type === ResourceType.Html, keepSearch, localSrcRoot);
+  if (!refSavePath) {
+    refSavePath = implGenerateSavePath(refUri, refType === ResourceType.Html,
+      false, localSrcRoot);
+  }
   const replaceUri = replacePathHasError ? URI(rawUrl) :
     URI(urlOfSavePath(savePath)).relativeTo(urlOfSavePath(refSavePath));
 

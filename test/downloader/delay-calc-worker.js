@@ -1,12 +1,8 @@
-import {parentPort, workerData} from 'node:worker_threads';
-
-const {taskPort, logPort} = workerData.workerChannels;
+import {parentPort} from 'node:worker_threads';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms | 0));
 
-parentPort.postMessage({type: 'ready'});
-
-taskPort.addListener('message', async (msg) => {
+parentPort.addListener('message', async (msg) => {
   const result = msg.body[0] + msg.body[1];
   await sleep(300);
   const message = {
@@ -15,25 +11,25 @@ taskPort.addListener('message', async (msg) => {
     body: result,
     error: isNaN(result) ? new Error('NaN') : undefined
   };
-  taskPort.postMessage(message);
-  logPort.postMessage({
+  parentPort.postMessage(message);
+  parentPort.postMessage({
     // this simulates an invalid log
     type: 0
   });
-  logPort.postMessage({
+  parentPort.postMessage({
     // this simulates an log with empty body
     type: 0,
     body: {
     }
   });
-  logPort.postMessage({
+  parentPort.postMessage({
     // this simulates a log with logType only
     type: 0,
     body: {
       logType: 'system.complete'
     }
   });
-  logPort.postMessage({
+  parentPort.postMessage({
     // this simulates a log without content
     type: 0,
     body: {
@@ -41,7 +37,7 @@ taskPort.addListener('message', async (msg) => {
       level: 'info'
     }
   });
-  logPort.postMessage({
+  parentPort.postMessage({
     // this simulates a log with content
     type: 0,
     body: {

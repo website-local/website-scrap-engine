@@ -3,6 +3,7 @@ import {createDefaultEsmPreset} from 'ts-jest';
 
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
+  roots: ['<rootDir>/test'],
   ...createDefaultEsmPreset({
     tsconfig: {
       rootDir: '.',

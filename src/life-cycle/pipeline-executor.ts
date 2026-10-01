@@ -60,7 +60,7 @@ export interface PipelineExecutor {
     encoding?: ResourceEncoding,
     refSavePath?: string,
     refType?: ResourceType
-  ): AsyncResult<Resource | void>;
+  ): AsyncResult<Resource>;
 
   processBeforeDownload(
     res: Resource,

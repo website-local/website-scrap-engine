@@ -22,7 +22,6 @@ export const defaultLifeCycle = (): ProcessingLifeCycle => ({
   init: [],
   linkRedirect: [skipLinks],
   detectResourceType: [detectResourceType],
-  generateSavePath: [],
   createResource,
   processBeforeDownload: [],
   download: [

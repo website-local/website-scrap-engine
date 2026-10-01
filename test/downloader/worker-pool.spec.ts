@@ -2,8 +2,6 @@ import {describe, expect, jest, test} from '@jest/globals';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Worker} from 'node:worker_threads';
-import {setLogger} from '../../src/logger/logger.js';
-import {createDefaultLogger} from '../../src/logger/default-logger.js';
 // noinspection ES6PreferShortImport
 import type {WorkerInfo} from '../../src/downloader/worker-pool.js';
 // noinspection ES6PreferShortImport
@@ -110,7 +108,7 @@ describe('worker-pool', function () {
             expect(result.reason.message).toContain(`exited with code ${exitCode}`);
           }
         }
-        expect(pool.workingTasks.size).toBe(0);
+        expect(Object.keys(pool.workingTasks)).toHaveLength(0);
         expect(pool.pendingTasks).toHaveLength(0);
         await expect(pool.submitTask([5, 6]))
           .rejects.toThrow(`exited with code ${exitCode}`);
@@ -135,7 +133,7 @@ describe('worker-pool', function () {
       expect(results[0].status).toBe('rejected');
       expect(results[1]).toMatchObject({status: 'fulfilled', value: {body: 5}});
       expect(results[2]).toMatchObject({status: 'fulfilled', value: {body: 9}});
-      expect(pool.workingTasks.size).toBe(0);
+      expect(Object.keys(pool.workingTasks)).toHaveLength(0);
       expect(pool.pendingTasks).toHaveLength(0);
       expect((await pool.submitTask([6, 7])).body).toBe(13);
     } finally {
@@ -151,75 +149,10 @@ describe('worker-pool', function () {
       await pool.ready;
       await expect(pool.submitTask([1, 2]))
         .rejects.toThrow('exited with code 1');
-      expect(pool.workingTasks.size).toBe(0);
+      expect(Object.keys(pool.workingTasks)).toHaveLength(0);
       expect(pool.workers[0].load).toBe(0);
     } finally {
       await pool.dispose();
-    }
-  }, 10000);
-
-  test('pool rejects task and log payloads on parentPort', async () => {
-    const fn = jest.fn();
-
-    class Pool extends WorkerPool {
-      onControlMessage(info: WorkerInfo, message: never) {
-        super.onControlMessage(info, message);
-        fn(message);
-      }
-    }
-
-    const pool = new Pool(1,
-      join(__dirname, 'invalid-parent-port-worker.js'), {});
-    try {
-      await pool.ready;
-      await new Promise(resolve => setTimeout(resolve, 200));
-      expect(fn).toHaveBeenCalledTimes(2);
-    } finally {
-      await pool.dispose();
-    }
-  }, 10000);
-
-  test('pool ignores malformed task port messages', async () => {
-    const fn = jest.fn();
-
-    class Pool extends WorkerPool {
-      complete(info: WorkerInfo, message: never) {
-        super.complete(info, message);
-        fn(message);
-      }
-    }
-
-    const pool = new Pool(1,
-      join(__dirname, 'invalid-task-port-worker.js'), {});
-    try {
-      await pool.ready;
-      const result = await pool.submitTask([2, 3]);
-      expect(result.body).toBe(5);
-      expect(pool.workers[0].load).toBe(0);
-      expect(fn).toHaveBeenCalledTimes(3);
-    } finally {
-      await pool.dispose();
-    }
-  }, 10000);
-
-  test('pool drains worker logs before dispose resolves', async () => {
-    const logs: unknown[][] = [];
-    setLogger({
-      ...createDefaultLogger(),
-      info(_type, ...contents) {
-        logs.push(contents);
-      }
-    });
-    const pool = new WorkerPool(1,
-      join(__dirname, 'log-after-complete-worker.js'), {});
-    try {
-      await pool.ready;
-      const result = await pool.submitTask([4, 5]);
-      expect(result.body).toBe(9);
-      await pool.dispose();
-      expect(logs.length).toBe(100);
-    } finally {
-      setLogger(createDefaultLogger());
     }
   }, 10000);
 });

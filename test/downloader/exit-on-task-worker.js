@@ -1,9 +1,7 @@
 import {parentPort, workerData} from 'node:worker_threads';
 
-const {taskPort} = workerData.workerChannels;
-
 parentPort.postMessage({type: 'ready'});
 
-taskPort.addListener('message', () => {
+parentPort.addListener('message', () => {
   process.exit(workerData.exitCode ?? 1);
 });

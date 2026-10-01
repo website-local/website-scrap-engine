@@ -1,74 +1,34 @@
-0.11.0
+0.9.1
 ============
 
-**BREAKING CHANGE** — Node.js 20.19.0 or newer is now required.
-
-Performance
-------------
-* **process-css: remove repeated URL scans** — Deduplicate URLs with a `Set` while preserving first-seen order and every match position used for rewriting.
-* **existing-resource: use asynchronous metadata checks** — Reuse one `fs.promises.stat()` result per download/save phase for the hook and timestamp comparison. Check again before saving to observe files changed during the download.
+Compatible update from 0.9.0. The declared Node.js minimum remains 18.17.0.
 
 Fix
 ------------
-* **download: honor configured retries and accept empty responses** — Let Got enforce retry limits, methods, and hooks for transport failures. Successful empty HTTP 200/204 and HEAD responses now complete after one request instead of entering an extra 25-attempt loop; empty HTML also bypasses incomplete-HTML retries.
-* **download: preserve cached files on HTTP 304** — Stop buffered and streaming downloads without retrying or overwriting the existing file when the server reports that it is unchanged.
-* **resource: preserve binary encoding** — Keep explicit `null` request encoding so binary content is saved without text conversion.
-* **worker: preserve configuration across threads** — Pass static overrides to workers and merge options without mutating the caller's request configuration. Resolve the default worker entry point correctly in ESM.
-* **worker-pool: stop dispatching to failed workers** — Reject affected tasks, clear failed-worker load, and let queued work proceed on healthy workers or reject promptly when none remain.
-* **process-html: preserve literal meta-refresh paths** — Keep dollar sequences such as `$$` unchanged when replacing a refresh URL.
-* **download-streaming-resource: allow local-file fallback** — Pass non-HTTP resources through to the local-file download handler.
-* **npm: include public URI declarations** — Ship the existing `@types/urijs` dependency so TypeScript consumers can resolve the URI types used by the resource and lifecycle APIs.
-
-Breaking Changes
-------------
-* The minimum Node.js version increases from `18.17.0` to `20.19.0`, aligning the package with its existing runtime dependencies and the Node 20 development-tooling minimum. CI covers the minimum version and Node 20, 22, and 24.
-* Applications relying on automatic retries of successful empty responses must implement that policy explicitly. Transport retries use `req.retry`.
-
-Test
-------------
-* Add regression coverage for retry limits and hooks, empty and conditional responses, binary persistence, real worker startup and configuration, failed workers, repeated CSS URLs, and local files changed during downloads.
-
-Misc
-------------
-* Update development dependencies, including security fixes in `brace-expansion` 5.0.9 and `js-yaml` 3.15.2.
-
-0.10.0
-============
-
-**BREAKING CHANGE** — see Breaking Changes below.
+* **download: respect transport retry settings** — Honor Got retry limits, methods, and hooks. Preserve the existing retry policy for successful empty responses.
+* **download: preserve cached resources** — Handle HTTP 304 without retrying or overwriting cached files in buffered and streaming downloads.
+* **resource: preserve binary data** — Respect explicit `null` encoding and use binary defaults for binary resources.
+* **resource: keep writes inside localRoot** — Sanitize dot segments in generated HTTP(S) paths, decode local file URLs correctly, and reject output paths outside the configured root.
+* **worker: preserve options and handle failures** — Forward static overrides, avoid mutating caller configuration, resolve the default ESM worker path, and reject tasks assigned to failed workers while continuing on healthy workers.
+* **process-css: preserve unrelated text** — Rewrite parsed URL tokens without replacing matching text in comments or string literals.
+* **process-html: preserve meta-refresh paths** — Keep literal dollar sequences such as `$$` when rewriting refresh URLs.
+* **download-streaming-resource: handle local files and write errors** — Allow local-file fallback and reject destination write failures promptly.
+* **types: include public URI declarations** — Include `@types/urijs` for consumers of the resource and lifecycle APIs.
 
 Feature
 ------------
-* **life-cycle: add local URL mount download adapter** — New `lifeCycle.adapter.localUrlMounts()` / `lifeCycle.localUrlMounts()` helper mounts static local directories over HTTP(S) URL prefixes during the download lifecycle, with priority/longest-prefix matching, HTML index resolution, case handling, and configurable miss behavior.
-* **life-cycle: add generateSavePath stage (#731)** — New `generateSavePath` hook array runs after type detection and before `createResource`, allowing composable save-path transforms and hook-based resource discard before the `Resource` object is assembled.
+* **life-cycle: add local URL mounts** — Optional `lifeCycle.localUrlMounts()` and `lifeCycle.adapter.localUrlMounts()` helpers map HTTP(S) URL prefixes to local directories, with priority, longest-prefix matching, index resolution, case handling, and configurable fallback.
 
-Changed
+Performance
 ------------
-* **runtime: modernize internals (#1397)** — Remove the `mkdirp` and `css-url-parser` runtime dependencies, use built-in recursive `fs.promises.mkdir`, use `node:stream/promises.pipeline`, vendor CSS URL parsing as typed ESM, raise the TypeScript target to `es2022`, and use `Map` for worker-pool in-flight tasks.
-* **worker: split task and log MessagePorts (#491)** — Worker task/result payloads and log payloads now use dedicated `MessageChannel` ports. The default `parentPort` is reserved for lightweight control messages, including graceful worker close so queued logs can drain before disposal finishes.
+* **process-css: deduplicate URL processing** — Use a `Set` instead of repeated scans while preserving URL order and rewrite positions.
+* **existing-resource: check metadata asynchronously** — Reuse a file stat within each download/save phase and recheck before saving to observe files changed during download.
 
-Fix
+Compatibility and maintenance
 ------------
-* **resource: constrain disk writes to localRoot** — Sanitize literal and encoded dot segments in built-in HTTP(S) save paths, decode local `file://` URLs correctly, and reject save, HTML, streaming, and local-file copy paths whose resolved destination escapes `localRoot`.
-* **worker-pool: reject in-flight tasks on worker exit** — Clear crashed worker load and reject tasks assigned to a failed worker instead of leaving callers waiting indefinitely.
-* **process-css: rewrite parsed URL tokens only** — Replace CSS resource references at parser-reported positions so matching text in comments or string literals is preserved while duplicate resource processing is still avoided.
-* **download-streaming-resource: reject destination write errors** — Treat write-side pipeline failures as terminal download failures instead of waiting for a request-side error event that may never arrive.
-
-Breaking Changes
-------------
-* `ProcessingLifeCycle.generateSavePath` changes from a single optional generator to `GenerateSavePathFunc[]`. Consumers building the life cycle from scratch must add `generateSavePath: []`.
-* `CreateResourceArgument.generateSavePathFn` and the exported `GenerateSavePathFn` type are removed. Use `lifeCycle.generateSavePath.push(...)` for new code, or `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` to adapt an old full-generator function.
-* `PipelineExecutor.createResource` can now return `void` when a `generateSavePath` hook discards the resource. Direct callers should check the result before using the returned resource.
-* `StaticDownloadOptions.waitForInitBeforeIdle` is removed. It was deprecated since `0.8.2` and was no longer read by the runtime.
-* Custom worker implementations must read `workerData.workerChannels.taskPort` for tasks/results and `workerData.workerChannels.logPort` for logs. `parentPort` no longer carries task completion or log messages.
-
-New Exports
-------------
-* `lifeCycle.localUrlMounts()` and `lifeCycle.adapter.localUrlMounts()` — optional download lifecycle adapter for static local URL mounts
-* `LocalUrlMount*` types, `LocalUrlMountNotFoundError`, and `LocalUrlMountFileSizeError`
-* `GenerateSavePathContext`, `GenerateSavePathResult`, `GenerateSavePathFunc` — types for the save-path lifecycle stage
-* `lifeCycle.adapter.wrapLegacyGenerateSavePath(fn)` — compatibility wrapper for old full save-path generators
-* `downloader.getWorkerChannels()` and `WorkerChannels` — helper and type for custom worker scripts using the split worker transport
+* Retain the 0.9.0 save-path callback and resource creation contracts, custom-worker messages on `parentPort`, public worker-pool APIs, `mkdirRetry(dir, retry)`, and the deprecated `waitForInitBeforeIdle` option.
+* Retain `p-queue` 8 and the existing Undici exclusion. Node 18 consumers must configure that exclusion in their application; Cheerio's pre-existing Node 20.18.1 engine declaration still applies to strict-engine installs. See README for setup details.
+* Modernize internal filesystem, stream, and CSS parsing helpers and update development dependencies. Development tooling requires Node 20.19+, 22.13+, or 24+; CI separately checks the Node 18 runtime.
 
 0.9.0
 ============

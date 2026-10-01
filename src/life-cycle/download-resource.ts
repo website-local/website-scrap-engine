@@ -42,8 +42,18 @@ export async function getRetry(
   url: string,
   options: OptionsInit
 ): Promise<Response<Buffer | string> | void> {
-  // Got owns retry limits and hooks; successful empty bodies are valid responses.
-  return (await got(url, {...options})) as Response<Buffer | string>;
+  let response: Response<Buffer | string> | undefined;
+  for (let attempt = 0; attempt < 25; attempt++) {
+    // Got owns transport retry limits and hooks. Keep the existing empty-body
+    // retry policy until the next breaking release.
+    response = (await got(url, {...options})) as Response<Buffer | string>;
+    if (response.statusCode === 304 || response.body?.length) {
+      return response;
+    }
+    logger.retry.warn(attempt, url, 'manually retry on empty response or body',
+      response.body);
+  }
+  return response;
 }
 
 export async function requestForResource(
@@ -163,8 +173,7 @@ export async function downloadResource(
     }
     if (options.meta.detectIncompleteHtml &&
       (typeof downloadedResource.body === 'string' ||
-        Buffer.isBuffer(downloadedResource.body)) &&
-      downloadedResource.body.length > 0) {
+        Buffer.isBuffer(downloadedResource.body))) {
       if (!downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
         logger.error.info('Detected incomplete html, try again',
           downloadedResource.downloadLink);

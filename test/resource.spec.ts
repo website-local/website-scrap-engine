@@ -737,18 +737,20 @@ describe('resource', function () {
       .toBe(false);
   });
 
-  test('createResource accepts precomputed savePath', () => {
+  // BREAKING CHANGE v0.6
+  // resource: custom callback for rewriting savePath
+  // https://github.com/website-local/website-scrap-engine/issues/383
+  test('custom callback for rewriting savePath', () => {
     const arg: CreateResourceArgument = {
       type: ResourceType.Html,
       depth: 1,
       // since URI.js v1.19.7, http:///aaa -> http://aaa
-      url: 'http://aaa/',
-      rawUrl: 'http:///aaa',
+      url: 'http:///aaa',
       refUrl: 'https://nodejs.com/api/',
       refSavePath: join('nodejs.com', 'api', 'index.html'),
+      refType: ResourceType.Html,
       localRoot: '/tmp/aaa',
-      savePath: join('nodejs.com', 'aaa.html'),
-      replacePathHasError: false
+      generateSavePathFn: () => join('nodejs.com', 'aaa.html'),
     };
     const resource: Resource = createResource(arg);
     expect(resource.replaceUri?.toString()).toBe('../aaa.html');
