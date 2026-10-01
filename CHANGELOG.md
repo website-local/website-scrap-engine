@@ -10,7 +10,7 @@ Breaking changes
 * Drop Node 18 and 20; upgrade Got 13 to 16 and p-queue 8 to 9.
 * Downloaders wait for an explicit, awaitable `start()`. `dispose()` cancels and awaits cleanup by default; use its explicit drain mode to finish accepted work.
 * Require normalized `Resource.uri`, `refUri`, and `replaceUri`. Worker tasks/results use validated `WireResource` snapshots, preserve cloneable nested metadata, and exclude URI/DOM instances.
-* Custom workers use versioned task/log channels and control messages on `parentPort`, announce readiness, and handle shutdown. Worker factories must forward all supplied transferred ports, including the publication/accounting channel.
+* Custom workers use task/log channels and control messages on `parentPort`, announce readiness, and handle shutdown. Worker factories must forward all supplied transferred ports, including the publication/accounting channel.
 * Replace the full save-path callback with composable `GenerateSavePathFunc[]` hooks. Manually constructed lifecycles need `generateSavePath: []`; the legacy-generator adapter supports migration. Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`; pipeline resource creation can return `void` when a hook discards a resource.
 * Count successful streamed/local-copy acquisitions in `downloadedCount`, while excluding failed/cancelled attempts. Streaming error hooks propagate failure and do not run success hooks afterward.
 * Successful empty HTTP responses finish without extra retries; supplied empty-string bodies are treated as content. Implement an explicit empty-response retry policy when required.
@@ -34,18 +34,20 @@ Crawl control and reliability
 * Expose readonly per-attempt resource outcomes for acquisition, confirmed publication, skipping, failure and cancellation. Failed URL reservations release after settlement for explicit retries; successful redirect aliases survive concurrent target failures.
 * Add optional `maxResources`, `maxQueuedResources`, `maxConcurrency`, `maxDiscoveredResources`, `maxResourceBytes` and `maxBufferedBytes`. Report exceeded limits rather than blocking recursive discovery. Current/peak byte statistics describe logical body reservations, not total process memory.
 * Keep worker byte credits in the parent, transfer child credits without double charging, and await failed-worker exit before releasing transferred bodies—even before the first worker RPC. Previously acknowledged children remain eligible after a later parent failure.
-* Bound worker initialization and optional task deadlines; validate message versions, ownership, payloads and duplicate completions. Retire failed workers while healthy workers continue undispatched tasks without replaying failed work.
+* Bound worker initialization and optional task deadlines; validate message ownership, payloads and duplicate completions. Retire failed workers while healthy workers continue undispatched tasks without replaying failed work.
 * Scope logging and cancellation to each crawl. Worker disposal supports cooperative cancellation followed by forced termination after the configured grace period.
-* Stage buffered, HTTP-streamed and local-copy output on the destination volume, then publish by per-file rename after save-policy and cancellation checks. Preserve cached files/timestamps on failed writes, skipped saves and 304 responses; recheck directory containment and symlinks before publication.
-* Let the parent own worker task staging and publication, including cleanup after crashes, timeouts, forced cancellation and allocation races. Preserve confirmed publication counts after later failure.
+* Default downloader output to direct writes; failures/cancellation may leave partial files. Set atomicWrites for staged publication and preservation of cached files on failure. Save-policy skips and 304 responses preserve cached output in both modes.
+* Let the parent own worker output reservations and publication. Clean atomic staging after worker failure; direct partial output remains. Preserve confirmed publication counts after later failure.
 
 Fixes and performance
 ------------
 
+* Cache output-directory preparation per crawl by default; strictOutputChecks restores per-write preparation. Initialize worker pools once on demand and retain them until disposal; waitForWorkers restores eager readiness. Omit worker protocol-version fields and checks.
+
 * Calculate relative replacement paths directly for ordinary local filenames, with URIjs fallback for encoded and unusual paths. Reuse matching parsed response URLs and skip unused default path generation before the built-in legacy full-path adapter.
 * Use Got's public option snapshots instead of private history-bearing internals. Preserve hook/agent configuration without mutation and wrap Got 16 binary responses as Buffer views without copying bytes.
 * Retain content-length validation, bounded transport retries and range-resume behavior; await previous streams before retrying and remove legacy manual retry timers.
-* Normalize resources between lifecycle hooks so URL mutations and cloned objects cannot pass stale URI fields to subsequent hooks. Preserve binary view bounds and explicit encodings.
+* Normalize resources only when decoding worker-boundary data. Hooks, factories and queue callers maintain Resource invariants; body-size limits remain independent.
 * Avoid redundant output-directory creation while retaining containment checks. Reuse a single owned chunk in bounded local reads, but compact slices to avoid retaining oversized backing buffers.
 * Avoid accounting RPC for empty child bodies and unchanged worker body sizes.
 

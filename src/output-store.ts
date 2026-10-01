@@ -34,6 +34,42 @@ async function checkDirectories(root: string, parent: string, create: boolean): 
   }
 }
 
+async function resolveRoot(root: string): Promise<string> {
+  try { return await fs.realpath(root); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    await fs.mkdir(root, {recursive: true});
+    return fs.realpath(root);
+  }
+}
+
+/** Prepare each directory once per crawl; publication still checks the live parent. */
+export class OutputDirectories {
+  private readonly roots = new Map<string, Promise<string>>();
+  private readonly parents = new Map<string, Promise<void>>();
+
+  root(root: string): Promise<string> {
+    let pending = this.roots.get(root);
+    if (!pending) {
+      pending = resolveRoot(root).catch(error => { this.roots.delete(root); throw error; });
+      this.roots.set(root, pending);
+    }
+    return pending;
+  }
+
+  prepare(root: string, parent: string): Promise<void> {
+    let pending = this.parents.get(parent);
+    if (!pending) {
+      pending = checkDirectories(root, parent, true).catch(error => {
+        this.parents.delete(parent);
+        throw error;
+      });
+      this.parents.set(parent, pending);
+    }
+    return pending;
+  }
+}
+
 /** Share a private directory only while publications in the same parent overlap. */
 export class StagingDirectories {
   private readonly active = new Map<string, {directory: Promise<string>; references: number; next: number}>();
@@ -73,9 +109,11 @@ export class StagingDirectories {
   }
 }
 
-/** A staging allocation whose publication and cleanup can be owned by another service. */
+/** An output allocation whose publication and cleanup can be owned by another service. */
 export interface FilePublication {
+  /** Writer target: the destination in direct mode, a temporary path in atomic mode. */
   readonly stagingPath: string;
+  readonly direct?: boolean;
   /** Starts at most once; repeated calls share the same operation. */
   publish(): Promise<void>;
   /** Prevents new publication and waits for a publication already in flight. */
@@ -90,6 +128,8 @@ export async function createFilePublication(
   destination: string, signal?: AbortSignal, localRoot?: string
 ): Promise<FilePublication> {
   signal?.throwIfAborted();
+  const context = currentCrawlContext();
+  const directories = context?.outputDirectories;
   let canonicalRoot: string | undefined;
   if (localRoot !== undefined) {
     const resolvedRoot = resolve(localRoot);
@@ -97,24 +137,40 @@ export async function createFilePublication(
     if (!withinRoot || withinRoot === '..' || withinRoot.startsWith('..' + sep) ||
       isAbsolute(withinRoot)) throw new Error('Output destination escapes localRoot');
     // The configured root is trusted and may itself be a symlink.
-    try { canonicalRoot = await fs.realpath(resolvedRoot); }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      await fs.mkdir(resolvedRoot, {recursive: true});
-      canonicalRoot = await fs.realpath(resolvedRoot);
-    }
+    canonicalRoot = await (directories ? directories.root(resolvedRoot) : resolveRoot(resolvedRoot));
     destination = join(canonicalRoot, withinRoot);
-    await checkDirectories(canonicalRoot, dirname(destination), true);
+    await (directories ? directories.prepare(canonicalRoot, dirname(destination)) :
+      checkDirectories(canonicalRoot, dirname(destination), true));
   }
   const parent = dirname(destination);
   if (canonicalRoot === undefined) await fs.mkdir(parent, {recursive: true});
   signal?.throwIfAborted();
-  const context = currentCrawlContext();
   const reservationPath = context?.publicationReservations ?
     join(canonicalRoot === undefined ? await fs.realpath(parent) : parent, basename(destination)) : undefined;
   const release = context?.publicationOwner === undefined ? undefined :
     context.publicationReservations?.claim(process.platform === 'win32' ?
       reservationPath!.toLowerCase() : reservationPath!, context.publicationOwner);
+  if (context?.directWrites) {
+    try {
+      // A direct writer must not follow an existing destination symlink.
+      const stat = await fs.lstat(destination).catch(error => {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        return undefined;
+      });
+      if (stat?.isSymbolicLink()) throw new Error('Output destination must not be a symlink: ' + destination);
+    } catch (error) { release?.(false); throw error; }
+    let published = false;
+    let closed = false;
+    return {stagingPath: destination, direct: true,
+      async publish() {
+        if (closed) throw new Error('Publication has been closed');
+        signal?.throwIfAborted();
+        if (!published) { published = true; recordResourcePublication(); }
+      },
+      async cleanup() {
+        if (!closed) { closed = true; release?.(published); }
+      }};
+  }
   let staging: Awaited<ReturnType<StagingDirectories['acquire']>>;
   try {
     staging = await (context?.stagingDirectories ?? new StagingDirectories()).acquire(parent);
@@ -149,10 +205,10 @@ export async function createFilePublication(
   };
 }
 
-/** Publish one file only after its writer succeeds. Staging stays on the same volume. */
+/** Confirm successful output; atomic mode stages on the destination volume. */
 export async function publishFile(
   destination: string,
-  write: (stagingPath: string) => Promise<void>,
+  write: (stagingPath: string, direct?: boolean) => Promise<void | boolean>,
   signal?: AbortSignal,
   localRoot?: string,
   beforePublish?: () => Promise<boolean>
@@ -162,9 +218,10 @@ export async function publishFile(
     createFilePublication(destination, signal, localRoot));
   try {
     signal?.throwIfAborted();
-    await write(publication.stagingPath);
+    if (publication.direct && beforePublish && !await beforePublish()) return false;
+    if (await write(publication.stagingPath, publication.direct) === false) return false;
     signal?.throwIfAborted();
-    if (beforePublish && !await beforePublish()) return false;
+    if (!publication.direct && beforePublish && !await beforePublish()) return false;
     await publication.publish();
     return true;
   } finally {

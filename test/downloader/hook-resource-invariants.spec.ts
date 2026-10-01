@@ -2,7 +2,7 @@ import {describe, expect, jest, test} from '@jest/globals';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {defaultDownloadOptions} from '../../src/options.js';
-import {createResource, ResourceType} from '../../src/resource.js';
+import {createResource, normalizeResource, ResourceType} from '../../src/resource.js';
 import type {Resource} from '../../src/resource.js';
 import type {DownloadResource} from '../../src/life-cycle/types.js';
 
@@ -25,7 +25,7 @@ function makeResource(stage: Stage): Resource {
 }
 
 describe.each(stages)('%s resource invariants', stage => {
-  test.each([false, true])('normalizes every hook result (cloned: %s)', async clone => {
+  test.each([false, true])('accepts explicitly normalized hook results (cloned: %s)', async clone => {
     const lifeCycle = defaultLifeCycle();
     const observed = jest.fn();
     const mutate = <T extends Resource>(resource: T): T => {
@@ -33,7 +33,7 @@ describe.each(stages)('%s resource invariants', stage => {
       result.url = 'https://changed.test/b';
       result.refUrl = 'https://ref.test/c';
       result.replacePath = '../changed.bin';
-      return result;
+      return normalizeResource(result) as T;
     };
     const inspect = <T extends Resource>(resource: T): T => {
       expect(resource.uri.clone().toString()).toBe(resource.url);
@@ -50,16 +50,23 @@ describe.each(stages)('%s resource invariants', stage => {
     expect(observed).toHaveBeenCalledTimes(1);
   });
 
-  test('rejects malformed hook results before calling the next hook', async () => {
+  test('does not normalize resources between hooks', async () => {
     const lifeCycle = defaultLifeCycle();
     const next = jest.fn();
-    lifeCycle[stage] = [<T extends Resource>(resource: T): T =>
-      ({...resource, refUrl: undefined} as unknown as T),
-    <T extends Resource>(resource: T): T => { next(); return resource; }];
+    const resource = makeResource(stage);
+    const originalUri = resource.uri;
+    lifeCycle[stage] = [<T extends Resource>(value: T): T => {
+      value.url = 'https://changed.test/b';
+      return value;
+    }, <T extends Resource>(value: T): T => {
+      expect(value.uri).toBe(originalUri);
+      expect(value.uri.toString()).toBe('https://original.test/a');
+      next();
+      return value;
+    }];
     const options = defaultDownloadOptions({...lifeCycle, localRoot: 'output'});
     const pipeline = new PipelineExecutorImpl(options, options.req, options);
-    await expect(invoke(pipeline, stage, makeResource(stage)))
-      .rejects.toThrow('Resource.refUrl must be a string');
-    expect(next).not.toHaveBeenCalled();
+    await invoke(pipeline, stage, resource);
+    expect(next).toHaveBeenCalledTimes(1);
   });
 });

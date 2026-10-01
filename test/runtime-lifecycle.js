@@ -149,6 +149,32 @@ try {
     assert.ok(requests[0].args[0].includes(`/${label}.html`));
   }
 
+  // Streaming-only crawls need no workers; later buffered batches reuse one pool.
+  server.removeAllListeners('request');
+  server.on('request', (_request, response) => response.end('complete'));
+  const created = [];
+  const oneShot = new downloader.MultiThreadDownloader(optionsUrl,
+    {localRoot: path.join(root, 'one-shot')}, (filename, options) => {
+      const worker = new Worker(filename, options);
+      created.push(worker);
+      return worker;
+    });
+  crawlers.push(oneShot);
+  await oneShot.init;
+  assert.equal(created.length, 0);
+  for (const [index, type] of [resource.ResourceType.StreamingBinary,
+    resource.ResourceType.Binary, resource.ResourceType.Binary].entries()) {
+    oneShot.addProcessedResource(resource.createResource({type, depth: 0,
+      url: `${origin}/batch-${index}.bin`, refUrl: origin,
+      localRoot: path.join(root, 'one-shot')}));
+    await oneShot.start();
+    await oneShot.onIdle();
+    assert.equal(created.length, index === 0 ? 0 : 1);
+    if (index > 0) assert.ok(created[0].threadId > 0);
+  }
+  await oneShot.dispose();
+  assert.equal(created[0].threadId, -1);
+
   const failedPath = path.join(root, 'invalid.mjs');
   await fs.writeFile(failedPath, 'throw new Error("configuration failed");');
   for (const Downloader of [downloader.SingleThreadDownloader, downloader.MultiThreadDownloader]) {
@@ -171,7 +197,8 @@ export default options.defaultDownloadOptions({
   }]
 });
 `);
-  const workerFailed = new downloader.MultiThreadDownloader(pathToFileURL(workerFailedPath).href);
+  const workerFailed = new downloader.MultiThreadDownloader(pathToFileURL(workerFailedPath).href,
+    {waitForWorkers: true});
   crawlers.push(workerFailed);
   await assert.rejects(workerFailed.init, /worker pipeline initialization failed/);
   assert.equal(workerFailed.pool.workers[0].worker.threadId, -1);
@@ -187,7 +214,7 @@ export default {...base, init: [async () => {
   let workerOnline;
   const online = new Promise(resolve => { workerOnline = resolve; });
   const workerWaiting = new downloader.MultiThreadDownloader(
-    pathToFileURL(workerWaitingPath).href, undefined, (filename, options) => {
+    pathToFileURL(workerWaitingPath).href, {waitForWorkers: true}, (filename, options) => {
       const worker = new Worker(filename, options);
       worker.once('online', workerOnline);
       return worker;

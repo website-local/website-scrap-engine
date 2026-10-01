@@ -232,7 +232,7 @@ test('save-path hook URI mutations cannot redirect the resource or share mutable
   expect(res!.uri.path()).toBe('/docs/');
 });
 
-test('custom resource factories retain their argument contract and normalized results', async () => {
+test('custom resource factories retain their argument contract without implicit normalization', async () => {
   const lifeCycle = makeLifeCycle();
   lifeCycle.createResource = (...args) => {
     expect(args).toHaveLength(1);
@@ -243,8 +243,9 @@ test('custom resource factories retain their argument contract and normalized re
   const pipeline = new PipelineExecutorImpl(lifeCycle, {}, fakeOpt);
   const res = await pipeline.createResource(ResourceType.Html, 1, '/docs/',
     'https://example.com/index.html');
-  expect(res!.uri.toString()).toBe('https://custom.example/replaced');
-  expect(res!.host).toBe('custom.example');
+  expect(res!.url).toBe('https://custom.example/replaced');
+  expect(res!.uri.toString()).toBe('https://example.com/docs/');
+  expect(res!.host).toBe('example.com');
 });
 
 test('cached reference parsing does not share mutable state between resources', async () => {

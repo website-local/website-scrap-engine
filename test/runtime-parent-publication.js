@@ -36,6 +36,7 @@ lc.saveToDisk = [async (res, opt, pipeline) => {
   }, pipeline.signal, res.localRoot);
 }];
 export default options.defaultDownloadOptions({...lc, localRoot: ${JSON.stringify(output)},
+  atomicWrites: true,
   initialUrl: [], concurrency: 1, workerCount: 1, maxBufferedBytes: 64,
   workerPool: {taskTimeout: ${mode === 'timeout' ? 1500 : 'undefined'}, shutdownTimeout: 50},
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})

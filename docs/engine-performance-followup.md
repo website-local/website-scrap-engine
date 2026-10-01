@@ -1,5 +1,8 @@
 # Engine-only performance investigation — 2026-10-01
 
+Superseded by the subsequent [relaxed-defaults measurements](performance-defaults.md),
+following authorization to trade defensive checks and atomic output for speed.
+
 **The requested all-suite improvement over 0.9.1 is not achieved.** The changes
 below improve engine hot paths, but they are not a passing performance assessment
 for releasing 0.10.0. MDN's previously committed cleanup optimization is retained

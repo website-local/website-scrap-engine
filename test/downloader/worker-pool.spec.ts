@@ -453,37 +453,27 @@ describe('worker-pool', function () {
   });
 
   test.each([undefined, 0, 2, '1'])(
-    'incompatible startup version %s rejects and terminates the worker', async protocolVersion => {
+    'ignores obsolete startup version %s', async protocolVersion => {
       const pool = new WorkerPool(1,
         join(__dirname, 'task-deadline-worker.js'), {protocolVersion});
-      const queued = pool.submitTask(1);
-      const settled = await Promise.allSettled([pool.ready, queued]);
-      expect(settled.map(result => result.status)).toEqual(['rejected', 'rejected']);
-      await expect(pool.ready).rejects.toThrow('protocol version mismatch');
-      await pool.dispose();
-      expect(pool.workers[0].worker.threadId).toBe(-1);
-    });
-
-  test.each(['task', 'log', 'control'])(
-    'incompatible %s version rejects active tasks', async channel => {
-      const pool = new WorkerPool(1,
-        join(__dirname, 'task-deadline-worker.js'), {hang: true});
       try {
         await pool.ready;
-        const rejected = expect(pool.submitTask(1)).rejects.toThrow('protocol version mismatch');
-        pool.nextTask();
-        const worker = pool.workers[0];
-        if (channel === 'task') {
-          pool.complete(worker, {version: 2, type: 1, taskId: 1, body: 42} as never);
-        } else if (channel === 'log') {
-          pool.takeLog(worker, {version: 2, type: 0} as never);
-        } else {
-          pool.onControlMessage(worker, {version: 2, type: 'closed'} as never);
-        }
-        await rejected;
-        expect(pool.workingTasks.size).toBe(0);
-      } finally {
-        await pool.dispose();
-      }
+        await expect(pool.submitTask(42)).resolves.toMatchObject({body: 42});
+      } finally { await pool.dispose(); }
     });
+
+  test('sends and accepts task messages without a protocol version', async () => {
+    const pool = new WorkerPool(1,
+      join(__dirname, 'task-deadline-worker.js'), {hang: true});
+    try {
+      await pool.ready;
+      const worker = pool.workers[0];
+      const send = jest.spyOn(worker.taskPort, 'postMessage');
+      const pending = pool.submitTask(1);
+      pool.nextTask();
+      expect(send.mock.calls[0][0]).not.toHaveProperty('version');
+      pool.complete(worker, {type: 1, taskId: 1, body: 42});
+      await expect(pending).resolves.toMatchObject({body: 42});
+    } finally { await pool.dispose(); }
+  });
 });

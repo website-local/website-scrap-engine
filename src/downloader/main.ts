@@ -1,6 +1,6 @@
 import {withCrawlContext, createResourceProgress} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
-import {StagingDirectories} from '../output-store.js';
+import {OutputDirectories, StagingDirectories} from '../output-store.js';
 import {PublicationReservations} from '../publication-reservations.js';
 import type { BufferReservation} from '../buffer-budget.js';
 import {BufferBudget} from '../buffer-budget.js';
@@ -11,7 +11,7 @@ import URI from 'urijs';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';
-import {normalizeResource, ResourceType} from '../resource.js';
+import {ResourceType} from '../resource.js';
 import {checkResourceBody} from '../resource-limits.js';
 import {skip} from '../logger/logger.js';
 import {createDefaultLogger} from '../logger/default-logger.js';
@@ -97,6 +97,8 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     this._initOptions = this._asyncOptions.then(options => {
       options = mergeOverrideOptions(options, this._overrideOptions);
       this._options = options;
+      this.context.directWrites = options.atomicWrites !== true;
+      if (!options.strictOutputChecks) this.context.outputDirectories = new OutputDirectories();
       if (options.maxBufferedBytes !== undefined) this.bufferBudget = new BufferBudget(options.maxBufferedBytes);
       // https://github.com/website-local/website-scrap-engine/issues/1113
       this.queue.concurrency = options.concurrency;
@@ -184,7 +186,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     }
   }
 
-  protected _addProcessedResource(res: RawResource, credit?: BufferReservation): boolean | void {
+  protected _addProcessedResource(res: Resource, credit?: BufferReservation): boolean | void {
     if (this._state === 'closing' || this._state === 'closed' || this.signal.aborted) {
       return false;
     }
@@ -194,7 +196,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       this.notifyStatus(res, 'dispose');
       return false;
     }
-    const resource = normalizeResource(res);
+    const resource = res;
     checkResourceBody(resource, this.options.maxResourceBytes);
     const url = this.canonicalUrl(resource.url, resource.uri);
     if (this.queuedUrl.has(url)) {
@@ -264,7 +266,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
   abstract downloadAndProcessResource(res: Resource): Promise<boolean | void>;
 
-  addProcessedResource(res: RawResource): boolean | void {
+  addProcessedResource(res: Resource): boolean | void {
     try {
       return this._addProcessedResource(res);
     } catch (e) {

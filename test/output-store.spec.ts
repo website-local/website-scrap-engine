@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
 import {promises as fs} from 'node:fs';
 import {dirname, join} from 'node:path';
-import {publishFile, createFilePublication, StagingDirectories} from '../src/output-store.js';
+import {publishFile, createFilePublication, OutputDirectories, StagingDirectories} from '../src/output-store.js';
 import {writeFile} from '../src/io.js';
 import {createResource, ResourceType} from '../src/resource.js';
 import {saveResourceToDisk} from '../src/life-cycle/save-resource-to-disk.js';
@@ -12,6 +12,43 @@ import {createDefaultLogger} from '../src/logger/default-logger.js';
 let root: string;
 beforeEach(async () => { root = await fs.mkdtemp(join(process.cwd(), '.wse-output-test-')); });
 afterEach(async () => { await fs.rm(root, {recursive: true, force: true}); });
+
+test('direct output avoids staging and intentionally leaves partial failed writes', async () => {
+  const destination = join(root, 'asset');
+  await fs.writeFile(destination, 'cached');
+  const context = {directWrites: true, outputDirectories: new OutputDirectories(),
+    signal: new AbortController().signal, logger: createDefaultLogger()};
+  await expect(withCrawlContext(context, () => publishFile(destination, async (target, direct) => {
+    expect(direct).toBe(true);
+    expect(target).toBe(destination);
+    await fs.writeFile(target, 'partial');
+    throw new Error('writer failed');
+  }, undefined, root))).rejects.toThrow('writer failed');
+  expect(await fs.readFile(destination, 'utf8')).toBe('partial');
+  expect(await fs.readdir(root)).toEqual(['asset']);
+});
+
+test('direct output evaluates skip policy before touching a cached file', async () => {
+  const destination = join(root, 'asset');
+  await fs.writeFile(destination, 'cached');
+  const context = {directWrites: true, signal: new AbortController().signal, logger: createDefaultLogger()};
+  const saved = await withCrawlContext(context, () => publishFile(destination, async () => {
+    throw new Error('writer must not run');
+  }, undefined, root, async () => false));
+  expect(saved).toBe(false);
+  expect(await fs.readFile(destination, 'utf8')).toBe('cached');
+});
+
+test('direct output rejects an existing destination symlink', async () => {
+  const target = join(root, 'target');
+  const destination = join(root, 'alias');
+  await fs.writeFile(target, 'cached');
+  await fs.symlink(target, destination);
+  const context = {directWrites: true, signal: new AbortController().signal, logger: createDefaultLogger()};
+  await expect(withCrawlContext(context, () => writeFile(destination, 'new', 'utf8',
+    undefined, undefined, root))).rejects.toThrow('symlink');
+  expect(await fs.readFile(target, 'utf8')).toBe('cached');
+});
 
 describe('staged file publication', () => {
   test('keeps the previous file visible until all bytes are written', async () => {

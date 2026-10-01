@@ -60,16 +60,24 @@ export async function streamingDownloadToFile(
 ): Promise<Response | void> {
   const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
   let response: Response | void = undefined;
-  await publishFile(savePath, async staging => {
-    response = await streamToStagingFile(res, requestOptions, staging, options?.maxResourceBytes);
+  let skipped = false;
+  await publishFile(savePath, async (staging, direct) => {
+    response = await streamToStagingFile(res, requestOptions, staging, options?.maxResourceBytes,
+      direct && executor ? async () => {
+        skipped = !await executor.shouldSaveResource(res);
+        return !skipped;
+      } : undefined);
     if (response && response.statusCode !== 304) {
       markResourceDownloaded();
       res.redirectedUrl = response.url;
     }
-    if (response?.statusCode !== 304 && options) {
+    if (!skipped && response?.statusCode !== 304 && options) {
       await optionallySetLastModifiedTime(res, options, staging);
     }
+    if (skipped || response?.statusCode === 304) return false;
   }, requestOptions.signal, res.localRoot, async () => {
+    // Direct streams check the response-aware save policy before opening output.
+    if (!response) return true;
     if (response?.statusCode === 304) return false;
     return executor ? executor.shouldSaveResource(res) : true;
   });
@@ -80,7 +88,8 @@ async function streamToStagingFile(
   res: Resource & {downloadStartTimestamp: number},
   requestOptions: RequestOptions,
   savePath: string,
-  maxResourceBytes?: number
+  maxResourceBytes?: number,
+  beforeWrite?: () => Promise<boolean>
 ): Promise<Response> {
   const options = Object.assign({}, requestOptions, {
     isStream: true, headers: {...requestOptions.headers}
@@ -136,6 +145,19 @@ async function streamToStagingFile(
           if (response.request.isAborted) {
             // Cancellation is reported through the request error event.
             return;
+          }
+          if (beforeWrite) {
+            try {
+              if (!await beforeWrite()) {
+                request.once('end', () => resolve(response));
+                request.resume();
+                return;
+              }
+            } catch (error) {
+              request.destroy(error as Error);
+              reject(error);
+              return;
+            }
           }
           // Download body
           if (!fileWriteStream) {

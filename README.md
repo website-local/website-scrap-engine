@@ -311,6 +311,27 @@ On close, custom workers should close both transferred ports and send a
 `{type: 'closed'}` control message on `parentPort` so the pool can drain queued
 logs before disposal completes.
 
+## Performance defaults
+
+Downloaders write directly to output files by default. Failed or cancelled writes
+may leave partial files or overwrite a cached copy. Use `atomicWrites: true` to
+stage files and rename on success instead.
+
+Output roots and directories are prepared once per crawl. Keep the output tree
+stable during the crawl; `strictOutputChecks: true` restores checks before every
+write. Atomic writes also recheck the parent before rename.
+
+The multi-thread pool starts once on the first task needing a worker and stays
+alive until disposal. Streaming-only crawls do not start workers. Set
+`waitForWorkers: true` to wait for worker initialization as part of `init`, or
+await `downloader.pool.ready` explicitly.
+
+Resource normalization happens automatically only when receiving worker data.
+Hooks and queue callers must maintain `Resource` fields; call `normalizeResource`
+explicitly after changing URL strings or making structured clones when needed.
+Workers and the parent use the same runtime, so message versions are no longer
+sent or checked. Task ownership, payload checks and configured resource limits remain.
+
 ## Resource outcomes
 
 `downloader.outcomes` exposes the latest attempt for each canonical admission URL.

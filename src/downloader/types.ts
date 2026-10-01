@@ -53,6 +53,7 @@ export enum WorkerMessageType {
   Complete
 }
 
+/** @deprecated Protocol versions are no longer sent or checked. */
 export const WORKER_PROTOCOL_VERSION = 1 as const;
 
 export enum WorkerControlMessageType {
@@ -64,7 +65,8 @@ export enum WorkerControlMessageType {
 }
 
 export interface WorkerMessage<T = unknown> {
-  version: typeof WORKER_PROTOCOL_VERSION;
+  /** @deprecated Ignored; workers use the same installed runtime. */
+  version?: number;
   taskId: number;
   type: WorkerMessageType;
   body: T;
@@ -72,7 +74,8 @@ export interface WorkerMessage<T = unknown> {
 }
 
 export interface WorkerControlMessage {
-  version: typeof WORKER_PROTOCOL_VERSION;
+  /** @deprecated Ignored; workers use the same installed runtime. */
+  version?: number;
   type: WorkerControlMessageType;
   error?: string;
 }

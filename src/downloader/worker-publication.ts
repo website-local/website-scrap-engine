@@ -4,11 +4,9 @@ import type {FilePublication, PublicationStore} from '../output-store.js';
 import {withCrawlContext} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
 import type {BufferAccount} from '../buffer-budget.js';
-import {WORKER_PROTOCOL_VERSION} from './types.js';
 
 type Operation = 'create' | 'publish' | 'release' | 'buffer-body' | 'buffer-child';
 interface Request {
-  version: number;
   requestId: number;
   taskId: number;
   operation: Operation;
@@ -18,10 +16,9 @@ interface Request {
   bytes?: number;
 }
 interface Reply {
-  version: number;
   requestId: number;
   ok: boolean;
-  value?: {token: number; stagingPath: string};
+  value?: {token: number; stagingPath: string; direct?: boolean};
   error?: {message: string; code?: string; limit?: number; actual?: number};
 }
 interface Connection {
@@ -109,8 +106,7 @@ export class WorkerPublicationCoordinator {
   }
 
   private receive(connection: Connection, request: Request): void {
-    if (!request || request.version !== WORKER_PROTOCOL_VERSION ||
-      !Number.isSafeInteger(request.requestId) || request.requestId <= connection.lastRequest ||
+    if (!request || !Number.isSafeInteger(request.requestId) || request.requestId <= connection.lastRequest ||
       !Number.isSafeInteger(request.taskId) || request.taskId < 1) {
       this.channelFailed(connection.worker, new Error('Invalid worker publication envelope'));
       return;
@@ -120,7 +116,7 @@ export class WorkerPublicationCoordinator {
     const reply = (value?: Reply['value'], error?: unknown) => {
       const details = error as {message?: unknown; code?: unknown; limit?: unknown; actual?: unknown} | undefined;
       try {
-        connection.port.postMessage({version: WORKER_PROTOCOL_VERSION, requestId: request.requestId,
+        connection.port.postMessage({requestId: request.requestId,
           ok: error === undefined, value, error: error === undefined ? undefined : {
             message: typeof details?.message === 'string' ? details.message : String(error),
             code: typeof details?.code === 'string' ? details.code : undefined,
@@ -169,11 +165,17 @@ export class WorkerPublicationCoordinator {
         lease.handles.delete(token);
         throw new Error('Publication allocation was cancelled');
       }
-      return {token, stagingPath: handle.stagingPath};
+      return {token, stagingPath: handle.stagingPath, direct: handle.direct};
     }
     const handle = request.token === undefined ? undefined : lease.handles.get(request.token);
     if (!handle) throw new Error('Unknown publication allocation');
-    if (request.operation === 'publish') await handle.publish();
+    if (request.operation === 'publish') {
+      await handle.publish();
+      if (handle.direct) {
+        await handle.cleanup();
+        lease.handles.delete(request.token!);
+      }
+    }
     else if (request.operation === 'release') {
       await handle.cleanup();
       lease.handles.delete(request.token!);
@@ -191,8 +193,7 @@ export class WorkerPublicationClient {
   }>();
   constructor(private readonly port: MessagePort) {
     port.on('message', (reply: Reply) => {
-      if (!reply || reply.version !== WORKER_PROTOCOL_VERSION ||
-        !Number.isSafeInteger(reply.requestId) || typeof reply.ok !== 'boolean') {
+      if (!reply || !Number.isSafeInteger(reply.requestId) || typeof reply.ok !== 'boolean') {
         this.close();
         return;
       }
@@ -218,7 +219,7 @@ export class WorkerPublicationClient {
     return new Promise((resolve, reject) => {
       const requestId = ++this.nextRequest;
       this.pending.set(requestId, {resolve, reject});
-      try { this.port.postMessage({...data, version: WORKER_PROTOCOL_VERSION, requestId, taskId, operation}); }
+      try { this.port.postMessage({...data, requestId, taskId, operation}); }
       catch (error) { this.pending.delete(requestId); reject(error); }
     });
   }
@@ -226,24 +227,27 @@ export class WorkerPublicationClient {
     return {create: async (destination, signal, localRoot) => {
       signal?.throwIfAborted();
       const value = await this.request(taskId, 'create', {destination, localRoot});
-      if (!value || !Number.isSafeInteger(value.token) || value.token < 1 || typeof value.stagingPath !== 'string') {
+      if (!value || !Number.isSafeInteger(value.token) || value.token < 1 || typeof value.stagingPath !== 'string' ||
+        (value.direct !== undefined && typeof value.direct !== 'boolean')) {
         throw new TypeError('Invalid publication allocation reply');
       }
       let publishing: Promise<void> | undefined;
       let cleaning: Promise<void> | undefined;
-      return {stagingPath: value.stagingPath,
+      let published = false;
+      return {stagingPath: value.stagingPath, direct: value.direct,
         publish: () => {
           if (cleaning) return Promise.reject(new Error('Publication has been closed'));
           publishing ??= (async () => {
             signal?.throwIfAborted();
             await this.request(taskId, 'publish', {token: value.token});
+            published = true;
           })();
           return publishing;
         },
         cleanup: () => {
           cleaning ??= (async () => {
             await publishing?.catch(() => undefined);
-            await this.request(taskId, 'release', {token: value.token});
+            if (!value.direct || !published) await this.request(taskId, 'release', {token: value.token});
           })();
           return cleaning;
         }};

@@ -65,10 +65,16 @@ that previously assumed creation always succeeded.
 
 Tasks and results use `workerData.workerChannels.taskPort`; logs use
 `workerData.workerChannels.logPort`. `parentPort` carries control messages.
-Every task, result, log, and control envelope now requires `version: 1`. Use
-`downloader.types.WORKER_PROTOCOL_VERSION` when constructing messages. A version
-mismatch retires the worker and rejects its assigned tasks. The built-in worker
-is already updated.
+Worker envelopes no longer carry or check a protocol version: workers and the
+parent must use the same installed runtime. Task IDs, task ownership, message
+shapes and duplicate completions are still checked. The old version constant and
+optional type fields remain deprecated compatibility exports.
+
+The multi-thread downloader creates its pool on the first task that needs worker
+processing and retains that pool until disposal. Streaming-only crawls create no
+workers. Set `waitForWorkers: true` to create the pool during initialization and
+wait for readiness; alternatively await `downloader.pool.ready` to warm it explicitly.
+With the default, worker startup failures reject worker tasks instead of `init`.
 
 `WorkerPool.ready` now waits for every worker's `Ready` control message, after
 configuration and pipeline initialization succeed. Send `Failed` with an `error`
@@ -94,25 +100,23 @@ import {parentPort} from 'node:worker_threads';
 import {downloader} from 'website-scrap-engine';
 
 const {taskPort, logPort} = downloader.getWorkerChannels();
-const {WorkerMessageType, WorkerControlMessageType, WORKER_PROTOCOL_VERSION} = downloader.types;
+const {WorkerMessageType, WorkerControlMessageType} = downloader.types;
 
-taskPort.on('message', ({version, taskId, body}) => {
-  if (version !== WORKER_PROTOCOL_VERSION) throw new Error('Worker protocol mismatch');
-  taskPort.postMessage({version: WORKER_PROTOCOL_VERSION, taskId, type: WorkerMessageType.Complete, body});
+taskPort.on('message', ({taskId, body}) => {
+  taskPort.postMessage({taskId, type: WorkerMessageType.Complete, body});
 });
 
-parentPort.on('message', ({version, type}) => {
-  if (version !== WORKER_PROTOCOL_VERSION) throw new Error('Worker protocol mismatch');
+parentPort.on('message', ({type}) => {
   if (type === WorkerControlMessageType.Close || type === WorkerControlMessageType.Cancel) {
     taskPort.close();
     logPort.close();
-    parentPort.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});
+    parentPort.postMessage({type: WorkerControlMessageType.Closed});
   }
 });
-parentPort.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Ready});
+parentPort.postMessage({type: WorkerControlMessageType.Ready});
 ```
 
-Add `version` to existing log envelopes and send them on `logPort`. Close both ports
+Send log envelopes on `logPort`; no `version` is required. Close both ports
 before acknowledging shutdown so queued logs can drain. Custom worker factories
 must forward the supplied worker options, including `workerData` and
 `transferList`.
@@ -237,28 +241,27 @@ at the next pipeline boundary, after the hook has allocated it. Use it together
 with `maxResourceBytes`, discovery/queue limits and bounded concurrency, and allow
 additional memory headroom. Separate downloaders have independent budgets.
 
-Buffered saves now write a temporary file beside the destination and publish it
-by rename. Failures and cancellation observed before publication leave the prior
-destination intact; normal cleanup removes the temporary directory. Publication
-is atomic per file, not across a redirected resource's multiple output files.
-This does not promise durability after power loss. Local streaming-file copies
-and streaming URL mounts also use staged publication and recheck the save-stage
-existing-resource policy before publishing. HTTP streams now use the same staged
-publication and policy check. Range retries reuse the staging file after the
-previous stream closes; 304 responses and skipped saves discard staging without
-changing the cached file or its timestamps. Stream retries follow Got's configured
-retry policy; legacy manual retry timers have been removed.
+Downloader output uses **direct writes by default**, including HTTP streams,
+local copies and worker saves. A failed or cancelled write may leave partial
+output and may overwrite a previously cached file. Set `atomicWrites: true` to
+stage each file and publish by rename; failed writes then preserve the old file.
+Atomicity is per file, not a multi-file transaction or a power-loss guarantee.
 
-Built-in worker task publications now allocate staging paths and confirm renames
-through a dedicated parent-owned `publicationPort`. On timeout, crash, or forced
-cancellation, task settlement waits for worker exit and parent staging cleanup.
+Save policies run before direct output is opened. HTTP streams check the
+response-aware save policy before opening the file, and 304 responses leave the
+cached file and timestamps unchanged. Range retries reuse the output (or staging
+file in atomic mode) after the previous stream closes.
+
+Built-in worker writes still reserve destinations and confirm successful writes
+through the parent-owned `publicationPort`. Allocation replies include a `direct`
+flag so clients can evaluate save policies before writing. On timeout, crash or
+forced cancellation, atomic staging is cleaned up; partial direct output remains.
 A completed publication remains counted if the worker subsequently crashes.
-Custom worker factories must forward this additional transferred port. Direct
-filesystem writes and custom initialization-hook writes are outside this task
-publication protocol. A rename already in progress may complete during cancellation.
+Custom factories must forward the transferred publication port. Custom filesystem
+writes outside these helpers require their own coordination.
 
 Within one downloader, different canonical admission URLs cannot publish to the
-same destination. The first staging allocation reserves the resolved path; a
+same destination. The first output allocation reserves the resolved path; a
 conflicting attempt fails with `ERR_OUTPUT_CONFLICT` instead of silently replacing
 another resource. An unpublished allocation releases ownership after cleanup.
 Confirmed output retains ownership for the crawl, including when a later hook
@@ -273,13 +276,15 @@ Custom `PipelineExecutor` implementations must provide
 save policy. Built-in local copy handlers use it before publication; the default
 executor shares that check with buffered saves.
 
-Built-in buffered saves reject symlinked directories below `localRoot`. The
-configured root itself may be a symlink; its resolved target is treated as the
-trusted root. A destination-file symlink is replaced, leaving its former target
-untouched. Direct `io.writeFile` callers can pass `localRoot` as the sixth argument
-to enable these checks. The output directory tree must remain under application
-control: these portable path checks do not defend against a hostile process
-concurrently replacing directories between filesystem operations.
+Output roots and parent directories are resolved/prepared once per crawl by
+default. The configured root may itself be a symlink; its first resolved target
+remains the trusted root for that crawl. Do not delete, replace or retarget the
+output directory tree during a crawl. Set `strictOutputChecks: true` to resolve
+roots and check parent directories on every write. Atomic publication always
+rechecks the parent immediately before rename. Direct writes reject an existing
+destination-file symlink; atomic mode replaces that symlink without following it.
+Standalone publication helpers outside a downloader context retain atomic behavior.
+Portable path checks do not defend against hostile concurrent directory replacement.
 
 - Remove `waitForInitBeforeIdle` from options. It was deprecated and unused.
 - Call `io.mkdirRetry(dir)` without a retry argument. It now makes one recursive
@@ -292,12 +297,12 @@ concurrently replacing directories between filesystem operations.
 
 ## Request options and normalized resources
 
-Before-download, download, after-download, and save hook chains normalize every
-returned resource before invoking the next hook. Canonical `url`, `refUrl`, and
-`replacePath` strings determine the corresponding URI instances; changing those
-strings in a hook updates the URI fields at the next hook boundary. Returning a
-structured clone is supported. Invalid canonical fields reject the stage before
-subsequent hooks run.
+Automatic resource normalization happens when decoding worker-boundary data,
+not between lifecycle hooks or at queue admission. Hooks and custom factories
+must return a valid `Resource` and keep its URL/URI fields consistent. If a hook
+changes canonical strings or returns a structured clone, explicitly call
+`normalizeResource` before handing it to another hook or submitting it. Body-size
+and configured buffered-memory limits are still checked independently.
 
 Got is upgraded from 13 to 16. HTTP/2 agents, DNS caching, and cross-origin
 credential handling follow Got 16's contracts. Option merging uses public plain
@@ -308,8 +313,8 @@ retry limit. Explicit `retry.errorCodes` continues to override library defaults.
 `Resource.uri`, `refUri`, and `replaceUri` are required URI.js instances, and
 `host` is a required string (possibly empty for a local URL). Use `createResource`
 or `normalizeResource` rather than constructing a partially initialized Resource.
-Raw submissions still use strings. Normalization repairs structured-cloned URI
-objects and refreshes fields when canonical strings change.
+Queue submissions now require `Resource`, not `RawResource`. Worker snapshots
+use strings and are normalized on receipt.
 
 Worker resource snapshots preserve structured-clone-compatible nested metadata.
 Parsed DOMs stay local; metadata containing functions now fails explicitly rather
@@ -348,8 +353,8 @@ which previously returned void without being counted. It excludes failed and
 cancelled attempts. A body successfully acquired but skipped by the save policy
 still counts, matching buffered behavior; pre-download skips and HTTP 304 do not.
 The outcome's `downloaded` flag describes acquisition independently of final
-success, and `publishedFiles` can be nonzero on a later failure. Publication is
-atomic per file; the outcome does not claim a multi-file transaction.
+success, and `publishedFiles` can be nonzero on a later failure. With `atomicWrites: true`, publication is atomic per file. Direct-write failures
+can leave partial files even when `publishedFiles` is zero.
 
 Built-in workers return an optional validated `progress` object with a nonnegative
 safe-integer `publishedFiles` and boolean `skipped`. Custom workers may supply it to

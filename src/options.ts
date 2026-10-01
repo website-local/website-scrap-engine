@@ -32,6 +32,14 @@ export interface StaticDownloadOptions {
    * @see Resource.localRoot
    */
   localRoot: string;
+  /** Re-resolve the root and prepare/check parents on every write instead of caching per crawl.
+   * Atomic publication always rechecks its parent. Default: false.
+   */
+  strictOutputChecks?: boolean;
+  /** Stage output and rename only on success. Default: false (direct writes may leave partial files). */
+  atomicWrites?: boolean;
+  /** Multi-thread only: initialize workers before init resolves. Default: false (on first worker task). */
+  waitForWorkers?: boolean;
 
   /**
    * Local source path to download from,

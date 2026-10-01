@@ -62,6 +62,18 @@ export class MultiThreadDownloader extends AbstractDownloader {
 
   protected async _internalInit(options: DownloadOptions): Promise<void> {
     this.signal.throwIfAborted();
+    if (options.waitForWorkers) {
+      const pool = this.pool;
+      const cancelStartup = () => { void pool.dispose().catch(() => undefined); };
+      this.signal.addEventListener('abort', cancelStartup, {once: true});
+      try { await pool.ready; }
+      finally { this.signal.removeEventListener('abort', cancelStartup); }
+    }
+    return this.addInitialResource(options.initialUrl ?? []);
+  }
+
+  private createPool(options: DownloadOptions): WorkerPool<WireResource, DownloadWorkerMessage> {
+    this.signal.throwIfAborted();
     let workerCount: number = options.concurrency;
     if (options.workerCount) {
       workerCount = Math.min(options.workerCount, workerCount);
@@ -92,25 +104,12 @@ export class MultiThreadDownloader extends AbstractDownloader {
           this.workerDispose.push(disposed);
         });
     }
-    const cancelStartup = () => { void this.pool.dispose().catch(() => undefined); };
-    this.signal.addEventListener('abort', cancelStartup, {once: true});
-    try {
-      await this.pool.ready;
-    } finally {
-      this.signal.removeEventListener('abort', cancelStartup);
-    }
-    if (this.options.initialUrl) {
-      return this.addInitialResource(this.options.initialUrl);
-    } else {
-      return this.addInitialResource([]);
-    }
+    return this._pool;
   }
 
   get pool(): WorkerPool<WireResource, DownloadWorkerMessage> {
-    if (this._pool) {
-      return this._pool;
-    }
-    throw new TypeError('MultiThreadDownloader: pool not initialized');
+    // Creation is synchronous and one-shot; submitTask waits for worker readiness.
+    return this._pool ?? this.createPool(this.options);
   }
 
   async downloadAndProcessResource(res: Resource): Promise<boolean | void> {

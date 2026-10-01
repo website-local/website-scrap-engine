@@ -9,7 +9,7 @@ import type {WireResource} from '../resource.js';
 import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
-import {WorkerControlMessageType, WorkerMessageType, WORKER_PROTOCOL_VERSION} from './types.js';
+import {WorkerControlMessageType, WorkerMessageType} from './types.js';
 import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {WorkerTaskMessage} from './worker-type.js';
 import {getWorkerChannels} from './worker-channel.js';
@@ -46,10 +46,9 @@ const asyncPipeline = asyncOptions.then(options => withCrawlContext(context, () 
 }));
 
 async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> {
-  if (msg?.version !== WORKER_PROTOCOL_VERSION ||
+  if (!msg ||
     !Number.isSafeInteger(msg.taskId) || msg.taskId <= 0) {
-    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
-      type: WorkerControlMessageType.Failed, error: 'Invalid worker task envelope'});
+    parentPort?.postMessage({type: WorkerControlMessageType.Failed, error: 'Invalid worker task envelope'});
     return;
   }
   const collectedResource: WireResource[] = [];
@@ -129,7 +128,6 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
       }
     }
     const message: DownloadWorkerMessage = {
-      version: WORKER_PROTOCOL_VERSION,
       taskId: msg.taskId,
       type: WorkerMessageType.Complete,
       body: collectedResource,
@@ -152,17 +150,11 @@ taskPort.addListener('message', (msg: WorkerTaskMessage<WireResource>) => {
   active.add(task);
   void task.then(() => active.delete(task), () => {
     active.delete(task);
-    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
-      type: WorkerControlMessageType.Failed, error: 'Worker task response failed'});
+    parentPort?.postMessage({type: WorkerControlMessageType.Failed, error: 'Worker task response failed'});
   });
 });
 
 parentPort?.addListener('message', msg => {
-  if (msg?.version !== WORKER_PROTOCOL_VERSION) {
-    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION,
-      type: WorkerControlMessageType.Failed, error: 'Worker protocol version mismatch'});
-    return;
-  }
   if (msg?.type !== WorkerControlMessageType.Close &&
     msg?.type !== WorkerControlMessageType.Cancel) {
     return;
@@ -176,17 +168,16 @@ parentPort?.addListener('message', msg => {
     publications?.close();
     taskPort.close();
     logPort.close();
-    parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Closed});
+    parentPort?.postMessage({type: WorkerControlMessageType.Closed});
   })();
 });
 
 void asyncPipeline.then(() => {
   if (closing) return;
-  parentPort?.postMessage({version: WORKER_PROTOCOL_VERSION, type: WorkerControlMessageType.Ready});
+  parentPort?.postMessage({type: WorkerControlMessageType.Ready});
 }, error => {
   if (closing) return;
   parentPort?.postMessage({
-    version: WORKER_PROTOCOL_VERSION,
     type: WorkerControlMessageType.Failed,
     error: error instanceof Error ? error.message : String(error)
   });
