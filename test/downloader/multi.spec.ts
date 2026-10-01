@@ -154,3 +154,10 @@ test('explicit lifecycle and crawl isolation in real Node processes', async () =
     path.join(buildRoot, 'index.js')
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
+
+test('failed downloads, processing, and saves can be retried in both modes', async () => {
+  await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-failure-retry.js'),
+    path.join(buildRoot, 'index.js')
+  ], {cwd: projectRoot, timeout: 35000});
+}, 40000);

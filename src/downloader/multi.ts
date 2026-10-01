@@ -120,7 +120,6 @@ export class MultiThreadDownloader extends AbstractDownloader {
       this.handleError(e, 'submitting resource to worker', res);
       return false;
     }
-    this.downloadedUrl.add(res.url);
     if (!msg) {
       await this.pipeline.notifyStatusChange(res, 'processAfterDownload');
       return;
@@ -132,7 +131,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
     if (msg.redirectedUrl) {
       this.queuedUrl.add(msg.redirectedUrl);
     }
-
+    if (msg.error) return false;
+    this.downloadedUrl.add(res.url);
   }
 
   protected async cancelActiveWork(): Promise<void> {

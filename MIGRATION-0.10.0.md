@@ -129,6 +129,13 @@ For code that directly uses worker-pool internals:
 
 ## Other changes
 
+Failed download, processing, and save attempts no longer increment
+`downloadedCount`. Once a failed task settles, its URL reservation is released so
+the application can explicitly resubmit it; there is no automatic task replay.
+Successful tasks remain deduplicated. Create a fresh resource for a network retry,
+especially after worker buffer transfer. A retry is a new admission for
+`maxResources`; previously admitted children retain their own reservations.
+
 Optional scheduling limits are positive integers:
 
 - `maxResources` caps total resource admissions for a crawl; duplicates and rejected

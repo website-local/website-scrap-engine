@@ -85,7 +85,9 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
     // https://github.com/website-local/website-scrap-engine/issues/340
     try {
       // should always be
-      if (typeof structuredClone === 'function') {
+      if (e === null || typeof e !== 'object') {
+        error = new Error(String(e));
+      } else if (typeof structuredClone === 'function') {
         error = structuredClone(e);
       } else {
         // this is the old behavior before this

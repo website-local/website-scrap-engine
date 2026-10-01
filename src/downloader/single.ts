@@ -23,7 +23,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
     }
   }
 
-  async downloadAndProcessResource(res: Resource): Promise<void> {
+  async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
     let r: DownloadResource | void;
     try {
       r = await this.pipeline.download(res);
@@ -33,9 +33,8 @@ export class SingleThreadDownloader extends AbstractDownloader {
       }
     } catch (e) {
       this.handleError(e, 'downloading resource', res);
-      return;
+      return false;
     }
-    this.downloadedUrl.add(res.url);
 
     const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
       if (Array.isArray(resources)) {
@@ -58,8 +57,10 @@ export class SingleThreadDownloader extends AbstractDownloader {
         processedResource.redirectedUrl !== processedResource.url) {
         this.queuedUrl.add(processedResource.redirectedUrl);
       }
+      this.downloadedUrl.add(res.url);
     } catch (e) {
       this.handleError(e, 'post-process', res);
+      return false;
     }
   }
 

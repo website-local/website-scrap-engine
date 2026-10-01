@@ -153,6 +153,17 @@ automatic adjustment clamping. Build and all 360 tests pass on Node 24.18.0; the
 four new budget tests pass on Node 22.13.0. Byte/resource-size limits and an
 evidence-led review of the adjustment heuristic remain outstanding.
 
+Failed download, processing, and save attempts now return a failure result in
+both downloader implementations and do not increment downloadedCount. The queue
+wrapper releases the original canonical URL reservation only after failure settles,
+allowing explicit retries while preventing active duplicates. Worker primitive
+throws become explicit errors, including `throw undefined`. Real-process tests
+exercise download/process/save/falsy failures, preserved output absence, retries,
+and successful deduplication in both modes. Build and all 361 tests pass on
+Node 24.18.0; the eight real-process scenarios pass on Node 22.13.0. A complete
+registry with alias ownership, destination conflicts, streaming success counts,
+and explicit terminal outcomes remains outstanding.
+
 - Remaining worker cleanup/stress verification.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.

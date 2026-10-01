@@ -176,11 +176,20 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
         {code: 'ERR_CRAWL_LIMIT', limit}), 'admitting resource', resource);
       return false;
     }
+    delete resource.meta.error;
+    delete resource.meta.errorCause;
     ++this._admittedCount;
     this.queuedUrl.add(url);
     void this.queue.add(() => withCrawlContext(this.context, async () => {
-      this.signal.throwIfAborted();
-      await this.downloadAndProcessResource(resource);
+      try {
+        this.signal.throwIfAborted();
+        if (await this.downloadAndProcessResource(resource) === false) {
+          this.queuedUrl.delete(url);
+        }
+      } catch (error) {
+        this.queuedUrl.delete(url);
+        throw error;
+      }
     })).catch(error => {
       this.handleError(error, this.signal.aborted ? 'cancelled' : 'processing resource', resource);
     });
