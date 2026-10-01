@@ -38,6 +38,11 @@ export interface WorkerFactory {
   (filename: string | URL, options?: WorkerOptions): Worker;
 }
 
+export interface WorkerPoolOptions {
+  /** Maximum time for each worker to announce successful initialization. */
+  startupTimeout?: number;
+}
+
 function defaultWorkerFactory(
   filename: string | URL, options?: WorkerOptions): Worker {
   return new Worker(filename, options);
@@ -53,14 +58,28 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   private _disposePromise?: Promise<number[]>;
   private readonly _unavailableWorkers = new Set<WorkerInfo>();
   private _lastWorkerError?: Error;
+  private _initialized = false;
+  private readonly _starting = new Map<WorkerInfo, {
+    resolve: () => void;
+    reject: (error: Error) => void;
+  }>();
 
   constructor(
     public coreSize: number,
     public workerScript: string,
     public workerData: Record<string, unknown>,
     public maxLoad: number = -1,
-    public factory: WorkerFactory = defaultWorkerFactory
+    public factory: WorkerFactory = defaultWorkerFactory,
+    options: WorkerPoolOptions = {}
   ) {
+    if (!Number.isSafeInteger(coreSize) || coreSize < 1) {
+      throw new RangeError('coreSize must be a positive integer');
+    }
+    const startupTimeout = options.startupTimeout ?? 30000;
+    if (!Number.isSafeInteger(startupTimeout) || startupTimeout < 1 ||
+      startupTimeout > 2147483647) {
+      throw new RangeError('startupTimeout must be an integer between 1 and 2147483647');
+    }
     const ready: Promise<void>[] = [];
     for (let i = 0; i < coreSize; i++) {
       const taskChannel = new MessageChannel();
@@ -69,13 +88,23 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         taskPort: taskChannel.port2,
         logPort: logChannel.port2
       };
-      const worker = factory(workerScript, {
-        workerData: {
-          ...workerData,
-          workerChannels
-        },
-        transferList: [taskChannel.port2, logChannel.port2]
-      });
+      let worker: Worker;
+      try {
+        worker = factory(workerScript, {
+          workerData: {
+            ...workerData,
+            workerChannels
+          },
+          transferList: [taskChannel.port2, logChannel.port2]
+        });
+      } catch (error) {
+        taskChannel.port1.close();
+        taskChannel.port2.close();
+        logChannel.port1.close();
+        logChannel.port2.close();
+        ready.push(Promise.reject(error));
+        break;
+      }
       this.workers[i] = new WorkerInfoImpl(
         worker, taskChannel.port1, logChannel.port1);
       this.workers[i].worker.addListener('message',
@@ -88,11 +117,33 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
         err => this.workerOnError(this.workers[i], err as Error));
       this.workers[i].worker.addListener('exit',
         exitCode => this.workerOnExit(this.workers[i], exitCode));
-      ready.push(new Promise(resolve => {
-        this.workers[i].worker.addListener('online', resolve);
+      const info = this.workers[i];
+      ready.push(new Promise<void>((resolve, reject) => {
+        const finish = (error?: Error) => {
+          clearTimeout(timeout);
+          this._starting.delete(info);
+          if (error) reject(error);
+          else resolve();
+        };
+        const timeout = setTimeout(() => finish(new Error(
+          `worker ${info.id} initialization timed out after ${startupTimeout}ms`
+        )), startupTimeout);
+        this._starting.set(info, {
+          resolve: () => finish(), reject: error => finish(error)
+        });
       }));
     }
-    this.ready = Promise.all(ready).then(() => undefined);
+    this.ready = Promise.all(ready).then(() => {
+      if (this._isDisposing) throw new Error('disposed');
+      this._initialized = true;
+      this.nextTask();
+    }).catch(async error => {
+      this._lastWorkerError = error;
+      await this.dispose();
+      throw error;
+    });
+    // Keep rejection observable through ready without an unhandled-rejection race.
+    void this.ready.catch(() => undefined);
   }
 
   workerOnError(info: WorkerInfo, err: Error): void {
@@ -109,6 +160,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   rejectWorkerTasks(info: WorkerInfo, err: Error): void {
+    this._starting.get(info)?.reject(err);
     if (this._unavailableWorkers.has(info)) {
       return;
     }
@@ -135,6 +187,11 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   onControlMessage(info: WorkerInfo, message: WorkerControlMessage): void {
     if (message?.type === WorkerControlMessageType.Ready) {
+      this._starting.get(info)?.resolve();
+      return;
+    }
+    if (message?.type === WorkerControlMessageType.Failed) {
+      this.rejectWorkerTasks(info, new Error(message.error || 'Worker initialization failed'));
       return;
     }
     if (message?.type === WorkerControlMessageType.Closed) {
@@ -192,7 +249,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     taskBody: T,
     transferList?: Transferable[]): Promise<R> {
     if (this._isDisposing) {
-      return Promise.reject(new Error('disposed'));
+      return Promise.reject(this._lastWorkerError || new Error('disposed'));
     }
     if (!this.workers.some(worker => !this._unavailableWorkers.has(worker))) {
       return Promise.reject(this._lastWorkerError ||
@@ -212,7 +269,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   }
 
   nextTask(): void {
-    if (this._isDisposing || !this.pendingTasks.length) {
+    if (!this._initialized || this._isDisposing || !this.pendingTasks.length) {
       return;
     }
     const sorted = this.workers
@@ -311,6 +368,9 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   private async disposeOnce(): Promise<number[]> {
     this._isDisposing = true;
+    for (const startup of this._starting.values()) {
+      startup.reject(new Error('disposed'));
+    }
     const shouldDrainPorts = this.pendingTasks.length === 0 &&
       this.workingTasks.size === 0;
     if (!shouldDrainPorts) {

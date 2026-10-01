@@ -15,3 +15,5 @@ parentPort.postMessage({
     content: ['invalid parentPort log']
   }
 });
+
+parentPort.postMessage({type: 'ready'});

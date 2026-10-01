@@ -39,17 +39,27 @@ Raw local measurements are under `artifacts/wse-010-implementation/`.
 - Build and 281 tests pass. Both lifecycle and downloader runtime checks pass on
   Node 22.13.0; real-process tests also exercise Node 24.18.0.
 
-## Remaining implementation and release gates
+## Worker stabilization in progress
 
 Worker boundary validation now checks completion ownership before changing load
 or settling tasks, validates log method names and payload arrays, and isolates
 consumer logger exceptions. Worker channel access requires two distinct actual
 MessagePorts. Deterministic regression tests cover forged/duplicate completions,
 malformed logs, and throwing loggers; build and all 283 tests pass on Node 24.18.0.
-Initialized readiness, protocol versioning, and failure deadlines remain pending.
+Worker readiness now means pipeline initialization has succeeded. Dispatch waits
+for readiness; initialization errors, early exits, deadline expiry, and partial
+factory failures terminate the pool and settle startup/queued promises. The
+startup deadline defaults to 30 seconds and is configurable through pool options.
+Disposal during initialization settles readiness, including cancellation from the
+multi-thread downloader while a worker initialization hook is waiting indefinitely.
+The new tests cover pool failures and actual default-worker initialization failures.
+Build and all 289 tests pass on Node 24.18.0; the expanded real-process lifecycle
+harness also passes on the exact Node 22.13.0 minimum.
 
-- Validated/versioned worker protocol, initialized readiness, deadlines, failures,
-  message ownership, and complete cleanup.
+## Remaining implementation and release gates
+
+- Versioned worker protocol, task deadlines, cooperative worker cancellation,
+  message decoding failures, and complete cleanup.
 - Safe staged publication for all sources, uniform existing-file policy, path and
   symlink containment, resource registry/outcomes, and configured admission budgets.
 - Evidence-led test-runner comparison; audit TypeScript 7 without forcing an

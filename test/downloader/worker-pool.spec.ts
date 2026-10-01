@@ -52,9 +52,8 @@ describe('worker-pool', function () {
     const pool = new Pool(2,
       join(__dirname, 'error-worker.js'), {});
     try {
-      await pool.ready;
-      await new Promise(resolve => setTimeout(resolve, 200));
-      expect(fn).toHaveBeenCalledTimes(2);
+      await expect(pool.ready).rejects.toThrow('Test worker error');
+      expect(fn).toHaveBeenCalled();
       // noinspection JSUnusedAssignment
       expect(error).toBeTruthy();
       expect(error?.message).toBe('Test worker error');
@@ -172,8 +171,7 @@ describe('worker-pool', function () {
       join(__dirname, 'invalid-parent-port-worker.js'), {});
     try {
       await pool.ready;
-      await new Promise(resolve => setTimeout(resolve, 200));
-      expect(fn).toHaveBeenCalledTimes(2);
+      expect(fn).toHaveBeenCalledTimes(3);
     } finally {
       await pool.dispose();
     }
@@ -247,6 +245,61 @@ describe('worker-pool', function () {
       await pool.dispose();
     }
   }, 10000);
+
+  test('tasks wait for initialized readiness', async () => {
+    const pool = new WorkerPool(1,
+      join(__dirname, 'startup-worker.js'), {mode: 'wait'});
+    try {
+      const task = pool.submitTask(42);
+      pool.nextTask();
+      expect(pool.workingTasks.size).toBe(0);
+      expect(pool.pendingTasks).toHaveLength(1);
+      pool.workers[0].worker.postMessage('initialize');
+      await pool.ready;
+      expect((await task).body).toBe(42);
+    } finally {
+      await pool.dispose();
+    }
+  });
+
+  test.each(['failed', 'exit', 'timeout'])(
+    'initialization %s rejects readiness and queued work', async mode => {
+      const pool = new WorkerPool(1,
+        join(__dirname, 'startup-worker.js'), {mode}, -1, undefined,
+        {startupTimeout: mode === 'timeout' ? 100 : 5000});
+      const queued = pool.submitTask(42);
+      const results = await Promise.allSettled([pool.ready, queued]);
+      expect(results.map(result => result.status)).toEqual(['rejected', 'rejected']);
+      const expected = mode === 'failed' ? 'configuration failed' :
+        mode === 'exit' ? 'exited with code 0' : 'initialization timed out';
+      await expect(pool.ready).rejects.toThrow(expected);
+      await pool.dispose();
+      expect(pool.workers[0].worker.threadId).toBe(-1);
+      expect(pool.pendingTasks).toHaveLength(0);
+      expect(pool.workingTasks.size).toBe(0);
+    });
+
+  test('partial factory failure terminates already created workers', async () => {
+    let count = 0;
+    const pool = new WorkerPool(2,
+      join(__dirname, 'startup-worker.js'), {mode: 'wait'}, -1,
+      (filename, options) => {
+        if (count++) throw new Error('factory failed');
+        return new Worker(filename, options);
+      });
+    await expect(pool.ready).rejects.toThrow('factory failed');
+    expect(pool.workers).toHaveLength(1);
+    expect(pool.workers[0].worker.threadId).toBe(-1);
+    await pool.dispose();
+  });
+
+  test('disposal during initialization settles readiness', async () => {
+    const pool = new WorkerPool(1,
+      join(__dirname, 'startup-worker.js'), {mode: 'wait'});
+    const rejected = expect(pool.ready).rejects.toThrow('disposed');
+    await pool.dispose();
+    await rejected;
+  });
 
   test('malformed logs and throwing loggers cannot interrupt task delivery', async () => {
     const info = jest.fn(() => { throw new Error('consumer logger failed'); });

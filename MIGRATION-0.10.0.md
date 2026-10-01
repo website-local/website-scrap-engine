@@ -47,7 +47,17 @@ that previously assumed creation always succeeded.
 
 Tasks and results use `workerData.workerChannels.taskPort`; logs use
 `workerData.workerChannels.logPort`. `parentPort` carries control messages.
-The built-in worker is already updated. A minimal custom worker looks like:
+The built-in worker is already updated.
+
+`WorkerPool.ready` now waits for every worker's `Ready` control message, after
+configuration and pipeline initialization succeed. Send `Failed` with an `error`
+string when initialization fails. Tasks submitted before readiness are queued.
+Startup failures reject readiness, terminate the pool, and settle queued tasks.
+The default startup deadline is 30 seconds; configure `startupTimeout` in the
+sixth `WorkerPool` constructor argument, or use `workerPool: {startupTimeout}`
+in multi-thread downloader options. A custom worker must send `Ready` explicitly.
+
+A minimal custom worker looks like:
 
 ```js
 import {parentPort} from 'node:worker_threads';

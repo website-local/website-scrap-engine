@@ -1,6 +1,6 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import type {WorkerFactory} from './worker-pool.js';
+import type {WorkerFactory, WorkerPoolOptions} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
 import type {RawResource, Resource} from '../resource.js';
 import type {DownloadWorkerMessage} from './types.js';
@@ -11,6 +11,7 @@ import {AbstractDownloader} from './main.js';
 export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
   pathToWorker?: string;
   maxLoad: number;
+  workerPool?: WorkerPoolOptions;
 }
 
 export class MultiThreadDownloader extends AbstractDownloader {
@@ -28,7 +29,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
     this.workerDispose = [];
   }
 
-  protected _internalInit(options: DownloadOptions): Promise<void> {
+  protected async _internalInit(options: DownloadOptions): Promise<void> {
+    this.signal.throwIfAborted();
     let workerCount: number = options.concurrency;
     if (options.workerCount) {
       workerCount = Math.min(options.workerCount, workerCount);
@@ -48,7 +50,8 @@ export class MultiThreadDownloader extends AbstractDownloader {
         path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'worker.js'),
       {pathToOptions: this.pathToOptions, overrideOptions: this._overrideOptions},
       workerOptions.maxLoad || -1,
-      this._workerFactory
+      this._workerFactory,
+      workerOptions.workerPool
     );
     for (const info of this.pool.workers) {
       info.worker.addListener('exit',
@@ -57,6 +60,13 @@ export class MultiThreadDownloader extends AbstractDownloader {
           void disposed.catch(() => undefined);
           this.workerDispose.push(disposed);
         });
+    }
+    const cancelStartup = () => { void this.pool.dispose().catch(() => undefined); };
+    this.signal.addEventListener('abort', cancelStartup, {once: true});
+    try {
+      await this.pool.ready;
+    } finally {
+      this.signal.removeEventListener('abort', cancelStartup);
     }
     if (this.options.initialUrl) {
       return this.addInitialResource(this.options.initialUrl);

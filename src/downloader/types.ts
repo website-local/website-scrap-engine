@@ -54,6 +54,7 @@ export enum WorkerMessageType {
 
 export enum WorkerControlMessageType {
   Ready = 'ready',
+  Failed = 'failed',
   Close = 'close',
   Closed = 'closed'
 }
@@ -67,6 +68,7 @@ export interface WorkerMessage<T = unknown> {
 
 export interface WorkerControlMessage {
   type: WorkerControlMessageType;
+  error?: string;
 }
 
 export interface WorkerReadyMessage extends WorkerControlMessage {

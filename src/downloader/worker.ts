@@ -111,4 +111,11 @@ parentPort?.addListener('message', msg => {
   parentPort?.postMessage({type: WorkerControlMessageType.Closed});
 });
 
-parentPort?.postMessage({type: WorkerControlMessageType.Ready});
+void asyncPipeline.then(() => {
+  parentPort?.postMessage({type: WorkerControlMessageType.Ready});
+}, error => {
+  parentPort?.postMessage({
+    type: WorkerControlMessageType.Failed,
+    error: error instanceof Error ? error.message : String(error)
+  });
+});

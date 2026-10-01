@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {setImmediate as nextTurn} from 'node:timers/promises';
+import {Worker} from 'node:worker_threads';
 
 const entry = process.argv[2] ? pathToFileURL(path.resolve(process.argv[2])).href :
   new URL('../lib/index.js', import.meta.url).href;
@@ -132,6 +133,46 @@ try {
     await failed.dispose();
     assert.equal(failed.state, 'closed');
   }
+  const workerFailedPath = path.join(root, 'worker-init-failed.mjs');
+  await fs.writeFile(workerFailedPath, `
+import {isMainThread} from 'node:worker_threads';
+import {lifeCycle, options} from ${JSON.stringify(entry)};
+export default options.defaultDownloadOptions({
+  ...lifeCycle.defaultLifeCycle(),
+  initialUrl: [], concurrency: 1, workerCount: 1,
+  localRoot: ${JSON.stringify(root)},
+  init: [async () => {
+    if (!isMainThread) throw new Error('worker pipeline initialization failed');
+  }]
+});
+`);
+  const workerFailed = new downloader.MultiThreadDownloader(pathToFileURL(workerFailedPath).href);
+  crawlers.push(workerFailed);
+  await assert.rejects(workerFailed.init, /worker pipeline initialization failed/);
+  assert.equal(workerFailed.pool.workers[0].worker.threadId, -1);
+  await workerFailed.dispose();
+  const workerWaitingPath = path.join(root, 'worker-init-waiting.mjs');
+  await fs.writeFile(workerWaitingPath, `
+import {isMainThread} from 'node:worker_threads';
+import base from ${JSON.stringify(optionsUrl)};
+export default {...base, init: [async () => {
+  if (!isMainThread) await new Promise(() => {});
+}]};
+`);
+  let workerOnline;
+  const online = new Promise(resolve => { workerOnline = resolve; });
+  const workerWaiting = new downloader.MultiThreadDownloader(
+    pathToFileURL(workerWaitingPath).href, undefined, (filename, options) => {
+      const worker = new Worker(filename, options);
+      worker.once('online', workerOnline);
+      return worker;
+    });
+  crawlers.push(workerWaiting);
+  await online;
+  const waitingRejected = assert.rejects(workerWaiting.init, /disposed/);
+  await workerWaiting.dispose();
+  await waitingRejected;
+  assert.equal(workerWaiting.pool.workers[0].worker.threadId, -1);
   console.log(`${process.version}: explicit startup, cancel/drain cleanup, and crawl isolation passed`);
 } finally {
   await Promise.all(crawlers.map(crawler => crawler.dispose()));
