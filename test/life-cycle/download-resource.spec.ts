@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import type {BeforeRetryHook} from 'got';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
-import {defaultDownloadOptions} from '../../src/options.js';
+import {calculateFastDelay, defaultDownloadOptions} from '../../src/options.js';
 import {ResourceType} from '../../src/resource.js';
 import {getLogger, setLogger} from '../../src/logger/logger.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
@@ -72,6 +72,26 @@ describe.each(['text', 'buffer'] as const)('empty %s responses', responseType =>
 });
 
 describe('configured retries', () => {
+  test.each([500, 429])('fast delay retries HTTP %i when the computed wait rounds to zero', async status => {
+    let requests = 0;
+    const url = await listen((_request, response) => {
+      if (++requests === 1) {
+        response.statusCode = status;
+        if (status === 429) response.setHeader('Retry-After', '0');
+        response.end('retry');
+      } else response.end('recovered');
+    });
+    const random = jest.spyOn(Math, 'random').mockReturnValue(0.001);
+    try {
+      const result = await getRetry(url, {
+        responseType: 'buffer', timeout: {request: 2000},
+        retry: {limit: 1, calculateDelay: calculateFastDelay}
+      });
+      expect(result?.body).toEqual(Buffer.from('recovered'));
+      expect(requests).toBe(2);
+    } finally { random.mockRestore(); }
+  });
+
   test.each([
     {method: 'GET', limit: 0, expectedRequests: 1},
     {method: 'GET', limit: 2, expectedRequests: 3},

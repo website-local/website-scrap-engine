@@ -119,8 +119,24 @@ describe('calculateFastDelay', function () {
   test('returns positive delay for retryable error', () => {
     const obj = makeRetryObject({attemptCount: 1});
     const delay = calculateFastDelay(obj);
-    expect(delay).toBeGreaterThanOrEqual(0);
+    expect(delay).toBeGreaterThan(0);
   });
+
+  test.each([0, 0.001, 0.004999])('keeps the first retry when jitter is %s', random => {
+    const spy = jest.spyOn(Math, 'random').mockReturnValue(random);
+    try {
+      expect(calculateFastDelay(makeRetryObject({}))).toBe(1);
+    } finally { spy.mockRestore(); }
+  });
+
+  test.each(['0', 'Thu, 01 Jan 1970 00:00:00 GMT'])(
+    'keeps a retry due immediately for Retry-After %s', retryAfter => {
+      const spy = jest.spyOn(Date, 'now').mockReturnValue(0);
+      try {
+        expect(calculateFastDelay(makeRetryObject({statusCode: 429,
+          errorName: 'HTTPError', retryAfter}))).toBe(1);
+      } finally { spy.mockRestore(); }
+    });
 
   test('429 with retry-after within maxRetryAfter uses retry-after', () => {
     const obj = makeRetryObject({

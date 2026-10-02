@@ -287,7 +287,8 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
     }
   }
   delay |= 0;
-  return delay;
+  // Got treats zero as cancellation, including rounded jitter and Retry-After: 0.
+  return Math.max(1, delay);
 };
 
 const defaultOptions: DownloadOptions = {
