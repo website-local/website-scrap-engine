@@ -17,7 +17,7 @@ export async function processCssText(
   if (!cssUrls.length) return cssText;
   // Phase 1: process URLs and collect replacements
   const replacements = new Map<string, string>();
-  const processed = new Map<string, Resource | void>();
+  const processed = new Set<string>();
   let rawUrl: string, r: Resource | void;
   // noinspection DuplicatedCode
   for (let i = 0, l = cssUrls.length; i < l; i++) {
@@ -27,7 +27,7 @@ export async function processCssText(
     }
     r = await pipeline.createAndProcessResource(
       rawUrl, ResourceType.Binary, depth, null, res);
-    processed.set(rawUrl, r);
+    processed.add(rawUrl);
     if (!r) continue;
     if (!r.shouldBeDiscardedFromDownload) {
       resources.push(r);

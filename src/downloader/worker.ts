@@ -107,11 +107,8 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
           actual: typeof details.actual === 'number' ? details.actual : undefined};
       } else if (e === null || typeof e !== 'object') {
         error = new Error(String(e));
-      } else if (typeof structuredClone === 'function') {
-        error = structuredClone(e);
       } else {
-        // this is the old behavior before this
-        error = e;
+        error = structuredClone(e);
       }
     } catch {
       // can not clone, so no need to get the full error here
