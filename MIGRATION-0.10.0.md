@@ -82,6 +82,13 @@ parent must use the same installed runtime. Task IDs, task ownership, message
 shapes and duplicate completions are still checked. The old version constant and
 optional type fields remain deprecated compatibility exports.
 
+Built-in workers discard repeated eligible bodyless discoveries from the same
+task before serializing them. All discoveries still count toward configured
+limits. Unused duplicate metadata no longer has to be cloneable; resources that
+actually cross the boundary retain validation. Byte-accounted and depth-ineligible
+discoveries retain their original submission behavior. A caught serialization
+failure does not prevent a corrected resource from being submitted at the same URL.
+
 The multi-thread downloader creates its pool on the first task that needs worker
 processing and retains that pool until disposal. Streaming-only crawls create no
 workers. Set `waitForWorkers: true` to create the pool during initialization and

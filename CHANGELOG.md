@@ -29,7 +29,7 @@ Performance
 * Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
 * Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
 * Keep worker logging imports out of the direct single-thread entry and defer the HTML parser until markup processing. Pools remain one-shot and live until downloader disposal.
-* Keep synchronous link/type/before-download pipelines synchronous; coalesce validated duplicate bodyless discoveries before worker transfer, retaining discovery counting and byte-budget behavior.
+* Keep synchronous link/type/before-download pipelines synchronous; coalesce duplicate bodyless discoveries before serialization and worker transfer, retaining discovery counting and byte-budget behavior. Validate actual transport payloads; unused duplicate metadata is not cloned.
 * Avoid URI hostname classification for already-absolute URLs, reduce redundant URI copies, overlap local metadata/body reads, and use callback file I/O behind promise interfaces.
 * Use kernel no-follow opens for supported direct writes instead of a separate destination probe. Generic writers, worker publication requests and Windows retain explicit destination checks. Increase the streaming write buffer to 256 KiB.
 * Add a combined synthetic/MDN regression runner and an isolated HTTP transport probe. Remaining regressions are reported per workload, without an aggregate performance pass.

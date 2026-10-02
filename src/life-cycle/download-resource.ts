@@ -50,9 +50,10 @@ export async function getRetry(
   // Got owns retry limits and hooks; successful empty bodies are valid responses.
   const account = currentCrawlContext()?.bufferAccount;
   const limitController = maxResourceBytes === undefined && !account ? undefined : new AbortController();
+  // This helper consumes a response promise, across Got 13–16 overloads.
   const request = got(url, {...options, signal: limitController ?
     options.signal ? AbortSignal.any([options.signal, limitController.signal]) : limitController.signal :
-    options.signal});
+    options.signal} as OptionsInit & {isStream?: false; resolveBodyOnly?: false});
   let sizeError: unknown;
   if (maxResourceBytes !== undefined || account) {
     const failed = (error: unknown) => {

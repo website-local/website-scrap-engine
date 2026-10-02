@@ -1,5 +1,8 @@
 # Native HTTP performance — 2026-10-02
 
+Follow-up: [Got 13–16 profiles and comparison](got-major-profiles.md) measures
+the full-compatibility transport alternatives and a targeted worker optimization.
+
 The opt-in native transport beats 0.9.1 in all measured HTTP crawl cases. The
 all-suite target is still **not met**: the strict combined native gate failed
 single-thread local copying, and the Got-default gate failed single-thread HTTP.

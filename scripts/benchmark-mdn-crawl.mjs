@@ -26,13 +26,16 @@ for (let index = 0; index < entries.length; index += 2) {
   variants.push({name: index / 2, api, lifecycle, MdnDownloader});
 }
 const root = await fs.mkdtemp(path.join(tmpdir(), 'wse-mdn-replay-'));
-const deadline = setTimeout(() => { throw new Error('MDN replay timed out'); }, 120000);
+const deadline = setTimeout(() => { throw new Error('MDN replay timed out'); },
+  Math.max(120000, (samples + 1) * variants.length * 10000));
 deadline.unref();
 const results = [];
 let expected;
 try {
   for (let sample = -1; sample < samples; sample++) {
-    const order = sample % 2 === 1 ? [...variants].reverse() : variants;
+    const order = [...variants];
+    if (order.length > 2 && sample >= 0) order.push(...order.splice(0, sample % order.length));
+    if ((order.length > 2 ? Math.floor(sample / order.length) : sample) % 2 === 1) order.reverse();
     for (const {name, api, lifecycle, MdnDownloader} of order) {
       const caseRoot = await fs.mkdtemp(path.join(root, 'case-'));
       const output = path.join(caseRoot, 'output');

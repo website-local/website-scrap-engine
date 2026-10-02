@@ -66,16 +66,16 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
     const res = msg.body;
     const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
     discovery = createDiscoverySubmit(resource => {
-      const wire = prepareResourceForClone(resource);
       // The parent admits only the first eligible resource for a URL. Avoid
-      // transferring and reconstructing repeated bodyless links from one task.
-      // Keep validation/discovery counting above this filter, and retain the
-      // original stream when byte credits or depth rejection can affect admission.
-      if (pipeline.options.maxBufferedBytes === undefined && wire.body === undefined &&
-        wire.depth <= pipeline.options.maxDepth) {
-        if (discoveredUrls.has(wire.url)) return;
-        discoveredUrls.add(wire.url);
-      }
+      // cloning/validating transport data for links that will never cross the
+      // boundary. Discovery/size limits still run before this filter. Retain
+      // the original stream when byte credits or depth affect admission.
+      const coalesce = pipeline.options.maxBufferedBytes === undefined && resource.body === undefined &&
+        resource.depth <= pipeline.options.maxDepth;
+      if (coalesce && discoveredUrls.has(resource.url)) return;
+      const wire = prepareResourceForClone(resource);
+      // A caught serialization failure must allow a corrected resubmission.
+      if (coalesce) discoveredUrls.add(wire.url);
       const reserved = currentCrawlContext()?.bufferAccount?.reserveChild(resourceBodyBytes(wire.body, wire.encoding));
       if (reserved) return reserved.then(() => { collectedResource.push(wire); });
       collectedResource.push(wire);

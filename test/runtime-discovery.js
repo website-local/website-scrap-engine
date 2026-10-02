@@ -12,14 +12,16 @@ const deadline = setTimeout(() => { throw new Error('Discovery checks timed out'
 deadline.unref();
 try {
   for (const Downloader of [downloader.SingleThreadDownloader, downloader.MultiThreadDownloader]) {
-    for (const mode of ['limit', 'failed-parent', 'oversized-child', 'duplicate-limit']) {
+    for (const mode of ['limit', 'failed-parent', 'oversized-child', 'duplicate-limit', 'duplicate-discarded',
+      'duplicate-corrected']) {
       const output = path.join(root, Downloader.name, mode);
       await fs.mkdir(output, {recursive: true});
       const config = path.join(output, 'options.mjs');
       await fs.writeFile(config, `
 import {lifeCycle, options, resource} from ${JSON.stringify(entry)};
+import {isMainThread} from 'node:worker_threads';
 const lc = lifeCycle.defaultLifeCycle();
-if (${JSON.stringify(mode)} === 'duplicate-limit') lc.download.unshift(res => {
+if (${JSON.stringify(mode)}.startsWith('duplicate-')) lc.download.unshift(res => {
   if (!res.url.endsWith('/parent')) res.body = 'child';
   return res;
 });
@@ -27,10 +29,18 @@ lc.processAfterDownload.unshift((res, submit) => {
   if (!res.url.endsWith('/parent')) return res;
   const make = id => ({...resource.createResource({type: resource.ResourceType.Binary, depth: 1,
     url: 'https://example.test/child-' + id, refUrl: res.url, localRoot: res.localRoot}), body: 'child'});
-  if (${JSON.stringify(mode)} === 'duplicate-limit') {
+  if (${JSON.stringify(mode)}.startsWith('duplicate-')) {
     const child = make(1);
     delete child.body;
-    submit([child, child, child]);
+    if (${JSON.stringify(mode)} === 'duplicate-corrected') {
+      if (!isMainThread) {
+        try { submit({...child, meta: {invalid: () => {}}}); } catch { /* Repair and resubmit below. */ }
+      }
+      submit(child);
+    } else if (${JSON.stringify(mode)} === 'duplicate-discarded') {
+      // Unused duplicate metadata is not serialized across the worker boundary.
+      submit([child, {...child, meta: {unused: () => {}}}]);
+    } else submit([child, child, child]);
     return res;
   }
   submit([make(1), make(2)]);
@@ -55,11 +65,12 @@ export default options.defaultDownloadOptions({...lc, initialUrl: [],
         assert.equal(crawler.addProcessedResource(parent), true);
         await crawler.start();
         await crawler.onIdle();
-        assert.equal(crawler.outcomes.get(url).status, 'failed');
+        const successfulParent = mode === 'duplicate-discarded' || mode === 'duplicate-corrected';
+        assert.equal(crawler.outcomes.get(url).status, successfulParent ? 'saved' : 'failed');
         if (mode === 'limit' || mode === 'duplicate-limit') assert.equal(parent.meta.error.code, 'ERR_DISCOVERY_LIMIT');
         if (mode === 'oversized-child') assert.equal(parent.meta.error.code, 'ERR_RESOURCE_SIZE_LIMIT');
-        const ids = mode === 'duplicate-limit' ? [1] : [1, 2];
-        assert.equal(crawler.downloadedCount, ids.length);
+        const ids = mode.startsWith('duplicate-') ? [1] : [1, 2];
+        assert.equal(crawler.downloadedCount, ids.length + (successfulParent ? 1 : 0));
         assert.equal(crawler.outcomes.size, ids.length + 1);
         for (const id of ids) {
           assert.equal(crawler.outcomes.get('https://example.test/child-' + id).status, 'saved');

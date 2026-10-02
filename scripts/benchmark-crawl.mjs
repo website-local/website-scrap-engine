@@ -162,7 +162,9 @@ try {
     for (const mode of modes) {
       for (let sample = -1; sample < samples; sample++) {
         const order = variants.map((_, index) => index);
-        if (sample % 2 === 1) order.reverse();
+        // Rotate multi-version comparisons so no version is always in the middle.
+        if (order.length > 2 && sample >= 0) order.push(...order.splice(0, sample % order.length));
+        if ((order.length > 2 ? Math.floor(sample / order.length) : sample) % 2 === 1) order.reverse();
         for (const variant of order) {
           const result = await run(variant, workload, mode, sample);
           if (sample >= 0) results.push(result);
