@@ -2,7 +2,7 @@ import {currentCrawlContext, throwIfCancelled, markResourceDownloaded, markResou
 import {prepareHtmlParser} from '../cheerio.js';
 import {fullSavePathHooks} from '../life-cycle/save-path-hook-state.js';
 import {isPromiseLike} from '../util.js';
-import {checkResourceBody, accountBufferedBody} from '../resource-limits.js';
+import {checkResourceBody, checkAndAccountResourceBody} from '../resource-limits.js';
 import path from 'node:path';
 import {promises as fs} from 'node:fs';
 import type {Stats} from 'node:fs';
@@ -349,8 +349,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       requestOptions = {...requestOptions, signal: requestOptions.signal ?
         AbortSignal.any([requestOptions.signal, signal]) : signal};
     }
-    let downloadedResource: DownloadResource | Resource | void = this.checkResource(res);
-    const accounting = accountBufferedBody(downloadedResource.body, downloadedResource.encoding);
+    let downloadedResource: DownloadResource | Resource | void = res;
+    const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
     if (accounting) await accounting;
     for (const download of this.lifeCycle.download) {
       throwIfCancelled(this.signal);
@@ -360,8 +360,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         return undefined;
       }
       throwIfCancelled(this.signal);
-      this.checkResource(downloadedResource);
-      const accounting = accountBufferedBody(downloadedResource.body, downloadedResource.encoding);
+      const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
       if (accounting) await accounting;
       // if downloaded, end loop and return
       if (downloadedResource.body !== undefined) {
@@ -392,8 +391,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     if (!options) {
       options = this.options;
     }
-    let downloadedResource: DownloadResource | void = this.checkResource(res) as DownloadResource;
-    const accounting = accountBufferedBody(downloadedResource.body, downloadedResource.encoding);
+    let downloadedResource: DownloadResource | void = res;
+    const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
     if (accounting) await accounting;
     for (const processAfterDownload of this.lifeCycle.processAfterDownload) {
       throwIfCancelled(this.signal);
@@ -402,8 +401,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         === undefined) {
         return undefined;
       }
-      this.checkResource(downloadedResource);
-      const accounting = accountBufferedBody(downloadedResource.body, downloadedResource.encoding);
+      const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
       if (accounting) await accounting;
     }
     throwIfCancelled(this.signal);
@@ -419,8 +417,8 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       options = this.options;
     }
     if (!await this.shouldSaveResource(res)) return undefined;
-    let downloadedResource: DownloadResource | void = this.checkResource(res) as DownloadResource;
-    const accounting = accountBufferedBody(downloadedResource.body, downloadedResource.encoding);
+    let downloadedResource: DownloadResource | void = res;
+    const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
     if (accounting) await accounting;
     for (const saveToDisk of this.lifeCycle.saveToDisk) {
       throwIfCancelled(this.signal);
@@ -430,8 +428,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         // already downloaded
         return undefined;
       }
-      this.checkResource(downloadedResource);
-      const accounting = accountBufferedBody(downloadedResource.body, downloadedResource.encoding);
+      const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
       if (accounting) await accounting;
     }
     // not downloaded

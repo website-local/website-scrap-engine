@@ -34,6 +34,15 @@ export function accountBufferedBody(body: ResourceBody | undefined, encoding: Re
   return currentCrawlContext()?.bufferAccount?.observeBody(resourceBodyBytes(body, encoding));
 }
 
+export function checkAndAccountResourceBody(res: Resource, limit?: number): void | Promise<void> {
+  const account = currentCrawlContext()?.bufferAccount;
+  if (limit === undefined && !account) return;
+  const bytes = resourceBodyBytes(res.body, res.encoding);
+  // Validate before reserving credits, and only reuse the size at this hook boundary.
+  if (res.body !== undefined) checkResourceSize(bytes, limit);
+  return account?.observeBody(bytes);
+}
+
 export function limitResourceStream(limit: number, offset = 0): Transform {
   let size = offset;
   return new Transform({transform(chunk: Buffer, _encoding, callback) {

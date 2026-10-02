@@ -57,6 +57,7 @@ Fixes and performance
 * Normalize resources only when decoding worker-boundary data. Hooks, factories and queue callers maintain Resource invariants; body-size limits remain independent.
 * Avoid redundant output-directory creation while retaining containment checks. Reuse a single owned chunk in bounded local reads, but compact slices to avoid retaining oversized backing buffers.
 * Avoid accounting RPC for empty child bodies and unchanged worker body sizes.
+* Share body-size calculations between adjacent resource-limit checks and buffer accounting, preserving validation order and recalculating after hooks change bodies or encodings.
 * Complete successful worker publications in the parent for both output modes, avoiding a separate release request for atomic writes while preserving ownership and failed-worker cleanup.
 * Skip empty cleanup for completed worker tasks and look up publication connections by worker. Failed tasks still await worker exit before releasing allocations or transferred-body credits.
 * Reuse the synchronous-hook promise check, consolidate retry defaults and logging, and resolve the default worker path directly from the module URL without changing custom worker-factory arguments.
