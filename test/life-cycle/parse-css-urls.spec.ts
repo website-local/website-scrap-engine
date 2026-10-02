@@ -1,8 +1,46 @@
 import {describe, expect, test} from '@jest/globals';
 import parseCssUrls from '../../src/life-cycle/parse-css-urls.js';
 import {parseCssUrlMatches} from '../../src/life-cycle/parse-css-urls.js';
+import {processCssText} from '../../src/life-cycle/process-css.js';
+import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
+import {defaultDownloadOptions} from '../../src/options.js';
+import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
+import {createResource, ResourceType} from '../../src/resource.js';
+import type {Resource} from '../../src/resource.js';
 
 describe('parseCssUrls', () => {
+  test.each([
+    ['url("', 'url', '")'],
+    ['url(\'', 'url', '\')'],
+    ['url(', 'url', ')'],
+    ['@import "', 'import', '";'],
+    ['@import \'', 'import', '\';'],
+    ['@import ', 'import', ';'],
+    ['URL(  "', 'URL', '"  )'],
+    ['url(  "', ' ', '"  )'],
+    ['@import  \'', ' ', '\';']
+  ])('locates the argument in %s%s%s', (before, url, after) => {
+    const prefix = '/* url("ignored") */\n';
+    const css = prefix + before + url + after;
+    const start = prefix.length + before.length;
+    expect(parseCssUrlMatches(css)).toEqual([{url, start, end: start + url.length}]);
+  });
+
+  test('rewrites repeated URLs named url and import without replacing CSS syntax', async () => {
+    const css = '@import "import";a{x:url("url");y:url(url)}';
+    const options = defaultDownloadOptions({...defaultLifeCycle(), processBeforeDownload: [res => {
+      res.replacePath = 'assets/' + res.rawUrl;
+      return res;
+    }]});
+    const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const parent = {...createResource({type: ResourceType.Css, depth: 0,
+      url: 'https://example.test/style.css', refUrl: 'https://example.test/', localRoot: 'output'}), body: css};
+    const resources: Resource[] = [];
+    expect(await processCssText(css, parent, options, pipeline, 1, resources))
+      .toBe('@import "assets/import";a{x:url("assets/url");y:url(assets/url)}');
+    expect(resources.map(res => res.rawUrl)).toEqual(['import', 'url']);
+  });
+
   test('parses css urls and imports', () => {
     const cssText = `
       /* url("/commented.png") */

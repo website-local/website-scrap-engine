@@ -23,9 +23,12 @@ function matchUrl(match: RegExpExecArray): {
 }
 
 function captureStart(match: RegExpExecArray, captureIndex: number): number {
-  const capture = match[captureIndex];
-  const offset = capture ? match[0].indexOf(capture) : -1;
-  return offset < 0 ? match.index : match.index + offset;
+  // Quoted values can contain whitespace also present before the opening quote.
+  if (captureIndex === 3 || captureIndex === 9) return match.index + match[0].indexOf('"') + 1;
+  if (captureIndex === 5 || captureIndex === 11) return match.index + match[0].indexOf('\'') + 1;
+  // Search within the argument, excluding the url()/@import syntax itself.
+  const argumentStart = captureIndex === 6 ? match[0].indexOf('(') + 1 : '@import'.length;
+  return match.index + match[0].indexOf(match[captureIndex], argumentStart);
 }
 
 /**
