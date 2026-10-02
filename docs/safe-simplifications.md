@@ -53,11 +53,12 @@ Exported worker state fields remain intact for compatibility.
 
 ## Remaining tradeoffs
 
-Publication lifecycle consolidation is the next useful non-breaking experiment,
-but must preserve output ownership, cancellation, and worker-exit cleanup. A
-prior diagnostic bypass saved about 19 ms in warm worker markup while dropping
-those guarantees; an equivalent refactor cannot promise that gain and would not
-speed up single-thread MDN.
+Publication completion now uses the same parent-owned cleanup path for direct
+and atomic writes, removing the extra release request for successful atomic
+output. Output ownership, cancellation, and worker-exit cleanup remain intact.
+See the [publication experiment](publication-simplification.md) for fresh small,
+repeated measurements with explicit noise exclusions. This change does not
+affect single-threaded MDN publication.
 
 Removing the metadata pre-clone changes snapshot/error timing. Bounded outcome
 retention changes API availability. Single-boundary configuration normalization

@@ -175,15 +175,11 @@ export class WorkerPublicationCoordinator {
     if (!handle) throw new Error('Unknown publication allocation');
     if (request.operation === 'publish') {
       await handle.publish();
-      if (handle.direct) {
-        await handle.cleanup();
-        lease.handles.delete(request.token!);
-      }
-    }
-    else if (request.operation === 'release') {
-      await handle.cleanup();
-      lease.handles.delete(request.token!);
-    } else throw new TypeError('Invalid publication operation');
+    } else if (request.operation !== 'release') throw new TypeError('Invalid publication operation');
+    // The parent completes successful publications in both output modes.
+    // Failed publications keep their allocation until release or task cleanup.
+    await handle.cleanup();
+    lease.handles.delete(request.token!);
     return undefined;
   }
 }
@@ -251,7 +247,7 @@ export class WorkerPublicationClient {
         cleanup: () => {
           cleaning ??= (async () => {
             await publishing?.catch(() => undefined);
-            if (!value.direct || !published) await this.request(taskId, 'release', {token: value.token});
+            if (!published) await this.request(taskId, 'release', {token: value.token});
           })();
           return cleaning;
         }};

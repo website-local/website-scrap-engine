@@ -20,9 +20,14 @@ function setup(directWrites = false) {
   const failures: Error[] = [];
   const coordinator = new WorkerPublicationCoordinator((worker, task) => owners.get(task) === worker,
     (_worker, error) => { failures.push(error); });
+  const workers: Worker[] = [];
+  const requests: string[] = [];
   const clients = [101, 102].map(id => {
     const channel = new MessageChannel();
-    coordinator.attach(Object.assign(new EventEmitter(), {threadId: id}) as unknown as Worker, channel.port1);
+    const worker = Object.assign(new EventEmitter(), {threadId: id}) as unknown as Worker;
+    workers.push(worker);
+    channel.port1.on('message', request => requests.push(request.operation));
+    coordinator.attach(worker, channel.port1);
     return new WorkerPublicationClient(channel.port2);
   });
   const progress = createResourceProgress();
@@ -31,7 +36,7 @@ function setup(directWrites = false) {
   const controller = new AbortController();
   coordinator.register(1, {logger: createDefaultLogger(), signal: controller.signal,
     resourceProgress: progress, bufferAccount, directWrites});
-  return {owners, failures, coordinator, clients, progress, budget, bufferAccount, controller};
+  return {owners, failures, coordinator, clients, workers, requests, progress, budget, bufferAccount, controller};
 }
 
 test('crawl cancellation rejects every allocation sharing a task lease', async () => {
@@ -147,6 +152,51 @@ test('worker byte reservations enforce parent ownership and preserve structured 
     expect(budget.used).toBe(0);
   } finally {
     bufferAccount.release();
+    await coordinator.dispose();
+    clients.forEach(client => client.close());
+  }
+});
+
+test.each([false, true])('successful publication releases its allocation in the parent (direct=%s)', async direct => {
+  const {coordinator, clients, requests, progress} = setup(direct);
+  try {
+    const destination = join(root, 'asset');
+    const handle = await clients[0].forTask(1).create(destination, undefined, root);
+    await fs.writeFile(handle.stagingPath, 'complete');
+    await handle.publish();
+    // Atomic staging is already gone when the parent confirms publication.
+    expect(await fs.readdir(root)).toEqual(['asset']);
+    await handle.cleanup();
+    await handle.cleanup();
+    expect(requests).toEqual(['create', 'publish']);
+    expect(progress.publishedFiles).toBe(1);
+    await coordinator.finish(1, false);
+    expect(await fs.readFile(destination, 'utf8')).toBe('complete');
+  } finally {
+    await coordinator.dispose();
+    clients.forEach(client => client.close());
+  }
+});
+
+test('failed worker allocations remain until the writer exits', async () => {
+  const {coordinator, clients, workers} = setup();
+  try {
+    coordinator.assign(1, workers[0]);
+    const destination = join(root, 'asset');
+    await fs.writeFile(destination, 'cached');
+    const handle = await clients[0].forTask(1).create(destination, undefined, root);
+    await fs.writeFile(handle.stagingPath, 'partial');
+    let finished = false;
+    const finishing = coordinator.finish(1, true).then(() => { finished = true; });
+    await new Promise(resolve => setImmediate(resolve));
+    expect(finished).toBe(false);
+    expect(await fs.readFile(handle.stagingPath, 'utf8')).toBe('partial');
+    workers[0].emit('exit', 1);
+    await finishing;
+    expect(await fs.readdir(root)).toEqual(['asset']);
+    expect(await fs.readFile(destination, 'utf8')).toBe('cached');
+  } finally {
+    workers[0].emit('exit', 1);
     await coordinator.dispose();
     clients.forEach(client => client.close());
   }
