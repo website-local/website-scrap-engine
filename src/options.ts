@@ -404,19 +404,13 @@ export function defaultDownloadOptions(
       request: 200000
     };
   }
-  if (!('retry' in merged.req) || merged.req.retry === undefined) {
+  if (merged.req.retry === undefined || typeof merged.req.retry === 'number') {
     merged.req.retry = {
-      limit: merged.httpTransport === 'native' ? 2 : 25,
-      maxRetryAfter: 60000,
-      calculateDelay: merged.httpTransport === 'native' ? got.defaults.options.retry.calculateDelay : calculateFastDelay
+      limit: merged.req.retry ?? (merged.httpTransport === 'native' ? 2 : 25),
+      maxRetryAfter: 60000
     };
-  } else if (typeof merged.req.retry === 'number') {
-    merged.req.retry = {
-      limit: merged.req.retry,
-      maxRetryAfter: 60000,
-      calculateDelay: merged.httpTransport === 'native' ? got.defaults.options.retry.calculateDelay : calculateFastDelay
-    };
-  } else if (!merged.req.retry.calculateDelay) {
+  }
+  if (!merged.req.retry.calculateDelay) {
     merged.req.retry.calculateDelay = merged.httpTransport === 'native' ? got.defaults.options.retry.calculateDelay : calculateFastDelay;
   }
   if (merged.req.retry && !merged.req.retry.errorCodes) {

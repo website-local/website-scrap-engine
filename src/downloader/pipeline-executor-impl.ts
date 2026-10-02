@@ -1,6 +1,7 @@
 import {currentCrawlContext, throwIfCancelled, markResourceDownloaded, markResourceSkipped} from '../crawl-context.js';
 import {prepareHtmlParser} from '../cheerio.js';
 import {fullSavePathHooks} from '../life-cycle/save-path-hook-state.js';
+import {isPromiseLike} from '../util.js';
 import {checkResourceBody, accountBufferedBody} from '../resource-limits.js';
 import path from 'node:path';
 import {promises as fs} from 'node:fs';
@@ -113,7 +114,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       for (; index < hooks.length; index++) {
         throwIfCancelled(this.signal);
         const result = invoke(hooks[index], value);
-        if (this._isPromiseLike(result)) return result.then(value => run(index + 1, value));
+        if (isPromiseLike(result)) return result.then(value => run(index + 1, value));
         if (result === undefined) return;
         value = result;
         if (validate) validate(value);
@@ -158,7 +159,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     const savePathResult = this.generateSavePath(
       resolved.uri, type, depth, url, refUrl, resolved.keepSearch,
       resolved.replacePathHasError, refSavePath, refType);
-    if (this._isPromiseLike(savePathResult)) {
+    if (isPromiseLike(savePathResult)) {
       return savePathResult.then(result => this._createResourceWithSavePath(
         result, type, depth, resolved.url, url, refUrl, localRoot, encoding,
         resolved.keepSearch, resolved.replacePathHasError, resolved.uri, resolved.refUri));
@@ -254,7 +255,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     for (let index = 0; index < hooks.length; index++) {
       const fn = hooks[index];
       const result = fn(savePath, context);
-      if (this._isPromiseLike(result)) {
+      if (isPromiseLike(result)) {
         return this._continueGenerateSavePath(
           result, hooks, index + 1, savePath, resultRefSavePath, context);
       }
@@ -302,10 +303,6 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       result = await hooks[index](savePath, context);
       index++;
     }
-  }
-
-  private _isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
-    return !!value && typeof (value as PromiseLike<T>).then === 'function';
   }
 
   processBeforeDownload(

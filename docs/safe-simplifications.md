@@ -53,6 +53,10 @@ Exported worker state fields remain intact for compatibility.
 
 ## Remaining tradeoffs
 
+A later [small cleanup pass](minor-simplifications.md) reuses the promise check,
+consolidates retry defaults/logging, and shortens worker-path resolution. Its
+fresh measurements are mixed; it makes no overall speedup claim.
+
 Publication completion now uses the same parent-owned cleanup path for direct
 and atomic writes, removing the extra release request for successful atomic
 output. Output ownership, cancellation, and worker-exit cleanup remain intact.

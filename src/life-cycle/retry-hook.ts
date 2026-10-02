@@ -11,17 +11,12 @@ export const beforeRetryHook: BeforeRetryHook = (
   if (!options) {
     return;
   }
-  if (!error) {
-    logger.retry.warn(retryCount, String(options.url));
-    return;
-  }
-  const url = String(error.options.url);
+  const url = String(options.url);
+  const log = retryCount && retryCount > 1 ? logger.retry.warn : logger.retry.info;
   if (error instanceof TimeoutError || error.name === 'TimeoutError') {
-    (retryCount && retryCount > 1 ? logger.retry.warn : logger.retry.info)
-      .call(logger.retry, retryCount, url, error.name, error.code,
-        error.message, (error as TimeoutError).event);
+    log.call(logger.retry, retryCount, url, error.name, error.code,
+      error.message, (error as TimeoutError).event);
   } else {
-    (retryCount && retryCount > 1 ? logger.retry.warn : logger.retry.info)
-      .call(logger.retry, retryCount, url, error.name, error.code, error.message);
+    log.call(logger.retry, retryCount, url, error.name, error.code, error.message);
   }
 };

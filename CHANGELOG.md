@@ -58,6 +58,7 @@ Fixes and performance
 * Avoid redundant output-directory creation while retaining containment checks. Reuse a single owned chunk in bounded local reads, but compact slices to avoid retaining oversized backing buffers.
 * Avoid accounting RPC for empty child bodies and unchanged worker body sizes.
 * Complete successful worker publications in the parent for both output modes, avoiding a separate release request for atomic writes while preserving ownership and failed-worker cleanup.
+* Reuse the synchronous-hook promise check, consolidate retry defaults and logging, and resolve the default worker path directly from the module URL without changing custom worker-factory arguments.
 * Keep eligible Got retries at a minimum delay of 1 ms so rounded jitter and Retry-After: 0 cannot accidentally stop retries; exhausted limits and ineligible requests still stop.
 
 Tooling and validation

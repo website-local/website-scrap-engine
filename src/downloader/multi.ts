@@ -5,7 +5,6 @@ import {DiscoveryLimitError} from './discovery.js';
 import {BufferReservation} from '../buffer-budget.js';
 import type {WorkerChannels} from './worker-channel.js';
 import {currentCrawlContext} from '../crawl-context.js';
-import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import type {WorkerFactory, WorkerPoolOptions} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
@@ -83,14 +82,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     }
     const workerOptions = options as Partial<MultiThreadDownloaderOptions>;
     this._pool = new WorkerPool<WireResource, DownloadWorkerMessage>(workerCount,
-      // worker script should be compiled to .js
-      // Resolve relative to this module's own URL: the compiled output is ESM,
-      // where `__dirname` is undefined. `__dirname` only type-checks here
-      // because @types/node declares it as a global; it would throw a
-      // ReferenceError at runtime. fileURLToPath(import.meta.url) is the
-      // ESM-safe equivalent (same pattern as read-or-copy-local-resource.ts).
-      workerOptions.pathToWorker ||
-        path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'worker.js'),
+      workerOptions.pathToWorker || fileURLToPath(new URL('worker.js', import.meta.url)),
       {pathToOptions: this.pathToOptions, overrideOptions: this._overrideOptions},
       workerOptions.maxLoad || -1,
       this.createWorker,
