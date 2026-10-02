@@ -1,5 +1,11 @@
 # Got 13–16 profiles and final comparison — 2026-10-02
 
+Follow-up: [engine regression investigation](engine-regression-investigation.md)
+identifies a dependency-layout confound in this comparison: baseline dependencies
+were physical directories, while candidate packages used symlinks. Preserve the
+measurements below as historical results, but do not attribute their full baseline
+gap to engine code. The follow-up includes aligned layouts and further ablations.
+
 No Got version meets the strict all-suite improvement target against 0.9.1.
 Got 14 is the strongest compromise in this run: it improves the markup cases and
 has a smaller single-thread streaming regression than Got 15/16. Got 16 wins

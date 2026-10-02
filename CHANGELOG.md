@@ -31,7 +31,7 @@ Performance
 * Keep worker logging imports out of the direct single-thread entry and defer the HTML parser until markup processing. Pools remain one-shot and live until downloader disposal.
 * Keep synchronous link/type/before-download pipelines synchronous; coalesce duplicate bodyless discoveries before serialization and worker transfer, retaining discovery counting and byte-budget behavior. Validate actual transport payloads; unused duplicate metadata is not cloned.
 * Avoid URI hostname classification for already-absolute URLs, reduce redundant URI copies, overlap local metadata/body reads, and use callback file I/O behind promise interfaces.
-* Use kernel no-follow opens for supported direct writes instead of a separate destination probe. Generic writers, worker publication requests and Windows retain explicit destination checks. Increase the streaming write buffer to 256 KiB.
+* Use kernel no-follow opens for supported direct writes instead of a separate destination probe, forwarding this guarantee through worker publication requests. Generic writers and Windows retain explicit destination checks. Increase the streaming write buffer to 256 KiB.
 * Add a combined synthetic/MDN regression runner and an isolated HTTP transport probe. Remaining regressions are reported per workload, without an aggregate performance pass.
 
 Crawl control and reliability

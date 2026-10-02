@@ -16,6 +16,10 @@ writers retain the explicit destination check. Streaming output now uses a
 256 KiB write buffer instead of Node's default 64 KiB; this trades up to an
 additional 192 KiB per active output stream for fewer small writes.
 
+Built-in worker writers forward their no-follow guarantee to the parent, avoiding
+a duplicate destination probe. Custom publication writers must only set
+`writerRejectsSymlinks` when their writer actually opens with no-follow flags.
+
 ## Dependency installation
 
 `log4js` is now an optional peer instead of an automatically installed optional

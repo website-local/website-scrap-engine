@@ -135,7 +135,9 @@ export interface FilePublication {
 }
 
 export interface PublicationStore {
-  create(destination: string, signal?: AbortSignal, localRoot?: string): Promise<FilePublication>;
+  /** Set writerRejectsSymlinks only when the writer opens with no-follow flags. */
+  create(destination: string, signal?: AbortSignal, localRoot?: string,
+    writerRejectsSymlinks?: boolean): Promise<FilePublication>;
 }
 
 export async function createFilePublication(
@@ -234,7 +236,7 @@ export async function publishFile(
   writerRejectsSymlinks = false
 ): Promise<boolean> {
   const store = currentCrawlContext()?.publicationStore;
-  const publication = await (store ? store.create(destination, signal, localRoot) :
+  const publication = await (store ? store.create(destination, signal, localRoot, writerRejectsSymlinks) :
     createFilePublication(destination, signal, localRoot, writerRejectsSymlinks));
   try {
     signal?.throwIfAborted();

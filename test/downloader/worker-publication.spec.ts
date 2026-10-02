@@ -6,6 +6,8 @@ import {MessageChannel} from 'node:worker_threads';
 import type {Worker} from 'node:worker_threads';
 import {WorkerPublicationClient, WorkerPublicationCoordinator} from '../../src/downloader/worker-publication.js';
 import {createResourceProgress} from '../../src/crawl-context.js';
+import {withCrawlContext} from '../../src/crawl-context.js';
+import {noFollowWriteFlags, publishFile} from '../../src/output-store.js';
 import {createDefaultLogger} from '../../src/logger/default-logger.js';
 import {BufferBudget} from '../../src/buffer-budget.js';
 
@@ -13,7 +15,7 @@ let root: string;
 beforeEach(async () => { root = await fs.mkdtemp(join(process.cwd(), '.wse-publication-test-')); });
 afterEach(async () => { await fs.rm(root, {recursive: true, force: true}); });
 
-function setup() {
+function setup(directWrites = false) {
   const owners = new Map([[1, 101]]);
   const failures: Error[] = [];
   const coordinator = new WorkerPublicationCoordinator((worker, task) => owners.get(task) === worker,
@@ -27,7 +29,7 @@ function setup() {
   const budget = new BufferBudget(10);
   const bufferAccount = budget.reserve(0);
   coordinator.register(1, {logger: createDefaultLogger(), signal: new AbortController().signal,
-    resourceProgress: progress, bufferAccount});
+    resourceProgress: progress, bufferAccount, directWrites});
   return {owners, failures, coordinator, clients, progress, budget, bufferAccount};
 }
 
@@ -66,6 +68,38 @@ test('remote publication is confirmed in the parent context exactly once', async
     expect(progress.publishedFiles).toBe(1);
     expect(await fs.readFile(destination, 'utf8')).toBe('complete');
     expect(await fs.readdir(root)).toEqual(['asset']);
+  } finally {
+    await coordinator.dispose();
+    clients.forEach(client => client.close());
+  }
+});
+
+(noFollowWriteFlags === undefined ? test.skip : test)('remote direct writers retain symlink rejection without a duplicate probe', async () => {
+  const {coordinator, clients, progress} = setup(true);
+  const target = join(root, 'target');
+  const destination = join(root, 'asset');
+  await fs.writeFile(target, 'cached');
+  await fs.symlink(target, destination);
+  let writerCalled = false;
+  try {
+    const context = {logger: createDefaultLogger(), signal: new AbortController().signal,
+      publicationStore: clients[0].forTask(1)};
+    const write = async (path: string) => {
+      writerCalled = true;
+      // Node accepts numeric flags although the Node 22 type omits them.
+      await fs.writeFile(path, 'replacement', {flag: noFollowWriteFlags} as unknown as Parameters<typeof fs.writeFile>[2]);
+    };
+    // Generic writers must fail allocation before their callback can run.
+    await expect(withCrawlContext(context, () => publishFile(destination, write, undefined, root)))
+      .rejects.toThrow('symlink');
+    expect(writerCalled).toBe(false);
+    // The built-in no-follow writer rejects the same symlink at open instead.
+    await expect(withCrawlContext(context, () => publishFile(destination, write, undefined, root, undefined, true)))
+      .rejects.toMatchObject({code: 'ELOOP'});
+    expect(writerCalled).toBe(true);
+    expect(await fs.readFile(target, 'utf8')).toBe('cached');
+    expect(progress.publishedFiles).toBe(0);
+    await coordinator.finish(1, false);
   } finally {
     await coordinator.dispose();
     clients.forEach(client => client.close());

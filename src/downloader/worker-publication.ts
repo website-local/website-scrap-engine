@@ -1,5 +1,5 @@
 import type {MessagePort, Worker} from 'node:worker_threads';
-import {createFilePublication} from '../output-store.js';
+import {createFilePublication, noFollowWriteFlags} from '../output-store.js';
 import type {FilePublication, PublicationStore} from '../output-store.js';
 import {withCrawlContext} from '../crawl-context.js';
 import type {CrawlContext} from '../crawl-context.js';
@@ -12,6 +12,7 @@ interface Request {
   operation: Operation;
   destination?: string;
   localRoot?: string;
+  writerRejectsSymlinks?: boolean;
   token?: number;
   bytes?: number;
 }
@@ -153,11 +154,13 @@ export class WorkerPublicationCoordinator {
     }
     if (request.operation === 'create') {
       if (typeof request.destination !== 'string' ||
-        request.localRoot !== undefined && typeof request.localRoot !== 'string') {
+        request.localRoot !== undefined && typeof request.localRoot !== 'string' ||
+        request.writerRejectsSymlinks !== undefined && typeof request.writerRejectsSymlinks !== 'boolean') {
         throw new TypeError('Invalid publication destination');
       }
       const handle = await createFilePublication(request.destination,
-        AbortSignal.any([lease.context.signal, lease.controller.signal]), request.localRoot);
+        AbortSignal.any([lease.context.signal, lease.controller.signal]), request.localRoot,
+        request.writerRejectsSymlinks === true && noFollowWriteFlags !== undefined);
       const token = ++this.nextToken;
       lease.handles.set(token, handle);
       if (lease.controller.signal.aborted) {
@@ -224,9 +227,9 @@ export class WorkerPublicationClient {
     });
   }
   forTask(taskId: number): PublicationStore {
-    return {create: async (destination, signal, localRoot) => {
+    return {create: async (destination, signal, localRoot, writerRejectsSymlinks = false) => {
       signal?.throwIfAborted();
-      const value = await this.request(taskId, 'create', {destination, localRoot});
+      const value = await this.request(taskId, 'create', {destination, localRoot, writerRejectsSymlinks});
       if (!value || !Number.isSafeInteger(value.token) || value.token < 1 || typeof value.stagingPath !== 'string' ||
         (value.direct !== undefined && typeof value.direct !== 'boolean')) {
         throw new TypeError('Invalid publication allocation reply');
