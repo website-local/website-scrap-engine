@@ -13,6 +13,76 @@ import {WorkerPool} from '../../src/downloader/worker-pool.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe('worker-pool', function () {
+  test('batches burst dispatch while yielding and respecting worker capacity', async () => {
+    const pool = new WorkerPool(2, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 2);
+    try {
+      await pool.ready;
+      const next = jest.spyOn(pool, 'nextTask');
+      const owners = new Map<number, WorkerInfo>();
+      const dispatched: number[] = [];
+      const tasks = Array.from({length: 6}, (_, index) => {
+        let id = 0;
+        return pool.submitTask(index, undefined, value => { id = value; }, worker => {
+          owners.set(id, pool.workers.find(info => info.worker === worker)!);
+          dispatched.push(id);
+        });
+      });
+      expect(pool.workingTasks.size).toBe(0);
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(dispatched).toEqual([1, 2, 3, 4]);
+      expect(pool.workers.map(info => info.load)).toEqual([2, 2]);
+      const complete = (id: number) => pool.complete(owners.get(id)!, {type: 1, taskId: id, body: id});
+      complete(1);
+      complete(2);
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(next).toHaveBeenCalledTimes(2);
+      expect(dispatched).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(pool.workers.map(info => info.load)).toEqual([2, 2]);
+      for (const id of [...pool.workingTasks.keys()]) complete(id);
+      expect((await Promise.all(tasks)).map(result => result.body)).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(pool.pendingTasks).toHaveLength(0);
+      expect(pool.workers.map(info => info.load)).toEqual([0, 0]);
+    } finally { await pool.dispose(); }
+  });
+
+  test('work submitted during dispatch gets another pass before a completion', async () => {
+    const pool = new WorkerPool(1, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 2);
+    try {
+      await pool.ready;
+      let child: ReturnType<typeof pool.submitTask> | undefined;
+      const first = pool.submitTask(1, undefined, undefined, () => { child = pool.submitTask(2); });
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(pool.workingTasks.size).toBe(1);
+      expect(pool.pendingTasks).toHaveLength(1);
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(pool.workingTasks.size).toBe(2);
+      expect(pool.pendingTasks).toHaveLength(0);
+      for (const taskId of pool.workingTasks.keys()) {
+        pool.complete(pool.workers[0], {type: 1, taskId, body: taskId});
+      }
+      await expect(first).resolves.toMatchObject({body: 1});
+      await expect(child).resolves.toMatchObject({body: 2});
+    } finally { await pool.dispose(); }
+  });
+
+  test('successful completion clears an enabled deadline before later work', async () => {
+    const pool = new WorkerPool(1, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 1,
+      undefined, {taskTimeout: 100});
+    try {
+      await pool.ready;
+      const first = pool.submitTask(1);
+      pool.nextTask();
+      pool.complete(pool.workers[0], {type: 1, taskId: 1, body: 1});
+      await first;
+      await new Promise(resolve => setTimeout(resolve, 150));
+      const second = pool.submitTask(2);
+      pool.nextTask();
+      pool.complete(pool.workers[0], {type: 1, taskId: 2, body: 2});
+      await expect(second).resolves.toMatchObject({body: 2});
+    } finally { await pool.dispose(); }
+  });
+
   test('dispatch callbacks identify the owner after successful transport', async () => {
     const pool = new WorkerPool(1, join(__dirname, 'delay-calc-worker.js'), {});
     try {

@@ -60,6 +60,7 @@ Fixes and performance
 * Share body-size calculations between adjacent resource-limit checks and buffer accounting, including queue admission, preserving validation order and recalculating after hooks change bodies or encodings.
 * Track processed CSS URLs with a Set instead of retaining unused resource values, and remove the worker fallback for runtimes without structuredClone.
 * Fix CSS replacement offsets when a URL matches the surrounding url()/@import syntax or a quoted value contains whitespace.
+* Coalesce pending worker dispatch callbacks while retaining asynchronous dispatch and worker capacity limits; skip task-timer cleanup when deadlines are disabled.
 * Complete successful worker publications in the parent for both output modes, avoiding a separate release request for atomic writes while preserving ownership and failed-worker cleanup.
 * Skip empty cleanup for completed worker tasks and look up publication connections by worker. Failed tasks still await worker exit before releasing allocations or transferred-body credits.
 * Reuse the synchronous-hook promise check, consolidate retry defaults and logging, and resolve the default worker path directly from the module URL without changing custom worker-factory arguments.

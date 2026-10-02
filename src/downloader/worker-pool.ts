@@ -70,6 +70,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   private readonly _unavailableWorkers = new Set<WorkerInfo>();
   private _lastWorkerError?: Error;
   private _initialized = false;
+  private _nextTaskScheduled = false;
   private readonly _taskTimeout?: number;
   private readonly _shutdownTimeout: number;
   private readonly _taskTimers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -204,12 +205,23 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       this.pendingTasks.length = 0;
     }
     void this.terminateWorker(info).catch(() => undefined);
-    setImmediate(() => this.nextTask());
+    this.scheduleNextTask();
   }
 
   private clearTaskTimer(taskId: number): void {
+    if (this._taskTimeout === undefined) return;
     clearTimeout(this._taskTimers.get(taskId));
     this._taskTimers.delete(taskId);
+  }
+
+  private scheduleNextTask(): void {
+    if (this._nextTaskScheduled) return;
+    this._nextTaskScheduled = true;
+    setImmediate(() => {
+      // Dispatch callbacks may submit more work for a subsequent turn.
+      this._nextTaskScheduled = false;
+      this.nextTask();
+    });
   }
 
   private terminateWorker(info: WorkerInfo): Promise<number> {
@@ -280,7 +292,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       return;
     }
     --info.load;
-    setImmediate(() => this.nextTask());
+    this.scheduleNextTask();
     this.workingTasks.delete(message.taskId);
     this.clearTaskTimer(message.taskId);
     pending.resolve(message as R);
@@ -308,7 +320,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       };
       onAccepted?.(task.taskId);
       this.pendingTasks.push(task);
-      setImmediate(() => this.nextTask());
+      this.scheduleNextTask();
     });
   }
 
