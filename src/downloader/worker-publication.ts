@@ -43,7 +43,7 @@ interface Lease {
 /** Parent owns allocations and publication even when the writer's thread dies. */
 export class WorkerPublicationCoordinator {
   private readonly leases = new Map<number, Lease>();
-  private readonly connections = new Set<Connection>();
+  private readonly connections = new Map<Worker, Connection>();
   private nextToken = 0;
 
   constructor(private readonly ownsTask: (workerId: number, taskId: number) => boolean,
@@ -52,10 +52,10 @@ export class WorkerPublicationCoordinator {
   attach(worker: Worker, port: MessagePort): void {
     const connection: Connection = {worker, id: worker.threadId, port, alive: true,
       lastRequest: 0, exited: new Promise(resolve => worker.once('exit', () => resolve()))};
-    this.connections.add(connection);
+    this.connections.set(worker, connection);
     worker.once('exit', () => {
       connection.alive = false;
-      this.connections.delete(connection);
+      this.connections.delete(worker);
       port.close();
     });
     port.on('message', message => this.receive(connection, message));
@@ -77,7 +77,7 @@ export class WorkerPublicationCoordinator {
 
   assign(taskId: number, worker: Worker): void {
     const lease = this.leases.get(taskId);
-    const connection = [...this.connections].find(connection => connection.worker === worker);
+    const connection = this.connections.get(worker);
     if (!lease || !connection) throw new Error('Publication task dispatch has no registered worker');
     lease.connection = connection;
   }
@@ -86,6 +86,10 @@ export class WorkerPublicationCoordinator {
     const lease = this.leases.get(taskId);
     if (!lease) return Promise.resolve();
     lease.closing ??= (async () => {
+      if (!failed && !lease.handles.size && !lease.operations.size) {
+        this.leases.delete(taskId);
+        return;
+      }
       lease.controller.abort(new Error('Publication task closed'));
       // The writer must be stopped before removing paths it may still be using.
       if (failed && lease.connection) await lease.connection.exited;
@@ -101,7 +105,7 @@ export class WorkerPublicationCoordinator {
 
   async dispose(): Promise<void> {
     const results = await Promise.allSettled([...this.leases.keys()].map(id => this.finish(id, true)));
-    for (const connection of this.connections) connection.port.close();
+    for (const connection of this.connections.values()) connection.port.close();
     this.connections.clear();
     const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
     if (errors.length) throw new AggregateError(errors, 'Publication coordinator cleanup failed');

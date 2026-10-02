@@ -64,6 +64,10 @@ See the [publication experiment](publication-simplification.md) for fresh small,
 repeated measurements with explicit noise exclusions. This change does not
 affect single-threaded MDN publication.
 
+The subsequent [worker completion experiment](worker-completion.md) skips empty
+successful cleanup and indexes connections by worker. Focused coordinator costs
+fall; whole-crawl timings remain mixed.
+
 Removing the metadata pre-clone changes snapshot/error timing. Bounded outcome
 retention changes API availability. Single-boundary configuration normalization
 can change caller-mutation and initialization-hook observability. Those require

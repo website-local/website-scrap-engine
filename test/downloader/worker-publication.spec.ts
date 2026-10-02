@@ -201,3 +201,88 @@ test('failed worker allocations remain until the writer exits', async () => {
     clients.forEach(client => client.close());
   }
 });
+
+test('completed tasks with no allocations reject late publication requests', async () => {
+  const {coordinator, clients, workers} = setup();
+  try {
+    coordinator.assign(1, workers[0]);
+    await coordinator.finish(1, false);
+    await coordinator.finish(1, false);
+    await expect(clients[0].forTask(1).create(join(root, 'late'), undefined, root))
+      .rejects.toThrow('owned');
+    expect(await fs.readdir(root)).toEqual([]);
+  } finally {
+    workers[0].emit('exit', 0);
+    await coordinator.dispose();
+    clients.forEach(client => client.close());
+  }
+});
+
+test('failed tasks without allocations still wait for worker exit before releasing credits', async () => {
+  const {coordinator, clients, workers, bufferAccount, budget} = setup();
+  try {
+    coordinator.assign(1, workers[0]);
+    bufferAccount.observeBody(4);
+    const finishing = coordinator.finish(1, true);
+    const released = finishing.then(() => bufferAccount.release());
+    // A later successful close must not bypass an existing failure's exit wait.
+    expect(coordinator.finish(1, false)).toBe(finishing);
+    await new Promise(resolve => setImmediate(resolve));
+    expect(budget.used).toBe(4);
+    workers[0].emit('exit', 1);
+    await released;
+    expect(budget.used).toBe(0);
+  } finally {
+    workers[0].emit('exit', 1);
+    await coordinator.dispose();
+    bufferAccount.release();
+    clients.forEach(client => client.close());
+  }
+});
+
+test('successful close waits for pending operations even without allocations', async () => {
+  const {coordinator, clients, workers, owners} = setup();
+  let unblock!: () => void;
+  const blocked = new Promise<void>(resolve => { unblock = resolve; });
+  let onStarted!: () => void;
+  const started = new Promise<void>(resolve => { onStarted = resolve; });
+  owners.set(2, workers[0].threadId);
+  coordinator.register(2, {logger: createDefaultLogger(), signal: new AbortController().signal,
+    bufferAccount: {observeBody: () => { onStarted(); return blocked; }, reserveChild: () => {}}});
+  try {
+    const reserving = clients[0].bufferForTask(2).observeBody(4);
+    await started;
+    let finished = false;
+    const finishing = coordinator.finish(2, false).then(() => { finished = true; });
+    await new Promise(resolve => setImmediate(resolve));
+    expect(finished).toBe(false);
+    unblock();
+    await reserving;
+    await finishing;
+    expect(finished).toBe(true);
+    await expect(clients[0].bufferForTask(2).observeBody(5)).rejects.toThrow('owned');
+  } finally {
+    unblock();
+    workers[0].emit('exit', 0);
+    await coordinator.dispose();
+    clients.forEach(client => client.close());
+  }
+});
+
+test('assignment requires the attached worker object and rejects exited workers', async () => {
+  const {coordinator, clients, workers, budget} = setup();
+  try {
+    expect(() => coordinator.assign(1, {threadId: workers[0].threadId} as Worker))
+      .toThrow('no registered worker');
+    workers[1].emit('exit', 0);
+    expect(() => coordinator.assign(1, workers[1])).toThrow('no registered worker');
+    coordinator.assign(1, workers[0]);
+    await clients[0].bufferForTask(1).observeBody(4);
+    expect(budget.used).toBe(4);
+    await coordinator.finish(1, false);
+  } finally {
+    workers[0].emit('exit', 0);
+    await coordinator.dispose();
+    clients.forEach(client => client.close());
+  }
+});
