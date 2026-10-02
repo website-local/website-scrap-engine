@@ -13,6 +13,11 @@ const entries = process.argv.slice(2);
 if (!entries.length) entries.push(new URL('../lib/index.js', import.meta.url).pathname);
 const samples = Number(process.env.WSE_BENCH_SAMPLES ?? 5);
 assert.ok(Number.isSafeInteger(samples) && samples > 0);
+// Optional parent-thread profiles cover initialization through disposal, excluding
+// fixture setup, output hashing and cleanup. Profiled timings are diagnostic only.
+const profileDirectory = process.env.WSE_BENCH_CPU_PROFILE_DIR;
+const InspectorSession = profileDirectory ? (await import('node:inspector/promises')).Session : undefined;
+if (profileDirectory) await fs.mkdir(profileDirectory, {recursive: true});
 const maxBufferedBytes = process.env.WSE_BENCH_BUFFER_BYTES === undefined ? undefined :
   Number(process.env.WSE_BENCH_BUFFER_BYTES);
 assert.ok(maxBufferedBytes === undefined || Number.isSafeInteger(maxBufferedBytes) && maxBufferedBytes > 0);
@@ -100,6 +105,13 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   lag.enable();
   requests = 0;
   const errors = [];
+  const profiler = InspectorSession && sample >= 0 ? new InspectorSession() : undefined;
+  if (profiler) {
+    profiler.connect();
+    await profiler.post('Profiler.enable');
+    await profiler.post('Profiler.setSamplingInterval', {interval: 250});
+    await profiler.post('Profiler.start');
+  }
   const cpu = process.cpuUsage();
   const started = performance.now();
   const crawler = new api.downloader[mode](pathToFileURL(config).href);
@@ -135,6 +147,9 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
         'native benchmark must exercise the native transport');
     }
     if (crawler.outcomes) assert.ok([...crawler.outcomes.values()].every(item => item.status === 'saved'));
+  } catch (error) {
+    profiler?.disconnect();
+    throw error;
   } finally {
     await crawler.dispose();
     clearInterval(memoryTimer);
@@ -142,6 +157,13 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   }
   const finished = performance.now();
   const cpuUsed = process.cpuUsage(cpu);
+  if (profiler) {
+    try {
+      const {profile} = await profiler.post('Profiler.stop');
+      await fs.writeFile(path.join(profileDirectory,
+        `${variant}-${workload}-${mode}-${sample}.cpuprofile`), JSON.stringify(profile));
+    } finally { profiler.disconnect(); }
+  }
   assert.equal(requests, workload === 'local' ? 0 : workload === 'markup' ? documents * 4 : binaryCount);
   const outputFingerprint = await fingerprint(output, workload === 'markup' ? documents * 4 : binaryCount,
     workload === 'streamed' ? bytes.length : 65536);
@@ -176,7 +198,7 @@ try {
     entries: variants.map(variant => variant.entry), samples, concurrency: 8, workerCount: 2,
     documents, binaryCount, binaryBytes: 65536, streamingBytes: bytes.length,
     maxBufferedBytes,
-    warmupsPerCase: 1, gcExposed: !!global.gc, results}, null, 2));
+    warmupsPerCase: 1, gcExposed: !!global.gc, parentCpuProfiles: !!profileDirectory, results}, null, 2));
 } finally {
   clearTimeout(deadline);
   await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });
