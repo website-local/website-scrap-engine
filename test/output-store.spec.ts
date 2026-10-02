@@ -144,12 +144,13 @@ describe('staged file publication', () => {
     expect((await fs.lstat(destination)).isSymbolicLink()).toBe(false);
   });
 
-  test('rejects lexical escape before creating the configured root', async () => {
-    const output = join(root, 'output');
-    await expect(writeFile(join(root, 'asset'), 'new', 'utf8', undefined, undefined, output))
-      .rejects.toThrow('escapes localRoot');
-    expect(await fs.readdir(root)).toEqual([]);
-  });
+  test.each(['asset', 'output-sibling/asset', 'output/../asset'])(
+    'rejects lexical escape %s before creating the configured root', async path => {
+      const output = join(root, 'output');
+      await expect(writeFile(join(root, path), 'new', 'utf8', undefined, undefined, output))
+        .rejects.toThrow('escapes localRoot');
+      expect(await fs.readdir(root)).toEqual([]);
+    });
 
   test('concurrent publishers safely create shared missing directories', async () => {
     const output = join(root, 'missing', 'output');

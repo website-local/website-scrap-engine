@@ -28,6 +28,7 @@ Performance
 * Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.
 * Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
 * Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
+* Reuse normalized publication destinations and reservation paths instead of resolving and reconstructing the same paths repeatedly.
 * Keep worker logging imports out of the direct single-thread entry and defer the HTML parser until markup processing. Pools remain one-shot and live until downloader disposal.
 * Keep synchronous link/type/before-download pipelines synchronous; coalesce duplicate bodyless discoveries before serialization and worker transfer, retaining discovery counting and byte-budget behavior. Validate actual transport payloads; unused duplicate metadata is not cloned.
 * Avoid URI hostname classification for already-absolute URLs, reduce redundant URI copies, overlap local metadata/body reads, and use callback file I/O behind promise interfaces.

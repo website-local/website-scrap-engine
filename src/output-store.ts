@@ -150,13 +150,18 @@ export async function createFilePublication(
   let canonicalRoot: string | undefined;
   if (localRoot !== undefined) {
     const resolvedRoot = resolve(localRoot);
-    const withinRoot = relative(resolvedRoot, resolve(destination));
+    const resolvedDestination = resolve(destination);
+    const rootPrefix = resolvedRoot.endsWith(sep) ? resolvedRoot : resolvedRoot + sep;
+    // Most destinations already share the normalized root spelling. Avoid
+    // resolving both paths again inside relative() for that common case.
+    const withinRoot = resolvedDestination.startsWith(rootPrefix) ?
+      resolvedDestination.slice(rootPrefix.length) : relative(resolvedRoot, resolvedDestination);
     if (!withinRoot || withinRoot === '..' || withinRoot.startsWith('..' + sep) ||
       isAbsolute(withinRoot)) throw new Error('Output destination escapes localRoot');
     // The configured root is trusted and may itself be a symlink.
     const root = directories ? directories.root(resolvedRoot) : resolveRoot(resolvedRoot);
     canonicalRoot = typeof root === 'string' ? root : await root;
-    destination = join(canonicalRoot, withinRoot);
+    destination = canonicalRoot === resolvedRoot ? resolvedDestination : join(canonicalRoot, withinRoot);
     const preparing = directories ? directories.prepare(canonicalRoot, dirname(destination)) :
       checkDirectories(canonicalRoot, dirname(destination), true);
     if (preparing) await preparing;
@@ -164,8 +169,8 @@ export async function createFilePublication(
   const parent = dirname(destination);
   if (canonicalRoot === undefined) await fs.mkdir(parent, {recursive: true});
   signal?.throwIfAborted();
-  const reservationPath = context?.publicationReservations ?
-    join(canonicalRoot === undefined ? await fs.realpath(parent) : parent, basename(destination)) : undefined;
+  const reservationPath = context?.publicationReservations ? canonicalRoot === undefined ?
+    join(await fs.realpath(parent), basename(destination)) : destination : undefined;
   const release = context?.publicationOwner === undefined ? undefined :
     context.publicationReservations?.claim(process.platform === 'win32' ?
       reservationPath!.toLowerCase() : reservationPath!, context.publicationOwner);
