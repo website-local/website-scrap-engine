@@ -348,18 +348,28 @@ than being silently omitted. Callers should use serializable metadata.
 `httpTransport: 'native'` opts into Node's HTTP(S) client for buffered and streamed
 GET/HEAD requests. Got remains the default. Set the option in the configuration
 module before calling `defaultDownloadOptions`. Native configuration defaults to
-zero retries and a 200-second request deadline. Previously normalized Got options
+two retries and a 200-second request deadline per attempt. Previously normalized Got options
 retain their retry and phase-timeout settings; when overriding such options, also
-set `req: {retry: {limit: 0}, timeout: {request: 200000}}` and remove inherited phase
-timeouts if your merge retains them.
+set `req: {retry: {limit: 2}, timeout: {request: 200000}}` and remove inherited phase
+timeouts and custom retry callbacks if your merge retains them.
 
 The native path supports headers, bounded redirects, cross-origin credential
 stripping, gzip/deflate/Brotli decoding, `decompress: false`, request deadlines,
 cancellation, HTTP status errors, save policies, atomic/direct output and decoded
-body limits. It does not retry automatically. Unsupported content encodings fail.
+body limits. Native retries honor `retry.limit`, `methods`, `statusCodes`,
+`errorCodes`, `backoffLimit`, `noise` and `maxRetryAfter`. Backoff is exponential;
+`Retry-After` seconds and HTTP dates are supported. Cancellation interrupts both
+requests and retry waits. Set `retry.limit: 0` to disable retries.
+
+An interrupted stream restarts the original request and truncates its output
+before writing again; native retries do not resume with a Range request.
+Atomic mode preserves the cached file if all attempts fail. Direct mode can
+leave partial output after final failure. The returned `retryCount` counts retries.
+Unsupported content encodings fail.
 Custom agents/TLS/DNS, cookies, caching, HTTP/2, non-GET/HEAD methods, phase timeouts,
-positive retry limits and Got hooks select Got before I/O. The inert `beforeRetry`
-hook is allowed with zero retries. When native mode is requested,
+custom retry callbacks, `enforceRetryRules: false` and Got hooks select Got before
+I/O. The built-in retry logger is allowed; custom `beforeRetry` hooks are allowed
+only when retries are disabled. When native mode is requested,
 `resource.meta.httpTransport` is `'native'` or `'got'` for each HTTP acquisition.
 
 `streamingDownloadToFile` can now return `NativeHttpResponse` as well as Got's

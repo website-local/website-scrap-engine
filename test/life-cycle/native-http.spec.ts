@@ -28,7 +28,17 @@ const server = createServer((request, response) => {
   response.setHeader('Connection', 'close');
   const url = request.url!;
   seen.set(url, [...seen.get(url) ?? [], request.headers]);
-  if (url === '/redirect' || url === '/cross' || url === '/loop') {
+  if (url.startsWith('/retry-stream-') && (url.endsWith('always') || seen.get(url)!.length === 1)) {
+    response.setHeader('Content-Length', payload.length);
+    response.write(Buffer.alloc(1024, 98));
+    setTimeout(() => response.destroy(), 10);
+  } else if (url.startsWith('/retry-native') || url === '/retry-after') {
+    if (url === '/retry-after' || url !== '/retry-native-success' || seen.get(url)!.length === 1) {
+      response.statusCode = 503;
+      if (url === '/retry-after') response.setHeader('Retry-After', '60');
+      response.end('unavailable');
+    } else response.end(payload);
+  } else if (url === '/redirect' || url === '/cross' || url === '/loop') {
     response.statusCode = 302;
     response.setHeader('Location', url === '/cross' ? targetOrigin + '/target' :
       url === '/loop' ? '/loop' : '/gzip');
@@ -70,21 +80,75 @@ afterAll(async () => {
   await fs.rm(root, {recursive: true, force: true});
 });
 
-const config = () => defaultDownloadOptions({...defaultLifeCycle(), localRoot: root, httpTransport: 'native'});
+const config = () => defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
+  httpTransport: 'native', req: {retry: {limit: 0}}});
 const resource = (path: string, streaming = false) => ({...createResource({
   type: streaming ? ResourceType.StreamingBinary : ResourceType.Binary, depth: 0,
   url: origin + path, refUrl: origin + path, localRoot: root, savePath: path.slice(1)
 }), downloadStartTimestamp: Date.now()});
 
 test('native defaults are usable; Got-specific options select Got', () => {
-  const options = config();
-  expect(options.req.retry?.limit).toBe(0);
+  const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root, httpTransport: 'native'});
+  expect(options.req.retry?.limit).toBe(2);
   expect(canUseNativeHttp(options.req)).toBe(true);
-  for (const extra of [{retry: {limit: 1}}, {timeout: {connect: 100}},
+  expect(canUseNativeHttp({...options.req, retry: {limit: 1}})).toBe(true);
+  for (const extra of [{retry: {limit: 1, calculateDelay: () => 1}}, {timeout: {connect: 100}},
     {hooks: {beforeRequest: [() => {}]}}, {https: {rejectUnauthorized: false}},
     {method: 'POST'}, {searchParams: {a: 'b'}}, {decompress: true, responseType: 'json'}] as const) {
     expect(canUseNativeHttp({...options.req, ...extra} as typeof options.req)).toBe(false);
   }
+});
+
+test('native status retries honor limits, Retry-After bounds and zero retry', async () => {
+  const options = {...config().req, retry: {limit: 2, backoffLimit: 0, noise: 0}};
+  const response = await nativeBufferedRequest(origin + '/retry-native-success', options);
+  expect(response.body).toEqual(payload);
+  expect(response.retryCount).toBe(1);
+  await expect(nativeBufferedRequest(origin + '/retry-native-exhausted', options))
+    .rejects.toMatchObject({response: {statusCode: 503, retryCount: 2}});
+  expect(seen.get('/retry-native-exhausted')).toHaveLength(3);
+  await expect(nativeBufferedRequest(origin + '/retry-native-zero', config().req)).rejects.toBeInstanceOf(NativeHttpError);
+  expect(seen.get('/retry-native-zero')).toHaveLength(1);
+  await expect(nativeBufferedRequest(origin + '/retry-after', {...options,
+    retry: {...options.retry, maxRetryAfter: 1}})).rejects.toBeInstanceOf(NativeHttpError);
+  expect(seen.get('/retry-after')).toHaveLength(1);
+});
+
+test.each([true, false])('native retries restart interrupted output (direct=%s)', async directWrites => {
+  const options = config();
+  options.req.retry = {limit: 1, backoffLimit: 0, noise: 0};
+  const path = '/retry-stream-' + directWrites;
+  const res = resource(path, true);
+  const context = {directWrites, signal: new AbortController().signal, logger: createDefaultLogger()};
+  const response = await withCrawlContext(context, () => streamingDownloadToFile(res, options.req, undefined, options));
+  expect(res.meta.httpTransport).toBe('native');
+  expect(response?.retryCount).toBe(1);
+  expect(seen.get(path)).toHaveLength(2);
+  expect(await fs.readFile(join(root, path.slice(1)))).toEqual(payload);
+});
+
+test('exhausted native streaming retries preserve cached atomic output', async () => {
+  const options = config();
+  options.req.retry = {limit: 1, backoffLimit: 0, noise: 0};
+  const res = resource('/retry-stream-always', true);
+  await fs.writeFile(join(root, res.savePath), 'cached');
+  const context = {directWrites: false, signal: new AbortController().signal, logger: createDefaultLogger()};
+  await expect(withCrawlContext(context, () => streamingDownloadToFile(res, options.req, undefined, options)))
+    .rejects.toMatchObject({code: 'ECONNRESET'});
+  expect(seen.get('/retry-stream-always')).toHaveLength(2);
+  expect(await fs.readFile(join(root, res.savePath), 'utf8')).toBe('cached');
+  expect((await fs.readdir(root)).some(name => name.startsWith('.wse-stage-'))).toBe(false);
+});
+
+test('native cancellation interrupts retry backoff without issuing another request', async () => {
+  const controller = new AbortController();
+  const pending = nativeBufferedRequest(origin + '/retry-native-cancel', {...config().req,
+    signal: controller.signal, retry: {limit: 2, noise: 0}});
+  const timer = setTimeout(() => controller.abort(), 100);
+  try { await expect(pending).rejects.toMatchObject({code: 'ABORT_ERR'}); }
+  finally { clearTimeout(timer); }
+  expect(seen.get('/retry-native-cancel')).toHaveLength(1);
+  expect(getEventListeners(controller.signal, 'abort')).toHaveLength(0);
 });
 
 test.each(['/body', '/gzip', '/deflate', '/br', '/redirect'])('native buffered content matches decoded bytes: %s', async path => {

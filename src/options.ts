@@ -405,18 +405,18 @@ export function defaultDownloadOptions(
   }
   if (!('retry' in merged.req) || merged.req.retry === undefined) {
     merged.req.retry = {
-      limit: merged.httpTransport === 'native' ? 0 : 25,
+      limit: merged.httpTransport === 'native' ? 2 : 25,
       maxRetryAfter: 60000,
-      calculateDelay: calculateFastDelay
+      calculateDelay: merged.httpTransport === 'native' ? got.defaults.options.retry.calculateDelay : calculateFastDelay
     };
   } else if (typeof merged.req.retry === 'number') {
     merged.req.retry = {
       limit: merged.req.retry,
       maxRetryAfter: 60000,
-      calculateDelay: calculateFastDelay
+      calculateDelay: merged.httpTransport === 'native' ? got.defaults.options.retry.calculateDelay : calculateFastDelay
     };
   } else if (!merged.req.retry.calculateDelay) {
-    merged.req.retry.calculateDelay = calculateFastDelay;
+    merged.req.retry.calculateDelay = merged.httpTransport === 'native' ? got.defaults.options.retry.calculateDelay : calculateFastDelay;
   }
   if (merged.req.retry && !merged.req.retry.errorCodes) {
     // Got 16 distinguishes truncated responses from socket resets. Keep strict

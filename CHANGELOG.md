@@ -22,7 +22,7 @@ Breaking changes
 Performance
 ------------
 
-* Add opt-in native HTTP(S) for GET/HEAD with zero retries, request deadlines, redirects, decompression and resource limits. Unsupported request options fall back to Got before I/O; Got remains the default.
+* Add opt-in native HTTP(S) for GET/HEAD with bounded retries, request deadlines, redirects, decompression and resource limits. Native defaults to two retries, supports retry backoff and Retry-After, and restarts interrupted streams without retaining partial bytes. Custom retry callbacks and unsupported request options fall back to Got before I/O; Got remains the default.
 * Cache unchanged normalized request snapshots without retaining merge history, and avoid promise turns for prepared output directories.
 * Reuse URI parsing during resource creation and deduplication; reuse a private parsed reference URL across links without sharing mutable URI instances with hooks.
 * Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.

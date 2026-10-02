@@ -320,12 +320,14 @@ export default options.defaultDownloadOptions({
   ...lifeCycle.defaultLifeCycle(),
   localRoot: './output',
   httpTransport: 'native',
-  req: {retry: {limit: 0}, timeout: {request: 200000}}
+  req: {retry: {limit: 2}, timeout: {request: 200000}}
 });
 ```
 
 Native mode supports GET/HEAD, redirects, gzip/deflate/Brotli decoding,
-cancellation and resource limits. Unsupported request options (including retries,
+cancellation, bounded retries and resource limits. Interrupted native streams
+restart the original request; retries default to two and honor backoff and
+`Retry-After`. Unsupported request options (including custom retry callbacks,
 Got hooks, custom agents and phase timeouts) automatically select Got before any
 request is sent. `resource.meta.httpTransport` reports the selected backend when
 native mode is requested. Got remains the default. See the

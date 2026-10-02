@@ -2,11 +2,14 @@ import {request as httpRequest} from 'node:http';
 import type {ClientRequest, IncomingHttpHeaders, IncomingMessage} from 'node:http';
 import {request as httpsRequest} from 'node:https';
 import {addAbortListener} from 'node:events';
+import {setTimeout as delay} from 'node:timers/promises';
+import got from 'got';
 import type {Readable} from 'node:stream';
 import {createBrotliDecompress, createGunzip, createInflate} from 'node:zlib';
 import type {RequestOptions} from './types.js';
 import {checkResourceSize} from '../resource-limits.js';
 import {currentCrawlContext} from '../crawl-context.js';
+import {beforeRetryHook} from './download-resource.js';
 
 /** Native mode exposes HTTP metadata, not Got's request implementation. */
 export interface NativeHttpResponse {
@@ -35,22 +38,68 @@ const supportedOptions = new Set(['headers', 'method', 'retry', 'timeout', 'sign
 export function canUseNativeHttp(options: RequestOptions): boolean {
   if (Object.entries(options).some(([key, value]) => value !== undefined && !supportedOptions.has(key))) return false;
   if (options.method && options.method !== 'GET' && options.method !== 'HEAD') return false;
-  if (options.retry?.limit !== 0) return false;
+  const retries = options.retry?.limit ?? 2;
+  if (!Number.isSafeInteger(retries) || retries < 0) return false;
+  if (retries && (options.retry?.enforceRetryRules === false ||
+    options.retry?.calculateDelay && options.retry.calculateDelay !== got.defaults.options.retry.calculateDelay)) return false;
   if (options.followRedirect !== undefined && typeof options.followRedirect !== 'boolean') return false;
   const deadline = options.timeout?.request;
   if (deadline !== undefined && (!Number.isFinite(deadline) || deadline < 0 || deadline > 2147483647)) return false;
   if (options.timeout && Object.entries(options.timeout).some(([key, value]) => key !== 'request' && value !== undefined)) {
     return false;
   }
-  // beforeRetry cannot run when retries are disabled. Every other Got hook
-  // needs Got's request/response objects and therefore selects that backend.
-  if (options.hooks && Object.entries(options.hooks).some(([key, hooks]) => key !== 'beforeRetry' && hooks?.length)) {
+  // Custom hooks require Got request/error objects. Its built-in retry logger
+  // is inert for native errors, which have no Got options object.
+  if (options.hooks && Object.entries(options.hooks).some(([key, hooks]) => hooks?.length &&
+    (key !== 'beforeRetry' || retries && hooks.some(hook => hook !== beforeRetryHook)))) {
     return false;
   }
   return options.responseType === undefined || options.responseType === 'buffer';
 }
 
 export async function withNativeHttp<T>(
+  url: string,
+  options: RequestOptions,
+  consume: (response: NativeHttpResponse, body: Readable) => Promise<T>
+): Promise<T> {
+  const retry = options.retry;
+  const defaults = got.defaults.options.retry;
+  const limit = retry?.limit ?? 2;
+  for (let attempt = 0; ; ++attempt) {
+    try {
+      return await nativeHttpAttempt(url, options, (response, body) => {
+        response.retryCount = attempt;
+        return consume(response, body);
+      });
+    } catch (error) {
+      if (error instanceof NativeHttpError) error.response.retryCount = attempt;
+      if (options.signal?.aborted || attempt >= limit ||
+        !(retry?.methods ?? defaults.methods!).includes(options.method ?? 'GET')) throw error;
+      const response = error instanceof NativeHttpError ? error.response : undefined;
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (!(response && (retry?.statusCodes ?? defaults.statusCodes!).includes(response.statusCode)) &&
+        !(code && (retry?.errorCodes ?? defaults.errorCodes!).includes(code))) throw error;
+      const retryAfter = response?.headers['retry-after'];
+      let wait: number;
+      if (typeof retryAfter === 'string') {
+        const seconds = Number(retryAfter);
+        wait = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - Date.now();
+        if (!Number.isFinite(wait)) throw error;
+        wait = Math.max(0, wait);
+        if (wait > (retry?.maxRetryAfter ?? options.timeout?.request ?? Infinity)) throw error;
+      } else {
+        if (response?.statusCode === 413) throw error;
+        wait = Math.min(2 ** attempt * 1000, retry?.backoffLimit ?? defaults.backoffLimit!) +
+          Math.random() * (retry?.noise ?? defaults.noise!);
+      }
+      // Never let timer overflow turn a long server delay into an immediate retry.
+      if (!Number.isFinite(wait) || wait < 0 || wait > 2147483647) throw error;
+      await delay(wait, undefined, {signal: options.signal});
+    }
+  }
+}
+
+async function nativeHttpAttempt<T>(
   url: string,
   options: RequestOptions,
   consume: (response: NativeHttpResponse, body: Readable) => Promise<T>
