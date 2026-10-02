@@ -1,5 +1,9 @@
 # Shared body-size validation and accounting
 
+The subsequent [admission and overall comparison](admission-overall-performance.md)
+extends size reuse to queue admission and directly measures current code against
+0.9.1 with the same noise exclusion rule.
+
 Adjacent resource-limit validation and buffer accounting now calculate the body
 size once, at entry and after each hook in `download`, `processAfterDownload` and
 `saveToDisk`. Resource validation still precedes buffer reservation, including

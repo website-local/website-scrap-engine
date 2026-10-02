@@ -4,7 +4,7 @@ import {OutputDirectories, StagingDirectories} from '../output-store.js';
 import {PublicationReservations} from '../publication-reservations.js';
 import type { BufferReservation} from '../buffer-budget.js';
 import {BufferBudget} from '../buffer-budget.js';
-import {resourceBodyBytes} from '../resource-limits.js';
+import {checkResourceSize, resourceBodyBytes} from '../resource-limits.js';
 import {adjust, resetAdjustment} from './adjust-concurrency.js';
 import PQueue from 'p-queue';
 import URI from 'urijs';
@@ -12,7 +12,6 @@ import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
-import {checkResourceBody} from '../resource-limits.js';
 import {skip} from '../logger/logger.js';
 import {createDefaultLogger} from '../logger/default-logger.js';
 import {importDefaultFromPath} from '../util.js';
@@ -197,7 +196,10 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       return false;
     }
     const resource = res;
-    checkResourceBody(resource, this.options.maxResourceBytes);
+    const resourceLimit = this.options.maxResourceBytes;
+    const checkedBytes = resourceLimit === undefined || resource.body === undefined ? undefined :
+      resourceBodyBytes(resource.body, resource.encoding);
+    if (checkedBytes !== undefined) checkResourceSize(checkedBytes, resourceLimit);
     const url = this.canonicalUrl(resource.url, resource.uri);
     if (this.queuedUrl.has(url)) {
       return false;
@@ -211,7 +213,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
         {code: 'ERR_CRAWL_LIMIT', limit}), 'admitting resource', resource);
       return false;
     }
-    const bytes = this.bufferBudget ? resourceBodyBytes(resource.body, resource.encoding) : 0;
+    const bytes = this.bufferBudget ? checkedBytes ?? resourceBodyBytes(resource.body, resource.encoding) : 0;
     const bufferReservation = this.bufferBudget ? credit && credit.childBytes >= bytes ? credit.takeChild(bytes) :
       this.bufferBudget.reserve(bytes) : undefined;
     delete resource.meta.error;
