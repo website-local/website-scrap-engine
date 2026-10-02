@@ -1,5 +1,5 @@
-import type {BeforeRetryHook, OptionsInit, RequestError, Response} from 'got';
-import got, {HTTPError, TimeoutError} from 'got';
+import type {OptionsInit, Response} from 'got';
+import got, {HTTPError} from 'got';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {Resource} from '../resource.js';
 import {generateSavePath, ResourceType} from '../resource.js';
@@ -12,29 +12,7 @@ import {currentCrawlContext} from '../crawl-context.js';
 import {canUseNativeHttp, nativeBufferedRequest} from './native-http.js';
 import type {NativeHttpResponse} from './native-http.js';
 
-/** Take logs before retry */
-export const beforeRetryHook: BeforeRetryHook = (
-  error: RequestError,
-  retryCount: number | undefined
-) => {
-  const options = error.options;
-  if (!options) {
-    return;
-  }
-  if (!error) {
-    logger.retry.warn(retryCount, String(options.url));
-    return;
-  }
-  const url = String(error.options.url);
-  if (error instanceof TimeoutError || error.name === 'TimeoutError') {
-    (retryCount && retryCount > 1 ? logger.retry.warn : logger.retry.info)
-      .call(logger.retry, retryCount, url, error.name, error.code,
-        error.message, (error as TimeoutError).event);
-  } else {
-    (retryCount && retryCount > 1 ? logger.retry.warn : logger.retry.info)
-      .call(logger.retry, retryCount, url, error.name, error.code, error.message);
-  }
-};
+export {beforeRetryHook} from './retry-hook.js';
 
 export interface DownloadError extends Partial<Error> {
   retryLimitExceeded?: boolean;

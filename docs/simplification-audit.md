@@ -53,7 +53,7 @@ that task.
 
 Recommendation: centralize the executor/context check in one helper that checks
 a second signal only when it is different. Compose the lease's combined signal
-once when the lease is registered and reuse it for all allocations. Do not cache
+lazily on the first allocation and reuse it for all allocations. Do not cache
 a caller-specific request signal globally or assume independently supplied
 executor/context signals are always identical.
 
@@ -104,8 +104,8 @@ and comments deliberately preserve those behaviors.
 
 Benefit: lower initialization/allocation complexity, likely most relevant to
 short-lived downloaders. It is not a demonstrated fix for steady HTTP throughput.
-There is also a duplicate `adjustConcurrencyPeriod` upper-bound check that can
-be removed independently, without changing normalization policy.
+Correction after implementation review: the current `adjustConcurrencyPeriod`
+upper-bound validation already occurs once; there is no duplicate to remove.
 
 ### 5. Retry compatibility introduces an avoidable import cycle
 
@@ -176,8 +176,8 @@ These are maintainability cleanups, not credible performance fixes on their own.
 
 ## Recommended order and validation
 
-1. Reuse lease cancellation signals, centralize duplicate signal checks, trim
-   unused declarations and the duplicate timeout validation.
+1. Reuse lease cancellation signals and centralize duplicate signal checks.
+   Keep exported declarations unless their removal is separately approved.
 2. Remove the retry-hook import cycle without changing the public export.
 3. Evaluate publication lifecycle consolidation with explicit state transitions.
 4. Revisit metadata handoff and outcome retention only with an agreed contract.

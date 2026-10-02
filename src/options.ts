@@ -5,7 +5,7 @@ import type {ResourceEncoding, ResourceType} from './resource.js';
 import {createResource} from './resource.js';
 import type {ProcessingLifeCycle, RequestOptions} from './life-cycle/types.js';
 // noinspection ES6PreferShortImport
-import {beforeRetryHook} from './life-cycle/download-resource.js';
+import {beforeRetryHook} from './life-cycle/retry-hook.js';
 import {error} from './logger/logger.js';
 // noinspection ES6PreferShortImport
 import {adjust} from './downloader/adjust-concurrency.js';

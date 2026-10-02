@@ -37,8 +37,10 @@ export function currentCrawlContext(): CrawlContext | undefined {
   return contexts.getStore();
 }
 
-export function throwIfCancelled(): void {
-  contexts.getStore()?.signal.throwIfAborted();
+export function throwIfCancelled(signal?: AbortSignal): void {
+  signal?.throwIfAborted();
+  const contextSignal = contexts.getStore()?.signal;
+  if (contextSignal !== signal) contextSignal?.throwIfAborted();
 }
 
 export function markResourceDownloaded(): void {

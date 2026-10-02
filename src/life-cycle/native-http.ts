@@ -9,7 +9,7 @@ import {createBrotliDecompress, createGunzip, createInflate} from 'node:zlib';
 import type {RequestOptions} from './types.js';
 import {checkResourceSize} from '../resource-limits.js';
 import {currentCrawlContext} from '../crawl-context.js';
-import {beforeRetryHook} from './download-resource.js';
+import {beforeRetryHook} from './retry-hook.js';
 
 /** Native mode exposes HTTP metadata, not Got's request implementation. */
 export interface NativeHttpResponse {

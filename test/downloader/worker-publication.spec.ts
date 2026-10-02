@@ -28,10 +28,34 @@ function setup(directWrites = false) {
   const progress = createResourceProgress();
   const budget = new BufferBudget(10);
   const bufferAccount = budget.reserve(0);
-  coordinator.register(1, {logger: createDefaultLogger(), signal: new AbortController().signal,
+  const controller = new AbortController();
+  coordinator.register(1, {logger: createDefaultLogger(), signal: controller.signal,
     resourceProgress: progress, bufferAccount, directWrites});
-  return {owners, failures, coordinator, clients, progress, budget, bufferAccount};
+  return {owners, failures, coordinator, clients, progress, budget, bufferAccount, controller};
 }
+
+test('crawl cancellation rejects every allocation sharing a task lease', async () => {
+  const {coordinator, clients, progress, controller} = setup();
+  try {
+    const handles = [];
+    for (const name of ['first', 'second']) {
+      const destination = join(root, name);
+      await fs.writeFile(destination, 'cached');
+      const handle = await clients[0].forTask(1).create(destination, undefined, root);
+      await fs.writeFile(handle.stagingPath, 'replacement');
+      handles.push(handle);
+    }
+    controller.abort(new Error('crawl cancelled'));
+    for (const handle of handles) await expect(handle.publish()).rejects.toThrow('crawl cancelled');
+    await coordinator.finish(1, false);
+    expect(progress.publishedFiles).toBe(0);
+    for (const name of ['first', 'second']) expect(await fs.readFile(join(root, name), 'utf8')).toBe('cached');
+    expect((await fs.readdir(root)).sort()).toEqual(['first', 'second']);
+  } finally {
+    await coordinator.dispose();
+    clients.forEach(client => client.close());
+  }
+});
 
 test('foreign allocation and late publication cannot change cached output', async () => {
   const {owners, coordinator, clients, failures} = setup();

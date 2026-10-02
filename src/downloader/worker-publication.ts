@@ -33,6 +33,7 @@ interface Connection {
 interface Lease {
   context: CrawlContext;
   controller: AbortController;
+  signal?: AbortSignal;
   connection?: Connection;
   handles: Map<number, FilePublication>;
   operations: Set<Promise<unknown>>;
@@ -159,7 +160,7 @@ export class WorkerPublicationCoordinator {
         throw new TypeError('Invalid publication destination');
       }
       const handle = await createFilePublication(request.destination,
-        AbortSignal.any([lease.context.signal, lease.controller.signal]), request.localRoot,
+        lease.signal ??= AbortSignal.any([lease.context.signal, lease.controller.signal]), request.localRoot,
         request.writerRejectsSymlinks === true && noFollowWriteFlags !== undefined);
       const token = ++this.nextToken;
       lease.handles.set(token, handle);
