@@ -138,6 +138,19 @@ describe('calculateFastDelay', function () {
       } finally { spy.mockRestore(); }
     });
 
+  test('does not wrap a stale HTTP-date into a long future delay', () => {
+    const spy = jest.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 9, 2, 14, 30));
+    try {
+      expect(calculateFastDelay(makeRetryObject({statusCode: 429,
+        errorName: 'HTTPError', retryAfter: 'Thu, 01 Jan 1970 00:00:00 GMT'}))).toBe(1);
+    } finally { spy.mockRestore(); }
+  });
+
+  test('caps a large server delay at the largest supported timer value', () => {
+    expect(calculateFastDelay(makeRetryObject({statusCode: 429,
+      errorName: 'HTTPError', retryAfter: '4294968'}))).toBe(2147483647);
+  });
+
   test('429 with retry-after within maxRetryAfter uses retry-after', () => {
     const obj = makeRetryObject({
       attemptCount: 1,

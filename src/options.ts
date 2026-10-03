@@ -271,8 +271,7 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
       } else {
         retryAfter *= 1000;
       }
-      if (!isNaN(retryAfter)) {
-        retryAfter |= 0;
+      if (Number.isFinite(retryAfter)) {
         if (retryAfter < 0) {
           retryAfter = 1;
         }
@@ -286,9 +285,8 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
       }
     }
   }
-  delay |= 0;
-  // Got treats zero as cancellation, including rounded jitter and Retry-After: 0.
-  return Math.max(1, delay);
+  // Got treats zero as cancellation. Avoid 32-bit wrap and timer overflow.
+  return Math.max(1, Math.min(2147483647, Math.trunc(delay)));
 };
 
 const defaultOptions: DownloadOptions = {

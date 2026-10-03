@@ -1,5 +1,17 @@
 # 0.10.0 implementation and release audit
 
+## Accepted correctness fixes — 2026-10-03
+
+The user accepted the measured performance tradeoff and authorized applying the
+stale Retry-After overflow and directory-index metadata fixes. The exact measured
+patch is applied with four regression cases. On Node 22.13.0, all 511 tests in
+40 suites, lint, strict source/test checks, the build and real Got retry checks
+pass in an isolated snapshot containing only these accepted code changes.
+[Measurements](repair-repeat-measurement.md) retain their uncertainty; acceptance
+does not establish strict non-regression. [Validation evidence](evidence/repair-acceptance.json)
+records this decision. Earlier platform/package evidence predates the fixes;
+changed-artifact release checks and manual CI remain pending.
+
 This branch prepares **0.10.0**, unreleased. Implementation and local validation
 are complete, with measured performance regressions explicitly retained as the
 cost of stronger lifecycle/publication guarantees. No push, tag or publication

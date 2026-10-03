@@ -46,6 +46,7 @@ export async function readOrCopyLocalResource(
         if (await promises.access(fileSrcPath + '/' + index)
           .then(() => true).catch(() => false)) {
           fileSrcPath += '/' + index;
+          stats = undefined;
           break;
         }
       }

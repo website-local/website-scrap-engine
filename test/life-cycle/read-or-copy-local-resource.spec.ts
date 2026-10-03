@@ -50,6 +50,23 @@ describe('readOrCopyLocalResource', () => {
     expect(downloaded!.body).toBe('body');
   });
 
+  test.each(['index.html', 'index.htm'])('uses %s metadata for a directory input', async index => {
+    const directory = path.join(tmpRoot, 'site');
+    await fs.mkdir(directory);
+    const input = path.join(directory, index);
+    await fs.writeFile(input, '<html>fixture</html>');
+    await fs.utimes(input, 1000000, 1000000);
+    await fs.utimes(directory, 2000000, 2000000);
+    const url = pathToFileURL(directory).href + '/';
+    const res = createResource({type: ResourceType.Html, depth: 0, url, refUrl: url,
+      localSrcRoot: tmpRoot, localRoot, encoding: 'utf8'});
+    await readOrCopyLocalResource(res, {}, options());
+    const actual = await fs.stat(input);
+    expect(res.body).toBe('<html>fixture</html>');
+    expect(res.meta.headers).toEqual({'content-length': String(actual.size),
+      'last-modified': actual.mtime.toISOString()});
+  });
+
   test('rejects streaming copy paths that escape localRoot', async () => {
     const srcPath = path.join(tmpRoot, 'source.bin');
     await fs.writeFile(srcPath, 'body');

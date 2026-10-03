@@ -1,0 +1,61 @@
+{
+  "acceptedAt": "2026-10-03T04:04:34.931065+00:00",
+  "authorization": "User: accept this change and commit",
+  "decision": "Apply the exact measured correctness patch; accept the observed tradeoff without claiming that the strict non-regression gate passed.",
+  "measurement": "repair-repeat-measurement.json",
+  "measurementSha256": "f5a2626e5b1604aa3126d54347062c9e1c657b739416bd2d357ada3b257b2db0",
+  "inputs": {
+    "baseCommit": "a7d2dbf6468653050dbb943f2589a9b31c6cc345",
+    "includedWorkspaceChanges": [
+      "src/options.ts",
+      "src/life-cycle/read-or-copy-local-resource.ts",
+      "test/options.spec.ts",
+      "test/life-cycle/read-or-copy-local-resource.spec.ts"
+    ],
+    "sha256": {
+      "src/options.ts": "dd10a14bba87158bc139b391d69a74949417529e937c08ee09c83f55ef9fc917",
+      "src/life-cycle/read-or-copy-local-resource.ts": "3bccc016858cf589ee47c6ca1e7758c4fbb574df56c2852f1b90b3e94c9bb440",
+      "test/options.spec.ts": "f629aaf8ab8dd39876bffcf094357963d3413f1a01ee8e6264c159845206114e",
+      "test/life-cycle/read-or-copy-local-resource.spec.ts": "de90d4aad64f1fb246e2ee5b1493b764059eabfadb197479d09625bf7d9fade9"
+    },
+    "scope": "Clean HEAD snapshot plus exactly the four accepted source/test files; unrelated working changes excluded"
+  },
+  "node": "v22.13.0",
+  "artifactRoot": "/mnt/e/tmp/wse-accept-repair-20261003",
+  "checks": [
+    {
+      "command": "npm test -- --runInBand --cacheDirectory /mnt/e/tmp/wse-accept-repair-20261003/cache/jest",
+      "exitCode": 0,
+      "suitesPassed": 40,
+      "testsPassed": 511,
+      "includes": [
+        "ESLint",
+        "strict source/test typecheck",
+        "Jest"
+      ]
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0
+    },
+    {
+      "command": "node <workspace>/test/runtime-fast-retry.js /mnt/e/tmp/wse-accept-repair-20261003/tree/lib/index.js",
+      "exitCode": 0,
+      "output": "[io.http.request] http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:50627/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 503 (Service Unavailable): GET http://127.0.0.1:50627/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:50627/retry.bin',\n  origin: 'http://127.0.0.1:50627',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:50627',\n  hostname: '127.0.0.1',\n  port: '50627',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin null 1\n[io.http.request] http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:50627/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:50627/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:50627/retry.bin',\n  origin: 'http://127.0.0.1:50627',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:50627',\n  hostname: '127.0.0.1',\n  port: '50627',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin null 1\n[io.http.request] http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:50627/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:50627/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:50627/retry.bin',\n  origin: 'http://127.0.0.1:50627',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:50627',\n  hostname: '127.0.0.1',\n  port: '50627',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin http://127.0.0.1:50627/retry.bin null 1\nv22.13.0: zero jitter and immediate Retry-After recover through Got"
+    }
+  ],
+  "logHashes": {
+    "logs/build.log": "501bf8f797dc5edbabab22bd0dd213032499bdc61b6f1c39ee4227e52e79f97d",
+    "logs/fast-retry.log": "24d3e47c5cde6c8be2f4740e859b9a0b370fee61ed3bdcf62ce237964e69a36e",
+    "logs/test.log": "d074e00f09c875d88bcc9a73d0f88d2b39f8785a553eea79b93bc966e27ea3fb"
+  },
+  "localRetryHarness": {
+    "source": "import assert from 'node:assert/strict';\nimport {createServer} from 'node:http';\nimport path from 'node:path';\nimport {pathToFileURL} from 'node:url';\n\nconst entry = pathToFileURL(path.resolve(process.argv[2])).href;\nconst {lifeCycle, options, resource} = await import(entry);\nlet requests = 0;\nlet status = 503;\nlet retryAfter;\nconst server = createServer((_request, response) => {\n  response.setHeader('Connection', 'close');\n  if (++requests === 1) {\n    response.statusCode = status;\n    if (retryAfter !== undefined) response.setHeader('Retry-After', retryAfter);\n    response.end('retry');\n  } else {\n    response.end('recovered');\n  }\n});\nconst deadline = setTimeout(() => { throw new Error('Fast retry checks timed out'); }, 20000);\ndeadline.unref();\ntry {\n  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));\n  const url = `http://127.0.0.1:${server.address().port}/retry.bin`;\n  for (const header of [undefined, '0', new Date(Date.now() - 1000).toUTCString()]) {\n    requests = 0;\n    status = header === undefined ? 503 : 429;\n    retryAfter = header;\n    const delays = [];\n    const config = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),\n      localRoot: process.cwd(), req: {timeout: {request: 5000}, retry: {\n        limit: 1,\n        calculateDelay: retry => {\n          const random = Math.random;\n          try {\n            Math.random = () => 0;\n            const delay = options.calculateFastDelay(retry);\n            assert.equal(delay, 1, 'Eligible immediate retries must not be cancelled');\n            delays.push(delay);\n            return delay;\n          } finally { Math.random = random; }\n        }\n      }}});\n    const res = {...resource.createResource({type: resource.ResourceType.Binary,\n      depth: 0, url, refUrl: url, localRoot: process.cwd()}), downloadStartTimestamp: Date.now()};\n    const result = await lifeCycle.requestForResource(res, config.req, config);\n    assert.equal(result.body.toString(), 'recovered');\n    assert.equal(requests, 2);\n    assert.deepEqual(delays, [1], 'Got must receive a positive delay to keep the retry');\n  }\n  console.log(`${process.version}: zero jitter and immediate Retry-After recover through Got`);\n} finally {\n  clearTimeout(deadline);\n  server.closeAllConnections();\n  await new Promise(resolve => server.close(resolve));\n}\n",
+    "sha256": "7e65d361605217ae30ba158a3c8b12097a4eb6e2fe3f58b39092f6b7cd8fed1a"
+  },
+  "changedSourceMatchesMeasuredRepair": true,
+  "validationSnapshotContainsOnlyAcceptedChanges": true,
+  "ciDispatched": false,
+  "githubApisUsed": false,
+  "releaseLimit": "The earlier platform/package evidence predates these fixes. Changed-artifact release checks and manual CI remain pending."
+}
