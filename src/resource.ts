@@ -400,20 +400,19 @@ export function generateSavePath(
   } else {
     const host: string = uri.hostname();
     const uriPath = uri.path();
-    savePath = path.join(host || '',
-      ...uriPath.split('/').filter(Boolean).map(segment => {
-        // Normalize encoded dot segments before the final localRoot containment check.
-        let decodedSegment: string;
-        try {
-          decodedSegment = segment.includes('%') ? decodeURIComponent(segment) : segment;
-        } catch {
-          decodedSegment = segment;
-        }
-        if (decodedSegment === '.' || decodedSegment === '..') {
-          return '_';
-        }
-        return escapePath(segment);
-      }));
+    const segments = uriPath.split('/');
+    for (let index = 0; index < segments.length; index++) {
+      const segment = segments[index];
+      // Normalize encoded dot segments before the final localRoot containment check.
+      let decodedSegment: string;
+      try {
+        decodedSegment = segment.includes('%') ? decodeURIComponent(segment) : segment;
+      } catch {
+        decodedSegment = segment;
+      }
+      segments[index] = decodedSegment === '.' || decodedSegment === '..' ? '_' : escapePath(segment);
+    }
+    savePath = path.join(host || '', ...segments);
     if (uriPath.endsWith('/')) {
       savePath += path.sep;
     }

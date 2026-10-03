@@ -36,11 +36,12 @@ async function processHtmlDoc(
       if (!attr || !attrValue) {
         // style block
         if (type === ResourceType.CssInline) {
-          let content = elem.html();
+          const content = elem.html();
           if (!content) continue;
-          content = await processCssText(content, res, options,
+          const processed = await processCssText(content, res, options,
             pipeline, depth, resources);
-          elem.html(content);
+          // Hooks can mutate the document while processing its CSS links.
+          if (processed !== content || elem.html() !== content) elem.html(processed);
         }
         continue;
       } else if (type === ResourceType.CssInline) {

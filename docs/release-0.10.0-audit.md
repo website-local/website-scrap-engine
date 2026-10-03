@@ -22,6 +22,7 @@ checkpoint narratives are preserved in the [archive](archive/0.10.0-experiments.
 | Latest working-tree benchmark against 0.9.1 | All nine workload output checks passed; 10–12 rounds retained per case | [Latest 0.9.1 evidence](evidence/idle-working-tree-performance.json); multi buffered HTTP is faster under the paired-control rule; six comparisons remain provisional |
 | HTTP-cache mitigation, committed as `584e07c` | 527 tests / 41 suites, lint, strict source/test types, build and both downloader smoke checks passed on Node 22.13.0 | [Mitigation evidence](evidence/http-cache-mitigation.json); includes 16 new cases and confirmed failures without the guard; upstream advisory remains open, outside the reported CI pass |
 | Allocation candidate after `584e07c` | 531 tests / 42 suites, lint, strict source/test types and build passed on Node 22.13.0; eight crawl output checks matched | [Follow-up evidence](evidence/performance-memory-followup.json); sampled allocation reductions in CSS/SVG/link creation, no confirmed elapsed-time or RSS improvement; quiet-host latency gate pending |
+| Markup/path candidate after `8c7a290` | 534 tests / 42 suites, lint, strict source/test types and build passed; eight synthetic crawl outputs and local MDN outputs matched | [New evidence](evidence/markup-path-followup.json); MDN elapsed time -6.11% normally and -4.66% under pressure passes controls; other focused comparisons remain partly unresolved, no aggregate non-regression sign-off |
 
 The latest benchmark against 0.9.1 snapshots the tracked working tree based on `a1f5fb1`,
 including the retained `src/downloader/multi.ts` cleanup and two local QA harnesses.
@@ -106,10 +107,15 @@ contracts and their configuration options.
 
 ## Remaining release work
 
-1. Finalize the intended allocation changes, worker cleanup, QA harness and
+1. Finalize the intended allocation and markup/path changes, worker cleanup, QA harness and
    documentation in the release candidate; keep unrelated local files out of the package.
 2. Complete quiet-host paired latency validation for the allocation candidate;
-   the loaded-host profiles do not establish non-regression.
+   include the [local MDN replay](performance.md#css-scanner-and-local-mdn-replay)
+   alongside synthetic crawls. The loaded-host profiles do not establish
+   non-regression. The experimental CSS scanner remains outside the release code.
+   The [markup/path follow-up](performance.md#markup-and-path-follow-up-2026-10-04)
+   qualifies the MDN comparison against `8c7a290`, but does not close every earlier
+   or heap-pressure comparison.
 3. Build and pack that exact candidate, then refresh installed-consumer and native
    Windows checks. Preserve the package digest and candidate identity together.
 4. Run CI for any final code changes and record the result. The user controls CI

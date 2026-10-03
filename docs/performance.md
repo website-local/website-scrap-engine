@@ -11,6 +11,10 @@ A later [allocation investigation](#allocation-follow-up-2026-10-03) against
 controls failed on the loaded host, so it does not establish a speedup or close
 the candidate's latency gate.
 
+The [markup/path follow-up](#markup-and-path-follow-up-2026-10-04) qualifies a
+6.11% elapsed-time reduction in local MDN replay normally and 4.66% under heap
+pressure, against `8c7a290`. Other comparisons remain partly unresolved.
+
 ## Latest 0.9.1 comparison: 2026-10-03
 
 The candidate is the tracked working tree based on `a1f5fb1`, including the retained
@@ -167,6 +171,125 @@ negligible allocation change, and a simple-path prefix shortcut gave small,
 inconsistent benefits. Both added complexity without sufficient evidence. Further
 work should follow measured hotspots; this phase does not justify weakening
 checks or replacing dependencies before release.
+
+## CSS scanner and local MDN replay
+
+Commit `8c7a290` contains the allocation changes above. The next experiment used
+that code plus the inherited worker cleanup as its baseline, with Cheerio and
+URIjs unchanged. **Keep the trimmed regex for the release.** A specialized scanner
+is worth further investigation for CSS with many duplicate URLs, but this
+prototype does not yet justify replacing the current extractor. The
+[scanner and MDN evidence](evidence/css-scanner-mdn.json) preserves both prototypes,
+fixtures, measurements and independent statistical checks. Production code was
+not changed by this experiment.
+
+The first prototype scanned characters individually. The tuned version uses
+cached native string searches to jump to possible `url`, `@import` and comment
+starts, then extracts URL tokens and offsets with a small state machine. Irregular
+tokens fall back to the existing regex for the whole input. It is not a full CSS
+parser and does not build an AST. Both versions matched the current extractor on
+51,312 generated/fixture cases, including all 16 saved MDN style blocks. This
+corpus is evidence of compatibility, not a proof for every possible CSS input.
+
+The table shows median paired changes in sampled cumulative allocation for the
+tuned scanner. Each mode used three rotated baseline/candidate/identical-candidate
+triplets on Node 22.13.0, with 4 KiB allocation sampling, a 128 MiB old-space limit
+and 4 MiB semi-space. Pressure totals include the same JavaScript-array churn
+in every variant; no pressure baseline was subtracted.
+
+| Workload | Normal | Managed heap pressure |
+| --- | ---: | ---: |
+| Extract 512 unique CSS URLs/document | -64.3% | -23.1% |
+| Extract 2,048 occurrences of eight CSS URLs/document | -61.3% | -43.3% |
+| Extract 512 CSS URLs/document interspersed with comments | -85.2% | -49.6% |
+| Full CSS processing, 512 unique URLs/document | -2.77% | -1.76% |
+| Full CSS processing, 2,048 occurrences of eight URLs/document | -53.10% | -40.01% |
+| Complete local MDN replay | -1.10% | -1.05% |
+
+The standalone MDN stylesheet extractor allocated about 44% more normally,
+roughly 75 KiB over 128 repetitions of a 22.6 KiB stylesheet with four URL matches.
+This small absolute increase and the full-pipeline results show why extraction
+benchmarks alone should not decide adoption. No RSS, retained-heap or peak-memory
+improvement was established for the scanner.
+
+The MDN workload uses the real MDN lifecycle and URL hooks: three saved 101,908-byte
+HTML documents plus CSS extracted from their inline styles, concurrency eight,
+depth zero, local acquisition, real output writes and disposal. All variants
+produced the same four files, 323,010 bytes and output hash. Network access was
+disabled. This is a small single-thread CPU/I/O replay, not a full MDN mirror; the
+CSS fixture is not MDN's external global stylesheet.
+
+Timing ran 12 measured rounds per mode after three calibration triplets, with
+two observations per variant, whole-triplet CPU/I/O exclusions and the existing
+±5% control criterion. MDN retained 11/12 rounds normally and 12/12 under pressure;
+both controls failed. Every extractor comparison also failed its control or lacked
+eight qualifying rounds. Apparent gains after the native-search refinement remain
+provisional. No timing results were pooled, and profiling continued under host
+load without waiting for idle time.
+
+The scanner's duplicate-heavy CSS savings are substantial, but ordinary unique-URL
+processing and this MDN replay show much smaller allocation changes. The prototype
+also adds 102 lines alongside the 60-line regex fallback. Before adoption, require
+representative external stylesheets and a passing complete-workload timing gate.
+The local MDN replay is now an explicit workload for the next quiet-host latency
+pass on the committed allocation changes, alongside the existing synthetic crawls.
+
+## Markup and path follow-up: 2026-10-04
+
+The next candidate, based on `8c7a290` plus the inherited worker cleanup, retains
+two changes: reuse the split path array while escaping segments, and avoid
+reconstructing unchanged inline style contents. The latter rereads the element
+before skipping its setter, preserving the existing result when CSS hooks mutate
+the document. Dot-segment sanitization, Cheerio, URIjs and the CSS regex remain
+unchanged. The candidate was measured before commit.
+[Source fingerprints, measurements and validation](evidence/markup-path-followup.json)
+identify the exact experiment; this is not a comparison against 0.9.1.
+
+The complete local MDN replay passes the paired-control rule in both modes:
+
+| Mode | Accepted rounds / 12 | Elapsed change | 95% paired interval | Median paired change | Sampled allocation change |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Normal | 12 | -6.11% | -7.39% to -4.64% | -20.52 ms | -5.69% |
+| Managed heap pressure | 11 | -4.66% | -6.74% to -0.83% | -16.24 ms | -5.48% |
+
+Both identical-candidate control intervals include zero and fit within ±5%, and
+both candidate copies have negative effect intervals. One pressure triplet was
+excluded for its I/O probe. The replay uses the same three saved MDN pages plus
+one extracted stylesheet described above, with matching four-file output hashes.
+These are warmed, same-process paired crawl observations, including crawler
+initialization, output writes and disposal; they do not establish network or
+steady-state throughput. Allocation profiles ran separately in three rotated
+triplets per mode, with the same 4 KiB sampling and constrained heap settings.
+
+Isolating the path change reduced sampled allocation by 4.02% for unique-URL CSS,
+3.53% for HTML image links, 4.04% for SVG links and 5.23% for combined link creation
+normally. Under pressure the respective changes were 4.07%, 3.15%, 2.93% and 0.31%.
+The simpler experiment that removed only the filter array gave small, inconsistent
+changes and was superseded by reusing the split array for the transformation.
+
+The separate 18-round focused timing campaigns qualified normal link creation as
+1.52% faster. Normal unique CSS, SVG and HTML passed controls without qualifying
+a difference under the two-copy rule; duplicate CSS failed its control. All five
+pressure-focused controls failed. In particular, an apparent pressure CSS slowdown
+remains unresolved; the MDN result does not override that uncertainty. There is
+still no universal speedup or strict non-regression guarantee, and these results
+do not retroactively validate the earlier allocation commit against its baseline.
+
+Ten repeated MDN crawls in separate baseline/candidate/control processes per mode
+ended near 21 MiB of post-GC heap, with comparable late drift. No additional
+retained-heap growth relative to baseline was observed in this short check.
+RSS differences varied by mode; no general RSS or peak-memory reduction is claimed.
+
+The exact candidate passed **534 tests / 42 suites**, lint, strict source/test
+types and build. Differential checks matched 80,000 resource/path outcomes per
+experiment, including malformed-input failures, plus 14 HTML cases with hook
+mutations. All eight small synthetic crawl output comparisons also matched.
+The independent audit reproduced calibration thresholds, exclusions, output
+checks and bootstrap intervals. Additional [pre-commit fuzzing](evidence/markup-path-fuzz.json)
+matched 160,000 POSIX/Windows-path comparisons and 8,000 HTML/CSS cases across
+eight seeds, including asynchronous hooks and document mutation. Windows path
+API coverage does not substitute for native Windows filesystem testing. CI and
+final-package validation remain separate.
 
 ## Retained changes and defaults
 

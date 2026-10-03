@@ -234,3 +234,36 @@ div {
   });
 
 });
+
+
+describe('inline style processing', () => {
+  test.each([false, true])('preserves unchanged CSS after hook mutation=%s', async mutate => {
+    const css = '.asset { background: url(icon.png); content: "<b>&"; }';
+    const res = resHtml('https://example.com/index.html', '<style>' + css + '</style>');
+    const lifeCycle = testLifeCycle();
+    lifeCycle.processBeforeDownload = [resource => {
+      if (mutate) res.meta.doc!('style').text('hook mutation');
+      resource.replacePath = resource.rawUrl;
+      return resource;
+    }];
+    const pipeline = new PipelineExecutorImpl(lifeCycle, {}, testPipeline.options);
+    const submitted: string[] = [];
+    await processHtml(res, value => {
+      for (const item of Array.isArray(value) ? value : [value]) submitted.push(item.url);
+    }, pipeline.options, pipeline);
+    expect(res.meta.doc!('style').html()).toBe(css);
+    expect(submitted).toEqual(['https://example.com/icon.png']);
+  });
+
+  test('writes changed CSS while preserving surrounding text', async () => {
+    const res = resHtml('https://example.com/index.html', '<style>/* keep */ .asset { background: url(icon.png); }</style>');
+    const lifeCycle = testLifeCycle();
+    lifeCycle.processBeforeDownload = [resource => {
+      resource.replacePath = 'assets/icon.png';
+      return resource;
+    }];
+    const pipeline = new PipelineExecutorImpl(lifeCycle, {}, testPipeline.options);
+    await processHtml(res, () => {}, pipeline.options, pipeline);
+    expect(res.meta.doc!('style').html()).toBe('/* keep */ .asset { background: url(assets/icon.png); }');
+  });
+});
