@@ -17,6 +17,8 @@ harness fingerprints are recorded in the
 [preserved input evidence](evidence/final-working-tree-performance.json). The fresh
 [measurements and host samples](evidence/idle-working-tree-performance.json) record
 the run from 08:36:29 to 08:42:35 UTC without pooling earlier samples.
+This snapshot predates the HTTP-cache security mitigation described in the
+[dependency audit](dependency-audit.md); these figures do not validate that change.
 The [release audit](release-0.10.0-audit.md) distinguishes this tree from committed CI.
 
 Negative changes mean less elapsed time. Percentages and milliseconds are medians

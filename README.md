@@ -336,6 +336,12 @@ request is sent. `resource.meta.httpTransport` reports the selected backend when
 native mode is requested. Got remains the default. See the
 [migration guide](MIGRATION-0.10.0.md#native-http-transport) for compatibility details.
 
+HTTP response caching is opt-in through Got's `req.cache`. Requests containing
+`Cache-Control: max-stale` bypass that cache until
+[GHSA-ch52-4w7c-c8xp](https://github.com/advisories/GHSA-ch52-4w7c-c8xp)
+has an upstream fix. This applies to buffered and streaming downloads, including
+redirects and retries; other cache requests retain their configured behavior.
+
 Downloaders write directly to output files by default. Failed or cancelled writes
 may leave partial files or overwrite a cached copy. Use `atomicWrites: true` to
 stage files and rename on success instead.

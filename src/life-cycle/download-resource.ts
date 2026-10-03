@@ -11,6 +11,7 @@ import {ResourceSizeError} from '../resource-limits.js';
 import {currentCrawlContext} from '../crawl-context.js';
 import {canUseNativeHttp, nativeBufferedRequest} from './native-http.js';
 import type {NativeHttpResponse} from './native-http.js';
+import {withHttpCacheSafety} from './http-cache-safety.js';
 
 export {beforeRetryHook} from './retry-hook.js';
 
@@ -29,9 +30,9 @@ export async function getRetry(
   const account = currentCrawlContext()?.bufferAccount;
   const limitController = maxResourceBytes === undefined && !account ? undefined : new AbortController();
   // This helper consumes a response promise, across Got 13–16 overloads.
-  const request = got(url, {...options, signal: limitController ?
+  const request = got(url, withHttpCacheSafety({...options, signal: limitController ?
     options.signal ? AbortSignal.any([options.signal, limitController.signal]) : limitController.signal :
-    options.signal} as OptionsInit & {isStream?: false; resolveBodyOnly?: false});
+    options.signal} as OptionsInit & {isStream?: false; resolveBodyOnly?: false}));
   let sizeError: unknown;
   if (maxResourceBytes !== undefined || account) {
     const failed = (error: unknown) => {

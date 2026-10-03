@@ -21,6 +21,7 @@ import type {PipelineExecutor} from './pipeline-executor.js';
 import {isUrlHttp} from '../util.js';
 import {canUseNativeHttp, withNativeHttp} from './native-http.js';
 import type {NativeHttpResponse} from './native-http.js';
+import {withHttpCacheSafety} from './http-cache-safety.js';
 
 export function isBytesAccepted(acceptRange?: string): boolean {
   if (!acceptRange) {
@@ -113,11 +114,11 @@ async function streamToStagingFile(
     });
   }
   if (preferNative) res.meta.httpTransport = 'got';
-  const options = Object.assign({}, requestOptions, {
+  const options = withHttpCacheSafety(Object.assign({}, requestOptions, {
     isStream: true, headers: {...requestOptions.headers}
   }) as RequestOptions & {
     isStream?: true
-  };
+  });
   let fileWriteStream: WriteStream | void;
   let activeRequest: ReturnType<typeof got.stream> | undefined;
 

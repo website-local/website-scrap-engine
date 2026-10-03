@@ -49,6 +49,8 @@ Crawl control and reliability
 Fixes and performance
 ------------
 
+* Bypass Got's response cache for requests containing Cache-Control: max-stale, including hook changes, redirects and retries in buffered and streaming downloads. This mitigates GHSA-ch52-4w7c-c8xp; http-cache-semantics has no patched release yet, so the dependency advisory remains open.
+
 * Cache output-directory preparation per crawl by default; strictOutputChecks restores per-write preparation. Initialize worker pools once on demand and retain them until disposal; waitForWorkers restores eager readiness. Omit worker protocol-version fields and checks.
 
 * Calculate relative replacement paths directly for ordinary local filenames, with URIjs fallback for encoded and unusual paths. Reuse matching parsed response URLs and skip unused default path generation before the built-in legacy full-path adapter.

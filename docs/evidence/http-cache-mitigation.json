@@ -1,0 +1,200 @@
+{
+  "date": "2026-10-03",
+  "baseCommit": "46df12d13753a57248a908f9e578f76b4353018e",
+  "advisory": "GHSA-ch52-4w7c-c8xp",
+  "cve": "CVE-2026-93748",
+  "status": "local mitigation; upstream dependency remains affected",
+  "dependencyPath": [
+    "got@16.0.0",
+    "cacheable-request@13.0.19",
+    "http-cache-semantics@4.2.0"
+  ],
+  "audit": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {
+      "cacheable-request": {
+        "name": "cacheable-request",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          "http-cache-semantics"
+        ],
+        "effects": [
+          "got"
+        ],
+        "range": ">=0.1.0",
+        "nodes": [
+          "node_modules/cacheable-request"
+        ],
+        "fixAvailable": {
+          "name": "got",
+          "version": "7.1.0",
+          "isSemVerMajor": true
+        }
+      },
+      "got": {
+        "name": "got",
+        "severity": "high",
+        "isDirect": true,
+        "via": [
+          "cacheable-request"
+        ],
+        "effects": [],
+        "range": ">=8.0.0",
+        "nodes": [
+          "node_modules/got"
+        ],
+        "fixAvailable": {
+          "name": "got",
+          "version": "7.1.0",
+          "isSemVerMajor": true
+        }
+      },
+      "http-cache-semantics": {
+        "name": "http-cache-semantics",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1240991,
+            "name": "http-cache-semantics",
+            "dependency": "http-cache-semantics",
+            "title": "http-cache-semantics max-stale handling can disclose cross-user cached responses",
+            "url": "https://github.com/advisories/GHSA-ch52-4w7c-c8xp",
+            "severity": "high",
+            "cwe": [
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": "<=4.2.0"
+          }
+        ],
+        "effects": [
+          "cacheable-request"
+        ],
+        "range": "*",
+        "nodes": [
+          "node_modules/http-cache-semantics"
+        ],
+        "fixAvailable": {
+          "name": "got",
+          "version": "7.1.0",
+          "isSemVerMajor": true
+        }
+      }
+    },
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 3,
+        "critical": 0,
+        "total": 3
+      },
+      "dependencies": {
+        "prod": 51,
+        "dev": 432,
+        "optional": 42,
+        "peer": 0,
+        "peerOptional": 0,
+        "total": 482
+      }
+    }
+  },
+  "publishedVersions": {
+    "version": "4.2.0",
+    "versions": [
+      "1.0.0",
+      "2.0.0",
+      "3.0.0",
+      "3.1.0",
+      "3.2.0",
+      "3.3.0",
+      "3.3.1",
+      "3.3.2",
+      "3.3.3",
+      "3.4.0",
+      "3.5.0",
+      "3.5.1",
+      "3.6.0",
+      "3.6.1",
+      "3.7.0",
+      "3.7.1",
+      "3.7.3",
+      "3.8.0",
+      "3.8.1",
+      "4.0.0",
+      "4.0.1",
+      "4.0.2",
+      "4.0.3",
+      "4.0.4",
+      "4.1.0",
+      "4.1.1",
+      "4.2.0-beta.1",
+      "4.2.0-beta.2",
+      "4.2.0"
+    ],
+    "dist-tags": {
+      "latest": "4.2.0",
+      "beta": "4.2.0-beta.1",
+      "next": "4.2.0-beta.2"
+    }
+  },
+  "mitigation": "Bypass Got response caching for max-stale requests after request hooks. Applies to built-in buffered/streaming requests, redirects and retries. Ordinary requests without caching or cache-enabling hooks retain the unguarded request path. Direct Got usage by custom code is outside the mitigation.",
+  "reproduction": {
+    "unmitigatedRequests": 1,
+    "secondResponseFromCache": true,
+    "secondResponseBody": "alice secret",
+    "secondResponseSetCookie": [
+      "session=alice"
+    ],
+    "regressionWithoutGuard": "Buffered and streaming leak tests both fail by returning alice instead of anonymous."
+  },
+  "validation": {
+    "node": "22.13.0",
+    "isolatedCandidate": "Current tracked workspace plus new security guard/test; unrelated untracked source excluded. Includes pre-existing worker and QA edits.",
+    "lint": true,
+    "sourceAndTestTypes": true,
+    "testSuites": 41,
+    "tests": 527,
+    "newRegressionCases": 16,
+    "build": true,
+    "runtimeSmoke": [
+      "main downloader and save-path hooks",
+      "worker downloader and save-path hooks"
+    ],
+    "packedGuardRuntimeSourceAndDeclarations": true,
+    "benchmarked": false,
+    "ciTriggered": false,
+    "dependencyVersionsChanged": false
+  },
+  "sourceSha256": {
+    "src/life-cycle/http-cache-safety.ts": "b497cb2446b5050247a49e16cb6db871266dc594360d208d618bbee5e3c977a6",
+    "src/life-cycle/download-resource.ts": "c2b0529094f09287e448fd82671c1f5a52d3286be751091e26b3f78730ece57b",
+    "src/life-cycle/download-streaming-resource.ts": "9bbae9a38ff3b08bbf7e9e4fde1418ca1442c6b39aefa50fbaf0953ee9498d50",
+    "test/life-cycle/http-cache-safety.spec.ts": "64a40cc36f341fc418cf3c098365c2635f4ab112ed268136c01526c9f5306a3e"
+  },
+  "validationLogSha256": {
+    "logs/advisory.html": "5d4f9ff78dd912756c2b2be58d230e34c8b903605fe8207c011fc11f6f7583cc",
+    "logs/audit-before.json": "9ba6dcf7d46a39b7b9b78a49853e4a6ad8ec07f507789be1429eea369bf86228",
+    "logs/build.log": "501bf8f797dc5edbabab22bd0dd213032499bdc61b6f1c39ee4227e52e79f97d",
+    "logs/cache-regression.log": "7549ecbffb3f658ad0a2cdd7ac26e4765ad5b9a17d216aec36454c87c38d36c1",
+    "logs/cache-versions.json": "ca9e85348f7e47952eea0d3d0670b29943bce5fe1d632b2ed9dde2a4209eb146",
+    "logs/full-test.log": "01db6f92490a576830dfd07bba24091e930163eecae906fe90f1e92b2b61c9e3",
+    "logs/pack.json": "5088d73ce2022a565becb755efeb5cbe572090b115aaae91d4cd689d501455fe",
+    "logs/regression-without-guard.log": "30dca850e9103452989fc16dbadf3ba114b56678d757cd9613270e07a508f945",
+    "logs/runtime-smoke.log": "3353dd649aa7af36283b9e894c9554520168d34fb34c22e6761c247e41f37a91",
+    "logs/types.log": "530074e7d42399dca181e408efd13eb5fa6a5e66dd500b35f38764844b33b4e5"
+  },
+  "package": {
+    "name": "website-scrap-engine",
+    "version": "0.10.0",
+    "filename": "website-scrap-engine-0.10.0.tgz",
+    "shasum": "9be44f524adc89454821b29fa4917bb1d8128e0b",
+    "integrity": "sha512-xM+BQ6yw79KEaANXbAa+/XsUG+Py4x9PBinbbOquANOhXG0dFbVIQQsiMlYDG5GRwjYEtZ7M1sfu9tJkITx2ZQ=="
+  }
+}

@@ -57,6 +57,23 @@ contracts. The audit does not force them to one major through overrides. The
 consumer graphs; that is a dated result, not a current registry claim.
 whatwg-encoding's deprecation is tracked through its upstream Cheerio chain.
 
+The 2026-10-03 audit found
+[GHSA-ch52-4w7c-c8xp / CVE-2026-93748](https://github.com/advisories/GHSA-ch52-4w7c-c8xp)
+in `http-cache-semantics` through 4.2.0, via Got → cacheable-request. No patched
+release was available. npm reports three affected package nodes for this one
+underlying advisory; its suggested Got 7 downgrade is incompatible with the
+current API. Package versions and the lockfile remain unchanged.
+
+The local mitigation bypasses Got's cache whenever the final request contains a
+`max-stale` Cache-Control directive. This prevents reuse of shared entries whose
+freshness was zeroed for security, including responses with Set-Cookie. It covers
+built-in buffered and streaming downloads, hook changes, redirects and retries;
+ordinary public cache hits remain enabled. Direct Got calls in custom code are
+outside this mitigation. The upstream dependency alert remains open and requires
+a compatible patched release; this is not a clean dependency-audit result.
+[Mitigation evidence](evidence/http-cache-mitigation.json) records the audit,
+reproduction, tested source hashes and local validation.
+
 [Installation evidence](evidence/dependencies.json) retains file counts, sizes,
 registry payloads and timing samples. The [historical package refresh](evidence/final-package.json)
 and [later quality-pass package checks](evidence/final-quality-pass.json) identify

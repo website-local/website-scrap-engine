@@ -20,6 +20,7 @@ checkpoint narratives are preserved in the [archive](archive/0.10.0-experiments.
 | Earlier packed consumers | Strict declarations and 13 runtime harnesses passed on the four Linux versions, with and without log4js | Same historical artifact; not a package sign-off for the changed release tree |
 | Earlier native Windows consumers | Node 22.13.0 and 24.21.0 passed general and filesystem harnesses, including permitted symlinks | Historical artifact; Windows validation must be refreshed for the final package |
 | Latest working-tree benchmark | All nine workload output checks passed; 10–12 rounds retained per case | [Latest evidence](evidence/idle-working-tree-performance.json); multi buffered HTTP is faster under the paired-control rule; six comparisons remain provisional |
+| Local HTTP-cache mitigation after `46df12d` | 527 tests / 41 suites, lint, strict source/test types, build and both downloader smoke checks passed on Node 22.13.0 | [Mitigation evidence](evidence/http-cache-mitigation.json); includes 16 new cases and confirmed failures without the guard; upstream advisory remains open, no new benchmark or CI run |
 
 The latest benchmark snapshots the tracked working tree based on `a1f5fb1`,
 including the retained `src/downloader/multi.ts` cleanup and two local QA harnesses.
@@ -27,6 +28,11 @@ The cleanup narrows an already-validated worker-result type and removes an
 unreachable branch. The unrelated untracked `src/shared-context.ts` sketch is
 excluded from that build. Benchmark fingerprints identify the exact runtime;
 subsequent documentation edits do not alter its code.
+
+The later HTTP-cache mitigation is outside that benchmark snapshot and the
+reported CI pass. It bypasses cache lookup for `max-stale` requests in the built-in
+transports; the [dependency audit](dependency-audit.md) records the still-open
+upstream advisory and its scope.
 
 The retained worker cleanup and earlier QA/documentation changes still require
 inclusion or exclusion when finalizing the release commit. The committed CI result
