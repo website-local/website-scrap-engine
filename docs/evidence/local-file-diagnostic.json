@@ -1,0 +1,56 @@
+{
+  "currentCommit": "a7d2dbf6468653050dbb943f2589a9b31c6cc345",
+  "phaseSource": "final-091-performance.json; same 11 qualifying groups, no new timing comparison",
+  "phaseMedianMs": {
+    "initializationMs": [
+      1.219499999999698,
+      1.5078500000000759,
+      1.4901500000000851
+    ],
+    "crawlMs": [
+      4.592649999999821,
+      5.243100000000027,
+      5.303099999999972
+    ],
+    "disposalMs": [
+      0.03850000000011278,
+      0.1349999999999909,
+      0.12684999999987667
+    ],
+    "cpuMs": [
+      31.25,
+      7.8125,
+      0
+    ]
+  },
+  "method": "Separate diagnostic: one warm-up plus one 12-file local observation per version; instrument public fs APIs. Timings ignored. Counts are API calls, not syscalls. Source counts include both warm-up and measured crawl plus fixture creation; measured-output counts include hashing and cleanup. Callback lstat calls in both variants include harness cleanup and are not engine output checks.",
+  "counts": {
+    "baseline": {
+      "source-warmup-and-measured/promise/writeFile": 1,
+      "source-warmup-and-measured/promise/readFile": 24,
+      "source-warmup-and-measured/promise/stat": 24,
+      "measured-output/callback/existsSync": 12,
+      "measured-output/promise/mkdir": 8,
+      "measured-output/promise/writeFile": 12,
+      "measured-output/promise/readFile": 12,
+      "measured-output/callback/lstat": 14,
+      "source-warmup-and-measured/callback/lstat": 1
+    },
+    "current": {
+      "source-warmup-and-measured/promise/writeFile": 1,
+      "source-warmup-and-measured/promise/stat": 24,
+      "source-warmup-and-measured/callback/readFile": 24,
+      "measured-output/promise/realpath": 3,
+      "measured-output/promise/mkdir": 2,
+      "measured-output/promise/lstat": 3,
+      "measured-output/callback/writeFile": 12,
+      "measured-output/promise/readFile": 12,
+      "measured-output/callback/lstat": 14,
+      "source-warmup-and-measured/callback/lstat": 1
+    }
+  },
+  "outputHashes": {
+    "baseline": "c9f762a91d365c2cad3e98679385dad9fb25343899454c7e65214e91de07d00c",
+    "current": "c9f762a91d365c2cad3e98679385dad9fb25343899454c7e65214e91de07d00c"
+  }
+}

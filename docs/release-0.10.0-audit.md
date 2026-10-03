@@ -1,129 +1,103 @@
-# 0.10.0 implementation and release audit
+# 0.10.0 release audit
 
-## Accepted correctness fixes — 2026-10-03
+**The two known correctness blockers are fixed and committed. CI passed for
+`a1f5fb1`, as reported by the user. Release sign-off still requires finalizing
+the remaining working-tree changes and validating the resulting release artifact.**
+0.10.0 remains unreleased.
 
-The user accepted the measured performance tradeoff and authorized applying the
-stale Retry-After overflow and directory-index metadata fixes. The exact measured
-patch is applied with four regression cases. On Node 22.13.0, all 511 tests in
-40 suites, lint, strict source/test checks, the build and real Got retry checks
-pass in an isolated snapshot containing only these accepted code changes.
-[Measurements](repair-repeat-measurement.md) retain their uncertainty; acceptance
-does not establish strict non-regression. [Validation evidence](evidence/repair-acceptance.json)
-records this decision. Earlier platform/package evidence predates the fixes;
-changed-artifact release checks and manual CI remain pending.
+Use the [migration guide](../MIGRATION-0.10.0.md) for public contracts and upgrade
+steps, [performance report](performance.md) for measurements, and
+[dependency audit](dependency-audit.md) for package/tooling decisions. Earlier
+checkpoint narratives are preserved in the [archive](archive/0.10.0-experiments.md#release-0.10.0-audit).
 
-This branch prepares **0.10.0**, unreleased. Implementation and local validation
-are complete, with measured performance regressions explicitly retained as the
-cost of stronger lifecycle/publication guarantees. No push, tag or publication
-was performed. Hosted CI has not run for these final, unpushed commits.
+## Candidate and validation status
 
-## Requirements and implementation evidence
-
-| Requirement | Implemented result | Evidence and limits |
+| Scope | Result | Evidence and limits |
 | --- | --- | --- |
-| Drop Node 18/20; support 22/24/26 | Require Node >=22.13.0; CI tests the exact minimum and latest 22/24/26. Publishing uses Node 24 with npm major 12 pinned. | package.json, CI/publishing workflows; final local matrix passed below. |
-| Audit dependencies and installed size | Got 16 and p-queue 9 retained; compatible lint tooling updated; log4js is an optional peer. The default consumer avoids its eleven-package tree. | [Dependency audit](dependency-audit.md), [raw installation measurements](evidence/dependencies.json). [Final package footprint and consumers](evidence/final-package.json) validated. |
-| Reassess Undici removal | Retain the development skip-dependency override and packaged declaration shim; remove the fragile declaration-copy postinstall. | Saves about 1.58 MiB in development. Consumers do not inherit root overrides; Cheerio still declares Undici. A parser replacement/fork is not justified by current evidence. |
-| Audit Got and its historical Options leak | Use public Options.toJSON snapshots, remove url before normalizing options, and avoid reusing Options instances. Preserve hooks/agents and handle Got 16 Uint8Array bodies with a Buffer view. | scripts/benchmark-options.mjs reproduces the old history growth when given Got 13 and checks 12,000 new merges. [Retention checkpoint](evidence/runtime-baseline.json); transport/retry tests. |
-| Audit p-queue and concurrency | Retain p-queue. Correct the opt-in controller's inverted response: bounded gradual growth, backoff on stalls/slowdown, elapsed-time sampling and reset on resume. | [Runtime audit](runtime-performance-audit.md), queue microbenchmarks, deterministic sampling tests and stalled-origin harness. Fixed concurrency remains the default; no universal throughput optimum is claimed. |
-| Harden tests and select a framework | Retain Jest; add strict source/test typechecking, local deterministic fixtures and real-process worker/transport tests. | [Runner audit](test-runner-audit.md): five warmed samples favored the existing runner. Native ESM mocking and migration costs did not justify replacement. |
-| Audit TypeScript 7 | Retain TypeScript 6.0.3 and Node 22 typings. | [TypeScript audit](typescript-7-audit.md): TS7 compiles faster, but current lint/test integrations require legacy compiler APIs and exclude TS7. No parallel compiler dependency was added. |
-| Normalize Resource and make URI fields required | Runtime Resource URI/host fields are required and repaired at hook boundaries; raw inputs and explicit WireResource snapshots remain separate. | Resource, hook-invariant and worker-wire tests; [migration guide](../MIGRATION-0.10.0.md). Structured metadata survives; unsupported clone values fail explicitly. |
-| Make crawl lifetime explicit | Awaitable start, pause/resume, cancellation or explicit drain, cancel-and-await disposal, initialization cleanup and per-crawl AsyncLocalStorage services. | Runtime lifecycle and simultaneous-crawl isolation tests. Hooks receive an AbortSignal; custom code must cooperate or workers are terminated after their grace period. |
-| Bound scheduling and buffering | maxResources, maxQueuedResources, maxConcurrency, maxDiscoveredResources, maxResourceBytes and maxBufferedBytes; explicit failure codes and current/peak byte reservations. | Admission/size/ledger tests and 24 real-process byte-budget scenarios in both modes. Limits reject rather than waiting on capacity held by a parent task. |
-| Track outcomes and retries consistently | Immutable per-attempt outcome snapshots, separate acquisition/publication state, accurate stream/local success counts and released failed URL reservations. | Forty outcome scenarios, failure/retry tests, redirect-alias ownership regressions. Outcomes retain scalar state rather than bodies/DOMs. |
-| Stabilize workers | Versioned task/control/log envelopes, readiness, startup/task deadlines, ownership validation, transport failure retirement, cooperative cancellation and awaited termination. | Worker-pool, channel, lifecycle and real-process tests cover malformed/duplicate/foreign messages, failed startup, queued work, active cancellation and timeout. |
-| Publish safely and resolve output conflicts | Same-volume staging, atomic per-file rename, containment/symlink checks, parent-owned task publication and crawl-local destination reservations. | Output tests, forced-worker-failure/allocation-race harness and conflict/retry harness. Confirmed output remains counted after later failure. |
-| Improve performance based on evidence | Avoid redundant mkdir calls; reuse full owned local-read chunks while compacting slices; avoid unnecessary Buffer copies and zero-byte/unchanged-body accounting RPC. | [Runtime performance audit](runtime-performance-audit.md) and paired raw samples. Safety/readiness changes have costs; [two final release comparisons](evidence/final-runtime-performance.json) quantify the regressions. |
-| Investigate architecture and stress behavior | Parent-owned publication and byte accounting, explicit task/child ownership, independent child outcomes and bounded discovery replace implicit cross-thread assumptions. | [Stress evidence](evidence/buffering-and-stress.json), scripts/stress-crawl.mjs and protocol tests. A wholesale pipeline/parser/queue rewrite is not supported by the evidence. |
+| Committed correctness fixes, `a1f5fb1` | 511 tests / 40 suites, lint, strict source/test types, build and real Got retries passed on Node 22.13.0 | [Acceptance evidence](evidence/repair-acceptance.json); isolated snapshot contained only the accepted code changes |
+| Hosted CI for `a1f5fb1` | Passed, user-reported after push | Configured Ubuntu matrix: Node 22.13.0, 22.x, 24.x, 26.x, including installed-package/declaration checks; no run logs or API status were fetched |
+| Earlier frozen runtime: `a7d2dbf` plus retained worker cleanup | 507 tests / 40 suites passed on Linux Node 22.13.0, 22.23.3, 24.21.0 and 26.10.0 | [Quality-pass evidence](evidence/final-quality-pass.json); predates the two correctness fixes |
+| Earlier packed consumers | Strict declarations and 13 runtime harnesses passed on the four Linux versions, with and without log4js | Same historical artifact; not a package sign-off for the changed release tree |
+| Earlier native Windows consumers | Node 22.13.0 and 24.21.0 passed general and filesystem harnesses, including permitted symlinks | Historical artifact; Windows validation must be refreshed for the final package |
+| Latest working-tree benchmark | All nine workload output checks passed; 10–12 rounds retained per case | [Latest evidence](evidence/idle-working-tree-performance.json); multi buffered HTTP is faster under the paired-control rule; six comparisons remain provisional |
 
-## Runtime guarantees and deliberate limits
+The latest benchmark snapshots the tracked working tree based on `a1f5fb1`,
+including the retained `src/downloader/multi.ts` cleanup and two local QA harnesses.
+The cleanup narrows an already-validated worker-result type and removes an
+unreachable branch. The unrelated untracked `src/shared-context.ts` sketch is
+excluded from that build. Benchmark fingerprints identify the exact runtime;
+subsequent documentation edits do not alter its code.
 
-The byte budget counts logical reservations: queued supplied bodies, each active
-body's high-water mark, generated output through io.writeFile, and child bodies
-awaiting worker-result delivery/admission. The parent owns worker credits and
-transfers them into child tasks without double charging. Failed/duplicate/rejected
-children release unused credits at parent settlement. Even timeout before the
-first worker RPC waits for worker exit before releasing its transferred body.
+The retained worker cleanup and earlier QA/documentation changes still require
+inclusion or exclusion when finalizing the release commit. The committed CI result
+does not automatically cover those uncommitted changes.
 
-This is not an exact process-memory ceiling. DOMs, metadata, stream buffers,
-codec/transport copies, simultaneous body representations and temporary custom-hook
-allocations require additional headroom. A hook-created body is checked after the
-hook returns. Custom workers need equivalent accounting for their own allocations.
-Streaming resources do not reserve their entire file size.
+## Accepted correctness fixes
 
-Children submitted before a later parent failure remain independently eligible
-for processing; there is no transactional rollback of child work. A worker crash
-can lose a discovery batch that was not yet delivered. Discovery count/byte limits
-bound library admission and transport, not arbitrary allocations within hooks.
+Commit `a1f5fb1` applies both measured fixes and four regression cases:
 
-Publication is atomic per file, not across a redirected resource's multiple files,
-and does not promise power-loss durability. A rename already in progress may
-complete during cancellation. Parent cleanup covers built-in worker task
-publication; direct custom filesystem I/O and initialization-hook writes remain
-outside that protocol. Destination ownership is crawl-local, not a cross-process
-lock. The configured root is trusted; portable path checks do not defend against
-a hostile process replacing directories concurrently.
+- **Retry delay overflow:** a long-expired HTTP-date could wrap through signed
+  32-bit conversion into a long future delay. For example, at the fixed time
+  2026-10-02 14:30 UTC, an epoch `Retry-After` produced 49,962,432 ms. The fix removes
+  premature truncation, rejects non-finite header delays and bounds eligible
+  final delays to 1–2,147,483,647 ms. Zero remains available for ineligible retries;
+  eligible immediate retries stay positive because Got treats zero as cancellation.
+- **Directory-index metadata:** selecting `index.html` or `index.htm` retained
+  the directory's stat. The fix invalidates that stat so headers and timestamps
+  describe the selected file. Both index names have regression coverage.
 
-## Validation checkpoints already completed
+Both defects reproduced in 0.9.1 and the frozen pre-fix runtime. The user accepted
+the measured performance tradeoff and authorized committing the exact tested patch.
+That acceptance supersedes the earlier performance blocker; it does not turn the
+noise-limited experiments into proof of strict non-regression. See the
+[repair experiment history](archive/0.10.0-experiments.md#repair-repeat-measurement)
+and [raw repair measurements](evidence/repair-repeat-measurement.json).
 
-- At `20ad94a`, build, full source/test typecheck and **413 tests** pass on Node
-  24.18.0. The aggregate-budget cases and pre-RPC timeout cleanup pass on Node
-  22.13.0 and 26.10.0; prior checkpoints cover lifecycle, outcomes, discovery,
-  publication failures and conflicts on these runtimes.
-- Six stress rounds pass on each of Node 22.13.0, 24.18.0 and 26.10.0: **2,400 saved
-  resources, 72 successful retry attempts and 240 queued cancellations per
-  runtime**, with checked output, zero final byte reservations and actual worker
-  exit after every round. Parent retained-heap growth after warm-up was about
-  0.49–0.74 MiB, below the probe's 12 MiB allowance. ESM configuration modules are
-  cached by Node; this is a bounded regression probe, not a proof against all leaks.
-- At `05b4597`, the bounded-read optimization passes build/typecheck, thirteen
-  affected size/local-source tests and an exact-output Node 22.13 local fixture.
-  Paired local medians improved 11.8% in single-thread mode and 1.7% in worker mode.
-- The earlier Node 26 packed checkpoint validated strict declarations, real
-  consumer Undici types, absent optional logging peer and both downloader modes.
-  That checkpoint predates the final runtime work and is not final package proof.
+## What the quality pass covers
 
-## Final validation and completion review
+Focused tests and real-process harnesses cover hook/resource invariants, worker
+messages and ownership, startup/task deadlines, cancellation and awaited disposal,
+retry/outcome accounting, redirects, byte reservations, output conflicts and
+atomic/direct publication. Consumer checks cover exported declarations, native
+HTTPS, lazy imports and the optional logging peer. Windows checks include encoded
+file URLs, buffered and streaming local input, junctions/symlinks, output casing,
+cross-drive containment and failure cleanup.
 
-1. **Passed:** clean tracked runtime snapshot at `05b4597`, fresh lockfile install,
-   build, all 413 tests and runtime smoke on Node 22.13.0, 22.22.2, 24.18.0 and
-   26.10.0. [Final source matrix](evidence/final-source-matrix.json) records the
-   runtime source tree and revised stall-test fingerprint. Node 26 initially hit
-   the fixture's 5-second request timeout; the harness allowed two separate
-   5-second phases. A 20-second request deadline isolates concurrency behavior
-   while keeping all backoff/completion assertions. The full Node 26 suite and
-   the revised fixture on the other three runtimes then passed.
-2. **Passed:** the clean tarball from `fd07670` passes strict declarations with
-   real consumer Undici types and ten runtime harnesses on Node 22.13.0,
-   22.22.2, 24.18.0 and 26.10.0. Fresh omit-optional and explicit-log4js consumers
-   pass declaration, downloader and logging checks. The default graph contains
-   51 packages, versus 62 with log4js; npm audit reports zero known advisories.
-   [Package evidence](evidence/final-package.json) records integrity, footprints
-   and actual harness output. CI now installs the tarball outside the checkout
-   and validates declarations/smoke so parent dev dependencies cannot mask peers.
-3. **Historical checkpoint; performance work reopened:** two independent five-sample
-   alternating comparisons against 0.9.1 validate exact output. Several cases
-   remain slower, particularly startup-dominated worker streaming and small
-   local-file crawls. A filesystem-call probe identifies added staging and
-   containment operations; initialization measurements identify worker readiness
-   costs. Retain those guarantees and the measured directory/read-copy
-   optimizations. This release makes no general speedup claim. See the
-   [original runtime audit](runtime-performance-audit.md#final-comparison-against-091).
-   The [single-thread follow-up](single-thread-performance-fixes.md) records the
-   subsequent fixes and MDN replay; the old regression table is not the candidate result.
-4. **Reviewed:** migration guide, changelog, README and specialized audits agree
-   on the Node minimum, explicit start/disposal, normalized resources, wire
-   contract, save-path hooks, outcomes, limits, optional peer and public Got API.
-   No new direct dependency names were introduced relative to 0.9.1. TypeScript 7,
-   test-runner migration and parser/queue replacement remain evidence-based
-   deferrals, not unfinished implementation promises. `AGENTS.md` stays excluded;
-   unrelated local files were preserved and omitted from clean package snapshots.
-   Runtime/package content has not changed since the validated snapshots; later
-   commits contain validation tools, CI and audit documentation only.
+The historical retention runs completed six crawl rounds each: 2,400 saved
+resources, 72 successful retries, 240 queued cancellations, zero final reserved
+bytes and confirmed worker exit. Retained parent-heap growth was 0.42–0.60 MiB;
+12,000 options merges retained 18–45 KiB. These are bounded retention checks, not
+throughput comparisons or exact process-memory guarantees.
 
-## Remaining release operations
+Local Linux Node 24.21.0 needed an ELF-loader workaround on this WSL1 kernel.
+That limitation belongs to the historical local run. The subsequently reported
+Ubuntu CI pass is separate evidence for the committed code.
 
-The implementation goal is complete. Review these commits and the performance
-tradeoffs before choosing to publish. Pushing, hosted CI, tagging and publication
-are separate operations and were not performed by this implementation task.
+The earlier tarball contained 286 entries and was 202,971 bytes compressed,
+943,602 bytes unpacked; its integrity and contents are recorded in the quality-pass
+JSON. Those package measurements predate the fixes and must not label a new tarball.
+
+## Guarantees and deliberate limits
+
+The release keeps explicit crawl lifetime, bounded admission, worker task
+ownership, resource-limit checks and per-crawl output conflict detection. Byte
+budgets count logical body reservations, not DOMs, all temporary copies or total
+RSS. Children may complete independently after a parent fails. Atomic publication
+is per file and does not promise power-loss durability. Direct writes may leave
+partial files; cached directory checks require a stable, trusted output tree.
+Custom hooks must cooperate with cancellation, and direct custom filesystem I/O
+is outside the built-in publication protocol. The migration guide defines these
+contracts and their configuration options.
+
+## Remaining release work
+
+1. Finalize the intended worker cleanup, QA harness and documentation changes in
+   the release candidate; keep unrelated local files out of the package.
+2. Build and pack that exact candidate, then refresh installed-consumer and native
+   Windows checks. Preserve the package digest and candidate identity together.
+3. Run CI for any final code changes and record the result. The user controls CI
+   and publication; the completed push did not create a tag or publish a package.
+
+No additional performance experiment is required to reapprove the already
+accepted correctness fixes. A future performance claim must respect the limits
+in the current report.

@@ -33,6 +33,9 @@ and Jest. Run `npm run check:tests` to check test types independently.
 Upgrading from 0.9.1? See [the 0.10.0 migration guide](MIGRATION-0.10.0.md)
 for save-path hooks, custom-worker channels, and other breaking changes.
 
+See the [0.10 documentation index](docs/README.md) for release validation,
+performance measurements, and dependency decisions.
+
 ## Usage
 
 The downloader takes a path (or `file://` URL) to a module that default-exports a `DownloadOptions` object. This pattern allows worker threads to independently load the same configuration.
