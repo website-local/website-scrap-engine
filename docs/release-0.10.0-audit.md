@@ -19,10 +19,11 @@ checkpoint narratives are preserved in the [archive](archive/0.10.0-experiments.
 | Earlier frozen runtime: `a7d2dbf` plus retained worker cleanup | 507 tests / 40 suites passed on Linux Node 22.13.0, 22.23.3, 24.21.0 and 26.10.0 | [Quality-pass evidence](evidence/final-quality-pass.json); predates the two correctness fixes |
 | Earlier packed consumers | Strict declarations and 13 runtime harnesses passed on the four Linux versions, with and without log4js | Same historical artifact; not a package sign-off for the changed release tree |
 | Earlier native Windows consumers | Node 22.13.0 and 24.21.0 passed general and filesystem harnesses, including permitted symlinks | Historical artifact; Windows validation must be refreshed for the final package |
-| Latest working-tree benchmark | All nine workload output checks passed; 10–12 rounds retained per case | [Latest evidence](evidence/idle-working-tree-performance.json); multi buffered HTTP is faster under the paired-control rule; six comparisons remain provisional |
-| Local HTTP-cache mitigation after `46df12d` | 527 tests / 41 suites, lint, strict source/test types, build and both downloader smoke checks passed on Node 22.13.0 | [Mitigation evidence](evidence/http-cache-mitigation.json); includes 16 new cases and confirmed failures without the guard; upstream advisory remains open, no new benchmark or CI run |
+| Latest working-tree benchmark against 0.9.1 | All nine workload output checks passed; 10–12 rounds retained per case | [Latest 0.9.1 evidence](evidence/idle-working-tree-performance.json); multi buffered HTTP is faster under the paired-control rule; six comparisons remain provisional |
+| HTTP-cache mitigation, committed as `584e07c` | 527 tests / 41 suites, lint, strict source/test types, build and both downloader smoke checks passed on Node 22.13.0 | [Mitigation evidence](evidence/http-cache-mitigation.json); includes 16 new cases and confirmed failures without the guard; upstream advisory remains open, outside the reported CI pass |
+| Allocation candidate after `584e07c` | 531 tests / 42 suites, lint, strict source/test types and build passed on Node 22.13.0; eight crawl output checks matched | [Follow-up evidence](evidence/performance-memory-followup.json); sampled allocation reductions in CSS/SVG/link creation, no confirmed elapsed-time or RSS improvement; quiet-host latency gate pending |
 
-The latest benchmark snapshots the tracked working tree based on `a1f5fb1`,
+The latest benchmark against 0.9.1 snapshots the tracked working tree based on `a1f5fb1`,
 including the retained `src/downloader/multi.ts` cleanup and two local QA harnesses.
 The cleanup narrows an already-validated worker-result type and removes an
 unreachable branch. The unrelated untracked `src/shared-context.ts` sketch is
@@ -33,6 +34,14 @@ The later HTTP-cache mitigation is outside that benchmark snapshot and the
 reported CI pass. It bypasses cache lookup for `max-stale` requests in the built-in
 transports; the [dependency audit](dependency-audit.md) records the still-open
 upstream advisory and its scope.
+
+The allocation candidate was compared with the tracked tree based on `584e07c`,
+including the inherited worker cleanup. It reduces unnecessary awaits, synchronous
+hook closures and CSS regex captures. The 15,000-input CSS equivalence check and
+eight small crawl comparisons passed. Its loaded-host timing controls did not
+qualify any speed or non-regression claim; see the
+[performance report](performance.md#allocation-follow-up-2026-10-03). Neither these
+changes nor the HTTP-cache mitigation are covered by the earlier CI result.
 
 The retained worker cleanup and earlier QA/documentation changes still require
 inclusion or exclusion when finalizing the release commit. The committed CI result
@@ -97,11 +106,13 @@ contracts and their configuration options.
 
 ## Remaining release work
 
-1. Finalize the intended worker cleanup, QA harness and documentation changes in
-   the release candidate; keep unrelated local files out of the package.
-2. Build and pack that exact candidate, then refresh installed-consumer and native
+1. Finalize the intended allocation changes, worker cleanup, QA harness and
+   documentation in the release candidate; keep unrelated local files out of the package.
+2. Complete quiet-host paired latency validation for the allocation candidate;
+   the loaded-host profiles do not establish non-regression.
+3. Build and pack that exact candidate, then refresh installed-consumer and native
    Windows checks. Preserve the package digest and candidate identity together.
-3. Run CI for any final code changes and record the result. The user controls CI
+4. Run CI for any final code changes and record the result. The user controls CI
    and publication; the completed push did not create a tag or publish a package.
 
 No additional performance experiment is required to reapprove the already

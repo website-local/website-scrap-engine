@@ -6,7 +6,12 @@ Multi-thread markup and saved MDN replay pass control stability but show no clea
 difference. Six other comparisons remain provisional because their controls fail.
 There is no demonstrated universal speedup or strict non-regression guarantee.
 
-## Latest comparison: 2026-10-03
+A later [allocation investigation](#allocation-follow-up-2026-10-03) against
+`584e07c` reduced sampled allocation in CSS, SVG and link creation. Its timing
+controls failed on the loaded host, so it does not establish a speedup or close
+the candidate's latency gate.
+
+## Latest 0.9.1 comparison: 2026-10-03
 
 The candidate is the tracked working tree based on `a1f5fb1`, including the retained
 worker-result cleanup, compared with the preserved 0.9.1 emitted artifact on
@@ -94,6 +99,74 @@ used during measurement; it did not relax the control criterion. Campaigns were
 not pooled. Older Node 24.18 results and focused microbenchmarks also describe
 different artifacts or workloads: their percentage gains must not be added to
 this table.
+
+## Allocation follow-up: 2026-10-03
+
+This comparison uses the tracked working tree based on `584e07c`, including the
+HTTP-cache mitigation and inherited worker-result cleanup, as its baseline.
+It is separate from the earlier 0.9.1 comparison. Cheerio, URIjs, dependencies,
+output checks and resource accounting are unchanged. The candidate was measured before commit; source/build hashes, harnesses and
+measurements are recorded in the
+[follow-up evidence](evidence/performance-memory-followup.json).
+
+Three changes remain in the candidate: avoid unnecessary awaits for synchronous
+stages in combined resource creation and SVG processing, remove the per-call
+recursive closure from synchronous hook execution, and remove unused CSS regex
+captures and the temporary capture-selection object. Resource creation still
+returns a Promise; asynchronous hooks, validation, ordering, cancellation and
+discarded links retain regression coverage.
+
+The table reports median paired changes in **sampled cumulative allocation**.
+These are neither retained-memory savings nor whole-crawl percentages.
+
+| Focused workload | Normal | Managed heap pressure |
+| --- | ---: | ---: |
+| CSS: 512 unique URLs/document | -21.47% | -19.88% |
+| CSS: 2,048 occurrences, eight distinct URLs/document | -23.75% | -21.98% |
+| SVG: 512 image links/document | -16.86% | -16.80% |
+| HTML: 512 image links/document | -3.31% | -3.43% |
+| Combined creation: 1,024 resources/batch | -22.64% | -15.49% |
+
+Allocation sampling used three rotated baseline/candidate/identical-candidate
+triplets in each mode, four documents or batches per observation, Node 22.13.0,
+a 128 MiB old-space limit and 4 MiB semi-space. Inspector sampling at 4 KiB included
+objects collected by minor and major GC. Pressure used JavaScript arrays, retaining
+up to 2 MiB during work and releasing them before post-GC checks. The pipeline ran
+in its real crawl context with Cheerio and URIjs. Output and discovered-link hashes
+matched throughout. Three triplets support this allocation observation; they do
+not establish a formal confidence bound. Profiles show fewer allocations in
+Promise-related paths and regex matching, consistent with the changes.
+
+Timing used separate short observations, three discarded calibration triplets,
+the same CPU/I/O group filtering and ±5% identical-code control requirement as
+above. Fresh-process campaigns ran 12 rounds per mode, requiring eight retained;
+tighter interleaved campaigns ran 18, requiring 12. The normal fresh-process run
+retained 8–10 rounds per case; pressure retained six for unique CSS and 11 for
+the others. Interleaving retained 9–15 normally and 14–18 under pressure. Every
+case either lacked enough rounds or failed control stability. No speedup,
+slowdown or strict non-regression conclusion passed. Campaigns were not pooled;
+favorable effect intervals do not override failed controls. Analysis and profiling
+continued under host load instead of waiting for idle time.
+
+Ten repeated mixed batches showed no sustained post-GC heap growth: baseline and
+both candidate copies settled around 13.3 MiB normally and 12.0 MiB under pressure.
+RSS varied by several MiB between identical candidate runs. Boundary-sampled heap
+peaks also did not establish a reduction; some SVG diagnostics were higher. There
+is no demonstrated RSS or peak-memory improvement. Lower cumulative allocation
+does not imply lower retained heap, a lower peak, or less elapsed time.
+
+The exact candidate passed **531 tests / 42 suites**, lint, strict source/test
+types and build. A generated 15,000-input CSS corpus matched the baseline. Eight
+small crawl cases (four workloads in both downloader modes) matched saved-file
+counts, bytes, request counts and hashes; their one-observation timings are only
+functional diagnostics. Quiet-host paired latency validation remains a release
+gate for this candidate.
+
+Two experiments were left out: combining CSS bookkeeping collections produced
+negligible allocation change, and a simple-path prefix shortcut gave small,
+inconsistent benefits. Both added complexity without sufficient evidence. Further
+work should follow measured hotspots; this phase does not justify weakening
+checks or replacing dependencies before release.
 
 ## Retained changes and defaults
 

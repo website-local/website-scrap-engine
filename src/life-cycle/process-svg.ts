@@ -1,11 +1,11 @@
 import type {SourceDefinition} from '../sources.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
-import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import {error, skip} from '../logger/logger.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {parseHtml} from './adapters.js';
+import {isPromiseLike} from '../util.js';
 import {getResourceBodyFromHtml} from './save-html-to-disk.js';
 import type {Cheerio, CheerioStatic} from '../types.js';
 
@@ -45,16 +45,16 @@ export async function processSvg(
       if (!originalLink) {
         continue;
       }
-      const link: string | void =
-        await pipeline.linkRedirect(originalLink, elem, res);
+      const redirected = pipeline.linkRedirect(originalLink, elem, res);
+      const link = isPromiseLike(redirected) ? await redirected : redirected;
       if (!link) {
         if (skip.isTraceEnabled()) {
           skip.trace('skip linkRedirect', originalLink, refUrl);
         }
         continue;
       }
-      const linkType: ResourceType | void =
-        await pipeline.detectResourceType(link, type, elem, res);
+      const detected = pipeline.detectResourceType(link, type, elem, res);
+      const linkType = isPromiseLike(detected) ? await detected : detected;
       if (!linkType) {
         if (skip.isTraceEnabled()) {
           skip.trace('skip detectResourceType',
@@ -62,10 +62,11 @@ export async function processSvg(
         }
         continue;
       }
-      let resource: Resource | void = await pipeline.createResource(
+      const created = pipeline.createResource(
         linkType, depth, link, refUrl,
         res.localRoot, options.encoding[linkType],
         savePath, res.type);
+      let resource = isPromiseLike(created) ? await created : created;
       if (!resource) {
         if (skip.isTraceEnabled()) {
           skip.trace('skip generateSavePath',
@@ -73,7 +74,8 @@ export async function processSvg(
         }
         continue;
       }
-      resource = await pipeline.processBeforeDownload(resource, elem, res, options);
+      const processed = pipeline.processBeforeDownload(resource, elem, res, options);
+      resource = isPromiseLike(processed) ? await processed : processed;
       if (!resource) {
         if (skip.isTraceEnabled()) {
           skip.trace('skip processBeforeDownload',

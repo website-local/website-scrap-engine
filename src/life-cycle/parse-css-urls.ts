@@ -1,7 +1,7 @@
 const embeddedRegexp = /^data:(.*?),(.*?)/;
 const commentRegexp = /\/\*([\s\S]*?)\*\//g;
 const urlsRegexp =
-  /(?:@import\s+)?url\s*\(\s*(("(.*?)")|('(.*?)')|(.*?))\s*\)|(?:@import\s+)(("(.*?)")|('(.*?)')|(.*?))[\s;]/ig;
+  /(?:@import\s+)?url\s*\(\s*(?:"(.*?)"|'(.*?)'|(.*?))\s*\)|(?:@import\s+)(?:"(.*?)"|'(.*?)'|(.*?))[\s;]/ig;
 
 export interface CssUrlMatch {
   url: string;
@@ -9,25 +9,19 @@ export interface CssUrlMatch {
   end: number;
 }
 
-function matchUrl(match: RegExpExecArray): {
-  url?: string;
-  captureIndex?: number;
-} {
-  if (match[3]) return {url: match[3], captureIndex: 3};
-  if (match[5]) return {url: match[5], captureIndex: 5};
-  if (match[6]) return {url: match[6], captureIndex: 6};
-  if (match[9]) return {url: match[9], captureIndex: 9};
-  if (match[11]) return {url: match[11], captureIndex: 11};
-  if (match[12]) return {url: match[12], captureIndex: 12};
-  return {};
+function captureIndex(match: RegExpExecArray): number {
+  for (let index = 1; index <= 6; index++) {
+    if (match[index]) return index;
+  }
+  return 0;
 }
 
 function captureStart(match: RegExpExecArray, captureIndex: number): number {
   // Quoted values can contain whitespace also present before the opening quote.
-  if (captureIndex === 3 || captureIndex === 9) return match.index + match[0].indexOf('"') + 1;
-  if (captureIndex === 5 || captureIndex === 11) return match.index + match[0].indexOf('\'') + 1;
+  if (captureIndex === 1 || captureIndex === 4) return match.index + match[0].indexOf('"') + 1;
+  if (captureIndex === 2 || captureIndex === 5) return match.index + match[0].indexOf('\'') + 1;
   // Search within the argument, excluding the url()/@import syntax itself.
-  const argumentStart = captureIndex === 6 ? match[0].indexOf('(') + 1 : '@import'.length;
+  const argumentStart = captureIndex === 3 ? match[0].indexOf('(') + 1 : '@import'.length;
   return match.index + match[0].indexOf(match[captureIndex], argumentStart);
 }
 
@@ -48,12 +42,13 @@ export function parseCssUrlMatches(cssText: string): CssUrlMatch[] {
   let match: RegExpExecArray | null;
   urlsRegexp.lastIndex = 0;
   while ((match = urlsRegexp.exec(uncommentedCssText))) {
-    const {url, captureIndex} = matchUrl(match);
-    if (!url || captureIndex === undefined ||
+    const index = captureIndex(match);
+    const url = match[index];
+    if (!index || !url ||
       embeddedRegexp.test(url.trim())) {
       continue;
     }
-    const start = captureStart(match, captureIndex);
+    const start = captureStart(match, index);
     matches.push({
       url,
       start,

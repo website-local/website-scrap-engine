@@ -85,45 +85,48 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     parent: Resource
   ): Promise<Resource | void> {
     throwIfCancelled(this.signal);
-    const url: string | void = await this.linkRedirect(rawUrl, element, parent);
+    const redirected = this.linkRedirect(rawUrl, element, parent);
+    const url = isPromiseLike(redirected) ? await redirected : redirected;
     if (!url) return;
-    const type = await this.detectResourceType(url, defaultType, element, parent);
+    const detected = this.detectResourceType(url, defaultType, element, parent);
+    const type = isPromiseLike(detected) ? await detected : detected;
     if (!type) return;
     const refUrl = parent.redirectedUrl || parent.url;
     const savePath = refUrl === parent.url ? parent.savePath : undefined;
-    const r = await this.createResource(type, depth || parent.depth + 1, url,
+    const created = this.createResource(type, depth || parent.depth + 1, url,
       refUrl,
       parent.localRoot,
       this.options.encoding[type],
       savePath,
       parent.type);
+    const r = isPromiseLike(created) ? await created : created;
     if (!r) return;
-    return await this.processBeforeDownload(r, element, parent, this.options);
+    return this.processBeforeDownload(r, element, parent, this.options);
   }
 
   private runHooks<T, H>(
-    initial: T,
+    value: T | void,
     hooks: H[],
     invoke: (hook: H, value: T) => AsyncResult<T | void>,
-    validate?: (value: T) => void
+    validate?: (value: T) => void,
+    startIndex = 0
   ): AsyncResult<T | void> {
-    const run = (index: number, value: T | void): AsyncResult<T | void> => {
+    try {
       throwIfCancelled(this.signal);
       if (value === undefined) return;
       if (validate) validate(value);
-      for (; index < hooks.length; index++) {
+      for (let index = startIndex; index < hooks.length; index++) {
         throwIfCancelled(this.signal);
         const result = invoke(hooks[index], value);
-        if (isPromiseLike(result)) return result.then(value => run(index + 1, value));
+        if (isPromiseLike(result)) return result.then(value =>
+          this.runHooks(value, hooks, invoke, validate, index + 1));
         if (result === undefined) return;
         value = result;
         if (validate) validate(value);
       }
       throwIfCancelled(this.signal);
       return value;
-    };
-    try { return run(0, initial); }
-    catch (error) { return Promise.reject(error); }
+    } catch (error) { return Promise.reject(error); }
   }
 
   linkRedirect(
