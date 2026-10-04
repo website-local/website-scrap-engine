@@ -50,31 +50,30 @@ export const orderUrlSearch = (search: string): string => {
     .split('&');
   const searchKeys: string[] = [],
     searchMap: Record<string, string[]> = {};
-  let searchParam: string[], searchKey: string;
   for (let i = 0; i < parts.length; i++) {
-    searchParam = parts[i].split('=');
-    if (searchMap[searchKey = searchParam.shift() || parts[i]]) {
-      searchMap[searchKey].push(searchParam.join('='));
+    const part = parts[i];
+    const separator = part.indexOf('=');
+    const searchKey = separator > 0 ? part.slice(0, separator) : part;
+    const value = separator === -1 ? '' : part.slice(separator + 1);
+    if (searchMap[searchKey]) {
+      searchMap[searchKey].push(value);
     } else {
       searchKeys.push(searchKey);
-      searchMap[searchKey] = [searchParam.join('=')];
+      searchMap[searchKey] = [value];
     }
   }
-  return '?' + searchKeys
-    .sort()
-    .map(k => searchMap[k]?.map(v => k + '=' + v).join('&'))
-    .join('&');
+  searchKeys.sort();
+  parts.length = 0;
+  for (const key of searchKeys) {
+    for (const value of searchMap[key]) parts.push(key + '=' + value);
+  }
+  return '?' + parts.join('&');
 };
 
 export const simpleHashString = (str: string): string =>
   createHash('sha256')
     .update(str)
-    .digest()
-    .toString('base64')
-    // making it url-safe
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+    .digest('base64url');
 
 export const hasOwnProperty = Object.prototype.hasOwnProperty;
 

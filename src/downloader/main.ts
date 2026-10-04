@@ -16,7 +16,7 @@ import {skip} from '../logger/logger.js';
 import {createDefaultLogger} from '../logger/default-logger.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloaderStats, DownloaderWithMeta, ResourceOutcome} from './types.js';
-import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
+import {completedStatusChange, PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {InitSubmitFunc, ResourceStatus} from '../life-cycle/types.js';
 
 export type DownloaderState = 'initializing' | 'ready' | 'running' |
@@ -286,10 +286,13 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
 
   private notifyStatus(resource: RawResource, status: ResourceStatus): void {
-    const pending = withCrawlContext(this.context, () =>
-      Promise.resolve(this._pipeline?.notifyStatusChange(resource, status)));
+    const result = withCrawlContext(this.context, () =>
+      this._pipeline?.notifyStatusChange(resource, status));
+    if (!result || result === completedStatusChange) return;
+    const pending = Promise.resolve(result);
     this.notifications.add(pending);
-    void pending.finally(() => this.notifications.delete(pending)).catch(() => undefined);
+    const settled = () => { this.notifications.delete(pending); };
+    void pending.then(settled, settled);
   }
 
   get downloadedCount(): number {

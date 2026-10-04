@@ -35,6 +35,7 @@ import type {
   ProcessingLifeCycle,
   RequestOptions,
   ResourceStatus,
+  StatusChangeFunc,
   SubmitResourceFunc
 } from '../life-cycle/types.js';
 // noinspection ES6PreferShortImport
@@ -45,6 +46,9 @@ import type {WorkerInfo} from './worker-pool.js';
 
 type Mutable<T> = {-readonly [P in keyof T]: T[P]};
 type SavePathState = {savePath: string; refSavePath: string};
+
+/** @internal Completed synchronous listeners need no per-notification tracking. */
+export const completedStatusChange: Promise<void> = Promise.resolve();
 
 /**
  * Pipeline executor
@@ -472,17 +476,51 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     }
   }
 
-  async notifyStatusChange(
+  notifyStatusChange(
     res: Resource | RawResource,
     status: ResourceStatus
   ): Promise<void> {
-    if (!this.lifeCycle.statusChange?.length) return;
-    for (const listener of this.lifeCycle.statusChange) {
+    try {
+      const listeners = this.lifeCycle.statusChange;
+      return listeners?.length ?
+        this.runStatusListeners(res, status, listeners, 0) || completedStatusChange :
+        completedStatusChange;
+    } catch (error) { return Promise.reject(error); }
+  }
+
+  private runStatusListeners(
+    res: Resource | RawResource,
+    status: ResourceStatus,
+    listeners: StatusChangeFunc[],
+    startIndex: number
+  ): AsyncResult<void> {
+    for (let index = startIndex; index < listeners.length; index++) {
       try {
-        const r = listener(res, status, this.options, this);
-        if (r) await r;
+        const listener = listeners[index];
+        const pending = listener(res, status, this.options, this);
+        if (pending) return this.continueStatusListeners(
+          pending, res, status, listeners, index + 1);
       } catch {
         // swallow
+      }
+    }
+  }
+
+  private async continueStatusListeners(
+    pending: Promise<void>,
+    res: Resource | RawResource,
+    status: ResourceStatus,
+    listeners: StatusChangeFunc[],
+    index: number
+  ): Promise<void> {
+    try { await pending; } catch { /* All listeners still run. */ }
+    for (; index < listeners.length; index++) {
+      try {
+        const listener = listeners[index];
+        const next = listener(res, status, this.options, this);
+        if (next) await next;
+      } catch {
+        // All listeners still run after a failure.
       }
     }
   }

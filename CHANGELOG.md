@@ -29,6 +29,8 @@ Performance
 * Reduce temporary allocations in combined link creation, SVG processing and synchronous hook execution; remove unused CSS URL regex captures while preserving replacement offsets.
 * Reuse the path-segment array during save-path escaping, and avoid reparsing unchanged inline styles while preserving existing CSS-hook and rewriting behavior.
 * Reuse the existing relative-path helper when writing redirects with a supplied target save path, retaining URIjs fallback for unusual paths.
+* Reuse completed synchronous status notifications and reduce pending-notification bookkeeping while preserving listener order, call receivers and disposal waiting.
+* Reduce query-ordering temporaries and encode long-query filename hashes directly as URL-safe base64, preserving existing output.
 * Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
 * Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
 * Reuse normalized publication destinations and reservation paths instead of resolving and reconstructing the same paths repeatedly.

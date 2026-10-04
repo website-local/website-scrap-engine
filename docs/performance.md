@@ -317,6 +317,72 @@ matched, but that was insufficient reason to add the extra scan. MDN timings for
 the exploratory pair of changes passed controls without qualifying a difference;
 they do not establish a gain for the retained redirect-only subset.
 
+## Status and query follow-up: 2026-10-04
+
+The redirect cleanup is committed as `b260204`. The next candidate, based on that
+commit plus the inherited worker cleanup, retains two changes: reuse completion
+for synchronous status listeners and track only pending notifications; reduce
+temporary arrays and string conversions when ordering and hashing URL searches.
+`notifyStatusChange` still returns a Promise, listeners keep their original `this`
+value and ordering, and disposal waits for asynchronous listeners. Query ordering,
+duplicate values and generated filenames remain compatible. These changes are
+accepted and retained. [Evidence and experiment sources](evidence/status-query-followup.json)
+identify the exact source and separate final measurement campaign.
+
+The final candidate's median paired changes in sampled cumulative allocation are:
+
+| Workload | Normal | Managed heap pressure |
+| --- | ---: | ---: |
+| Synchronous status notifications | -87.79% | -36.82% |
+| Asynchronous status notifications | -27.33% | -18.33% |
+| Resource creation with short queries | -4.76% | -4.16% |
+| Resource creation with long queries | -21.95% | -15.07% |
+| Complete local MDN replay | -4.62% | -2.52% |
+
+Status fixtures isolate depth-limit rejection of prebuilt resources, including
+crawler initialization and disposal, with two listeners per resource. Query
+fixtures use the full link pipeline with `deduplicateStripSearch: false`.
+Profiles repeat four batches: 8,192 synchronous notifications, 1,024 asynchronous
+notifications, or 2,048 resource creations. MDN uses the same three saved HTML
+pages and extracted stylesheet described above, including acquisition, processing,
+output writes and disposal. Every output check matched.
+
+Each allocation result uses three rotated baseline/candidate/identical-candidate
+triplets on Node 22.13.0, 4 KiB inspector sampling including collected objects,
+a 128 MiB old-space limit and 4 MiB semi-space. Pressure retains up to 2 MiB of
+JavaScript arrays; totals include the identical harness churn. These are sampled
+cumulative allocations, not exact byte counts, confidence bounds or crawl-wide
+memory savings. In particular, the status percentages exclude resource creation.
+
+Normal long-query resource creation is **20.99% faster**, with a 95% paired interval
+of **-24.92% to -17.49%** and 12/12 qualifying rounds. Its control interval contains
+zero and fits within the fixed +/-5% limit, and both candidate copies qualify.
+The other nine workload/mode comparisons fail their controls, including both MDN
+modes. Their observed improvements remain provisional. Each case retained 10–12
+of 12 rounds under the fixed CPU/I/O filter; no rounds were added or pooled.
+This does not establish a general speedup or complete the release latency gate.
+
+The exact final source passed **548 tests / 44 suites**, lint, strict source/test
+types and build in an isolated tracked-source snapshot. All 14 added compatibility
+tests also pass on the baseline. Differential checks matched 80,000 query inputs
+(36,798 outputs and 43,202 matching failures), 80,000 hashes, 800 mixed listener
+sequences and 3,000 metadata cases. Four small crawl workloads matched file and
+request counts, bytes and hashes in both downloader modes (eight cases); startup, cancellation,
+draining and crawl-isolation checks passed. The final review added a regression
+test for standalone listener calls; the earlier prototype failed it. The corrected
+source was rebuilt and measured in a separate campaign, superseding its timings.
+
+Ten repeated batches per workload, variant and memory mode check post-GC retention
+separately from timing. No additional sustained heap growth relative to baseline
+was observed in this short check. RSS varies across identical runs, and no general
+retained-heap, RSS or peak-memory reduction is claimed.
+
+Two empty-metadata cloning prototypes were left out. They reduced allocations
+for empty worker messages, but the effect varied more across profiles and their
+extra metadata test also affects populated messages. They did not establish a
+whole-worker speedup. Cheerio, URIjs, the CSS extractor and dependencies remain
+unchanged by this phase.
+
 ## Retained changes and defaults
 
 Got remains the default transport. Native HTTP is opt-in with fallback for
