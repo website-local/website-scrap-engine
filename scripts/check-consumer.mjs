@@ -26,13 +26,19 @@ await execute(process.execPath, [path.join(project, 'node_modules/typescript/bin
 const scripts = process.argv.includes('--smoke-only') ? ['runtime-smoke', 'runtime-log4js-peer'] : [
   'runtime-smoke', 'runtime-lifecycle', 'runtime-outcomes', 'runtime-failure-retry',
   'runtime-parent-publication', 'runtime-output-conflicts', 'runtime-discovery',
-  'runtime-buffer-budget', 'runtime-adjustment', 'runtime-log4js-peer'
+  'runtime-buffer-budget', 'runtime-adjustment', 'runtime-fast-retry',
+  'runtime-native-http', 'runtime-single-import', 'runtime-log4js-peer'
 ];
+if (process.platform === 'win32' && !process.argv.includes('--smoke-only')) scripts.push('runtime-windows-files');
 const results = [];
 for (const script of scripts) {
-  const args = [path.join(project, 'test', script + '.js'), entry];
+  const args = [path.join(project, 'test', script + '.js'),
+    script === 'runtime-single-import' ? path.dirname(entry) : entry];
   if (script === 'runtime-log4js-peer' && process.argv.includes('with-peer')) args.push('with-peer');
-  const result = await execute(process.execPath, args, {cwd: consumer, timeout: 60000, maxBuffer: 1024 * 1024});
+  const env = script === 'runtime-native-http' ? {...process.env,
+    NODE_EXTRA_CA_CERTS: path.join(project, 'test/fixtures/native-http-cert.pem')} : process.env;
+  const result = await execute(process.execPath, args,
+    {cwd: consumer, env, timeout: 60000, maxBuffer: 1024 * 1024});
   results.push({script, output: result.stdout.trim()});
   process.stderr.write(script + ': passed\n');
 }
