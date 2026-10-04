@@ -130,7 +130,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
         if (taskId !== undefined) await this.publications.finish(taskId, !completed);
       }
     };
-    let msg: DownloadWorkerMessage | void;
+    let msg: DownloadWorkerMessage;
     let children: Resource[];
     try {
       const wire = prepareResourceForClone(r);
@@ -169,10 +169,6 @@ export class MultiThreadDownloader extends AbstractDownloader {
     } catch (e) {
       this.handleError(e, 'submitting resource to worker', res);
       return false;
-    }
-    if (!msg) {
-      await this.pipeline.notifyStatusChange(res, 'processAfterDownload');
-      return;
     }
     if (msg.error) {
       this.handleError(msg.error, 'post-process', res);
