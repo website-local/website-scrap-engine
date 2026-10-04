@@ -12,8 +12,8 @@
 | Understand dependency, parser and development-tool decisions | [Dependency audit](dependency-audit.md) |
 
 The three maintained reports above describe the latest state and identify the
-commit or working tree covered by each result. Detailed earlier experiments are
-merged into the [historical archive](archive/0.10.0-experiments.md). Their original
+commit or working tree covered by each result. Earlier experiments are summarized in the
+[historical index](archive/0.10.0-experiments.md); full narratives remain in Git. Their
 raw JSON remains in [evidence/](evidence/); the latest benchmark is included there
 with its harnesses and fingerprints. Historical measurements are not pooled or
 presented as validation of a newer artifact.

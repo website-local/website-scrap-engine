@@ -1,21 +1,161 @@
 # Performance for 0.10
 
-The latest working-tree comparison with 0.9.1 establishes **27.6% less elapsed
-time for multi-thread buffered HTTP** under the declared paired-control rule.
-Multi-thread markup and saved MDN replay pass control stability but show no clear
-difference. Six other comparisons remain provisional because their controls fail.
-There is no demonstrated universal speedup or strict non-regression guarantee.
+The first focused comparison of final `f057597` against 0.9.1 confirms less
+elapsed time for **multi-thread buffered HTTP (-28.94%)** and **multi-thread
+local files (-32.42%)**. Multi-thread markup shows no clear difference; five
+synthetic controls still fail. The earlier MDN-local comparison also shows no
+clear difference. Strict non-regression remains unproven.
 
-A later [allocation investigation](#allocation-follow-up-2026-10-03) against
-`584e07c` reduced sampled allocation in CSS, SVG and link creation. Its timing
-controls failed on the loaded host, so it does not establish a speedup or close
-the candidate's latency gate.
+On 2026-10-04 the user accepted these results for now and requested that further
+runs stop. Benchmarking is paused; this acceptance does not change the measured
+confidence intervals or convert failed controls into confirmed results.
 
-The [markup/path follow-up](#markup-and-path-follow-up-2026-10-04) qualifies a
-6.11% elapsed-time reduction in local MDN replay normally and 4.66% under heap
-pressure, against `8c7a290`. Other comparisons remain partly unresolved.
+## Second independent repeat: 2026-10-04
 
-## Latest 0.9.1 comparison: 2026-10-03
+The same five cases were repeated again at the user's request, with unchanged
+pairing, round count and filtering. [Full evidence](evidence/focused-paired-repeat2.json).
+All five controls failed; the estimates below are inconclusive.
+
+| Case | Retained / 18 | Elapsed estimate | Control 95% interval |
+| --- | ---: | ---: | --- |
+| Single buffered | 18 | -10.14% | +2.31% to +15.48% |
+| Single streamed | 17 | -5.40% | -8.44% to +3.37% |
+| Multi streamed | 18 | -41.88% | -6.29% to +3.52% |
+| Single local | 18 | -0.57% | -1.31% to +7.07% |
+| Single markup | 18 | -20.15% | -2.35% to +6.51% |
+
+This campaign took **126.5 seconds including host checks/waits**. One of 90
+case-round groups was excluded (single streamed HTTP); all output checks matched.
+Starts passed at 0–9% CPU with empty disk queues. Post-run samples were 2%, 32%
+and 2%, so host activity remained intermittent. Frozen inputs and independent
+statistical verification passed. Earlier campaigns remain separate, and the
+performance gate remains open; no improvement or regression qualifies here.
+
+## Independent repeat: 2026-10-04
+
+At the user's request, the five failed-control cases were measured again in a
+separate fixed campaign. [Full repeat evidence](evidence/focused-paired-repeat.json).
+All **18 rounds per case** were retained; none of 90 groups crossed the fixed
+CPU/I/O thresholds. All five identical-code controls still failed the ±5% rule.
+Negative estimates mean less elapsed time; none below qualifies as a confirmed
+improvement or regression in this repeat.
+
+| Case | Elapsed estimate | Paired change | Identical-code control 95% interval |
+| --- | ---: | ---: | --- |
+| Single buffered | -9.90% | -2.770 ms | -3.87% to +7.55% |
+| Single streamed | +3.86% | +1.131 ms | -5.09% to +8.76% |
+| Multi streamed | -45.63% | -26.302 ms | -3.97% to +6.44% |
+| Single local | +6.96% | +0.583 ms | -4.65% to +6.85% |
+| Single markup | -20.39% | -17.532 ms | -4.05% to +7.30% |
+
+The repeat took **106.6 seconds including host checks**. Every start passed three
+CPU samples at 0–9% with empty disk queues. After the run, CPU samples rose to
+3%, 31% and 20%, with active Node processes. Quiet starts and passing probes did
+not establish stable workload timing; the failed identical-code controls remain
+decisive. Output hashes/counts/bytes and requests matched, the 32,315 original
+input fingerprints were unchanged, and an independent verifier reproduced all
+intervals, filtering and classifications.
+
+Pairing, calibration, round count and thresholds were unchanged. Earlier campaigns
+remain separate; no samples were pooled and no result was replaced. The five
+cases remain unresolved, so this repeat does not close the final performance gate.
+
+## Focused paired follow-up: 2026-10-04
+
+[Results, host samples and harnesses](evidence/focused-paired-remeasurement.json).
+This addresses the eight synthetic cases whose fresh-process controls failed.
+Negative changes mean less elapsed time; estimates with failed controls remain
+inconclusive even when their effect interval excludes zero.
+
+| Case | Retained / 18 | Elapsed change | 95% interval | Paired change | Interpretation |
+| --- | ---: | ---: | --- | ---: | --- |
+| Single buffered | 18 | -6.44% | -12.24% to -1.13% | -1.527 ms | Failed control; inconclusive |
+| Multi buffered | 18 | -28.94% | -30.24% to -26.75% | -103.331 ms | Confirmed improvement |
+| Single streamed | 18 | +0.02% | -3.83% to +2.82% | +0.007 ms | Failed control; inconclusive |
+| Multi streamed | 18 | -43.82% | -46.25% to -40.99% | -25.900 ms | Failed control; inconclusive |
+| Single local | 17 | +5.95% | -0.17% to +16.81% | +0.503 ms | Failed control; inconclusive |
+| Multi local | 18 | -32.42% | -33.92% to -31.27% | -107.946 ms | Confirmed improvement |
+| Single markup | 17 | -18.65% | -24.70% to -14.35% | -15.804 ms | Failed control; inconclusive |
+| Multi markup | 18 | +1.82% | -1.33% to +2.99% | +8.688 ms | No clear difference |
+
+Windows initially showed 10–17% total CPU, empty disk queues and intermittent
+activity from other benchmark/test processes. Each case waited for three samples
+at no more than 10% CPU and disk queue length one. All starts passed, with observed
+CPU between 0% and 6% and empty queues. Post-run samples were 2%, 2% and 14%:
+quiet starts do not establish uninterrupted idleness. Host probing ran between
+cases, outside timed observations; bracketing workload probes handled filtering.
+
+The pass took **433.5 seconds including host checks/waits**. Each case ran in one
+dedicated process, with both APIs warmed twice, three discarded calibration rounds
+and exactly 18 measured rounds. Each round alternated baseline/current/control,
+then reversed that order for a second observation. Six permutations repeated
+three times. Every observation initialized, ran and disposed a fresh crawler,
+including worker startup; candidate/control share the same imported current API.
+These are warmed complete-crawl measurements, not cold-import timings.
+
+Two of 144 complete case-round groups were excluded using fixed CPU/I/O thresholds
+(1.5 times the median of three calibration group maxima). Paired 10,000-resample
+bootstrap intervals and the original ±5% identical-code stability rule were
+unchanged. Both candidate copies must qualify an improvement. No rounds were
+added, pooled or discarded based on crawl times or favorable effects.
+
+Output hashes, byte/file counts and request counts matched across every variant.
+All 32,315 original frozen input entries matched before and after the pass; the
+new harness/protocol hashes also matched. Independent Python calculations verified
+host-start rules, ordering, calibration, exclusions, intervals and classifications.
+
+The single-thread local estimate is +0.503 ms (+5.95%), with an interval crossing
+zero and failed control; this does not reproduce a confirmed large slowdown.
+Single markup narrowly fails its control (upper bound +5.14%); the threshold was
+not relaxed. Five unresolved cases prevent closing the overall gate. These results
+also do not retroactively close the earlier allocation-specific latency gate.
+MDN was not rerun because its control already passed; its separate result follows.
+
+## Final source versus 0.9.1: 2026-10-04
+
+[Full results, harnesses and fixture](evidence/final-source-remeasurement.json).
+Negative changes mean less elapsed time. These are paired medians; they need not
+equal ratios or differences of the separate per-version medians.
+
+| Case | Retained / 12 | Elapsed change | 95% interval | Paired change | Interpretation |
+| --- | ---: | ---: | --- | ---: | --- |
+| Single buffered | 11 | +20.68% | +7.73% to +31.47% | +5.798 ms | Failed control; inconclusive |
+| Multi buffered | 12 | -33.70% | -35.96% to -25.31% | -149.465 ms | Failed control; inconclusive |
+| Single streamed | 12 | +17.78% | +8.36% to +33.84% | +6.481 ms | Failed control; inconclusive |
+| Multi streamed | 12 | -40.94% | -46.68% to -30.50% | -25.337 ms | Failed control; inconclusive |
+| Single local | 11 | +42.52% | +21.15% to +50.77% | +3.027 ms | Failed control; inconclusive |
+| Multi local | 12 | -33.96% | -39.11% to -28.80% | -135.821 ms | Failed control; inconclusive |
+| Single markup | 10 | -17.34% | -36.43% to -7.70% | -19.077 ms | Failed control; inconclusive |
+| Multi markup | 12 | -6.06% | -12.29% to +7.91% | -32.489 ms | Failed control; inconclusive |
+| Single MDN-local | 12 | -4.93% | -7.66% to +0.36% | -19.769 ms | No clear difference |
+
+The campaign took **421.1 seconds** on Node 22.13.0: three discarded calibration
+triplets, then exactly 12 balanced rounds per suite, two observations per process
+and one warmup per case. Four of 108 case-round groups were excluded by fixed
+CPU/I/O probe thresholds. No timing-based exclusions, extra rounds or pooling
+were used. Identical-code control intervals must contain zero and fit within
+±5%; both candidate copies must independently qualify a signed effect.
+
+All nine output/hash/count checks passed. Final source hashes and 32,315 frozen
+input entries were verified; all 172 baseline emitted files match the preserved
+0.9.1 fingerprints. An independent Python calculation reproduced calibration,
+exclusions, balanced ordering, bootstrap intervals and classifications.
+
+The synthetic estimates suggest faster multi-thread downloads and single-thread
+markup, with about 3–6.5 ms extra in small single-thread binary crawls. Failed
+controls prevent confirming those effects. MDN-local's control interval is
+-2.75% to +2.73%; its elapsed estimate is -4.93%, with an effect interval of
+-7.66% to +0.36%. This supports no clear difference, not a demonstrated slowdown.
+
+The saved MDN page is 101,908 bytes but differs in hash from the deleted earlier
+fixture. Its text is preserved in the evidence. The existing emitted MDN lifecycle
+is held constant across engines, with imports rebound to each version. This
+three-page replay excludes network and does not include the separate stylesheet
+used in later optimization experiments. It cannot isolate changes from the older
+MDN campaign. These measurements do not assess allocation, RSS or steady-state
+throughput, and do not close the earlier allocation-specific latency gate.
+
+## Earlier 0.9.1 comparison: 2026-10-03
 
 The candidate is the tracked working tree based on `a1f5fb1`, including the retained
 worker-result cleanup, compared with the preserved 0.9.1 emitted artifact on
@@ -106,351 +246,95 @@ this table.
 
 ## Allocation follow-up: 2026-10-03
 
-This comparison uses the tracked working tree based on `584e07c`, including the
-HTTP-cache mitigation and inherited worker-result cleanup, as its baseline.
-It is separate from the earlier 0.9.1 comparison. Cheerio, URIjs, dependencies,
-output checks and resource accounting are unchanged. The candidate was measured before commit; source/build hashes, harnesses and
-measurements are recorded in the
-[follow-up evidence](evidence/performance-memory-followup.json).
-
-Three changes remain in the candidate: avoid unnecessary awaits for synchronous
-stages in combined resource creation and SVG processing, remove the per-call
-recursive closure from synchronous hook execution, and remove unused CSS regex
-captures and the temporary capture-selection object. Resource creation still
-returns a Promise; asynchronous hooks, validation, ordering, cancellation and
-discarded links retain regression coverage.
-
-The table reports median paired changes in **sampled cumulative allocation**.
-These are neither retained-memory savings nor whole-crawl percentages.
-
-| Focused workload | Normal | Managed heap pressure |
-| --- | ---: | ---: |
-| CSS: 512 unique URLs/document | -21.47% | -19.88% |
-| CSS: 2,048 occurrences, eight distinct URLs/document | -23.75% | -21.98% |
-| SVG: 512 image links/document | -16.86% | -16.80% |
-| HTML: 512 image links/document | -3.31% | -3.43% |
-| Combined creation: 1,024 resources/batch | -22.64% | -15.49% |
-
-Allocation sampling used three rotated baseline/candidate/identical-candidate
-triplets in each mode, four documents or batches per observation, Node 22.13.0,
-a 128 MiB old-space limit and 4 MiB semi-space. Inspector sampling at 4 KiB included
-objects collected by minor and major GC. Pressure used JavaScript arrays, retaining
-up to 2 MiB during work and releasing them before post-GC checks. The pipeline ran
-in its real crawl context with Cheerio and URIjs. Output and discovered-link hashes
-matched throughout. Three triplets support this allocation observation; they do
-not establish a formal confidence bound. Profiles show fewer allocations in
-Promise-related paths and regex matching, consistent with the changes.
-
-Timing used separate short observations, three discarded calibration triplets,
-the same CPU/I/O group filtering and ±5% identical-code control requirement as
-above. Fresh-process campaigns ran 12 rounds per mode, requiring eight retained;
-tighter interleaved campaigns ran 18, requiring 12. The normal fresh-process run
-retained 8–10 rounds per case; pressure retained six for unique CSS and 11 for
-the others. Interleaving retained 9–15 normally and 14–18 under pressure. Every
-case either lacked enough rounds or failed control stability. No speedup,
-slowdown or strict non-regression conclusion passed. Campaigns were not pooled;
-favorable effect intervals do not override failed controls. Analysis and profiling
-continued under host load instead of waiting for idle time.
-
-Ten repeated mixed batches showed no sustained post-GC heap growth: baseline and
-both candidate copies settled around 13.3 MiB normally and 12.0 MiB under pressure.
-RSS varied by several MiB between identical candidate runs. Boundary-sampled heap
-peaks also did not establish a reduction; some SVG diagnostics were higher. There
-is no demonstrated RSS or peak-memory improvement. Lower cumulative allocation
-does not imply lower retained heap, a lower peak, or less elapsed time.
-
-The exact candidate passed **531 tests / 42 suites**, lint, strict source/test
-types and build. A generated 15,000-input CSS corpus matched the baseline. Eight
-small crawl cases (four workloads in both downloader modes) matched saved-file
-counts, bytes, request counts and hashes; their one-observation timings are only
-functional diagnostics. Quiet-host paired latency validation remains a release
-gate for this candidate.
-
-Two experiments were left out: combining CSS bookkeeping collections produced
-negligible allocation change, and a simple-path prefix shortcut gave small,
-inconsistent benefits. Both added complexity without sufficient evidence. Further
-work should follow measured hotspots; this phase does not justify weakening
-checks or replacing dependencies before release.
+Retained in `8c7a290`, against `584e07c` plus the inherited worker cleanup:
+remove unnecessary awaits, synchronous hook closures and CSS regex captures.
+Sampled cumulative allocation fell 21–24% for CSS, about 17% for SVG and
+15–23% for combined resource creation across normal/pressure modes. All timing
+comparisons lacked enough rounds or failed controls; the quiet-host latency gate
+remains open. The candidate passed 531 tests, builds, 15,000 CSS comparisons and
+eight crawl-output comparisons. [Evidence](evidence/performance-memory-followup.json).
 
 ## CSS scanner and local MDN replay
 
-Commit `8c7a290` contains the allocation changes above. The next experiment used
-that code plus the inherited worker cleanup as its baseline, with Cheerio and
-URIjs unchanged. **Keep the trimmed regex for the release.** A specialized scanner
-is worth further investigation for CSS with many duplicate URLs, but this
-prototype does not yet justify replacing the current extractor. The
-[scanner and MDN evidence](evidence/css-scanner-mdn.json) preserves both prototypes,
-fixtures, measurements and independent statistical checks. Production code was
-not changed by this experiment.
+The CSS scanner was rejected; the trimmed regex remains. Both prototypes matched
+51,312 inputs, but the tuned scanner added complexity and only reduced full MDN
+sampled allocation by about 1%. All timing controls failed or had too few rounds.
+Duplicate-heavy CSS allocation gains do not establish a general benefit.
+[Evidence](evidence/css-scanner-mdn.json).
 
-The first prototype scanned characters individually. The tuned version uses
-cached native string searches to jump to possible `url`, `@import` and comment
-starts, then extracts URL tokens and offsets with a small state machine. Irregular
-tokens fall back to the existing regex for the whole input. It is not a full CSS
-parser and does not build an AST. Both versions matched the current extractor on
-51,312 generated/fixture cases, including all 16 saved MDN style blocks. This
-corpus is evidence of compatibility, not a proof for every possible CSS input.
-
-The table shows median paired changes in sampled cumulative allocation for the
-tuned scanner. Each mode used three rotated baseline/candidate/identical-candidate
-triplets on Node 22.13.0, with 4 KiB allocation sampling, a 128 MiB old-space limit
-and 4 MiB semi-space. Pressure totals include the same JavaScript-array churn
-in every variant; no pressure baseline was subtracted.
-
-| Workload | Normal | Managed heap pressure |
-| --- | ---: | ---: |
-| Extract 512 unique CSS URLs/document | -64.3% | -23.1% |
-| Extract 2,048 occurrences of eight CSS URLs/document | -61.3% | -43.3% |
-| Extract 512 CSS URLs/document interspersed with comments | -85.2% | -49.6% |
-| Full CSS processing, 512 unique URLs/document | -2.77% | -1.76% |
-| Full CSS processing, 2,048 occurrences of eight URLs/document | -53.10% | -40.01% |
-| Complete local MDN replay | -1.10% | -1.05% |
-
-The standalone MDN stylesheet extractor allocated about 44% more normally,
-roughly 75 KiB over 128 repetitions of a 22.6 KiB stylesheet with four URL matches.
-This small absolute increase and the full-pipeline results show why extraction
-benchmarks alone should not decide adoption. No RSS, retained-heap or peak-memory
-improvement was established for the scanner.
-
-The MDN workload uses the real MDN lifecycle and URL hooks: three saved 101,908-byte
-HTML documents plus CSS extracted from their inline styles, concurrency eight,
-depth zero, local acquisition, real output writes and disposal. All variants
-produced the same four files, 323,010 bytes and output hash. Network access was
-disabled. This is a small single-thread CPU/I/O replay, not a full MDN mirror; the
-CSS fixture is not MDN's external global stylesheet.
-
-Timing ran 12 measured rounds per mode after three calibration triplets, with
-two observations per variant, whole-triplet CPU/I/O exclusions and the existing
-±5% control criterion. MDN retained 11/12 rounds normally and 12/12 under pressure;
-both controls failed. Every extractor comparison also failed its control or lacked
-eight qualifying rounds. Apparent gains after the native-search refinement remain
-provisional. No timing results were pooled, and profiling continued under host
-load without waiting for idle time.
-
-The scanner's duplicate-heavy CSS savings are substantial, but ordinary unique-URL
-processing and this MDN replay show much smaller allocation changes. The prototype
-also adds 102 lines alongside the 60-line regex fallback. Before adoption, require
-representative external stylesheets and a passing complete-workload timing gate.
-The local MDN replay is now an explicit workload for the next quiet-host latency
-pass on the committed allocation changes, alongside the existing synthetic crawls.
+The local MDN workload replays three saved 101,908-byte HTML pages and an extracted
+inline stylesheet with network access disabled, concurrency eight and depth zero.
+It includes initialization, local acquisition, processing, output and disposal:
+four matching files totaling 323,010 bytes. It is a small single-thread replay,
+not a full mirror or a representative external stylesheet corpus.
 
 ## Markup and path follow-up: 2026-10-04
 
-The next candidate, based on `8c7a290` plus the inherited worker cleanup, retains
-two changes: reuse the split path array while escaping segments, and avoid
-reconstructing unchanged inline style contents. The latter rereads the element
-before skipping its setter, preserving the existing result when CSS hooks mutate
-the document. Dot-segment sanitization, Cheerio, URIjs and the CSS regex remain
-unchanged. The candidate was measured before commit.
-[Source fingerprints, measurements and validation](evidence/markup-path-followup.json)
-identify the exact experiment; this is not a comparison against 0.9.1.
+Retained as `2382067`, against `8c7a290` plus worker cleanup: reuse split path
+segments and avoid rewriting unchanged inline styles, while preserving hook
+mutations. MDN elapsed time fell **6.11% normally** (95% interval -7.39% to -4.64%)
+and **4.66% under pressure** (-6.74% to -0.83%), passing both-copy controls.
+Normal link creation qualified as 1.52% faster. Other focused comparisons remain
+partly unresolved, including possible pressure CSS regression; these results do
+not retroactively close the earlier allocation gate.
 
-The complete local MDN replay passes the paired-control rule in both modes:
-
-| Mode | Accepted rounds / 12 | Elapsed change | 95% paired interval | Median paired change | Sampled allocation change |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Normal | 12 | -6.11% | -7.39% to -4.64% | -20.52 ms | -5.69% |
-| Managed heap pressure | 11 | -4.66% | -6.74% to -0.83% | -16.24 ms | -5.48% |
-
-Both identical-candidate control intervals include zero and fit within ±5%, and
-both candidate copies have negative effect intervals. One pressure triplet was
-excluded for its I/O probe. The replay uses the same three saved MDN pages plus
-one extracted stylesheet described above, with matching four-file output hashes.
-These are warmed, same-process paired crawl observations, including crawler
-initialization, output writes and disposal; they do not establish network or
-steady-state throughput. Allocation profiles ran separately in three rotated
-triplets per mode, with the same 4 KiB sampling and constrained heap settings.
-
-Isolating the path change reduced sampled allocation by 4.02% for unique-URL CSS,
-3.53% for HTML image links, 4.04% for SVG links and 5.23% for combined link creation
-normally. Under pressure the respective changes were 4.07%, 3.15%, 2.93% and 0.31%.
-The simpler experiment that removed only the filter array gave small, inconsistent
-changes and was superseded by reusing the split array for the transformation.
-
-The separate 18-round focused timing campaigns qualified normal link creation as
-1.52% faster. Normal unique CSS, SVG and HTML passed controls without qualifying
-a difference under the two-copy rule; duplicate CSS failed its control. All five
-pressure-focused controls failed. In particular, an apparent pressure CSS slowdown
-remains unresolved; the MDN result does not override that uncertainty. There is
-still no universal speedup or strict non-regression guarantee, and these results
-do not retroactively validate the earlier allocation commit against its baseline.
-
-Ten repeated MDN crawls in separate baseline/candidate/control processes per mode
-ended near 21 MiB of post-GC heap, with comparable late drift. No additional
-retained-heap growth relative to baseline was observed in this short check.
-RSS differences varied by mode; no general RSS or peak-memory reduction is claimed.
-
-The exact candidate passed **534 tests / 42 suites**, lint, strict source/test
-types and build. Differential checks matched 80,000 resource/path outcomes per
-experiment, including malformed-input failures, plus 14 HTML cases with hook
-mutations. All eight small synthetic crawl output comparisons also matched.
-The independent audit reproduced calibration thresholds, exclusions, output
-checks and bootstrap intervals. Additional [pre-commit fuzzing](evidence/markup-path-fuzz.json)
-matched 160,000 POSIX/Windows-path comparisons and 8,000 HTML/CSS cases across
-eight seeds, including asynchronous hooks and document mutation. Windows path
-API coverage does not substitute for native Windows filesystem testing. CI and
-final-package validation remain separate.
+Validation: 534 tests, builds, eight crawl-output comparisons, 80,000 resource/path
+outcomes per experiment, then 160,000 POSIX/Windows-path and 8,000 HTML/CSS fuzz
+cases. [Measurements](evidence/markup-path-followup.json),
+[fuzz evidence](evidence/markup-path-fuzz.json).
 
 ## Redirect path reuse follow-up: 2026-10-04
 
-After fuzzing and committing `2382067`, a further candidate reuses `replacementUri`
-when saving a redirect with an existing `redirectedSavePath`. It removes duplicate
-URIjs setup while keeping the helper's fallback for unusual paths. This change is
-retained. [Evidence and experiment sources](evidence/redirect-reuse-investigation.json)
-include 100,000 equivalent path pairs, with 25,030 matching malformed-input errors,
-and the exact retained subset's 534 passing tests / 42 suites, lint, types and build.
-
-Across three rotated triplets, isolated calculation of 4,096 ordinary relative
-paths used 70.42% fewer sampled allocation bytes normally and 40.30% fewer under
-managed heap pressure. These are path-calculation figures, not crawl savings.
-Redirect saving profiles were smaller and variable: four-batch confirmation
-profiles showed -6.43% normally and -0.56% under pressure. Each batch saved 12
-supplied HTML documents and 12 redirect stubs. Timing controls failed, so no new
-saving-stage speedup is established. Ten repeated batches ended near 9.6–9.7 MiB
-of post-GC heap with similar small growth across versions; RSS differences reversed
-under pressure, so there is no general retained-memory or RSS improvement claim.
-
-A separate inline-CSS marker precheck was rejected. It reduced sampled allocation
-about 20% for 256 URL-free style blocks, but showed no clear MDN benefit and about
-2.8% more allocation for URL-bearing styles normally. Its 8,000 HTML/CSS fuzz cases
-matched, but that was insufficient reason to add the extra scan. MDN timings for
-the exploratory pair of changes passed controls without qualifying a difference;
-they do not establish a gain for the retained redirect-only subset.
+Retained as `b260204`: reuse the relative-path helper when saving redirects.
+Sampled path allocation fell; no saving-stage speedup was established.
+Validation: 534 tests, builds and 100,000 path equivalence checks.
+The inline-CSS marker prototype added allocation without a clear MDN benefit
+and was excluded. [Evidence](evidence/redirect-reuse-investigation.json).
 
 ## Status and query follow-up: 2026-10-04
 
-The redirect cleanup is committed as `b260204`. The next candidate, based on that
-commit plus the inherited worker cleanup, retains two changes: reuse completion
-for synchronous status listeners and track only pending notifications; reduce
-temporary arrays and string conversions when ordering and hashing URL searches.
-`notifyStatusChange` still returns a Promise, listeners keep their original `this`
-value and ordering, and disposal waits for asynchronous listeners. Query ordering,
-duplicate values and generated filenames remain compatible. These changes are
-accepted and retained. [Evidence and experiment sources](evidence/status-query-followup.json)
-identify the exact source and separate final measurement campaign.
+Retained as `2789de6`, against `b260204` plus worker cleanup: reuse synchronous
+status completion, track pending notifications and reduce query-processing
+arrays/conversions. Promise, listener ordering/context, disposal and filenames
+remain compatible.
 
-The final candidate's median paired changes in sampled cumulative allocation are:
-
-| Workload | Normal | Managed heap pressure |
+| Sampled cumulative allocation | Normal | Managed heap pressure |
 | --- | ---: | ---: |
 | Synchronous status notifications | -87.79% | -36.82% |
 | Asynchronous status notifications | -27.33% | -18.33% |
-| Resource creation with short queries | -4.76% | -4.16% |
-| Resource creation with long queries | -21.95% | -15.07% |
-| Complete local MDN replay | -4.62% | -2.52% |
+| Short-query resource creation | -4.76% | -4.16% |
+| Long-query resource creation | -21.95% | -15.07% |
+| Local MDN replay | -4.62% | -2.52% |
 
-Status fixtures isolate depth-limit rejection of prebuilt resources, including
-crawler initialization and disposal, with two listeners per resource. Query
-fixtures use the full link pipeline with `deduplicateStripSearch: false`.
-Profiles repeat four batches: 8,192 synchronous notifications, 1,024 asynchronous
-notifications, or 2,048 resource creations. MDN uses the same three saved HTML
-pages and extracted stylesheet described above, including acquisition, processing,
-output writes and disposal. Every output check matched.
-
-Each allocation result uses three rotated baseline/candidate/identical-candidate
-triplets on Node 22.13.0, 4 KiB inspector sampling including collected objects,
-a 128 MiB old-space limit and 4 MiB semi-space. Pressure retains up to 2 MiB of
-JavaScript arrays; totals include the identical harness churn. These are sampled
-cumulative allocations, not exact byte counts, confidence bounds or crawl-wide
-memory savings. In particular, the status percentages exclude resource creation.
-
-Normal long-query resource creation is **20.99% faster**, with a 95% paired interval
-of **-24.92% to -17.49%** and 12/12 qualifying rounds. Its control interval contains
-zero and fits within the fixed +/-5% limit, and both candidate copies qualify.
-The other nine workload/mode comparisons fail their controls, including both MDN
-modes. Their observed improvements remain provisional. Each case retained 10–12
-of 12 rounds under the fixed CPU/I/O filter; no rounds were added or pooled.
-This does not establish a general speedup or complete the release latency gate.
-
-The exact final source passed **548 tests / 44 suites**, lint, strict source/test
-types and build in an isolated tracked-source snapshot. All 14 added compatibility
-tests also pass on the baseline. Differential checks matched 80,000 query inputs
-(36,798 outputs and 43,202 matching failures), 80,000 hashes, 800 mixed listener
-sequences and 3,000 metadata cases. Four small crawl workloads matched file and
-request counts, bytes and hashes in both downloader modes (eight cases); startup, cancellation,
-draining and crawl-isolation checks passed. The final review added a regression
-test for standalone listener calls; the earlier prototype failed it. The corrected
-source was rebuilt and measured in a separate campaign, superseding its timings.
-
-Ten repeated batches per workload, variant and memory mode check post-GC retention
-separately from timing. No additional sustained heap growth relative to baseline
-was observed in this short check. RSS varies across identical runs, and no general
-retained-heap, RSS or peak-memory reduction is claimed.
-
-Two empty-metadata cloning prototypes were left out. They reduced allocations
-for empty worker messages, but the effect varied more across profiles and their
-extra metadata test also affects populated messages. They did not establish a
-whole-worker speedup. Cheerio, URIjs, the CSS extractor and dependencies remain
-unchanged by this phase.
+Normal long-query creation qualified as **20.99% faster** (95% interval -24.92%
+to -17.49%; 12/12 rounds). The other nine controls failed, including both MDN
+modes. Status fixtures exclude resource creation. Validation: 548 tests, builds,
+14 compatibility tests also passing on baseline, 80,000 query inputs, 80,000
+hashes, 800 listener sequences, 3,000 metadata cases and eight matching crawls.
+Empty-metadata cloning prototypes were excluded. [Evidence](evidence/status-query-followup.json).
 
 ## Path punctuation investigation: 2026-10-04
 
-The status/query changes are committed as `2789de6`. The next investigation
-**retains no new runtime changes**: extending the relative-path shortcut reduced
-allocation for punctuation and short-query filenames, but repeated long-query
-timing concerns did not justify accepting the tradeoff. The
-[evidence and experiment sources](evidence/path-punctuation-investigation.json)
-preserve all three measured implementations, their raw observations and failed
-controls. Repository source and tests remain unchanged by this investigation.
+All three candidates after `2789de6` were **rejected**. The final candidate reduced
+sampled allocation around 31–32% for punctuation/short-query paths normally and
+23–25% under pressure. Short-query pressure timing qualified as 28.91% faster
+(95% interval -32.51% to -25.72%). Recurring long-query estimates of +5.20% normally
+and +4.15% under pressure had failed controls: unresolved regression concerns,
+not proven regressions. Neither ordinary paths nor MDN qualified a benefit.
 
-The final prototype keeps the original ordinary-path condition and calculation
-inline, then tries a shared matcher for `$`, `&`, `+`, comma, semicolon, `=` and
-`@` after a miss. Earlier versions widened the original matcher or moved both
-matchers into a helper. Each implementation was measured in a separate frozen
-campaign; results were neither pooled nor repeated to obtain passing controls.
+Each candidate passed 550 tests, builds, 325,832 path comparisons in both URIjs
+encoding modes and eight crawl-output comparisons. The two extra tests belong
+to the experiments; shipping code has 548 tests. Including `~` changed ISO-8859-1
+encoding, and removing later hook awaits changed cancellation boundaries; both
+were rejected. [All campaigns and sources](evidence/path-punctuation-investigation.json).
 
-The final prototype's median paired changes in sampled cumulative allocation are:
-
-| Workload | Normal | Managed heap pressure |
-| --- | ---: | ---: |
-| Ordinary relative links | +1.81% | +2.52% |
-| Punctuation-bearing relative links | -32.33% | -22.93% |
-| Paths retaining the URIjs fallback | -0.30% | +1.30% |
-| Resource creation with short queries | -30.81% | -24.60% |
-| Resource creation with long queries | -1.32% | +1.22% |
-| Complete local MDN replay | +0.41% | -0.15% |
-
-Profiles use three rotated baseline/candidate/identical-candidate triplets per
-mode, Node 22.13.0, a 128 MiB old-space limit, 4 MiB semi-space and 4 KiB inspector
-sampling including collected objects. Engine profiles create 2,048 resources
-through the full link pipeline. Pressure retains up to 2 MiB of JavaScript arrays,
-whose allocation is included in totals. MDN uses the same three saved HTML pages
-and extracted stylesheet, with local acquisition, processing, output and disposal.
-These are descriptive sampled-allocation changes, not retained-memory savings.
-
-Short-query creation under pressure is **28.91% faster**, with a 95% paired
-interval of **-32.51% to -25.72%**. Its control interval is **-4.18% to +3.55%**,
-and both candidate copies qualify. The other eleven comparisons comprise eight
-failed controls and three cases without a qualified difference, including both
-MDN modes. All final comparisons retained 12/12 rounds under the existing filter.
-
-Long-query timing estimates remain **+5.20% normally** and **+4.15% under pressure**.
-Both long-query controls fail, so these are unresolved regression concerns.
-Earlier implementations also produced positive long-query estimates. The final
-change was rejected because that concern recurred while ordinary links and MDN
-showed no qualified benefit. No confirmed general speedup or non-regression
-sign-off follows from the short-query result.
-
-All three candidate snapshots passed **550 tests / 44 suites**, lint, strict
-source/test types and build. Each matched 325,832 path comparisons across eight
-seeds and both URIjs encoding modes, including 11,713 matching failures; two
-added encoding-compatibility tests also passed on the unchanged baseline.
-Each candidate matched eight synthetic crawl-output comparisons in single and
-multi modes, including HTML, CSS and SVG links containing punctuation. Startup,
-save-path hooks, cancellation, draining and crawl-isolation checks passed.
-The additional tests remain in the experiment snapshots. Validation ran on Linux;
-Windows-style path comparisons do not establish native Windows performance.
-
-Ten repeated batches per workload, variant and mode yielded late post-GC heap
-medians near 12.8–12.9 MiB for focused cases and 21 MiB for MDN, with comparable
-late growth across versions. No retained-heap, RSS or peak-memory reduction was
-established. Independent checks reproduced frozen-input hashes, output checks,
-calibration, exclusions, ordering and bootstrap intervals for all three campaigns.
-
-Two earlier correctness failures were also resolved as rejected experiments.
-Including `~` in the shortcut bypassed URIjs's `%7E` encoding in ISO-8859-1 mode;
-all measured versions exclude it. Removing awaits from later hook stages changed
-cancellation at existing microtask boundaries and was rejected before timing.
+Allocation follow-ups use three rotated baseline/candidate/identical-candidate
+triplets per mode on Node 22.13.0, 4 KiB inspector sampling including collected
+objects, a 128 MiB old-space limit and 4 MiB semi-space. Pressure includes shared
+array churn retaining up to 2 MiB. These descriptive samples establish neither
+exact allocated bytes nor reduced RSS, peak or retained heap. Short repeated
+post-GC checks found no additional sustained growth. Campaigns remain separate;
+failed controls are never overridden by favorable effect intervals.
 
 ## Retained changes and defaults
 

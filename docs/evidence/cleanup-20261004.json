@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-04",
+  "scope": "Obsolete website-scrap-engine task artifacts only",
+  "removed": [
+    {
+      "path": "/mnt/e/tmp/website-scrap-review.IDUrab",
+      "allocatedBytes": 151314432
+    },
+    {
+      "path": "/mnt/e/tmp/wse-css-scan-mdn-20261003",
+      "allocatedBytes": 50237440
+    },
+    {
+      "path": "/mnt/e/tmp/wse-final-benchmark-20261003",
+      "allocatedBytes": 641056768
+    },
+    {
+      "path": "/mnt/e/tmp/wse-fuzz-next-20261004",
+      "allocatedBytes": 82165760
+    },
+    {
+      "path": "/mnt/e/tmp/wse-markup-path-20261004",
+      "allocatedBytes": 155668480
+    },
+    {
+      "path": "/mnt/e/tmp/wse-next-optimization-20261004",
+      "allocatedBytes": 253329408
+    },
+    {
+      "path": "/mnt/e/tmp/wse-perf-memory-20261003",
+      "allocatedBytes": 89190400
+    },
+    {
+      "path": "/mnt/e/tmp/wse-release-closeout-20261004",
+      "allocatedBytes": 328200192
+    },
+    {
+      "path": "/mnt/e/tmp/wse-resume-perf-memory-20261004",
+      "allocatedBytes": 195596288
+    },
+    {
+      "path": "/mnt/e/tmp/wse-security-20261003",
+      "allocatedBytes": 23207936
+    },
+    {
+      "path": "/mnt/e/tmp/wse-sync-push-20261004",
+      "allocatedBytes": 66654208
+    },
+    {
+      "path": "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.codex/tmp/performance-fixes-2026-09-28",
+      "allocatedBytes": 16052224
+    },
+    {
+      "path": "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.codex/tmp/session-01a0e295-performance",
+      "allocatedBytes": 162222080
+    }
+  ],
+  "allocatedBytesBefore": 2214895616,
+  "preserved": [
+    "All tracked raw JSON evidence",
+    "docs/evidence/release-closeout.json",
+    "Historical prose in Git f057597",
+    "Local proposals and scratch source",
+    "Recovered review patch, scripts and untracked tests in proposals/review-recovery-20261004",
+    "Codex sessions, auth, configuration, plugin caches and active arg0 tools",
+    "Unrelated /mnt/e/tmp files"
+  ],
+  "status": "complete"
+}

@@ -122,5 +122,5 @@ slower processing, and conversion back to URIjs for hooks could erase the gain.
 [URL evidence](evidence/url-parser-comparison.json) retains the cases and controls;
 no engine-wide speedup or drop-in compatibility is claimed.
 
-Full dependency, compiler, runner and parser reports are merged into the
-[historical archive](archive/0.10.0-experiments.md#dependency-audit).
+Full dependency, compiler, runner and parser reports remain in Git; see the
+[historical index](archive/0.10.0-experiments.md#dependency-audit).
