@@ -383,6 +383,75 @@ extra metadata test also affects populated messages. They did not establish a
 whole-worker speedup. Cheerio, URIjs, the CSS extractor and dependencies remain
 unchanged by this phase.
 
+## Path punctuation investigation: 2026-10-04
+
+The status/query changes are committed as `2789de6`. The next investigation
+**retains no new runtime changes**: extending the relative-path shortcut reduced
+allocation for punctuation and short-query filenames, but repeated long-query
+timing concerns did not justify accepting the tradeoff. The
+[evidence and experiment sources](evidence/path-punctuation-investigation.json)
+preserve all three measured implementations, their raw observations and failed
+controls. Repository source and tests remain unchanged by this investigation.
+
+The final prototype keeps the original ordinary-path condition and calculation
+inline, then tries a shared matcher for `$`, `&`, `+`, comma, semicolon, `=` and
+`@` after a miss. Earlier versions widened the original matcher or moved both
+matchers into a helper. Each implementation was measured in a separate frozen
+campaign; results were neither pooled nor repeated to obtain passing controls.
+
+The final prototype's median paired changes in sampled cumulative allocation are:
+
+| Workload | Normal | Managed heap pressure |
+| --- | ---: | ---: |
+| Ordinary relative links | +1.81% | +2.52% |
+| Punctuation-bearing relative links | -32.33% | -22.93% |
+| Paths retaining the URIjs fallback | -0.30% | +1.30% |
+| Resource creation with short queries | -30.81% | -24.60% |
+| Resource creation with long queries | -1.32% | +1.22% |
+| Complete local MDN replay | +0.41% | -0.15% |
+
+Profiles use three rotated baseline/candidate/identical-candidate triplets per
+mode, Node 22.13.0, a 128 MiB old-space limit, 4 MiB semi-space and 4 KiB inspector
+sampling including collected objects. Engine profiles create 2,048 resources
+through the full link pipeline. Pressure retains up to 2 MiB of JavaScript arrays,
+whose allocation is included in totals. MDN uses the same three saved HTML pages
+and extracted stylesheet, with local acquisition, processing, output and disposal.
+These are descriptive sampled-allocation changes, not retained-memory savings.
+
+Short-query creation under pressure is **28.91% faster**, with a 95% paired
+interval of **-32.51% to -25.72%**. Its control interval is **-4.18% to +3.55%**,
+and both candidate copies qualify. The other eleven comparisons comprise eight
+failed controls and three cases without a qualified difference, including both
+MDN modes. All final comparisons retained 12/12 rounds under the existing filter.
+
+Long-query timing estimates remain **+5.20% normally** and **+4.15% under pressure**.
+Both long-query controls fail, so these are unresolved regression concerns.
+Earlier implementations also produced positive long-query estimates. The final
+change was rejected because that concern recurred while ordinary links and MDN
+showed no qualified benefit. No confirmed general speedup or non-regression
+sign-off follows from the short-query result.
+
+All three candidate snapshots passed **550 tests / 44 suites**, lint, strict
+source/test types and build. Each matched 325,832 path comparisons across eight
+seeds and both URIjs encoding modes, including 11,713 matching failures; two
+added encoding-compatibility tests also passed on the unchanged baseline.
+Each candidate matched eight synthetic crawl-output comparisons in single and
+multi modes, including HTML, CSS and SVG links containing punctuation. Startup,
+save-path hooks, cancellation, draining and crawl-isolation checks passed.
+The additional tests remain in the experiment snapshots. Validation ran on Linux;
+Windows-style path comparisons do not establish native Windows performance.
+
+Ten repeated batches per workload, variant and mode yielded late post-GC heap
+medians near 12.8–12.9 MiB for focused cases and 21 MiB for MDN, with comparable
+late growth across versions. No retained-heap, RSS or peak-memory reduction was
+established. Independent checks reproduced frozen-input hashes, output checks,
+calibration, exclusions, ordering and bootstrap intervals for all three campaigns.
+
+Two earlier correctness failures were also resolved as rejected experiments.
+Including `~` in the shortcut bypassed URIjs's `%7E` encoding in ISO-8859-1 mode;
+all measured versions exclude it. Removing awaits from later hook stages changed
+cancellation at existing microtask boundaries and was rejected before timing.
+
 ## Retained changes and defaults
 
 Got remains the default transport. Native HTTP is opt-in with fallback for

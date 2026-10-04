@@ -15,7 +15,7 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 - Per-resource outcomes, explicit retries, and cancellation with awaited cleanup
 - Staged file publication and crawl-local output conflict detection
 - URL deduplication with configurable search-param stripping
-- Configurable retry with exponential backoff, jitter, and `Retry-After` header support
+- Configurable retry with backoff, jitter, and `Retry-After` header support
 - Local `file://` source support for re-processing previously saved sites
 - Pluggable logging with dedicated categories (`skip`, `retry`, `error`, `notFound`, etc.)
 

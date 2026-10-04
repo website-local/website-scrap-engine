@@ -1,8 +1,9 @@
 # 0.10.0 release audit
 
-**The two known correctness blockers are fixed and committed. CI passed for
-`a1f5fb1`, as reported by the user. Release sign-off still requires finalizing
-the remaining working-tree changes and validating the resulting release artifact.**
+**The two known correctness blockers, retained runtime changes and consumer
+checks are committed. The current package passed local Linux validation on
+Node 22.13.0. CI passed for `a1f5fb1`, as reported by the user; release sign-off
+still requires the remaining performance, platform and current CI checks below.**
 0.10.0 remains unreleased.
 
 Use the [migration guide](../MIGRATION-0.10.0.md) for public contracts and upgrade
@@ -24,7 +25,9 @@ checkpoint narratives are preserved in the [archive](archive/0.10.0-experiments.
 | Allocation candidate after `584e07c` | 531 tests / 42 suites, lint, strict source/test types and build passed on Node 22.13.0; eight crawl output checks matched | [Follow-up evidence](evidence/performance-memory-followup.json); sampled allocation reductions in CSS/SVG/link creation, no confirmed elapsed-time or RSS improvement; quiet-host latency gate pending |
 | Markup/path candidate after `8c7a290` | 534 tests / 42 suites, lint, strict source/test types and build passed; eight synthetic crawl outputs and local MDN outputs matched | [New evidence](evidence/markup-path-followup.json); MDN elapsed time -6.11% normally and -4.66% under pressure passes controls; other focused comparisons remain partly unresolved, no aggregate non-regression sign-off |
 | Redirect helper reuse, committed as `b260204` | 534 tests / 42 suites, lint, strict types and build passed; 100,000 path equivalence checks matched | [Redirect evidence](evidence/redirect-reuse-investigation.json); lower sampled allocation in path calculation, no confirmed saving-stage speedup; inline-CSS marker experiment excluded |
-| Status/query changes after `b260204`, accepted and retained | 548 tests / 44 suites, lint, strict types and build passed; 14 baseline compatibility tests and eight crawl output comparisons matched | [Final evidence](evidence/status-query-followup.json); lower sampled allocation, normal long-query resource creation 20.99% faster; MDN timing controls fail, no aggregate non-regression sign-off |
+| Status/query changes, committed as `2789de6` | 548 tests / 44 suites, lint, strict types and build passed; 14 baseline compatibility tests and eight crawl output comparisons matched | [Final evidence](evidence/status-query-followup.json); lower sampled allocation, normal long-query resource creation 20.99% faster; MDN timing controls fail, no aggregate non-regression sign-off |
+| Path-punctuation investigation after `2789de6`, rejected | Three candidate snapshots passed 550 tests / 44 suites, lint, types, build, path comparisons and crawl-output checks; repository source and tests remain unchanged | [Investigation evidence](evidence/path-punctuation-investigation.json); short-query pressure timing improves 28.91%, but recurring long-query regression concerns remain unresolved; no new runtime change retained |
+| Synchronization validation, runtime `71fac26` and consumer checks `d377776` | 548 tests / 44 suites, lint, strict source/test types and build passed on Linux Node 22.13.0; installed-package strict declarations and 13 runtime harnesses without log4js plus two with log4js passed | Current package digest and local artifacts are recorded below; broader runtime and native Windows checks were not refreshed, and no new CI result is recorded |
 
 The latest benchmark against 0.9.1 snapshots the tracked working tree based on `a1f5fb1`,
 including the retained `src/downloader/multi.ts` cleanup and two local QA harnesses.
@@ -46,9 +49,33 @@ qualify any speed or non-regression claim; see the
 [performance report](performance.md#allocation-follow-up-2026-10-03). Neither these
 changes nor the HTTP-cache mitigation are covered by the earlier CI result.
 
-The retained worker cleanup and earlier QA/documentation changes still require
-inclusion or exclusion when finalizing the release commit. The committed CI result
-does not automatically cover those uncommitted changes.
+The retained worker cleanup is committed as `71fac26`; the consumer runner and
+its fast-retry, Windows and smoke harness changes are committed as `d377776`.
+The performance reports record the accepted changes and rejected experiments.
+Unrelated local drafts and the unfinished `src/shared-context.ts` remain outside
+the validated snapshot and package. The earlier CI result does not cover these
+later commits.
+
+The 2026-10-04 synchronization validation used a snapshot matching the committed
+source and consumer checks, together with the README retry-wording correction.
+The build, lint, strict source/test types and all **548 tests / 44 suites** passed
+on Linux Node **22.13.0**. Fresh consumers installed the resulting tarball:
+strict declarations and all **13 runtime harnesses** passed without log4js;
+strict declarations, smoke and logging-peer integration passed with log4js
+(`--smoke-only`, **two harnesses**). These results do not refresh the broader
+runtime matrix or native Windows validation.
+
+The checked `website-scrap-engine-0.10.0.tgz` contains **291 entries**,
+**205,212 bytes compressed** and **953,418 bytes unpacked**. Its SHA-256 is:
+
+```text
+abbd0dfd01d873bf7a310832623b834a790e89b58238ce4d4dfec9484de2eb1e
+```
+
+The local snapshot, file-hash manifest, package and validation logs are retained
+under `/mnt/e/tmp/wse-sync-push-20261004/`. This audit is excluded from the
+package, so recording the results does not change that digest. No package was
+published and no new CI result was fetched as part of this validation.
 
 ## Accepted correctness fixes
 
@@ -109,19 +136,19 @@ contracts and their configuration options.
 
 ## Remaining release work
 
-1. Finalize the intended allocation and markup/path changes, worker cleanup, QA harness and
-   documentation in the release candidate; keep unrelated local files out of the package.
-2. Complete quiet-host paired latency validation for the allocation candidate;
+1. Complete quiet-host paired latency validation for the allocation candidate;
    include the [local MDN replay](performance.md#css-scanner-and-local-mdn-replay)
    alongside synthetic crawls. The loaded-host profiles do not establish
    non-regression. The experimental CSS scanner remains outside the release code.
    The [markup/path follow-up](performance.md#markup-and-path-follow-up-2026-10-04)
    qualifies the MDN comparison against `8c7a290`, but does not close every earlier
    or heap-pressure comparison.
-3. Build and pack that exact candidate, then refresh installed-consumer and native
-   Windows checks. Preserve the package digest and candidate identity together.
-4. Run CI for any final code changes and record the result. The user controls CI
-   and publication; the completed push did not create a tag or publish a package.
+2. Refresh the broader runtime matrix and native Windows installed-consumer checks
+   for the recorded package. If the release code changes, rebuild, repack and
+   repeat the relevant checks; preserve the new digest and candidate identity.
+3. Record the CI result for the synchronized commits. Pushing `master` triggers
+   the configured workflow; this local validation does not establish its result.
+   Publication remains a separate release step.
 
 No additional performance experiment is required to reapprove the already
 accepted correctness fixes. A future performance claim must respect the limits
