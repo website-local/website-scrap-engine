@@ -1,8 +1,7 @@
-import URI from 'urijs';
 import type {DownloadResource} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {ResourceBody, ResourceEncoding} from '../resource.js';
-import {ResourceType, urlOfSavePath} from '../resource.js';
+import {ResourceType, replacementUri} from '../resource.js';
 import {escapePath} from '../util.js';
 import {safeJoin, writeFile} from '../io.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
@@ -49,8 +48,7 @@ export async function saveHtmlToDisk(
   if (res.redirectedUrl && res.redirectedUrl !== res.url) {
     if (res.redirectedSavePath) {
       if (res.redirectedSavePath !== res.savePath) {
-        const replaceUri = URI(urlOfSavePath(res.redirectedSavePath))
-          .relativeTo(urlOfSavePath(res.savePath));
+        const replaceUri = replacementUri(res.redirectedSavePath, res.savePath);
         const relativePath: string = escapePath(replaceUri.toString());
         await writeFile(safeJoin(localRoot, decodeURI(res.savePath)),
           redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot);

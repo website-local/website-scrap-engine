@@ -291,6 +291,32 @@ eight seeds, including asynchronous hooks and document mutation. Windows path
 API coverage does not substitute for native Windows filesystem testing. CI and
 final-package validation remain separate.
 
+## Redirect path reuse follow-up: 2026-10-04
+
+After fuzzing and committing `2382067`, a further candidate reuses `replacementUri`
+when saving a redirect with an existing `redirectedSavePath`. It removes duplicate
+URIjs setup while keeping the helper's fallback for unusual paths. This change is
+retained. [Evidence and experiment sources](evidence/redirect-reuse-investigation.json)
+include 100,000 equivalent path pairs, with 25,030 matching malformed-input errors,
+and the exact retained subset's 534 passing tests / 42 suites, lint, types and build.
+
+Across three rotated triplets, isolated calculation of 4,096 ordinary relative
+paths used 70.42% fewer sampled allocation bytes normally and 40.30% fewer under
+managed heap pressure. These are path-calculation figures, not crawl savings.
+Redirect saving profiles were smaller and variable: four-batch confirmation
+profiles showed -6.43% normally and -0.56% under pressure. Each batch saved 12
+supplied HTML documents and 12 redirect stubs. Timing controls failed, so no new
+saving-stage speedup is established. Ten repeated batches ended near 9.6–9.7 MiB
+of post-GC heap with similar small growth across versions; RSS differences reversed
+under pressure, so there is no general retained-memory or RSS improvement claim.
+
+A separate inline-CSS marker precheck was rejected. It reduced sampled allocation
+about 20% for 256 URL-free style blocks, but showed no clear MDN benefit and about
+2.8% more allocation for URL-bearing styles normally. Its 8,000 HTML/CSS fuzz cases
+matched, but that was insufficient reason to add the extra scan. MDN timings for
+the exploratory pair of changes passed controls without qualifying a difference;
+they do not establish a gain for the retained redirect-only subset.
+
 ## Retained changes and defaults
 
 Got remains the default transport. Native HTTP is opt-in with fallback for

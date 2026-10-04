@@ -28,6 +28,7 @@ Performance
 * Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.
 * Reduce temporary allocations in combined link creation, SVG processing and synchronous hook execution; remove unused CSS URL regex captures while preserving replacement offsets.
 * Reuse the path-segment array during save-path escaping, and avoid reparsing unchanged inline styles while preserving existing CSS-hook and rewriting behavior.
+* Reuse the existing relative-path helper when writing redirects with a supplied target save path, retaining URIjs fallback for unusual paths.
 * Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
 * Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
 * Reuse normalized publication destinations and reservation paths instead of resolving and reconstructing the same paths repeatedly.
