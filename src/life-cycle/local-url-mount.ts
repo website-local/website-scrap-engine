@@ -258,7 +258,12 @@ export function localUrlMounts(
       return res;
     }
     const rawPath = extractRawPath(res.downloadLink);
-    if (rawPath && hasUnsafeDecodedPath(rawPath)) {
+    // Native URL resolution removes encoded dot segments. Check the original
+    // absolute source spelling as well before permitting a filesystem lookup.
+    const sourcePath = extractRawPath(res.rawUrl);
+    if (rawPath && hasUnsafeDecodedPath(rawPath) ||
+      sourcePath && hasUnsafeDecodedPath(sourcePath) ||
+      hasUnsafeEncodedReference(res.rawUrl)) {
       return handleNotFound(res, matched.mount, []);
     }
     if (res.type === ResourceType.StreamingBinary &&
@@ -451,6 +456,22 @@ function hasUnsafeDecodedPath(pathName: string): boolean {
       return true;
     }
     if (!isSafePathSegment(segment)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasUnsafeEncodedReference(reference: string): boolean {
+  // Unlike literal ../ links, encoded traversal must not disappear when a
+  // relative source link is resolved by WHATWG URL before reaching this stage.
+  const path = extractRawPath(reference.startsWith('//') ? 'https:' + reference : reference) ??
+    reference.split(/[?#]/, 1)[0];
+  for (const segment of path.split('/')) {
+    if (!segment.includes('%')) continue;
+    try {
+      if (!isSafePathSegment(decodeURIComponent(segment))) return true;
+    } catch {
       return true;
     }
   }

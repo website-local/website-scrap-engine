@@ -8,3 +8,6 @@ export * as options from './options.js';
 export * as resource from './resource.js';
 export type {SourceDefinition} from './sources.js';
 export * as util from './util.js';
+export {URI, NativeUri} from './uri.js';
+export type {UriInput, UriParts, URIConstructor, UriPredicate,
+  QueryInput, QueryValue, QueryData, QuerySetter, QueryMatcher, QuerySelector} from './uri.js';

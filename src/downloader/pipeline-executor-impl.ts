@@ -6,7 +6,7 @@ import {checkResourceBody, checkAndAccountResourceBody} from '../resource-limits
 import path from 'node:path';
 import {promises as fs} from 'node:fs';
 import type {Stats} from 'node:fs';
-import URI from 'urijs';
+import URI from '../uri.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {
   CreateResourceArgument,
@@ -595,7 +595,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
       replacePathHasError = true;
     }
 
-    return {uri, refUri, url, keepSearch, replacePathHasError};
+    return {uri, refUri, url: uri.toString(), keepSearch, replacePathHasError};
   }
 
 }

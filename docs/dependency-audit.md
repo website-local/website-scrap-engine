@@ -1,5 +1,8 @@
 # Dependency and tooling decisions for 0.10
 
+This records the accepted 0.10 baseline. The subsequent native URL branch
+replaces URIjs; see the [migration guide](native-url-migration.md).
+
 Keep the current runtime dependencies and TypeScript/Jest toolchain for 0.10.
 The consumer installation reduction comes from making log4js an optional peer.
 Parser replacement and compiler/test-runner migration are outside this release.

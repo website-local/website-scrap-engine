@@ -1,4 +1,4 @@
-import URI from 'urijs';
+import URI from './uri.js';
 import type {IncomingHttpHeaders} from 'node:http';
 import * as path from 'node:path';
 import {
@@ -462,7 +462,7 @@ export const urlOfSavePath = (savePath: string): string => {
 
 /** @internal Avoid URL parsing for already-normalized, unescaped local paths. */
 export function replacementUri(savePath: string, refSavePath: string): URI {
-  // URIjs must handle encoded characters, query/hash delimiters, dot segments,
+  // Full URL resolution handles encoded characters, query/hash delimiters, dot segments,
   // drive letters and other paths whose URL normalization changes their meaning.
   const simplePath = /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*(?:\/[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)*\/?$/;
   if (simplePath.test(savePath) && (savePath === refSavePath || simplePath.test(refSavePath))) {
@@ -564,7 +564,7 @@ export function resolveFileUrl(
     } else if (!url.startsWith(FILE_PROTOCOL_PREFIX)) {
       // relative url
       const absoluteRefUri = URI(FILE_PROTOCOL_PREFIX +
-        refUrl.slice(FILE_PROTOCOL_PREFIX.length + localSrcRoot.length));
+        refUrl.slice(FILE_PROTOCOL_PREFIX.length + localSrcRoot.length).replace(/^\/+/, ''));
       const uri = URI(url).absoluteTo(absoluteRefUri);
       url = FILE_PROTOCOL_PREFIX + localSrcRoot + uri.pathname() + uri.hash();
     }
@@ -621,6 +621,7 @@ export function createResourceWithUris({
 }: CreateResourceArgument, resolvedUri?: URI, resolvedRefUri?: URI): Resource {
   rawUrl ??= url;
   const refUri: URI = resolvedRefUri ?? URI(refUrl);
+  refUrl = refUri.toString();
   if (savePath === undefined) {
     if (url.startsWith(FILE_PROTOCOL_PREFIX) ||
       refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
@@ -641,6 +642,7 @@ export function createResourceWithUris({
     }
   }
   let uri = resolvedUri ?? (url === refUrl ? refUri.clone() : URI(url));
+  url = uri.toString();
 
   if (savePath === undefined) {
     if (!replacePathHasError && !uri.hostname() && uri.is('relative')) {
@@ -719,7 +721,8 @@ export function normalizeResource(res: RawResource): Resource {
   const refUri = normalizedUri(resource.refUri, resource.refUrl, 'refUrl');
   const replaceUri = normalizedUri(resource.replaceUri, resource.replacePath, 'replacePath');
   const normalized = Object.assign(resource, {uri, refUri, replaceUri,
-    host: uri.hostname()});
+    url: uri.toString(), refUrl: refUri.toString(),
+    replacePath: replaceUri.toString(), host: uri.hostname()});
   if (!resource.waitTime && resource.downloadStartTimestamp) {
     resource.waitTime = resource.downloadStartTimestamp - resource.createTimestamp;
   }

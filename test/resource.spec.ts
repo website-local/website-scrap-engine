@@ -17,7 +17,7 @@ import {
   ResourceType,
   urlOfSavePath
 } from '../src/resource.js';
-import URI from 'urijs';
+import URI from '../src/uri.js';
 
 test('download links match URI fragment removal without changing resource URIs', () => {
   for (const url of ['https://example.org/a?x=1#part', 'https://example.org/a?#',
@@ -34,7 +34,7 @@ test('download links match URI fragment removal without changing resource URIs',
   }
 });
 
-test('replacement path fast path matches URIjs, including fallback and directory cases', () => {
+test('replacement path fast path matches full URL calculation, including fallback and directory cases', () => {
   const paths = ['a', 'a/', 'a/b', 'a/b/', 'a/c.html', 'a/b/c.html', 'z/q.html',
     'a/x%20y', 'a/b#c', 'a/b?c', 'a/../b', 'a/路径', 'C:\\a\\b', '',
     'a/.hidden', 'a//b', '/a/b', 'a/a:b', 'a/a%2fb', 'a/a%23b', 'a/foo..bar'];
@@ -761,10 +761,11 @@ describe('resource', function () {
     expect(() => checkAbsoluteUri0('aa', 'http://bbb'))
       .toThrow('protocol  not supported');
 
-    expect(checkAbsoluteUri0('http:///', 'http:///aaa', true))
-      .toBe(true);
+    // Native URL rejects malformed hosts before the optional policy check.
+    expect(() => checkAbsoluteUri0('http:///', 'http:///aaa', true))
+      .toThrow('Invalid URL');
     expect(() => checkAbsoluteUri0('http:///', 'http:///aaa'))
-      .toThrow('empty host for non-file uri not supported');
+      .toThrow('Invalid URL');
 
     expect(checkAbsoluteUri0('file:///', 'file:///aaa', true))
       .toBe(false);

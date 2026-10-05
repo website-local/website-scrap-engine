@@ -1,0 +1,1976 @@
+{
+  "scope": "Native URL versus accepted 0.10 URIjs; not 0.9.1",
+  "artifactRoot": "/mnt/e/tmp/wse-native-url-20261004",
+  "node": "v22.13.0",
+  "protocol": {
+    "scope": "Native URL wrapper versus accepted 0.10 URIjs baseline; fixed single campaign",
+    "node": "v22.13.0",
+    "variants": [
+      "0.10-urijs",
+      "native-url",
+      "identical-native-url-control"
+    ],
+    "suites": [
+      "synthetic",
+      "mdn"
+    ],
+    "rounds": 18,
+    "samplesPerProcess": null,
+    "warmupsPerCase": 2,
+    "minimumQualifyingRounds": 12,
+    "order": "Six permutations repeated three times; second observation reverses the first order within each round",
+    "fixtures": {
+      "binaryResources": 12,
+      "binaryBytes": 65536,
+      "streamingBytes": 262144,
+      "markupDocuments": 6,
+      "markupOutputs": 24,
+      "mdnDocuments": 3,
+      "concurrency": 8,
+      "workers": 2
+    },
+    "noise": {
+      "calibrationGroupsPerSuite": 3,
+      "calibrationOrder": "Three rotations, each variant occupies each position once",
+      "calibrationSamplesPerProcess": 2,
+      "calibrationWarmupsPerCase": 1,
+      "thresholdMultiplier": 1.5,
+      "calibrateOncePerSuite": true,
+      "calibrationContext": "Same six observations in one process as measured rounds; three rotations; discarded calibration timings",
+      "groupStatistic": "Maximum of 12 bracketing probe values per metric and six-observation round",
+      "threshold": "Per case and metric: 1.5 times the median of three independent calibration group maxima; fixed before measured rounds. This is a heuristic outlier guard, not a calibrated false-positive probability.",
+      "cpuProbeOperations": 4000000,
+      "ioProbe": "8 sequential stat + readFile pairs on an independent 4 KiB fixture, same filesystem as workload",
+      "filter": "Discard complete three-variant round for a case when its CPU or I/O group maximum exceeds that case-specific threshold; never use crawl timing, paired effect or candidate performance for exclusion"
+    },
+    "statistics": {
+      "unit": "Per-process median, paired by round",
+      "bootstrapResamples": 10000,
+      "bootstrapSeed": 123456789,
+      "interval": 0.95,
+      "control": "95% interval includes zero and lies within [-5,+5] percent",
+      "classification": "Report faster/slower only when current/control stability passes and both current-vs-legacy and identical-current-vs-legacy intervals have that sign; otherwise unresolved. No universal non-regression claim."
+    },
+    "stopping": "Exactly three calibration rounds then 18 measured rounds per case. Abort on functional mismatch. No extra rounds, threshold changes or pooling.",
+    "timing": "One dedicated process per case, both APIs warmed twice; each observation creates, initializes, runs and disposes a new crawler, including worker startup. Baseline and two observations of the same current API alternate closely. Imports/JIT and caches are warmed, so results do not establish cold-start performance.",
+    "revision": 2,
+    "samplesPerVariantPerRound": 2,
+    "hostStartRule": {
+      "cpuPercentAtMost": 10,
+      "physicalDiskQueueAtMost": 1,
+      "consecutiveSamples": 3,
+      "maximumWaitMinutes": 5,
+      "ifNotQuiet": "Record busy host and run only as a diagnostic; no quiet-host gate claim."
+    }
+  },
+  "hostSamples": [
+    {
+      "utc": "2026-10-04T15:42:19.4166984Z",
+      "cpuPercent": 10,
+      "logicalProcessors": 8,
+      "disks": [
+        {
+          "Name": "0 E: F: G: H:",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 392685
+        },
+        {
+          "Name": "1 C: D:",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 98171
+        },
+        {
+          "Name": "_Total",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 490856
+        }
+      ],
+      "topProcesses": [
+        {
+          "Name": "fs_notify_union_shared_test",
+          "IDProcess": 4932,
+          "hostCpuPercent": 12.5
+        },
+        {
+          "Name": "codex-x86_64-unknown-linux-musl#2",
+          "IDProcess": 4924,
+          "hostCpuPercent": 1.38
+        },
+        {
+          "Name": "cli-proxy-api",
+          "IDProcess": 8852,
+          "hostCpuPercent": 1.38
+        },
+        {
+          "Name": "conhost#16",
+          "IDProcess": 1868,
+          "hostCpuPercent": 0.62
+        },
+        {
+          "Name": "codex-x86_64-unknown-linux-musl#3",
+          "IDProcess": 856,
+          "hostCpuPercent": 0.62
+        },
+        {
+          "Name": "WmiPrvSE#2",
+          "IDProcess": 7368,
+          "hostCpuPercent": 0.62
+        },
+        {
+          "Name": "svchost#5",
+          "IDProcess": 1360,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost#1",
+          "IDProcess": 416,
+          "hostCpuPercent": 0
+        }
+      ]
+    },
+    {
+      "utc": "2026-10-04T15:42:22.2946397Z",
+      "cpuPercent": 18,
+      "logicalProcessors": 8,
+      "disks": [
+        {
+          "Name": "0 E: F: G: H:",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 0
+        },
+        {
+          "Name": "1 C: D:",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 933250
+        },
+        {
+          "Name": "_Total",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 933250
+        }
+      ],
+      "topProcesses": [
+        {
+          "Name": "fs_notify_union_shared_test",
+          "IDProcess": 4932,
+          "hostCpuPercent": 9.5
+        },
+        {
+          "Name": "System",
+          "IDProcess": 4,
+          "hostCpuPercent": 2.12
+        },
+        {
+          "Name": "WmiPrvSE#2",
+          "IDProcess": 7368,
+          "hostCpuPercent": 0.62
+        },
+        {
+          "Name": "svchost#1",
+          "IDProcess": 416,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost",
+          "IDProcess": 88,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost#2",
+          "IDProcess": 956,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost#5",
+          "IDProcess": 1360,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost#4",
+          "IDProcess": 1280,
+          "hostCpuPercent": 0
+        }
+      ]
+    },
+    {
+      "utc": "2026-10-04T15:42:25.1644150Z",
+      "cpuPercent": 14,
+      "logicalProcessors": 8,
+      "disks": [
+        {
+          "Name": "0 E: F: G: H:",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 0
+        },
+        {
+          "Name": "1 C: D:",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 0
+        },
+        {
+          "Name": "_Total",
+          "CurrentDiskQueueLength": 0,
+          "PercentDiskTime": 0,
+          "DiskBytesPersec": 0
+        }
+      ],
+      "topProcesses": [
+        {
+          "Name": "fs_notify_union_shared_test",
+          "IDProcess": 7360,
+          "hostCpuPercent": 2.12
+        },
+        {
+          "Name": "WindTerm",
+          "IDProcess": 7908,
+          "hostCpuPercent": 2.12
+        },
+        {
+          "Name": "codex-x86_64-unknown-linux-musl#2",
+          "IDProcess": 4924,
+          "hostCpuPercent": 0.62
+        },
+        {
+          "Name": "dwm",
+          "IDProcess": 1332,
+          "hostCpuPercent": 0.62
+        },
+        {
+          "Name": "svchost#5",
+          "IDProcess": 1360,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost",
+          "IDProcess": 88,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost#2",
+          "IDProcess": 956,
+          "hostCpuPercent": 0
+        },
+        {
+          "Name": "svchost#3",
+          "IDProcess": 1056,
+          "hostCpuPercent": 0
+        }
+      ]
+    }
+  ],
+  "hostQualification": "Busy-host diagnostic. Quiet-start criterion failed; no five-minute wait/retry was performed. Timing filters and control rules unchanged.",
+  "cases": [
+    {
+      "case": "MdnDownloader/mdn",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:42:25.661Z",
+      "status": "faster",
+      "thresholds": {
+        "cpuMs": 20.546100000000024,
+        "ioMs": 6.318600000000515
+      },
+      "excludedRounds": [],
+      "acceptedRounds": 18,
+      "processMedians": [
+        [
+          342.6261000000013,
+          254.76175000000057,
+          258.12904999999955
+        ],
+        [
+          343.03069999999843,
+          268.1033000000007,
+          265.09009999999944
+        ],
+        [
+          355.5113000000001,
+          250.2426000000005,
+          275.20024999999987
+        ],
+        [
+          332.9919,
+          264.7678999999998,
+          255.6819000000005
+        ],
+        [
+          339.3435499999996,
+          269.0522499999988,
+          270.43445000000247
+        ],
+        [
+          337.8631999999998,
+          296.7428999999993,
+          253.81105000000025
+        ],
+        [
+          352.27770000000055,
+          280.37914999999884,
+          267.14084999999795
+        ],
+        [
+          346.0495499999997,
+          254.34490000000187,
+          252.83280000000013
+        ],
+        [
+          353.52080000000024,
+          264.69854999999916,
+          249.73379999999997
+        ],
+        [
+          324.74014999999963,
+          256.0309499999985,
+          259.3546499999993
+        ],
+        [
+          331.19195000000036,
+          254.72615000000042,
+          255.14389999999912
+        ],
+        [
+          342.55345000000125,
+          257.0302499999998,
+          248.59580000000096
+        ],
+        [
+          338.7723499999993,
+          249.4502500000017,
+          262.91425000000163
+        ],
+        [
+          331.02224999999453,
+          268.27704999999696,
+          252.62009999999646
+        ],
+        [
+          324.1290000000008,
+          263.4618499999997,
+          260.0980000000018
+        ],
+        [
+          354.67369999999937,
+          256.5527499999989,
+          249.2684999999983
+        ],
+        [
+          328.5958499999979,
+          255.87075000000186,
+          265.5089000000007
+        ],
+        [
+          319.76790000000256,
+          262.87644999999975,
+          261.54895000000397
+        ]
+      ],
+      "medianMs": [
+        339.05794999999944,
+        259.9533499999998,
+        258.74184999999943
+      ],
+      "currentVsLegacyPercent": {
+        "median": -21.987424552390856,
+        "interval95": [
+          -25.3847126697533,
+          -20.448904455921287
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -23.08935340235686,
+        "interval95": [
+          -24.769580268980526,
+          -21.362504230495844
+        ]
+      },
+      "controlPercent": {
+        "median": -0.8592014247093105,
+        "interval95": [
+          -3.3565928980400894,
+          0.7310815093763301
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": -73.82624999999689,
+        "interval95": [
+          -88.34330000000091,
+          -68.46660000000065
+        ]
+      },
+      "controlPass": true,
+      "finishedAt": "2026-10-04T15:43:11.147Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/mdn.json",
+      "sha256": "290429734c07032b7ed0baec6595f98e530b5baaa7b9c374839555b52eb5aabf"
+    },
+    {
+      "case": "Resource/create",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:49:23.121Z",
+      "status": "faster",
+      "thresholds": {
+        "cpuMs": 21.30015000000003,
+        "ioMs": 5.668799999999919
+      },
+      "excludedRounds": [],
+      "acceptedRounds": 18,
+      "processMedians": [
+        [
+          218.75075000000015,
+          123.24924999999985,
+          110.50995000000012
+        ],
+        [
+          252.5637499999998,
+          140.14629999999988,
+          127.06514999999945
+        ],
+        [
+          210.81314999999904,
+          126.44200000000001,
+          126.3810999999996
+        ],
+        [
+          210.45205000000078,
+          113.73720000000048,
+          127.86909999999989
+        ],
+        [
+          226.11574999999993,
+          116.67054999999982,
+          120.38750000000073
+        ],
+        [
+          222.36699999999928,
+          126.71424999999999,
+          121.82625000000007
+        ],
+        [
+          254.57254999999896,
+          112.29930000000058,
+          122.79925000000003
+        ],
+        [
+          205.00494999999955,
+          138.7139499999994,
+          136.5657000000001
+        ],
+        [
+          216.79780000000028,
+          120.44839999999931,
+          129.4340000000011
+        ],
+        [
+          222.62804999999935,
+          124.03605000000061,
+          125.77779999999984
+        ],
+        [
+          207.290649999999,
+          120.3393500000002,
+          121.59555
+        ],
+        [
+          214.99594999999863,
+          154.24165000000175,
+          120.32589999999982
+        ],
+        [
+          228.3769999999986,
+          116.96630000000005,
+          124.91600000000108
+        ],
+        [
+          222.61069999999927,
+          118.51020000000062,
+          120.47085000000152
+        ],
+        [
+          223.01274999999805,
+          128.4309000000012,
+          112.61865000000034
+        ],
+        [
+          235.69235000000117,
+          113.83639999999832,
+          116.71205000000009
+        ],
+        [
+          215.48535000000084,
+          125.52839999999924,
+          118.92134999999871
+        ],
+        [
+          250.48989999999867,
+          115.58759999999893,
+          113.02054999999928
+        ]
+      ],
+      "medianMs": [
+        222.48884999999927,
+        121.84882499999958,
+        121.71090000000004
+      ],
+      "currentVsLegacyPercent": {
+        "median": -44.363790407019934,
+        "interval95": [
+          -47.58288248288173,
+          -42.17876115752355
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -45.258301892806294,
+        "interval95": [
+          -49.48133892112369,
+          -42.42185921760799
+        ]
+      },
+      "controlPercent": {
+        "median": 0.4978584740888192,
+        "interval95": [
+          -4.560444432009253,
+          2.8559881553990807
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": -96.53212500000063,
+        "interval95": [
+          -110.42794999999933,
+          -92.26939999999922
+        ]
+      },
+      "controlPass": true,
+      "finishedAt": "2026-10-04T15:49:52.403Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/resource.json",
+      "sha256": "5c6188347222713f7aa27f0956fad8b81fefa0be37add9e2bd1b632618ae3add"
+    },
+    {
+      "case": "SingleThreadDownloader/buffered",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:45:42.431Z",
+      "status": "unresolved-control",
+      "thresholds": {
+        "cpuMs": 19.264650000000074,
+        "ioMs": 5.235149999999976
+      },
+      "excludedRounds": [
+        2
+      ],
+      "acceptedRounds": 17,
+      "processMedians": [
+        [
+          32.00570000000016,
+          23.95589999999993,
+          25.620049999999992
+        ],
+        [
+          27.321899999999687,
+          27.38644999999974,
+          21.88370000000009
+        ],
+        [
+          24.641399999999976,
+          21.26694999999995,
+          22.31899999999996
+        ],
+        [
+          31.401100000000042,
+          29.553399999999556,
+          22.43735000000038
+        ],
+        [
+          33.64480000000003,
+          21.828050000000076,
+          31.665149999999812
+        ],
+        [
+          24.841649999999845,
+          29.879300000000057,
+          30.739599999999882
+        ],
+        [
+          21.35649999999987,
+          20.76964999999973,
+          24.759450000000015
+        ],
+        [
+          23.058550000000196,
+          31.762250000000222,
+          22.70174999999972
+        ],
+        [
+          22.988200000000234,
+          21.08664999999928,
+          21.959049999999934
+        ],
+        [
+          26.96154999999999,
+          26.788050000000112,
+          22.404449999999997
+        ],
+        [
+          23.780949999999848,
+          29.349749999999858,
+          22.35440000000017
+        ],
+        [
+          21.893349999999373,
+          20.738350000000082,
+          22.026900000000296
+        ],
+        [
+          28.719600000000355,
+          22.600750000000062,
+          28.08224999999993
+        ],
+        [
+          24.437149999999747,
+          21.80884999999944,
+          23.524199999999382
+        ],
+        [
+          27.11660000000029,
+          23.13720000000012,
+          21.958699999999226
+        ],
+        [
+          25.488500000000386,
+          24.259800000000723,
+          24.522149999999783
+        ],
+        [
+          21.79910000000018,
+          22.070049999999355,
+          22.23530000000028
+        ]
+      ],
+      "medianMs": [
+        24.841649999999845,
+        23.13720000000012,
+        22.43735000000038
+      ],
+      "currentVsLegacyPercent": {
+        "median": -5.27557454660581,
+        "interval95": [
+          -13.694230035631206,
+          0.23625736131109853
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -4.476862042266417,
+        "interval95": [
+          -16.902218158822446,
+          -1.547365294003622
+        ]
+      },
+      "controlPercent": {
+        "median": 2.879250852596349,
+        "interval95": [
+          -16.3640130580617,
+          6.9467229367298655
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": -1.2286999999996624,
+        "interval95": [
+          -3.3744500000000244,
+          0.06455000000005384
+        ]
+      },
+      "controlPass": false,
+      "finishedAt": "2026-10-04T15:45:51.955Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/SingleThreadDownloader-buffered.json",
+      "sha256": "616e85f16f2914a3d2c7c26e80d4a6b173ec7f65d434e111a315d6463f309218"
+    },
+    {
+      "case": "SingleThreadDownloader/streamed",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:45:52.439Z",
+      "status": "unresolved-control",
+      "thresholds": {
+        "cpuMs": 19.614299999999957,
+        "ioMs": 5.993999999999801
+      },
+      "excludedRounds": [],
+      "acceptedRounds": 18,
+      "processMedians": [
+        [
+          35.37865000000011,
+          32.34725000000003,
+          36.37989999999991
+        ],
+        [
+          49.54624999999987,
+          39.28289999999993,
+          40.33200000000011
+        ],
+        [
+          36.05394999999953,
+          35.940200000000004,
+          31.881200000000035
+        ],
+        [
+          32.26054999999997,
+          35.53774999999996,
+          34.58005000000048
+        ],
+        [
+          33.066949999999906,
+          33.616250000000036,
+          39.767249999999876
+        ],
+        [
+          39.26514999999972,
+          29.948749999999563,
+          41.08815000000004
+        ],
+        [
+          30.42344999999932,
+          30.7808,
+          29.91359999999986
+        ],
+        [
+          32.54424999999992,
+          31.398699999999735,
+          40.73665000000028
+        ],
+        [
+          34.54314999999997,
+          33.35550000000012,
+          29.804200000000492
+        ],
+        [
+          33.76874999999973,
+          29.257449999999608,
+          32.448199999999815
+        ],
+        [
+          30.36530000000039,
+          30.504299999999603,
+          35.76144999999997
+        ],
+        [
+          30.918950000000223,
+          28.936749999998938,
+          31.600899999999456
+        ],
+        [
+          33.213299999999435,
+          33.03995000000032,
+          30.8424500000001
+        ],
+        [
+          27.455699999999524,
+          31.69880000000012,
+          30.13040000000001
+        ],
+        [
+          35.48974999999973,
+          28.777800000000752,
+          31.98885000000064
+        ],
+        [
+          36.051800000000185,
+          33.01099999999951,
+          30.926300000000083
+        ],
+        [
+          37.66480000000047,
+          30.80814999999984,
+          28.05265000000054
+        ],
+        [
+          30.160299999999552,
+          35.88390000000072,
+          29.372400000000198
+        ]
+      ],
+      "medianMs": [
+        33.49102499999958,
+        32.023025000000075,
+        31.935025000000337
+      ],
+      "currentVsLegacyPercent": {
+        "median": -3.479070109704152,
+        "interval95": [
+          -10.963918728919763,
+          0.8161733581531716
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -2.1441099934670635,
+        "interval95": [
+          -9.864538352620455,
+          5.916344973231535
+        ]
+      },
+      "controlPercent": {
+        "median": -0.012126559039876694,
+        "interval95": [
+          -6.315167671380628,
+          11.812413873246975
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": -1.1666000000000167,
+        "interval95": [
+          -3.776050000000396,
+          0.24817499999994652
+        ]
+      },
+      "controlPass": false,
+      "finishedAt": "2026-10-04T15:46:04.486Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/SingleThreadDownloader-streamed.json",
+      "sha256": "690274bb44c9992050b0321eaf098bbda76c5ba42b24f3c5c10f2aefbad104e5"
+    },
+    {
+      "case": "SingleThreadDownloader/local",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:46:04.963Z",
+      "status": "unresolved-control",
+      "thresholds": {
+        "cpuMs": 19.688400000000115,
+        "ioMs": 5.961450000000127
+      },
+      "excludedRounds": [
+        13
+      ],
+      "acceptedRounds": 17,
+      "processMedians": [
+        [
+          8.560750000000098,
+          9.381249999999909,
+          8.688499999999976
+        ],
+        [
+          8.379549999999881,
+          10.3445999999999,
+          9.868150000000014
+        ],
+        [
+          8.822850000000017,
+          8.953399999999874,
+          9.074500000000171
+        ],
+        [
+          9.040900000000192,
+          8.988349999999855,
+          8.734599999999773
+        ],
+        [
+          7.8474999999998545,
+          8.309149999999818,
+          8.882100000000037
+        ],
+        [
+          8.912950000000137,
+          7.989999999999782,
+          9.46109999999976
+        ],
+        [
+          8.819899999999961,
+          8.070600000000013,
+          8.533849999999802
+        ],
+        [
+          9.516500000000178,
+          9.11795000000052,
+          8.657700000000204
+        ],
+        [
+          8.080700000000434,
+          9.426600000000235,
+          8.980150000000322
+        ],
+        [
+          9.49409999999989,
+          8.322050000000218,
+          8.232700000000023
+        ],
+        [
+          8.520050000000083,
+          10.337500000000091,
+          8.54385000000002
+        ],
+        [
+          8.262949999999819,
+          9.345150000000103,
+          8.053400000000238
+        ],
+        [
+          8.444549999999708,
+          8.620800000000145,
+          8.038450000000466
+        ],
+        [
+          9.012099999999464,
+          8.587599999999838,
+          8.172949999999673
+        ],
+        [
+          8.463300000000345,
+          8.64409999999998,
+          8.582150000000183
+        ],
+        [
+          8.608350000000428,
+          10.425000000000182,
+          9.034450000000106
+        ],
+        [
+          8.849299999999857,
+          8.709550000000036,
+          8.377150000000256
+        ]
+      ],
+      "medianMs": [
+        8.608350000000428,
+        8.953399999999874,
+        8.657700000000204
+      ],
+      "currentVsLegacyPercent": {
+        "median": 2.087144963324783,
+        "interval95": [
+          -4.187989281770099,
+          13.097017409040458
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": 0.27934108367835275,
+        "interval95": [
+          -4.80901883462418,
+          4.949845208427361
+        ]
+      },
+      "controlPercent": {
+        "median": -4.605784660594814,
+        "interval95": [
+          -6.7551735337749275,
+          -0.7166738006246676
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": 0.17625000000043656,
+        "interval95": [
+          -0.3985499999996591,
+          1.0822000000002845
+        ]
+      },
+      "controlPass": false,
+      "finishedAt": "2026-10-04T15:46:12.321Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/SingleThreadDownloader-local.json",
+      "sha256": "b5ce5db91ce8355f8e1ffd2df44696e1c8e03f39fe991429260a9b7446faeca2"
+    },
+    {
+      "case": "SingleThreadDownloader/markup",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:46:12.780Z",
+      "status": "unresolved-control",
+      "thresholds": {
+        "cpuMs": 19.227449999999862,
+        "ioMs": 5.506500000000415
+      },
+      "excludedRounds": [],
+      "acceptedRounds": 18,
+      "processMedians": [
+        [
+          79.1923999999999,
+          68.1514500000003,
+          66.04525000000012
+        ],
+        [
+          71.84400000000005,
+          76.52584999999999,
+          64.16335000000026
+        ],
+        [
+          88.83995000000004,
+          70.61650000000054,
+          64.14879999999994
+        ],
+        [
+          69.96009999999978,
+          65.60500000000002,
+          69.23379999999997
+        ],
+        [
+          72.51584999999977,
+          62.57510000000002,
+          64.6838499999999
+        ],
+        [
+          72.76850000000013,
+          85.26680000000033,
+          70.65560000000005
+        ],
+        [
+          72.02034999999978,
+          72.79520000000048,
+          66.05150000000049
+        ],
+        [
+          70.20025000000078,
+          63.012400000000525,
+          68.41820000000007
+        ],
+        [
+          70.17065000000002,
+          66.7492000000002,
+          64.89615000000049
+        ],
+        [
+          73.6533500000005,
+          67.40330000000085,
+          67.91405000000032
+        ],
+        [
+          78.17554999999993,
+          60.908949999999095,
+          63.573050000000876
+        ],
+        [
+          76.56365000000096,
+          72.04989999999998,
+          68.5281500000001
+        ],
+        [
+          83.90140000000065,
+          65.24144999999953,
+          61.484950000000026
+        ],
+        [
+          70.87870000000021,
+          65.6500500000011,
+          70.78930000000037
+        ],
+        [
+          73.85919999999987,
+          64.76994999999988,
+          70.6584499999999
+        ],
+        [
+          71.4997999999996,
+          73.61570000000029,
+          67.7869499999997
+        ],
+        [
+          75.22205000000122,
+          62.62830000000031,
+          69.55099999999948
+        ],
+        [
+          76.13634999999977,
+          72.22660000000178,
+          68.37185000000227
+        ]
+      ],
+      "medianMs": [
+        73.21092500000032,
+        67.07625000000053,
+        67.85050000000001
+      ],
+      "currentVsLegacyPercent": {
+        "median": -7.931331788531559,
+        "interval95": [
+          -13.825156835386426,
+          -5.005546959370088
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -8.040020299199396,
+        "interval95": [
+          -10.74556506448962,
+          -5.192811728144564
+        ]
+      },
+      "controlPercent": {
+        "median": -2.933303984788127,
+        "interval95": [
+          -6.837825446071694,
+          4.952595683150651
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": -5.7393499999993765,
+        "interval95": [
+          -10.490849999999682,
+          -3.6655999999989035
+        ]
+      },
+      "controlPass": false,
+      "finishedAt": "2026-10-04T15:46:29.309Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/SingleThreadDownloader-markup.json",
+      "sha256": "e039191162c3750dc9e6bb2153695f8027095fe8a26a44d0c02bd7a591dd5071"
+    },
+    {
+      "case": "MultiThreadDownloader/buffered",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:46:29.781Z",
+      "status": "faster",
+      "thresholds": {
+        "cpuMs": 19.67429999999922,
+        "ioMs": 6.230549999999766
+      },
+      "excludedRounds": [
+        11
+      ],
+      "acceptedRounds": 17,
+      "processMedians": [
+        [
+          261.0281500000001,
+          251.88235000000077,
+          247.10475000000042
+        ],
+        [
+          261.16449999999895,
+          236.45434999999998,
+          237.94945000000007
+        ],
+        [
+          270.8303999999998,
+          242.29295000000002,
+          256.9406000000008
+        ],
+        [
+          273.10270000000037,
+          250.20704999999998,
+          243.39125000000058
+        ],
+        [
+          267.7566000000006,
+          243.58259999999973,
+          252.5959499999999
+        ],
+        [
+          271.53020000000106,
+          230.16875000000073,
+          247.2737500000003
+        ],
+        [
+          266.05159999999887,
+          250.14940000000024,
+          251.73929999999928
+        ],
+        [
+          255.51760000000104,
+          237.425049999998,
+          249.35030000000006
+        ],
+        [
+          254.729949999999,
+          247.94154999999955,
+          263.5263500000001
+        ],
+        [
+          261.6080000000002,
+          246.56589999999778,
+          248.0975500000004
+        ],
+        [
+          262.0524000000005,
+          242.35955000000104,
+          251.34829999999783
+        ],
+        [
+          273.367400000001,
+          240.29879999999866,
+          240.41869999999835
+        ],
+        [
+          256.12075000000004,
+          255.10570000000007,
+          245.62405000000217
+        ],
+        [
+          285.5191500000001,
+          249.0053500000031,
+          251.01304999999957
+        ],
+        [
+          277.4831000000013,
+          244.41769999999815,
+          243.08824999999706
+        ],
+        [
+          256.6142,
+          245.40864999999758,
+          249.0964500000009
+        ],
+        [
+          264.23964999999953,
+          244.69665000000168,
+          229.9336000000003
+        ]
+      ],
+      "medianMs": [
+        264.23964999999953,
+        244.69665000000168,
+        248.0975500000004
+      ],
+      "currentVsLegacyPercent": {
+        "median": -7.514851991433547,
+        "interval95": [
+          -10.537018739402892,
+          -5.74986238953028
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -5.379520363718793,
+        "interval95": [
+          -10.879222358475305,
+          -4.098340333611339
+        ]
+      },
+      "controlPercent": {
+        "median": 0.6355801772856662,
+        "interval95": [
+          -0.5439254194770204,
+          3.7088491045625283
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": -19.692849999999453,
+        "interval95": [
+          -28.537449999999808,
+          -15.042100000002392
+        ]
+      },
+      "controlPass": true,
+      "finishedAt": "2026-10-04T15:47:09.389Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/MultiThreadDownloader-buffered.json",
+      "sha256": "213f0b2303863227822608a76f7bd2fc383f5796b211f3d199d9a83d81871cec"
+    },
+    {
+      "case": "MultiThreadDownloader/streamed",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:47:09.895Z",
+      "status": "unresolved-control",
+      "thresholds": {
+        "cpuMs": 19.4538,
+        "ioMs": 5.198100000000068
+      },
+      "excludedRounds": [
+        0
+      ],
+      "acceptedRounds": 17,
+      "processMedians": [
+        [
+          30.98980000000006,
+          37.42190000000005,
+          38.71025000000009
+        ],
+        [
+          35.88210000000004,
+          33.14420000000018,
+          29.300700000000006
+        ],
+        [
+          35.58075000000008,
+          36.542349999999715,
+          33.38785000000007
+        ],
+        [
+          31.276700000000346,
+          35.19300000000021,
+          35.7542999999996
+        ],
+        [
+          38.85789999999952,
+          54.92520000000013,
+          30.652550000000247
+        ],
+        [
+          30.849249999999756,
+          40.097299999999905,
+          33.18735000000015
+        ],
+        [
+          36.89690000000019,
+          31.069100000000162,
+          30.70759999999973
+        ],
+        [
+          30.320600000000013,
+          30.214350000000195,
+          32.35694999999987
+        ],
+        [
+          34.690799999999854,
+          31.00395000000026,
+          41.460000000000036
+        ],
+        [
+          35.29269999999997,
+          42.3390500000005,
+          34.25895000000037
+        ],
+        [
+          28.65440000000126,
+          29.511999999998807,
+          40.35474999999951
+        ],
+        [
+          36.402000000000044,
+          41.63785000000098,
+          35.257400000000416
+        ],
+        [
+          28.3399500000005,
+          34.297200000000885,
+          37.387549999999464
+        ],
+        [
+          37.86815000000024,
+          34.547849999999926,
+          32.20024999999987
+        ],
+        [
+          28.30394999999953,
+          28.323200000000725,
+          38.1895999999997
+        ],
+        [
+          41.856049999999414,
+          26.999000000000706,
+          31.450449999999364
+        ],
+        [
+          38.11684999999943,
+          30.895000000000437,
+          29.706100000000333
+        ]
+      ],
+      "medianMs": [
+        35.29269999999997,
+        34.297200000000885,
+        33.38785000000007
+      ],
+      "currentVsLegacyPercent": {
+        "median": 2.702584965183785,
+        "interval95": [
+          -8.768054420404203,
+          19.965460279322734
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -2.9290759845509107,
+        "interval95": [
+          -16.774579978264914,
+          19.512954443253584
+        ]
+      },
+      "controlPercent": {
+        "median": -1.1635354741541648,
+        "interval95": [
+          -11.596297391399268,
+          9.010502315053426
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": 0.8575999999975465,
+        "interval95": [
+          -3.3203000000003158,
+          5.957250000000386
+        ]
+      },
+      "controlPass": false,
+      "finishedAt": "2026-10-04T15:47:22.208Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/MultiThreadDownloader-streamed.json",
+      "sha256": "9f90a3d7e490b8d57ce1b1f0c9666f1f8a57d78a9ee9c15258713999f61d1bdc"
+    },
+    {
+      "case": "MultiThreadDownloader/local",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:47:22.676Z",
+      "status": "unresolved-control",
+      "thresholds": {
+        "cpuMs": 20.121750000000475,
+        "ioMs": 4.96694999999977
+      },
+      "excludedRounds": [
+        2
+      ],
+      "acceptedRounds": 17,
+      "processMedians": [
+        [
+          228.7822500000002,
+          209.82839999999987,
+          220.0613500000004
+        ],
+        [
+          218.10600000000068,
+          222.52780000000075,
+          224.3460500000001
+        ],
+        [
+          226.4284000000007,
+          220.1257999999998,
+          229.11414999999943
+        ],
+        [
+          247.41260000000057,
+          250.47059999999965,
+          260.0116500000004
+        ],
+        [
+          244.63485000000037,
+          243.85085000000072,
+          231.8827999999994
+        ],
+        [
+          231.50545000000056,
+          210.14019999999982,
+          217.4099499999993
+        ],
+        [
+          220.12244999999893,
+          203.27080000000024,
+          204.51989999999932
+        ],
+        [
+          215.1742000000013,
+          204.19755000000077,
+          209.25535000000127
+        ],
+        [
+          219.99914999999964,
+          203.20664999999826,
+          212.53050000000076
+        ],
+        [
+          223.90059999999903,
+          209.5317500000001,
+          206.10879999999997
+        ],
+        [
+          215.80435000000034,
+          209.73244999999952,
+          211.22009999999864
+        ],
+        [
+          222.52510000000075,
+          216.48595000000023,
+          207.54965000000084
+        ],
+        [
+          220.21050000000105,
+          200.69990000000143,
+          206.67594999999892
+        ],
+        [
+          223.97275000000081,
+          203.16185000000223,
+          203.53545000000122
+        ],
+        [
+          232.13754999999946,
+          208.71019999999953,
+          219.66420000000107
+        ],
+        [
+          222.89725000000362,
+          206.33874999999898,
+          240.032650000001
+        ],
+        [
+          215.61160000000382,
+          202.7304499999991,
+          212.93494999999893
+        ]
+      ],
+      "medianMs": [
+        222.89725000000362,
+        209.5317500000001,
+        212.93494999999893
+      ],
+      "currentVsLegacyPercent": {
+        "median": -6.417512949942516,
+        "interval95": [
+          -8.284668063191225,
+          -2.7834847572128174
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": -3.8118778882539117,
+        "interval95": [
+          -6.146187397967884,
+          -1.2414220756234107
+        ]
+      },
+      "controlPercent": {
+        "median": 2.977604871750028,
+        "interval95": [
+          0.6145004594851233,
+          4.588358697908057
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": -14.368849999998929,
+        "interval95": [
+          -18.95385000000033,
+          -6.071900000000824
+        ]
+      },
+      "controlPass": false,
+      "finishedAt": "2026-10-04T15:47:57.724Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/MultiThreadDownloader-local.json",
+      "sha256": "1819531f2fbacc8cd42b0d61a7ea914071a2a41347f5cf8a2292711a1cb7afc0"
+    },
+    {
+      "case": "MultiThreadDownloader/markup",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-04T15:47:58.197Z",
+      "status": "slower",
+      "thresholds": {
+        "cpuMs": 20.082750000001397,
+        "ioMs": 6.158850000000712
+      },
+      "excludedRounds": [],
+      "acceptedRounds": 18,
+      "processMedians": [
+        [
+          443.9967999999999,
+          551.8572000000004,
+          548.5545499999998
+        ],
+        [
+          449.4391999999989,
+          533.6825000000008,
+          557.1643999999978
+        ],
+        [
+          434.2991499999989,
+          572.5364500000014,
+          537.4828000000016
+        ],
+        [
+          492.8555500000002,
+          635.0684499999988,
+          624.5612000000001
+        ],
+        [
+          558.0633999999991,
+          645.2948500000002,
+          668.1930000000011
+        ],
+        [
+          539.9673000000021,
+          648.2567499999986,
+          658.8250000000007
+        ],
+        [
+          563.0597499999967,
+          629.2064499999979,
+          645.8691499999986
+        ],
+        [
+          565.055849999997,
+          685.1014500000019,
+          652.0409499999987
+        ],
+        [
+          542.3011999999981,
+          648.0905000000021,
+          659.8718499999959
+        ],
+        [
+          540.7954500000014,
+          680.5014500000034,
+          681.4052999999949
+        ],
+        [
+          533.943299999999,
+          701.5098500000022,
+          659.9050000000025
+        ],
+        [
+          543.0306000000019,
+          642.8514500000019,
+          669.0100500000008
+        ],
+        [
+          544.3070499999994,
+          655.1392999999989,
+          668.8489499999996
+        ],
+        [
+          572.3836500000034,
+          652.1155000000035,
+          693.5735000000022
+        ],
+        [
+          532.8453000000009,
+          671.3824499999973,
+          676.9890999999989
+        ],
+        [
+          536.5564000000013,
+          676.9955500000069,
+          658.2118499999997
+        ],
+        [
+          534.344299999997,
+          701.9643500000093,
+          675.8707000000068
+        ],
+        [
+          523.0023000000001,
+          670.7304000000004,
+          678.3430500000031
+        ]
+      ],
+      "medianMs": [
+        538.2618500000017,
+        650.1861250000011,
+        659.8884249999992
+      ],
+      "currentVsLegacyPercent": {
+        "median": 22.76898338385476,
+        "interval95": [
+          19.39945446025375,
+          27.2101650117064
+        ]
+      },
+      "controlVsLegacyPercent": {
+        "median": 23.374270255258878,
+        "interval95": [
+          22.012018135171928,
+          24.984682314885774
+        ]
+      },
+      "controlPercent": {
+        "median": 0.9850347317959085,
+        "interval95": [
+          -2.1592642123597217,
+          2.235749613883641
+        ]
+      },
+      "currentVsLegacyMs": {
+        "median": 115.4389250000022,
+        "interval95": [
+          103.84062500000027,
+          140.07257500000378
+        ]
+      },
+      "controlPass": true,
+      "finishedAt": "2026-10-04T15:49:22.592Z",
+      "artifact": "/mnt/e/tmp/wse-native-url-20261004/performance/MultiThreadDownloader-markup.json",
+      "sha256": "40f611c9ae0d212166f0ca3869ff46650478ec529590843a73bd3a0cdf167436"
+    }
+  ],
+  "retainedHeapBytesPer10000Resources": [
+    13733356.0,
+    12506256.0,
+    12503236.0
+  ],
+  "validation": {
+    "consumer-current": {
+      "node": "v22.13.0",
+      "consumer": "/mnt/e/tmp/wse-native-url-20261004/consumer",
+      "entry": "/mnt/e/tmp/wse-native-url-20261004/consumer/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": false,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v22.13.0: main downloader and save-path hooks passed\nv22.13.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-lifecycle",
+          "output": "v22.13.0: explicit startup, cancel/drain cleanup, and crawl isolation passed"
+        },
+        {
+          "script": "runtime-outcomes",
+          "output": "v22.13.0: 40 resource outcome scenarios passed"
+        },
+        {
+          "script": "runtime-failure-retry",
+          "output": "v22.13.0: failed work is not counted and explicit retries succeed in both modes"
+        },
+        {
+          "script": "runtime-parent-publication",
+          "output": "v22.13.0: parent cleans worker staging after timeout, crash, and forced cancellation"
+        },
+        {
+          "script": "runtime-output-conflicts",
+          "output": "v22.13.0: destination conflicts, failed allocation release and owner retries pass in both modes"
+        },
+        {
+          "script": "runtime-discovery",
+          "output": "v22.13.0: discovery limits and failed-parent child outcomes pass in both modes"
+        },
+        {
+          "script": "runtime-buffer-budget",
+          "output": "v22.13.0: 24 aggregate-buffer scenarios and pre-RPC worker timeout cleanup pass"
+        },
+        {
+          "script": "runtime-adjustment",
+          "output": "v22.13.0: stalled HTTP origins do not trigger concurrency growth in either mode"
+        },
+        {
+          "script": "runtime-fast-retry",
+          "output": "[io.http.request] http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:64484/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 503 (Service Unavailable): GET http://127.0.0.1:64484/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:64484/retry.bin',\n  origin: 'http://127.0.0.1:64484',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64484',\n  hostname: '127.0.0.1',\n  port: '64484',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin null 1\n[io.http.request] http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:64484/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:64484/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:64484/retry.bin',\n  origin: 'http://127.0.0.1:64484',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64484',\n  hostname: '127.0.0.1',\n  port: '64484',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin null 1\n[io.http.request] http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:64484/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:64484/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:64484/retry.bin',\n  origin: 'http://127.0.0.1:64484',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64484',\n  hostname: '127.0.0.1',\n  port: '64484',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin http://127.0.0.1:64484/retry.bin null 1\nv22.13.0: zero jitter and immediate Retry-After recover through Got"
+        },
+        {
+          "script": "runtime-native-http",
+          "output": "[io.http.request] https://127.0.0.1:64491/native https://127.0.0.1:64491/native https://127.0.0.1:64491/native null 1\n[io.http.response] 200 URL {\n  href: 'https://127.0.0.1:64491/native',\n  origin: 'https://127.0.0.1:64491',\n  protocol: 'https:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64491',\n  hostname: '127.0.0.1',\n  port: '64491',\n  pathname: '/native',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} https://127.0.0.1:64491/native https://127.0.0.1:64491/native https://127.0.0.1:64491/native null 1"
+        },
+        {
+          "script": "runtime-single-import",
+          "output": ""
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v22.13.0: package imports without the optional log4js peer"
+        }
+      ]
+    },
+    "consumer-peer": {
+      "node": "v22.13.0",
+      "consumer": "/mnt/e/tmp/wse-native-url-20261004/consumer",
+      "entry": "/mnt/e/tmp/wse-native-url-20261004/consumer/node_modules/website-scrap-engine/lib/index.js",
+      "strictDeclarations": true,
+      "loggingPeer": true,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v22.13.0: main downloader and save-path hooks passed\nv22.13.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-lifecycle",
+          "output": "v22.13.0: explicit startup, cancel/drain cleanup, and crawl isolation passed"
+        },
+        {
+          "script": "runtime-outcomes",
+          "output": "v22.13.0: 40 resource outcome scenarios passed"
+        },
+        {
+          "script": "runtime-failure-retry",
+          "output": "v22.13.0: failed work is not counted and explicit retries succeed in both modes"
+        },
+        {
+          "script": "runtime-parent-publication",
+          "output": "v22.13.0: parent cleans worker staging after timeout, crash, and forced cancellation"
+        },
+        {
+          "script": "runtime-output-conflicts",
+          "output": "v22.13.0: destination conflicts, failed allocation release and owner retries pass in both modes"
+        },
+        {
+          "script": "runtime-discovery",
+          "output": "v22.13.0: discovery limits and failed-parent child outcomes pass in both modes"
+        },
+        {
+          "script": "runtime-buffer-budget",
+          "output": "v22.13.0: 24 aggregate-buffer scenarios and pre-RPC worker timeout cleanup pass"
+        },
+        {
+          "script": "runtime-adjustment",
+          "output": "v22.13.0: stalled HTTP origins do not trigger concurrency growth in either mode"
+        },
+        {
+          "script": "runtime-fast-retry",
+          "output": "[io.http.request] http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:64980/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 503 (Service Unavailable): GET http://127.0.0.1:64980/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:64980/retry.bin',\n  origin: 'http://127.0.0.1:64980',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64980',\n  hostname: '127.0.0.1',\n  port: '64980',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin null 1\n[io.http.request] http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:64980/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:64980/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:64980/retry.bin',\n  origin: 'http://127.0.0.1:64980',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64980',\n  hostname: '127.0.0.1',\n  port: '64980',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin null 1\n[io.http.request] http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:64980/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:64980/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:64980/retry.bin',\n  origin: 'http://127.0.0.1:64980',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64980',\n  hostname: '127.0.0.1',\n  port: '64980',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin http://127.0.0.1:64980/retry.bin null 1\nv22.13.0: zero jitter and immediate Retry-After recover through Got"
+        },
+        {
+          "script": "runtime-native-http",
+          "output": "[io.http.request] https://127.0.0.1:64987/native https://127.0.0.1:64987/native https://127.0.0.1:64987/native null 1\n[io.http.response] 200 URL {\n  href: 'https://127.0.0.1:64987/native',\n  origin: 'https://127.0.0.1:64987',\n  protocol: 'https:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:64987',\n  hostname: '127.0.0.1',\n  port: '64987',\n  pathname: '/native',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} https://127.0.0.1:64987/native https://127.0.0.1:64987/native https://127.0.0.1:64987/native null 1"
+        },
+        {
+          "script": "runtime-single-import",
+          "output": ""
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v22.13.0: explicitly installed log4js peer writes through the adapter"
+        }
+      ]
+    },
+    "windows-consumer": {
+      "node": "v22.13.0",
+      "consumer": "E:\\tmp\\wse-native-url-20261004\\consumer",
+      "entry": "E:\\tmp\\wse-native-url-20261004\\consumer\\node_modules\\website-scrap-engine\\lib\\index.js",
+      "strictDeclarations": true,
+      "loggingPeer": true,
+      "results": [
+        {
+          "script": "runtime-smoke",
+          "output": "v22.13.0: main downloader and save-path hooks passed\nv22.13.0: worker downloader and save-path hooks passed"
+        },
+        {
+          "script": "runtime-lifecycle",
+          "output": "v22.13.0: explicit startup, cancel/drain cleanup, and crawl isolation passed"
+        },
+        {
+          "script": "runtime-outcomes",
+          "output": "v22.13.0: 40 resource outcome scenarios passed"
+        },
+        {
+          "script": "runtime-failure-retry",
+          "output": "v22.13.0: failed work is not counted and explicit retries succeed in both modes"
+        },
+        {
+          "script": "runtime-parent-publication",
+          "output": "v22.13.0: parent cleans worker staging after timeout, crash, and forced cancellation"
+        },
+        {
+          "script": "runtime-output-conflicts",
+          "output": "v22.13.0: destination conflicts, failed allocation release and owner retries pass in both modes"
+        },
+        {
+          "script": "runtime-discovery",
+          "output": "v22.13.0: discovery limits and failed-parent child outcomes pass in both modes"
+        },
+        {
+          "script": "runtime-buffer-budget",
+          "output": "v22.13.0: 24 aggregate-buffer scenarios and pre-RPC worker timeout cleanup pass"
+        },
+        {
+          "script": "runtime-adjustment",
+          "output": "v22.13.0: stalled HTTP origins do not trigger concurrency growth in either mode"
+        },
+        {
+          "script": "runtime-fast-retry",
+          "output": "[io.http.request] http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:65204/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 503 (Service Unavailable): GET http://127.0.0.1:65204/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:65204/retry.bin',\n  origin: 'http://127.0.0.1:65204',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:65204',\n  hostname: '127.0.0.1',\n  port: '65204',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin null 1\n[io.http.request] http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:65204/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:65204/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:65204/retry.bin',\n  origin: 'http://127.0.0.1:65204',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:65204',\n  hostname: '127.0.0.1',\n  port: '65204',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin null 1\n[io.http.request] http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin null 1\n[io.http.retry] 1 http://127.0.0.1:65204/retry.bin HTTPError ERR_NON_2XX_3XX_RESPONSE Request failed with status code 429 (Too Many Requests): GET http://127.0.0.1:65204/retry.bin\n[io.http.response] 200 URL {\n  href: 'http://127.0.0.1:65204/retry.bin',\n  origin: 'http://127.0.0.1:65204',\n  protocol: 'http:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:65204',\n  hostname: '127.0.0.1',\n  port: '65204',\n  pathname: '/retry.bin',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin http://127.0.0.1:65204/retry.bin null 1\nv22.13.0: zero jitter and immediate Retry-After recover through Got"
+        },
+        {
+          "script": "runtime-native-http",
+          "output": "[io.http.request] https://127.0.0.1:65211/native https://127.0.0.1:65211/native https://127.0.0.1:65211/native null 1\n[io.http.response] 200 URL {\n  href: 'https://127.0.0.1:65211/native',\n  origin: 'https://127.0.0.1:65211',\n  protocol: 'https:',\n  username: '',\n  password: '',\n  host: '127.0.0.1:65211',\n  hostname: '127.0.0.1',\n  port: '65211',\n  pathname: '/native',\n  search: '',\n  searchParams: URLSearchParams {},\n  hash: ''\n} https://127.0.0.1:65211/native https://127.0.0.1:65211/native https://127.0.0.1:65211/native null 1"
+        },
+        {
+          "script": "runtime-single-import",
+          "output": ""
+        },
+        {
+          "script": "runtime-log4js-peer",
+          "output": "v22.13.0: explicitly installed log4js peer writes through the adapter"
+        },
+        {
+          "script": "runtime-windows-files",
+          "output": "{\n  \"node\": \"v22.13.0\",\n  \"platform\": \"win32\",\n  \"checks\": [\n    \"direct publication, cleanup, case, drive containment, junctions\",\n    \"atomic publication, cleanup, case, drive containment, junctions\",\n    \"SingleThreadDownloader atomicWrites=false: encoded file URLs, buffered/copy output, disposal\",\n    \"SingleThreadDownloader atomicWrites=true: encoded file URLs, buffered/copy output, disposal\",\n    \"MultiThreadDownloader atomicWrites=false: encoded file URLs, buffered/copy output, disposal\",\n    \"MultiThreadDownloader atomicWrites=true: encoded file URLs, buffered/copy output, disposal\"\n  ],\n  \"limitations\": []\n}"
+        }
+      ]
+    },
+    "installed-byte-verification": {
+      "matched": true,
+      "files": 232
+    },
+    "test": {
+      "passed": 558,
+      "suites": 45,
+      "log": "/mnt/e/tmp/wse-native-url-20261004/logs/test-current.log",
+      "buildLog": "/mnt/e/tmp/wse-native-url-20261004/logs/build-current.log"
+    },
+    "differential": {
+      "checked": 6000,
+      "mismatches": [],
+      "intentional": [
+        {
+          "value": "https://EXAMPLE.org:443/a",
+          "legacy": {
+            "text": "https://EXAMPLE.org:443/a",
+            "protocol": "https",
+            "host": "EXAMPLE.org:443",
+            "hostname": "EXAMPLE.org",
+            "path": "/a",
+            "search": "",
+            "hash": ""
+          },
+          "candidate": {
+            "text": "https://example.org/a",
+            "protocol": "https",
+            "host": "example.org",
+            "hostname": "example.org",
+            "path": "/a",
+            "search": "",
+            "hash": ""
+          }
+        },
+        {
+          "value": "https://\u4f8b\u5b50.\u6d4b\u8bd5/\u8def\u5f84",
+          "legacy": {
+            "text": "https://\u4f8b\u5b50.\u6d4b\u8bd5/\u8def\u5f84",
+            "protocol": "https",
+            "host": "\u4f8b\u5b50.\u6d4b\u8bd5",
+            "hostname": "\u4f8b\u5b50.\u6d4b\u8bd5",
+            "path": "/\u8def\u5f84",
+            "search": "",
+            "hash": ""
+          },
+          "candidate": {
+            "text": "https://xn--fsqu00a.xn--0zwm56d/%E8%B7%AF%E5%BE%84",
+            "protocol": "https",
+            "host": "xn--fsqu00a.xn--0zwm56d",
+            "hostname": "xn--fsqu00a.xn--0zwm56d",
+            "path": "/%E8%B7%AF%E5%BE%84",
+            "search": "",
+            "hash": ""
+          }
+        },
+        {
+          "value": "https://example.org/a/%2e%2e/b",
+          "legacy": {
+            "text": "https://example.org/a/%2e%2e/b",
+            "protocol": "https",
+            "host": "example.org",
+            "hostname": "example.org",
+            "path": "/a/%2e%2e/b",
+            "search": "",
+            "hash": ""
+          },
+          "candidate": {
+            "text": "https://example.org/b",
+            "protocol": "https",
+            "host": "example.org",
+            "hostname": "example.org",
+            "path": "/b",
+            "search": "",
+            "hash": ""
+          }
+        },
+        {
+          "value": "https://example.org/a?#",
+          "legacy": {
+            "text": "https://example.org/a",
+            "protocol": "https",
+            "host": "example.org",
+            "hostname": "example.org",
+            "path": "/a",
+            "search": "",
+            "hash": ""
+          },
+          "candidate": {
+            "text": "https://example.org/a?#",
+            "protocol": "https",
+            "host": "example.org",
+            "hostname": "example.org",
+            "path": "/a",
+            "search": "",
+            "hash": ""
+          }
+        },
+        {
+          "value": "https://bad host/a",
+          "legacy": {
+            "text": "https://bad host/a",
+            "protocol": "https",
+            "host": "bad host",
+            "hostname": "bad host",
+            "path": "/a",
+            "search": "",
+            "hash": ""
+          },
+          "candidate": {
+            "error": "TypeError"
+          }
+        }
+      ]
+    }
+  }
+}

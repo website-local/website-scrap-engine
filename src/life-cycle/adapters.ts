@@ -16,7 +16,7 @@ import {toString} from '../util.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio, CheerioStatic} from '../types.js';
-import type URI from 'urijs';
+import type URI from '../uri.js';
 
 export {
   LocalUrlMountFileSizeError,

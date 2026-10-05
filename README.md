@@ -417,8 +417,12 @@ Configure logging via `options.createLogger` and `options.logSubDir`.
 - **cheerio** - HTML/SVG parsing and manipulation
 - **got** - HTTP client with retry logic
 - **p-queue** - Download concurrency control
-- **urijs** - URL resolution and path generation
 - **srcset** - `srcset` attribute parsing
+
+URL handling uses Node's native `URL` through the exported `URI` compatibility
+wrapper. Hooks migrating from URIjs should follow the
+[native URL migration guide](docs/native-url-migration.md); this is a breaking
+change with intentional parsing and normalization differences.
 
 ## License
 

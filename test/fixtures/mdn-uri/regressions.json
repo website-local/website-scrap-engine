@@ -1,0 +1,2494 @@
+[
+  {
+    "input": "https://developer.mozilla.org/en-US/nsAString_(External).html",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/nsAString_(External).html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Style_sheet_(web_development)",
+    "method": "normalize",
+    "expected": "https://en.wikipedia.org/wiki/Style_sheet_%28web_development%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Glossary/Stylesheet.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Property%20(programming)",
+    "method": "normalize",
+    "expected": "https://en.wikipedia.org/wiki/Property%20%28programming%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Glossary/property/JavaScript.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your%20styles%20folder)/style/toolbars.css",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your%20styles%20folder)/style/edit_mode.css",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/%28your%20styles%20folder%29/style/edit_mode.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc%28%29$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Presto_(browser_engine)#ECMAScript_engines",
+    "method": "normalize",
+    "expected": "https://en.wikipedia.org/wiki/Presto_%28browser_engine%29#ECMAScript_engines",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Chakra_(JScript_engine)",
+    "method": "normalize",
+    "expected": "https://en.wikipedia.org/wiki/Chakra_%28JScript_engine%29",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Chakra_(JavaScript_engine)",
+    "method": "normalize",
+    "expected": "https://en.wikipedia.org/wiki/Chakra_%28JavaScript_engine%29",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Rhino_(JavaScript_engine)",
+    "method": "normalize",
+    "expected": "https://en.wikipedia.org/wiki/Rhino_%28JavaScript_engine%29",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://msdn.microsoft.com/library/windows/desktop/ms684161(v=vs.85).aspx",
+    "method": "normalize",
+    "expected": "https://msdn.microsoft.com/library/windows/desktop/ms684161%28v=vs.85%29.aspx",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_zh-CN.7z",
+      "member": "developer.mozilla.org_20250504_zh-CN/developer.mozilla.org/zh-CN/docs/Mozilla/Add-ons/WebExtensions/Chrome_incompatibilities.html"
+    }
+  },
+  {
+    "input": "https://msdn.microsoft.com/library/windows/desktop/ms684863(v=vs.85).aspx",
+    "method": "normalize",
+    "expected": "https://msdn.microsoft.com/library/windows/desktop/ms684863%28v=vs.85%29.aspx",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_zh-CN.7z",
+      "member": "developer.mozilla.org_20250504_zh-CN/developer.mozilla.org/zh-CN/docs/Mozilla/Add-ons/WebExtensions/Chrome_incompatibilities.html"
+    }
+  },
+  {
+    "input": "https://zh.wikipedia.org/wiki/%E5%8F%82%E6%95%B0_(%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1)#%E5%8F%82%E6%95%B0%E5%92%8C%E5%BC%95%E6%95%B0",
+    "method": "normalize",
+    "expected": "https://zh.wikipedia.org/wiki/%E5%8F%82%E6%95%B0_%28%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%29#%E5%8F%82%E6%95%B0%E5%92%8C%E5%BC%95%E6%95%B0",
+    "source": {
+      "archive": "developer.mozilla.org_20261003_zh-CN.7z",
+      "member": "developer.mozilla.org_20261003_zh-CN/developer.mozilla.org/zh-CN/docs/Glossary/Parameter.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Property (programming)",
+    "method": "normalize",
+    "expected": "https://en.wikipedia.org/wiki/Property%20%28programming%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Glossary/property/JavaScript.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/%28your%20styles%20folder%29/style/edit_mode.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc%28%29$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/nsAString_(External).html",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/nsAString_(External).html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Style_sheet_(web_development)",
+    "method": "normalizePath",
+    "expected": "https://en.wikipedia.org/wiki/Style_sheet_%28web_development%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Glossary/Stylesheet.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Property%20(programming)",
+    "method": "normalizePath",
+    "expected": "https://en.wikipedia.org/wiki/Property%20%28programming%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Glossary/property/JavaScript.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your%20styles%20folder)/style/toolbars.css",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your%20styles%20folder)/style/edit_mode.css",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/%28your%20styles%20folder%29/style/edit_mode.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc%28%29$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Presto_(browser_engine)#ECMAScript_engines",
+    "method": "normalizePath",
+    "expected": "https://en.wikipedia.org/wiki/Presto_%28browser_engine%29#ECMAScript_engines",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Chakra_(JScript_engine)",
+    "method": "normalizePath",
+    "expected": "https://en.wikipedia.org/wiki/Chakra_%28JScript_engine%29",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Chakra_(JavaScript_engine)",
+    "method": "normalizePath",
+    "expected": "https://en.wikipedia.org/wiki/Chakra_%28JavaScript_engine%29",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Rhino_(JavaScript_engine)",
+    "method": "normalizePath",
+    "expected": "https://en.wikipedia.org/wiki/Rhino_%28JavaScript_engine%29",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://msdn.microsoft.com/library/windows/desktop/ms684161(v=vs.85).aspx",
+    "method": "normalizePath",
+    "expected": "https://msdn.microsoft.com/library/windows/desktop/ms684161%28v=vs.85%29.aspx",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_zh-CN.7z",
+      "member": "developer.mozilla.org_20250504_zh-CN/developer.mozilla.org/zh-CN/docs/Mozilla/Add-ons/WebExtensions/Chrome_incompatibilities.html"
+    }
+  },
+  {
+    "input": "https://msdn.microsoft.com/library/windows/desktop/ms684863(v=vs.85).aspx",
+    "method": "normalizePath",
+    "expected": "https://msdn.microsoft.com/library/windows/desktop/ms684863%28v=vs.85%29.aspx",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_zh-CN.7z",
+      "member": "developer.mozilla.org_20250504_zh-CN/developer.mozilla.org/zh-CN/docs/Mozilla/Add-ons/WebExtensions/Chrome_incompatibilities.html"
+    }
+  },
+  {
+    "input": "https://zh.wikipedia.org/wiki/%E5%8F%82%E6%95%B0_(%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1)#%E5%8F%82%E6%95%B0%E5%92%8C%E5%BC%95%E6%95%B0",
+    "method": "normalizePath",
+    "expected": "https://zh.wikipedia.org/wiki/%E5%8F%82%E6%95%B0_%28%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%29#%E5%8F%82%E6%95%B0%E5%92%8C%E5%BC%95%E6%95%B0",
+    "source": {
+      "archive": "developer.mozilla.org_20261003_zh-CN.7z",
+      "member": "developer.mozilla.org_20261003_zh-CN/developer.mozilla.org/zh-CN/docs/Glossary/Parameter.html"
+    }
+  },
+  {
+    "input": "https://en.wikipedia.org/wiki/Property (programming)",
+    "method": "normalizePath",
+    "expected": "https://en.wikipedia.org/wiki/Property%20%28programming%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Glossary/property/JavaScript.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/%28your%20styles%20folder%29/style/edit_mode.css",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc%28%29$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/Add-ons/Overlay_Extensions/XUL_School/The_Box_Model.html#",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/Add-ons/Overlay_Extensions/XUL_School/The_Box_Model.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/Add-ons/Overlay_Extensions/XUL_School/The_Box_Model.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html"
+    }
+  },
+  {
+    "input": "http://mh-in-f132.google.com/search?hl=en&safe=off&num=100&q=cache%3Awww.ietf.org%2Frfc%2Frfc4211.txt+certReqMessage+certRequest+certReq&btnG=Search",
+    "method": "readable",
+    "expected": "http://mh-in-f132.google.com/search?hl=en&safe=off&num=100&q=cache:www.ietf.org/rfc/rfc4211.txt certReqMessage certRequest certReq&btnG=Search",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Archive/Mozilla/JavaScript_crypto/CRMF_Request_object.html"
+    }
+  },
+  {
+    "input": "http://web.archive.org/web/20160303012540/http://oaa-accessibility.org/example/25/",
+    "method": "readable",
+    "expected": "http://web.archive.org/web/20160303012540/http:/oaa-accessibility.org/example/25/",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/Accessibility/An_overview_of_accessible_web_applications_and_widgets.html"
+    }
+  },
+  {
+    "input": "https://html.spec.whatwg.org/multipage//#2dcontext",
+    "method": "readable",
+    "expected": "https://html.spec.whatwg.org/multipage/#2dcontext",
+    "source": {
+      "archive": "developer.mozilla.org_20250504_en-US.7z",
+      "member": "developer.mozilla.org_20250504_en-US/developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/JavaScript_technologies_overview.html"
+    }
+  },
+  {
+    "input": "https://web.archive.org/web/20210620014429/https://developer.mozilla.org/en-US/docs/Archive/Mozilla/Supporting_private_browsing_mode",
+    "method": "readable",
+    "expected": "https://web.archive.org/web/20210620014429/https:/developer.mozilla.org/en-US/docs/Archive/Mozilla/Supporting_private_browsing_mode",
+    "source": {
+      "archive": "developer.mozilla.org_20261003_en-US.7z",
+      "member": "developer.mozilla.org_20261003_en-US/developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/3.5/Security_changes.html"
+    }
+  },
+  {
+    "input": "https://web.archive.org/web/20210308202622/https://developer.mozilla.org/en-US/docs/Archive/Plugins/Reference/NPN_GetValue",
+    "method": "readable",
+    "expected": "https://web.archive.org/web/20210308202622/https:/developer.mozilla.org/en-US/docs/Archive/Plugins/Reference/NPN_GetValue",
+    "source": {
+      "archive": "developer.mozilla.org_20261003_en-US.7z",
+      "member": "developer.mozilla.org_20261003_en-US/developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/3.5/Security_changes.html"
+    }
+  },
+  {
+    "input": "#",
+    "method": "readable",
+    "expected": "",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/Add-ons/Overlay_Extensions/XUL_School/The_Box_Model.html"
+    }
+  },
+  {
+    "input": "./index.html",
+    "method": "readable",
+    "expected": "index.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Related/IMSC/IMSC_and_other_standards.html"
+    }
+  },
+  {
+    "input": "../../../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+    "method": "readable",
+    "expected": "../../../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your%20styles%20folder)/style/toolbars.css",
+    "method": "segment-set",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your%20styles%20folder)/style/edit_mode.css",
+    "method": "segment-set",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/%28your%20styles%20folder%29/style/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "method": "segment-set",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your%20styles%20folder)/style/toolbars.css",
+    "method": "segmentCoded-set",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your%20styles%20folder)/style/edit_mode.css",
+    "method": "segmentCoded-set",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/%28your%20styles%20folder%29/style/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Select_mode/2.0$samples/(your styles folder)/style/edit_mode.css"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/%E8%87%AA%E5%8A%A8%E8%B0%83%E6%95%B4%E8%A1%A8%E5%8D%95%E5%9F%9F%E7%9A%84%E5%A4%A7%E5%B0%8F%E4%BB%A5%E9%80%82%E5%BA%94%E5%85%B6%E5%AE%B9%E5%99%A8%E7%9A%84%E5%A4%A7%E5%B0%8F.html",
+    "method": "segmentCoded-set",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/calc%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/zh-CN/docs/Web/CSS/calc()$samples/自动调整表单域的大小以适应其容器的大小.html"
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/API/AudioNode/connect(AudioParam)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/API/AudioNode/connect%28AudioParam%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 169
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/symbol()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/symbol%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 177
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Mozilla/Projects/SpiderMonkey/JSAPI_reference/JSObject*",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Mozilla/Projects/SpiderMonkey/JSAPI_reference/JSObject%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 515
+    }
+  },
+  {
+    "input": "https://media.prod.mdn.mozit.cloud/attachments/2012/07/09/2870/a63aa88be2bccb75de5c3ffda40105e9/searchbar.dtd_(C_mozilla_l10n_locale_x-testing_3.6_browser_chrome_browser)_-_Komodo_Edit_5.2-2009.11(6).png",
+    "method": "normalize",
+    "expected": "https://media.prod.mdn.mozit.cloud/attachments/2012/07/09/2870/a63aa88be2bccb75de5c3ffda40105e9/searchbar.dtd_%28C_mozilla_l10n_locale_x-testing_3.6_browser_chrome_browser%29_-_Komodo_Edit_5.2-2009.11%286%29.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 531
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/.append()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/.append%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1106
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/.textContent()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/.textContent%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1124
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/.toggle()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/.toggle%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1126
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/1)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/1%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1127
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/1)%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/1%29%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1132
+    }
+  },
+  {
+    "input": "https://wiki.developer.mozilla.org/zh-CN/docs/tag/1)%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "method": "normalize",
+    "expected": "https://wiki.developer.mozilla.org/zh-CN/docs/tag/1%29%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1267
+    }
+  },
+  {
+    "input": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fremix%402x.png?1513093958726",
+    "method": "normalize",
+    "expected": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fremix@2x.png?1513093958726",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 282
+    }
+  },
+  {
+    "input": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fview-source%402x.png?1513093958802",
+    "method": "normalize",
+    "expected": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fview-source@2x.png?1513093958802",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 283
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*IC3eVvGnzvG1koQuxO0MMw.png",
+    "method": "normalize",
+    "expected": "https://miro.medium.com/max/1400/1%2AIC3eVvGnzvG1koQuxO0MMw.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 284
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*oIEIZmFmLlNYGBsdu4F1iQ.png",
+    "method": "normalize",
+    "expected": "https://miro.medium.com/max/1400/1%2AoIEIZmFmLlNYGBsdu4F1iQ.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 285
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*58clu6Q0bCAXYhQRT9lVRA.png",
+    "method": "normalize",
+    "expected": "https://miro.medium.com/max/1400/1%2A58clu6Q0bCAXYhQRT9lVRA.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 286
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*PUBiml_PJ-jjaVpjjeOUOw.png",
+    "method": "normalize",
+    "expected": "https://miro.medium.com/max/1400/1%2APUBiml_PJ-jjaVpjjeOUOw.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 287
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1000/1*Hfnup1P6aEdvFbaRRo6ajQ.png",
+    "method": "normalize",
+    "expected": "https://miro.medium.com/max/1000/1%2AHfnup1P6aEdvFbaRRo6ajQ.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 288
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*KBtS6k_EfhTUjWuunDg2cQ.png",
+    "method": "normalize",
+    "expected": "https://miro.medium.com/max/1400/1%2AKBtS6k_EfhTUjWuunDg2cQ.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 289
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/data-*",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/data-%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 235
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 357
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host-context()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host-context%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 358
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/--*",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/--%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1231
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/Descriptor_(CSS)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/Descriptor_%28CSS%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1247
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/function*",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/function%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1525
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/yield*",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/yield%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1531
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1543
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/XUL/Textbox_(Toolkit_autocomplete)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/XUL/Textbox_%28Toolkit_autocomplete%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1797
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Mozilla/About_omni.ja_(formerly_omni.jar)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Mozilla/About_omni.ja_%28formerly_omni.jar%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1845
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/Round_Trip_Time_(RTT)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/Round_Trip_Time_%28RTT%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 3819
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/Transmission_Control_Protocol_(TCP)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/Transmission_Control_Protocol_%28TCP%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 3904
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/XHR_(XMLHttpRequest)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/XHR_%28XMLHttpRequest%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 3953
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/Mozilla/XUL/Textbox_(XPFE_autocomplete)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/Mozilla/XUL/Textbox_%28XPFE_autocomplete%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4043
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/linear-gradient()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/linear-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4058
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-linear-gradient()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-linear-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4210
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/radial-gradient()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/radial-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4290
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-radial-gradient()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-radial-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4291
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/element()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/element%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4548
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/attr()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/attr%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4558
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/calc()",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/calc%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4575
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Build_Documentation/Rebranding_SpiderMonkey_(1.8.5)",
+    "method": "normalize",
+    "expected": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Build_Documentation/Rebranding_SpiderMonkey_%281.8.5%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4630
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/API/AudioNode/connect(AudioParam)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/API/AudioNode/connect%28AudioParam%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 169
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/symbol()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Web/CSS/symbol%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 177
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Mozilla/Projects/SpiderMonkey/JSAPI_reference/JSObject*",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Mozilla/Projects/SpiderMonkey/JSAPI_reference/JSObject%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 515
+    }
+  },
+  {
+    "input": "https://media.prod.mdn.mozit.cloud/attachments/2012/07/09/2870/a63aa88be2bccb75de5c3ffda40105e9/searchbar.dtd_(C_mozilla_l10n_locale_x-testing_3.6_browser_chrome_browser)_-_Komodo_Edit_5.2-2009.11(6).png",
+    "method": "normalizePath",
+    "expected": "https://media.prod.mdn.mozit.cloud/attachments/2012/07/09/2870/a63aa88be2bccb75de5c3ffda40105e9/searchbar.dtd_%28C_mozilla_l10n_locale_x-testing_3.6_browser_chrome_browser%29_-_Komodo_Edit_5.2-2009.11%286%29.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 531
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/.append()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/.append%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1106
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/.textContent()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/.textContent%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1124
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/.toggle()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/.toggle%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1126
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/1)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/1%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1127
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/tag/1)%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/tag/1%29%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1132
+    }
+  },
+  {
+    "input": "https://wiki.developer.mozilla.org/zh-CN/docs/tag/1)%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "method": "normalizePath",
+    "expected": "https://wiki.developer.mozilla.org/zh-CN/docs/tag/1%29%20%E5%B7%A6%E5%BC%80%E5%8F%B3%E9%97%AD%E5%8C%BA%E9%97%B4",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/retry.log",
+      "line": 1267
+    }
+  },
+  {
+    "input": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fremix%402x.png?1513093958726",
+    "method": "normalizePath",
+    "expected": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fremix@2x.png?1513093958726",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 282
+    }
+  },
+  {
+    "input": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fview-source%402x.png?1513093958802",
+    "method": "normalizePath",
+    "expected": "https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fview-source@2x.png?1513093958802",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 283
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*IC3eVvGnzvG1koQuxO0MMw.png",
+    "method": "normalizePath",
+    "expected": "https://miro.medium.com/max/1400/1%2AIC3eVvGnzvG1koQuxO0MMw.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 284
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*oIEIZmFmLlNYGBsdu4F1iQ.png",
+    "method": "normalizePath",
+    "expected": "https://miro.medium.com/max/1400/1%2AoIEIZmFmLlNYGBsdu4F1iQ.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 285
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*58clu6Q0bCAXYhQRT9lVRA.png",
+    "method": "normalizePath",
+    "expected": "https://miro.medium.com/max/1400/1%2A58clu6Q0bCAXYhQRT9lVRA.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 286
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*PUBiml_PJ-jjaVpjjeOUOw.png",
+    "method": "normalizePath",
+    "expected": "https://miro.medium.com/max/1400/1%2APUBiml_PJ-jjaVpjjeOUOw.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 287
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1000/1*Hfnup1P6aEdvFbaRRo6ajQ.png",
+    "method": "normalizePath",
+    "expected": "https://miro.medium.com/max/1000/1%2AHfnup1P6aEdvFbaRRo6ajQ.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 288
+    }
+  },
+  {
+    "input": "https://miro.medium.com/max/1400/1*KBtS6k_EfhTUjWuunDg2cQ.png",
+    "method": "normalizePath",
+    "expected": "https://miro.medium.com/max/1400/1%2AKBtS6k_EfhTUjWuunDg2cQ.png",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/complete.log",
+      "line": 289
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/data-*",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/data-%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 235
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 357
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host-context()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/:host-context%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 358
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/--*",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/--%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1231
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/Descriptor_(CSS)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/Descriptor_%28CSS%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1247
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/function*",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/function%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1525
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/yield*",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/yield%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1531
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function%2A",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1543
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/XUL/Textbox_(Toolkit_autocomplete)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/XUL/Textbox_%28Toolkit_autocomplete%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1797
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Mozilla/About_omni.ja_(formerly_omni.jar)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Mozilla/About_omni.ja_%28formerly_omni.jar%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 1845
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/Round_Trip_Time_(RTT)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/Round_Trip_Time_%28RTT%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 3819
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/Transmission_Control_Protocol_(TCP)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/Transmission_Control_Protocol_%28TCP%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 3904
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Glossary/XHR_(XMLHttpRequest)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Glossary/XHR_%28XMLHttpRequest%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 3953
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Archive/Mozilla/XUL/Textbox_(XPFE_autocomplete)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Archive/Mozilla/XUL/Textbox_%28XPFE_autocomplete%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4043
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/linear-gradient()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/linear-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4058
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-linear-gradient()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-linear-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4210
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/radial-gradient()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/radial-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4290
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-radial-gradient()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/repeating-radial-gradient%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4291
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/element()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/element%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4548
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/attr()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/attr%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4558
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Web/CSS/calc()",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Web/CSS/calc%28%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4575
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Build_Documentation/Rebranding_SpiderMonkey_(1.8.5)",
+    "method": "normalizePath",
+    "expected": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Build_Documentation/Rebranding_SpiderMonkey_%281.8.5%29",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 4630
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 691
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 2986
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR/Reference/I%2FO_Types",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR/Reference/I%2FO_Types",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4407
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/Prism%2F%2FBundle",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/Prism%2F%2FBundle",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4488
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/AJAX/WAI_ARIA_Live_Regions%2F%2FAPI_Support",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/AJAX/WAI_ARIA_Live_Regions%2F%2FAPI_Support",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4489
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/Mozilla_Source_Code_%28HTTP%2F%2FFTP%29",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/Mozilla_Source_Code_(HTTP%2F%2FFTP)",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4513
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/XUL_Parser_in_Python%2F%2Fsource",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/XUL_Parser_in_Python%2F%2Fsource",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4521
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/Core_JavaScript_1.5_Reference%2F%2Freorg",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/Core_JavaScript_1.5_Reference%2F%2Freorg",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4590
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor-or-self",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor-or-self",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4686
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4687
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/preceding",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/preceding",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4688
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/self",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/self",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4689
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR/Reference/I%2F%2FO_Functions",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR/Reference/I%2F%2FO_Functions",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4749
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/I%2F%2FO_Layering_Sample",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/I%2F%2FO_Layering_Sample",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4771
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/tag/%23%23 lastIndex bug%3F%3F%3F",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 6287
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/tag/%23B2G %23gaia",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 6288
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/tag/%23HataAy%C4%B1klay%C4%B1c%C4%B1%20%23HataAy%C4%B1klama%20%23JavaScript",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/tag/%23HataAyıklayıcı %23HataAyıklama %23JavaScript",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 6289
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/tag/%23id-checkbox",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/tag/%23id-checkbox",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 6290
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/tag/%23rust",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/tag/%23rust",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 6291
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/tag/%23RWD",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/tag/%23RWD",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 6292
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/en-US/docs/tag/%23%E8%A8%80%E8%AA%9E",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/en-US/docs/tag/%23言語",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 6293
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/Mozilla/Projects/NSPR/Reference/I%2F%2FO_Functions",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/Mozilla/Projects/NSPR/Reference/I%2F%2FO_Functions",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 7006
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/Mozilla/Projects/NSPR/Reference/I%2FO_Types",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/Mozilla/Projects/NSPR/Reference/I%2FO_Types",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 7011
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 588
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Creating_XPCOM_Components/What_is_XPCOM%3F#Object_Interface_Discovery",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Creating_XPCOM_Components/What_is_XPCOM%3F#Object_Interface_Discovery",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 3627
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Creating_XPCOM_Components/What_is_XPCOM%3F",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Creating_XPCOM_Components/What_is_XPCOM%3F",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 3627
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/DHTML_Demonstrations_Using_DOM%2F%2FStyle",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/DHTML_Demonstrations_Using_DOM%2F%2FStyle",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4871
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/The_XSLT%2F%2FJavaScript_Interface_in_Gecko",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/The_XSLT%2F%2FJavaScript_Interface_in_Gecko",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4892
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Using_Web_Standards_in_your_Web_Pages/Developing_Cross_Browser%2F%2FCross_Platform_Pages",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Using_Web_Standards_in_your_Web_Pages/Developing_Cross_Browser%2F%2FCross_Platform_Pages",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 4946
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Creating_XPCOM_Components/%E4%BB%80%E4%B9%88%E6%98%AF_XPCOM%3F",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Creating_XPCOM_Components/什么是_XPCOM%3F",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 5042
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/docs/Mozilla/Projects/NSPR/Reference/I%2FO_Types",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/docs/Mozilla/Projects/NSPR/Reference/I%2FO_Types",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 8934
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Prism%2F%2FBundle",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Prism%2F%2FBundle",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9073
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/AJAX/WAI_ARIA_Live_Regions%2F%2FAPI_Support",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/AJAX/WAI_ARIA_Live_Regions%2F%2FAPI_Support",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9075
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Mozilla_Source_Code_%28HTTP%2F%2FFTP%29",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Mozilla_Source_Code_(HTTP%2F%2FFTP)",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9112
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/XUL_Parser_in_Python%2F%2Fsource",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/XUL_Parser_in_Python%2F%2Fsource",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9134
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Core_JavaScript_1.5_Reference%2F%2Freorg",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Core_JavaScript_1.5_Reference%2F%2Freorg",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9228
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9364
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor-or-self",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/ancestor-or-self",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9365
+    }
+  },
+  {
+    "input": "https://developer.mozilla.org/zh-CN/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/preceding",
+    "method": "readable",
+    "expected": "https://developer.mozilla.org/zh-CN/Transforming_XML_with_XSLT/Mozilla_XSLT%2F%2FXPath_Reference/Axes/preceding",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+      "member": "developer.mozilla.org/logs/404.log",
+      "line": 9368
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr()$samples/content_property",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21071
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr()$samples/color-value",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21072
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc()$samples/Positioning_an_object_on_screen_with_a_margin",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21279
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc()$samples/Automatically_sizing_form_fields_to_fit_their_container",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21280
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Gradient_at_40-degrees",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21338
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Off-centered_gradient",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21339
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Gradient_pie-chart",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21340
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Checkerboard",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21341
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters()$samples/default_value_compared_to_upper_Roman",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21346
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters()$samples/decimal-leading-zero_compared_to_lower-alpha",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21347
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/cross-fade()$samples/Older_syntax_for_cross-fade",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/cross-fade%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21349
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter()$samples/default_value_compared_to_upper_Roman",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21357
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter()$samples/decimal-leading-zero_compared_to_lower-alpha",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21358
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/env()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/env%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21434
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient()$samples/Gradient_at_a_45-degree_angle",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21643
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient()$samples/Gradient_that_starts_at_60_of_the_gradient_line",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21644
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient()$samples/Gradient_with_multi-position_color_stops",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21645
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21684
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/max()$samples/Setting_a_minimum_size_for_a_font",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/max%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21686
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d()$samples/Cube_squashing_example",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21689
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d()$samples/Matrix_translation_and_scale_example",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21690
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/min()$samples/Setting_a_maximum_size_for_a_label_and_input",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/min%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21694
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/minmax()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/minmax%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21701
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/paint()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/paint%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21797
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/perspective()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/perspective%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21814
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient()$samples/Simple_gradient",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21834
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient()$samples/Non-centered_gradient",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21835
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeat()$samples/Specifying_grid_columns_using_repeat",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeat%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21845
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate()$samples/Basic_example",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21850
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate()$samples/Combining_rotation_with_another_transformation",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21851
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient()$samples/Black_and_white_gradient",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21853
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient()$samples/Farthest-corner",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21854
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d()$samples/Rotating_on_the_y-axis",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21864
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d()$samples/Rotating_on_a_custom_axis",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21865
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateY()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateY%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21867
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateX()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateX%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21869
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateZ()$samples/Examples",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateZ%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21871
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale()$samples/Scaling_the_X_and_Y_dimensions_together",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21874
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale()$samples/Scaling_X_and_Y_dimensions_separately_and_translating_the_origin",
+    "method": "segment-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale%28%29$samples/probe",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21875
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr()$samples/content_property",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21071
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr()$samples/color-value",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/attr%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21072
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc()$samples/Positioning_an_object_on_screen_with_a_margin",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21279
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc()$samples/Automatically_sizing_form_fields_to_fit_their_container",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/calc%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21280
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Gradient_at_40-degrees",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21338
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Off-centered_gradient",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21339
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Gradient_pie-chart",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21340
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient()$samples/Checkerboard",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/conic-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21341
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters()$samples/default_value_compared_to_upper_Roman",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21346
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters()$samples/decimal-leading-zero_compared_to_lower-alpha",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counters%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21347
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/cross-fade()$samples/Older_syntax_for_cross-fade",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/cross-fade%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21349
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter()$samples/default_value_compared_to_upper_Roman",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21357
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter()$samples/decimal-leading-zero_compared_to_lower-alpha",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/counter%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21358
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/env()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/env%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21434
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient()$samples/Gradient_at_a_45-degree_angle",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21643
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient()$samples/Gradient_that_starts_at_60_of_the_gradient_line",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21644
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient()$samples/Gradient_with_multi-position_color_stops",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/linear-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21645
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21684
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/max()$samples/Setting_a_minimum_size_for_a_font",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/max%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21686
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d()$samples/Cube_squashing_example",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21689
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d()$samples/Matrix_translation_and_scale_example",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/matrix3d%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21690
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/min()$samples/Setting_a_maximum_size_for_a_label_and_input",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/min%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21694
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/minmax()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/minmax%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21701
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/paint()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/paint%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21797
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/perspective()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/perspective%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21814
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient()$samples/Simple_gradient",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21834
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient()$samples/Non-centered_gradient",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/radial-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21835
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeat()$samples/Specifying_grid_columns_using_repeat",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeat%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21845
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate()$samples/Basic_example",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21850
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate()$samples/Combining_rotation_with_another_transformation",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21851
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient()$samples/Black_and_white_gradient",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21853
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient()$samples/Farthest-corner",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/repeating-radial-gradient%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21854
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d()$samples/Rotating_on_the_y-axis",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21864
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d()$samples/Rotating_on_a_custom_axis",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotate3d%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21865
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateY()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateY%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21867
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateX()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateX%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21869
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateZ()$samples/Examples",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/rotateZ%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21871
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale()$samples/Scaling_the_X_and_Y_dimensions_together",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21874
+    }
+  },
+  {
+    "input": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale()$samples/Scaling_X_and_Y_dimensions_separately_and_translating_the_origin",
+    "method": "segmentCoded-set",
+    "expected": "https://mdn.mozillademos.org/en-US/docs/Web/CSS/transform-function/scale%28%29$samples/%E6%BC%A2%E5%AD%97%20%2F%3F%23",
+    "source": {
+      "archive": "developer.mozilla.org_20201202_en-US.7z",
+      "member": "developer.mozilla.org/logs/request.log",
+      "line": 21875
+    }
+  },
+  {
+    "input": "https://user:secret@example.org/a%2Fb/%3F%23?q=a%26b&plus=a+b#some+part",
+    "method": "readable",
+    "expected": "https://example.org/a%2Fb/%3F%23?q=a%26b&plus=a b#some part",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "https://example.org/a/%252F/%2f?q=x%3Dy%26z",
+    "method": "readable",
+    "expected": "https://example.org/a/%2F/%2F?q=x=y%26z",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "https://example.org/a/%2f%3f%23",
+    "method": "normalizePath",
+    "expected": "https://example.org/a/%2F%3F%23",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "../a/./b/..",
+    "method": "normalizePath",
+    "expected": "../a/",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "a/.",
+    "method": "normalizePath",
+    "expected": "a/",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "a/..",
+    "method": "normalizePath",
+    "expected": "",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "https://example.org/a%3ab/%24%26%2b%2c%3b%3d%40/%21%27%28%29%2a",
+    "method": "normalizePath",
+    "expected": "https://example.org/a:b/$&+,;=@/%21%27%28%29%2A",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "../styles/(your styles folder)/漢字.css",
+    "method": "normalizePath",
+    "expected": "../styles/%28your%20styles%20folder%29/%E6%BC%A2%E5%AD%97.css",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  },
+  {
+    "input": "https://user:secret@xn--fsqu00a.xn--0zwm56d/path?q=a+b",
+    "method": "readable",
+    "expected": "https://例子.测试/path?q=a b",
+    "source": {
+      "derived": "Reduced MDN failure with delimiter, Unicode, credential or dot-segment boundary"
+    }
+  }
+]

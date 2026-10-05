@@ -1,0 +1,326 @@
+{
+  "version": "1.19.11",
+  "source": "test/test.js",
+  "sha256": "40119604fdf3a145f3b3ad036d0291ffddd3aee22a192387ccbb2436a6f2e9a0",
+  "absoluteTo": [
+    {
+      "name": "relative resolve",
+      "url": "relative/path?blubber=1#hash1",
+      "base": "http://www.example.org/path/to/file?some=query#hash",
+      "result": "http://www.example.org/path/to/relative/path?blubber=1#hash1"
+    },
+    {
+      "name": "absolute resolve",
+      "url": "/absolute/path?blubber=1#hash1",
+      "base": "http://www.example.org/path/to/file?some=query#hash",
+      "result": "http://www.example.org/absolute/path?blubber=1#hash1"
+    },
+    {
+      "name": "relative resolve full URL",
+      "url": "relative/path?blubber=1#hash3",
+      "base": "http://user:pass@www.example.org:1234/path/to/file?some=query#hash",
+      "result": "http://user:pass@www.example.org:1234/path/to/relative/path?blubber=1#hash3"
+    },
+    {
+      "name": "absolute resolve full URL",
+      "url": "/absolute/path?blubber=1#hash3",
+      "base": "http://user:pass@www.example.org:1234/path/to/file?some=query#hash",
+      "result": "http://user:pass@www.example.org:1234/absolute/path?blubber=1#hash3"
+    },
+    {
+      "name": "absolute resolve full URL without scheme",
+      "url": "//user:pass@www.example.org:1234/path/to/file?some=query#hash",
+      "base": "proto://user:pass@www.example.org:1234/path/to/file?some=query#hash",
+      "result": "proto://user:pass@www.example.org:1234/path/to/file?some=query#hash"
+    },
+    {
+      "name": "path-relative resolve",
+      "url": "./relative/path?blubber=1#hash3",
+      "base": "http://user:pass@www.example.org:1234/path/to/file?some=query#hash",
+      "result": "http://user:pass@www.example.org:1234/path/to/relative/path?blubber=1#hash3"
+    },
+    {
+      "name": "path-relative parent resolve",
+      "url": "../relative/path?blubber=1#hash3",
+      "base": "http://user:pass@www.example.org:1234/path/to/file?some=query#hash",
+      "result": "http://user:pass@www.example.org:1234/path/relative/path?blubber=1#hash3"
+    },
+    {
+      "name": "path-relative path resolve",
+      "url": "./relative/path?blubber=1#hash3",
+      "base": "/path/to/file?some=query#hash",
+      "result": "/path/to/relative/path?blubber=1#hash3",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "path-relative path resolve 2",
+      "url": "tofile",
+      "base": "/path/to/file",
+      "result": "/path/to/tofile",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "path-relative path-root resolve",
+      "url": "tofile",
+      "base": "/file",
+      "result": "/tofile",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "path-relative parent path resolve",
+      "url": "../relative/path?blubber=1#hash3",
+      "base": "/path/to/file?some=query#hash",
+      "result": "/path/relative/path?blubber=1#hash3",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "fragment absolute url",
+      "url": "#hash3",
+      "base": "/path/to/file?some=query#hash",
+      "result": "/path/to/file?some=query#hash3",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "fragment relative url",
+      "url": "#hash3",
+      "base": "path/to/file",
+      "result": "path/to/file#hash3",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "relative path - urljoin",
+      "url": "the_relative_url",
+      "base": "rel/path/",
+      "result": "rel/path/the_relative_url",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "relative path file - urljoin",
+      "url": "the_relative_url",
+      "base": "rel/path/something",
+      "result": "rel/path/the_relative_url",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "relative parent path file - urljoin",
+      "url": "../the_relative_url",
+      "base": "rel/path/",
+      "result": "rel/the_relative_url",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "relative root path file - urljoin",
+      "url": "/the_relative_url",
+      "base": "rel/path/",
+      "result": "/the_relative_url",
+      "nativeDifference": "absolute-base-required"
+    },
+    {
+      "name": "relative root file - urljoin",
+      "url": "/the_relative_url",
+      "base": "http://example.com/rel/path/",
+      "result": "http://example.com/the_relative_url"
+    },
+    {
+      "name": "absolute passthru - urljoin",
+      "url": "http://github.com//the_relative_url",
+      "base": "http://example.com/foo/bar",
+      "result": "http://github.com//the_relative_url"
+    },
+    {
+      "name": "absolute passthru - file:/// - urljoin (#328)",
+      "url": "file:///C:/skyclan/snipkit",
+      "base": "http://example.com/foo/bar",
+      "result": "file:///C:/skyclan/snipkit"
+    },
+    {
+      "name": "file paths - urljoin",
+      "url": "anotherFile",
+      "base": "aFile",
+      "result": "anotherFile",
+      "nativeDifference": "absolute-base-required"
+    }
+  ],
+  "relativeTo": [
+    {
+      "name": "same parent",
+      "url": "/relative/path?blubber=1#hash1",
+      "base": "/relative/file?some=query#hash",
+      "result": "path?blubber=1#hash1",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "direct parent",
+      "url": "/relative/path?blubber=1#hash1",
+      "base": "/relative/sub/file?some=query#hash",
+      "result": "../path?blubber=1#hash1",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "second parent",
+      "url": "/relative/path?blubber=1#hash1",
+      "base": "/relative/sub/sub/file?some=query#hash",
+      "result": "../../path?blubber=1#hash1",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "third parent",
+      "url": "/relative/path?blubber=1#hash1",
+      "base": "/relative/sub/foo/sub/file?some=query#hash",
+      "result": "../../../path?blubber=1#hash1",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "parent top level",
+      "url": "/relative/path?blubber=1#hash1",
+      "base": "/path/to/file?some=query#hash",
+      "result": "../../relative/path?blubber=1#hash1",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "descendant",
+      "url": "/base/path/with/subdir/inner.html",
+      "base": "/base/path/top.html",
+      "result": "with/subdir/inner.html",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "same directory",
+      "url": "/path/",
+      "base": "/path/top.html",
+      "result": "./",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "absolute /",
+      "url": "http://example.org/foo/bar/bat",
+      "base": "http://example.org/",
+      "result": "foo/bar/bat"
+    },
+    {
+      "name": "absolute /foo",
+      "url": "http://example.org/foo/bar/bat",
+      "base": "http://example.org/foo",
+      "result": "foo/bar/bat"
+    },
+    {
+      "name": "absolute /foo/",
+      "url": "http://example.org/foo/bar/bat",
+      "base": "http://example.org/foo/",
+      "result": "bar/bat"
+    },
+    {
+      "name": "same scheme",
+      "url": "http://example.org/foo/bar/bat",
+      "base": "http://example.com/foo/",
+      "result": "//example.org/foo/bar/bat",
+      "nativeDifference": "authority-retained"
+    },
+    {
+      "name": "different scheme",
+      "url": "http://example.org/foo/bar",
+      "base": "https://example.org/foo/",
+      "result": "http://example.org/foo/bar"
+    },
+    {
+      "name": "base with no scheme or host",
+      "url": "http://example.org/foo/bar",
+      "base": "/foo/",
+      "result": "http://example.org/foo/bar"
+    },
+    {
+      "name": "base with no scheme",
+      "url": "http://example.org/foo/bar",
+      "base": "//example.org/foo/bar",
+      "result": "http://example.org/foo/bar"
+    },
+    {
+      "name": "denormalized base",
+      "url": "/foo/bar/bat",
+      "base": "/foo/./bar/",
+      "result": "bat",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "denormalized url",
+      "url": "/foo//bar/bat",
+      "base": "/foo/bar/",
+      "result": "bat",
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "credentials",
+      "url": "http://user:pass@example.org/foo/bar",
+      "base": "http://example.org/foo/",
+      "result": "//user:pass@example.org/foo/bar",
+      "nativeDifference": "authority-retained"
+    },
+    {
+      "name": "base credentials",
+      "url": "http://example.org/foo/bar",
+      "base": "http://user:pass@example.org/foo/bar",
+      "result": "//example.org/foo/bar",
+      "nativeDifference": "authority-retained"
+    },
+    {
+      "name": "same credentials different host",
+      "url": "http://user:pass@example.org/foo/bar",
+      "base": "http://user:pass@example.com/foo/bar",
+      "result": "//user:pass@example.org/foo/bar",
+      "nativeDifference": "authority-retained"
+    },
+    {
+      "name": "different port 1",
+      "url": "http://example.org/foo/bar",
+      "base": "http://example.org:8080/foo/bar",
+      "result": "//example.org/foo/bar",
+      "nativeDifference": "authority-retained"
+    },
+    {
+      "name": "different port 2",
+      "url": "http://example.org:8081/foo/bar",
+      "base": "http://example.org:8080/foo/bar",
+      "result": "//example.org:8081/foo/bar",
+      "nativeDifference": "authority-retained"
+    },
+    {
+      "name": "different port 3",
+      "url": "http://example.org:8081/foo/bar",
+      "base": "http://example.org/foo/bar",
+      "result": "//example.org:8081/foo/bar",
+      "nativeDifference": "authority-retained"
+    },
+    {
+      "name": "same path - fragment",
+      "url": "http://www.example.com:8080/dir/file#abcd",
+      "base": "http://www.example.com:8080/dir/file",
+      "result": "#abcd"
+    },
+    {
+      "name": "same path - query",
+      "url": "http://www.example.com:8080/dir/file?abcd=123",
+      "base": "http://www.example.com:8080/dir/file",
+      "result": "?abcd=123"
+    },
+    {
+      "name": "same path - query and fragment",
+      "url": "http://www.example.com:8080/dir/file?abcd=123#alpha",
+      "base": "http://www.example.com:8080/dir/file",
+      "result": "?abcd=123#alpha"
+    },
+    {
+      "name": "already relative",
+      "url": "foo/bar",
+      "base": "/foo/",
+      "throws": true,
+      "nativeDifference": "relative-reference-retained"
+    },
+    {
+      "name": "relative base",
+      "url": "/foo/bar",
+      "base": "foo/",
+      "throws": true,
+      "nativeDifference": "relative-reference-retained"
+    }
+  ]
+}

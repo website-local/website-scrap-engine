@@ -58,7 +58,7 @@ describe('PipelineExecutorImpl.generateSavePath', () => {
     expect(res!.replacePath).toBe('docs/index.html');
   });
 
-  test('sanitizes dot segments before generating save paths', async () => {
+  test('resolves dot segments before generating save paths', async () => {
     const pipeline = new PipelineExecutorImpl(makeLifeCycle(), {}, fakeOpt);
 
     const res = await pipeline.createResource(
@@ -73,11 +73,11 @@ describe('PipelineExecutorImpl.generateSavePath', () => {
     );
 
     expect(res).toBeDefined();
-    expect(res!.savePath).toBe(normalize('example.com/_/_/evil.txt'));
+    expect(res!.savePath).toBe(normalize('example.com/evil.txt'));
     expect(res!.savePath).not.toContain('..');
   });
 
-  test('sanitizes encoded dot segments before generating save paths', async () => {
+  test('resolves encoded dot segments before generating save paths', async () => {
     const pipeline = new PipelineExecutorImpl(makeLifeCycle(), {}, fakeOpt);
 
     const res = await pipeline.createResource(
@@ -92,7 +92,7 @@ describe('PipelineExecutorImpl.generateSavePath', () => {
     );
 
     expect(res).toBeDefined();
-    expect(res!.savePath).toBe(normalize('example.com/_/evil.txt'));
+    expect(res!.savePath).toBe(normalize('example.com/evil.txt'));
     expect(decodeURI(res!.savePath)).not.toContain('..');
   });
 

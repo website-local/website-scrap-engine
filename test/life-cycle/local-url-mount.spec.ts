@@ -384,8 +384,9 @@ describe('localUrlMounts', () => {
     });
   });
 
-  test('rejects encoded traversal and falls back without escaping root',
-    async () => {
+  test.each(['https://example.com/%2e%2e/secret.html',
+    '%2e%2e/secret.html', './%2e%2e/secret.html'])(
+    'rejects encoded traversal %s without a filesystem lookup', async url => {
       await fs.writeFile(path.join(tmpRoot, 'secret.html'), 'secret');
       const fallback = jest.fn<DownloadResourceFunc>().mockReturnValue(undefined);
       const pipeline = makePipeline([
@@ -398,7 +399,7 @@ describe('localUrlMounts', () => {
         ]),
         fallback
       ]);
-      const res = makeResource('https://example.com/%2e%2e/secret.html');
+      const res = makeResource(url);
 
       const downloaded = await pipeline.download(res);
 

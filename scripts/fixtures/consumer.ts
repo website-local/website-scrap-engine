@@ -1,4 +1,4 @@
-import {resource, downloader, options, lifeCycle} from 'website-scrap-engine';
+import {resource, downloader, options, lifeCycle, URI, NativeUri} from 'website-scrap-engine';
 import type {Dispatcher} from 'undici';
 
 const res = resource.createResource({type: resource.ResourceType.Binary,
@@ -7,6 +7,16 @@ res.uri.clone().hash('');
 res.refUri.clone();
 res.replaceUri.clone();
 const host: string = res.host;
+const compatibleUri: URI = URI('../asset.svg').absoluteTo('https://example.test/docs/');
+const nativeUri: NativeUri = new URI(compatibleUri).clone().filename('other.svg');
+const query: string = nativeUri.query();
+const fromParts = URI({protocol: 'https', hostname: 'example.test', path: '/a'}, compatibleUri);
+fromParts.query(data => { data.flag = null; }).addSearch('x', [1, 2]).removeQuery('x', /1/);
+const parsedQuery = fromParts.search(true);
+const hasValue: boolean = fromParts.hasQuery('x', '2', true);
+const decodedSegment: string | undefined = fromParts.segmentCoded(0);
+const built: string = URI.buildQuery(parsedQuery);
+void hasValue; void decodedSegment; void built;
 const realUndici: 0 extends (1 & Dispatcher) ? false : true = true;
 const close: (crawler: downloader.MultiThreadDownloader) => Promise<void> = crawler => crawler.dispose();
 
@@ -31,3 +41,4 @@ if (outcome) {
 }
 void host; void realUndici; void close; void configuration;
 void currentBytes; void peakBytes; void outcome; void progress;
+void compatibleUri; void nativeUri; void query;

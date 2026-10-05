@@ -20,12 +20,10 @@
     "check:tests": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
-    "@types/urijs": "^1.19.26",
     "cheerio": "^1.2.0",
     "got": "^16.0.0",
     "p-queue": "^9.3.3",
-    "srcset": "^5.0.3",
-    "urijs": "^1.19.11"
+    "srcset": "^5.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

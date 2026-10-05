@@ -1,0 +1,159 @@
+{
+  "version": "1.19.11",
+  "source": "https://github.com/medialize/URI.js/tree/v1.19.11",
+  "hashes": {
+    "test/test.js": "40119604fdf3a145f3b3ad036d0291ffddd3aee22a192387ccbb2436a6f2e9a0",
+    "test/test_jim.js": "81b4f076b25f30d9dd95c55c6df12cdc6656d8cff40686ca5ae90fdbf11c6e6c"
+  },
+  "tests": [
+    {
+      "file": "test/test.js",
+      "line": 374,
+      "group": "mutating basics",
+      "name": "query",
+      "callback": "function() {\n    var u = new URI('http://example.org/foo.html');\n    u.query('foo=bar=foo');\n    equal(u.query(), 'foo=bar=foo', 'query: foo=bar=foo');\n    equal(u.search(), '?foo=bar=foo', 'query: foo=bar=foo - search');\n\n    u.query('?bar=foo');\n    equal(u.query(), 'bar=foo', 'query: ?bar=foo');\n    equal(u.search(), '?bar=foo', 'query: ?bar=foo - search');\n\n    u.query('');\n    equal(u.query(), '', 'query: \"\"');\n    equal(u.search(), '', 'query: \"\" - search');\n    equal(u.toString(), 'http://example.org/foo.html');\n\n    u.search('foo=bar=foo');\n    equal(u.query(), 'foo=bar=foo', 'search: foo=bar=foo');\n    equal(u.search(), '?foo=bar=foo', 'search: foo=bar=foo - query');\n\n    u.search('?bar=foo');\n    equal(u.query(), 'bar=foo', 'search: ?bar=foo');\n    equal(u.search(), '?bar=foo', 'search: ?bar=foo - query');\n\n    u.search('');\n    equal(u.query(), '', 'search: \"\"');\n    equal(u.search(), '', 'search: \"\" - query');\n\n    u.query('?foo');\n    equal(u.query(), 'foo', 'search: \"\"');\n    equal(u.search(), '?foo', 'search: \"\" - query');\n\n    u.search('foo=&foo=bar');\n    equal(u.query(), 'foo=&foo=bar', 'search: foo=&foo=bar');\n    equal(JSON.stringify(u.query(true)), JSON.stringify({foo: ['', 'bar']}), 'parsed query: {foo:[\"\", \"bar\"]}');\n\n    u.search('foo=bar&foo=');\n    equal(u.query(), 'foo=bar&foo=', 'search: foo=bar&foo=');\n    equal(JSON.stringify(u.query(true)), JSON.stringify({foo: ['bar', '']}), 'parsed query: {foo:[\"bar\", \"\"]}');\n\n    u.search('foo=bar&foo');\n    equal(u.query(), 'foo=bar&foo', 'search: foo=bar&foo');\n    equal(JSON.stringify(u.query(true)), JSON.stringify({foo: ['bar', null]}), 'parsed query: {foo:[\"bar\", null]}');\n\n    u.search('foo&foo=bar');\n    equal(u.query(), 'foo&foo=bar', 'search: foo&foo=bar');\n    equal(JSON.stringify(u.query(true)), JSON.stringify({foo: [null, 'bar']}), 'parsed query: {foo:[null, \"bar\"]}');\n\n    u.search('__proto__=hasOwnProperty&__proto__=eviltwin&uuid');\n    equal(u.query(), '__proto__=hasOwnProperty&__proto__=eviltwin&uuid', 'search: __proto__=hasOwnProperty&__proto__=eviltwin&uuid');\n    equal(JSON.stringify(u.query(true)), '{\"uuid\":null}', 'parsed query: {uuid: null}');\n\n    // parsing empty query\n    var t;\n    t = u.query('?').query(true);\n    t = u.query('').query(true);\n    t = u.href('http://example.org').query(true);\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 25
+    },
+    {
+      "file": "test/test.js",
+      "line": 877,
+      "group": "mutating query strings",
+      "name": "mutating object",
+      "callback": "function() {\n    var u = new URI('?foo=bar&baz=bam&baz=bau'),\n      q = u.query(true);\n\n    q.something = ['new', 'and', 'funky'];\n    u.query(q);\n    equal(u.query(), 'foo=bar&baz=bam&baz=bau&something=new&something=and&something=funky', 'adding array');\n\n    q.foo = undefined;\n    u.query(q);\n    equal(u.query(), 'baz=bam&baz=bau&something=new&something=and&something=funky', 'removing field');\n\n    q.baz = undefined;\n    u.query(q);\n    equal(u.query(), 'something=new&something=and&something=funky', 'removing array');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 3
+    },
+    {
+      "file": "test/test.js",
+      "line": 893,
+      "group": "mutating query strings",
+      "name": "query callback",
+      "callback": "function() {\n    var u = URI('?foo=bar');\n    u.query(function(data) {\n      data.foo = 'bam';\n    });\n    equal(u.query(), 'foo=bam', 'augment argument');\n\n    u.query(function() {\n      return {\n        bla: 'blubb'\n      };\n    });\n    equal(u.query(), 'bla=blubb', 'overwrite returned value');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 2
+    },
+    {
+      "file": "test/test.js",
+      "line": 907,
+      "group": "mutating query strings",
+      "name": "setQuery",
+      "callback": "function() {\n    var u = URI('?foo=bar');\n    u.setQuery('foo', 'bam');\n    equal(u.query(), 'foo=bam', 'set name, value');\n\n    u.setQuery('array', ['one', 'two']);\n    equal(u.query(), 'foo=bam&array=one&array=two', 'set name, array');\n\n    u.query('?foo=bar');\n    u.setQuery({'obj': 'bam', foo: 'baz'});\n    equal(u.query(), 'foo=baz&obj=bam', 'set {name: value}');\n\n    u.setQuery({'foo': 'foo', bar: ['1', '2']});\n    equal(u.query(), 'foo=foo&obj=bam&bar=1&bar=2', 'set {name: array}');\n\n    u.query('?foo=bar');\n    u.setQuery({'bam': null, 'baz': ''});\n    equal(u.query(), 'foo=bar&bam&baz=', 'set {name: null}');\n\n    u.query('?foo=bar');\n    u.setQuery('empty');\n    equal(u.query(), 'foo=bar&empty', 'set undefined');\n\n    u.query('?foo=bar');\n    u.setQuery('empty', '');\n    equal(u.query(), 'foo=bar&empty=', 'set empty string');\n\n    u.query('');\n    u.setQuery('some value', 'must be encoded because of = and ? and #');\n    equal(u.query(), 'some+value=must+be+encoded+because+of+%3D+and+%3F+and+%23', 'encoding');\n    equal(u.query(true)['some value'], 'must be encoded because of = and ? and #', 'decoding');\n\n    u.query('?foo=bar');\n    u.setQuery('__proto__', 'hasOwnProperty');\n    equal(u.query(), 'foo=bar', 'set __proto__');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 10
+    },
+    {
+      "file": "test/test.js",
+      "line": 943,
+      "group": "mutating query strings",
+      "name": "addQuery",
+      "callback": "function() {\n    var u = URI('?foo=bar');\n    u.addQuery('baz', 'bam');\n    equal(u.query(), 'foo=bar&baz=bam', 'add name, value');\n\n    u.addQuery('array', ['one', 'two']);\n    equal(u.query(), 'foo=bar&baz=bam&array=one&array=two', 'add name, array');\n\n    u.query('?foo=bar');\n    u.addQuery({'obj': 'bam', foo: 'baz'});\n    equal(u.query(), 'foo=bar&foo=baz&obj=bam', 'add {name: value}');\n\n    u.addQuery({'foo': 'bam', bar: ['1', '2']});\n    equal(u.query(), 'foo=bar&foo=baz&foo=bam&obj=bam&bar=1&bar=2', 'add {name: array}');\n\n    u.query('?foo=bar');\n    u.addQuery({'bam': null, 'baz': ''});\n    equal(u.query(), 'foo=bar&bam&baz=', 'add {name: null}');\n\n    u.query('?foo=bar');\n    u.addQuery('empty');\n    equal(u.query(), 'foo=bar&empty', 'add undefined');\n\n    u.query('?foo=bar');\n    u.addQuery('empty', '');\n    equal(u.query(), 'foo=bar&empty=', 'add empty string');\n\n    u.query('?foo');\n    u.addQuery('foo', 'bar');\n    equal(u.query(), 'foo=bar', 'add to null value');\n\n    u.query('');\n    u.addQuery('some value', 'must be encoded because of = and ? and #');\n    equal(u.query(), 'some+value=must+be+encoded+because+of+%3D+and+%3F+and+%23', 'encoding');\n    equal(u.query(true)['some value'], 'must be encoded because of = and ? and #', 'decoding');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 10
+    },
+    {
+      "file": "test/test.js",
+      "line": 979,
+      "group": "mutating query strings",
+      "name": "removeQuery",
+      "callback": "function() {\n    var u = new URI('?foo=bar&foo=baz&foo=bam&obj=bam&bar=1&bar=2&bar=3');\n\n    u.removeQuery('foo', 'bar');\n    equal(u.query(), 'foo=baz&foo=bam&obj=bam&bar=1&bar=2&bar=3', 'removing name, value');\n\n    u.removeQuery('foo');\n    equal(u.query(), 'obj=bam&bar=1&bar=2&bar=3', 'removing name');\n\n    u.removeQuery('bar', ['1', '3']);\n    equal(u.query(), 'obj=bam&bar=2', 'removing name, array');\n\n    u.query('?obj=bam&bar=1&bar=2');\n    u.removeQuery('bar', ['2']);\n    equal(u.query(), 'obj=bam&bar=1', 'removing name, singleton array');\n\n    u.removeQuery('bar', ['1']);\n    equal(u.query(), 'obj=bam', 'removing the last value via name, singleton array');\n\n    u.query('?foo=one&foo=two').removeQuery('foo', ['one', 'two']);\n    equal(u.query(), '', 'removing name, array, finishes empty');\n\n    u.query('?foo=one,two').removeQuery('foo', ['one', 'two']);\n    equal(u.query(), 'foo=one%2Ctwo', 'not removing name, array');\n\n    u.query('?foo=one,two').removeQuery('foo', ['one,two']);\n    equal(u.query(), '', 'removing name, singleton array with comma in value');\n\n    u.query('?foo=bar&foo=baz&foo=bam&obj=bam&bar=1&bar=2&bar=3');\n    u.removeQuery(['foo', 'bar']);\n    equal(u.query(), 'obj=bam', 'removing array');\n\n    u.query('?bar=1&bar=2');\n    u.removeQuery({ bar: 1 });\n    equal(u.query(), 'bar=2', 'removing non-string value from array');\n\n    u.removeQuery({ bar: 2 });\n    equal(u.query(), '', 'removing a non-string value');\n\n    u.query('?foo=bar&foo=baz&foo=bam&obj=bam&bar=1&bar=2&bar=3');\n    u.removeQuery({foo: 'bar', obj: undefined, bar: ['1', '2']});\n    equal(u.query(), 'foo=baz&foo=bam&bar=3', 'removing object');\n\n    u.query('?foo=bar&foo=baz&foo=bam&obj=bam&bar=1&bar=2&bar=3');\n    u.removeQuery(/^bar/);\n    equal(u.query(), 'foo=bar&foo=baz&foo=bam&obj=bam', 'removing by RegExp');\n\n    u.query('?foo=bar&foo=baz&foo=bam&obj=bam&bar=bar&bar=baz&bar=bam');\n    u.removeQuery('foo', /[rz]$/);\n    equal(u.query(), 'foo=bam&obj=bam&bar=bar&bar=baz&bar=bam', 'removing by value RegExp');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 14
+    },
+    {
+      "file": "test/test.js",
+      "line": 1030,
+      "group": "mutating query strings",
+      "name": "duplicateQueryParameters",
+      "callback": "function() {\n    var u = new URI('?bar=1&bar=1&bar=1');\n\n    u.normalizeQuery();\n    equal(u.toString(), '?bar=1', 'parameters de-duplicated');\n\n    u = new URI('?bar=1&bar=1&bar=1');\n    u.duplicateQueryParameters(true);\n    u.normalizeQuery();\n    equal(u.toString(), '?bar=1&bar=1&bar=1', 'parameters NOT de-duplicated');\n\n    u.duplicateQueryParameters(false);\n    u.normalizeQuery();\n    equal(u.toString(), '?bar=1', 'parameters de-duplicated again');\n\n    URI.duplicateQueryParameters = true;\n    u = new URI('?bar=1&bar=1&bar=1');\n    u.normalizeQuery();\n    equal(u.toString(), '?bar=1&bar=1&bar=1', 'global configuration');\n\n    URI.duplicateQueryParameters = false;\n\n    // test cloning\n    u = new URI('?bar=1&bar=1&bar=1');\n    u = u.duplicateQueryParameters(true).clone();\n    u.normalizeQuery();\n    equal(u.toString(), '?bar=1&bar=1&bar=1', 'parameters NOT de-duplicated');\n\n    // test adding\n    u = new URI('?bar=1&bar=1&bar=1');\n    u.duplicateQueryParameters(true);\n    u.addQuery('bar', 1);\n    equal(u.toString(), '?bar=1&bar=1&bar=1&bar=1', 'parameters NOT de-duplicated after addQuery()');\n  }",
+      "omittedInternalAssertions": [
+        "    ok(u._parts.duplicateQueryParameters, 'duplicateQueryParameters enabled');",
+        "    ok(u._parts.duplicateQueryParameters, 'duplicateQueryParameters still enabled after normalizeQuery()');",
+        "    ok(!u._parts.duplicateQueryParameters, 'duplicateQueryParameters still disabled after normalizeQuery()');",
+        "    ok(u._parts.duplicateQueryParameters, 'duplicateQueryParameters still enabled after clone()');"
+      ],
+      "assertions": 6
+    },
+    {
+      "file": "test/test.js",
+      "line": 1068,
+      "group": "mutating query strings",
+      "name": "escapeQuerySpace",
+      "callback": "function() {\n    var u = new URI('?bar=foo+bar&bam+baz=foo');\n    var data = u.query(true);\n\n    equal(data.bar, 'foo bar', 'value un-spac-escaped');\n    equal(data['bam baz'], 'foo', 'name un-spac-escaped');\n\n    u.escapeQuerySpace(false);\n    data = u.query(true);\n    equal(data.bar, 'foo+bar', 'value not un-spac-escaped');\n    equal(data['bam+baz'], 'foo', 'name not un-spac-escaped');\n\n    u.escapeQuerySpace(true);\n    data = u.query(true);\n\n    equal(data.bar, 'foo bar', 'value un-spac-escaped again');\n    equal(data['bam baz'], 'foo', 'name un-spac-escaped again');\n\n    u.escapeQuerySpace(false);\n\n    u.addQuery('alpha bravo', 'charlie delta');\n    equal(u.toString(), '?bar=foo%2Bbar&bam%2Bbaz=foo&alpha%20bravo=charlie%20delta', 'serialized un/escaped space');\n\n    URI.escapeQuerySpace = false;\n    u = new URI('?bar=foo+bar&bam+baz=foo');\n    data = u.query(true);\n    equal(data.bar, 'foo+bar', 'value not un-spac-escaped by default');\n    equal(data['bam+baz'], 'foo', 'name not un-spac-escaped by default');\n\n    // reset\n    URI.escapeQuerySpace = true;\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 9
+    },
+    {
+      "file": "test/test.js",
+      "line": 1100,
+      "group": "mutating query strings",
+      "name": "hasQuery",
+      "callback": "function() {\n    var u = URI('?string=bar&list=one&list=two&number=123&null&empty=&nested[one]=1&nested[two]=2');\n\n    // exists\n    equal(u.hasQuery('string'), true, 'simple exists check - passing');\n    equal(u.hasQuery('nono'), false, 'simple exists check - failing');\n\n    // truthy value\n    equal(u.hasQuery('string', true), true, 'has truthy value check - passing string');\n    equal(u.hasQuery('number', true), true, 'has truthy value check - passing number');\n    equal(u.hasQuery('list', true), true, 'has truthy value check - passing list');\n    equal(u.hasQuery('empty', true), false, 'has truthy value check - failing empty');\n    equal(u.hasQuery('null', true), false, 'has truthy value check - failing null');\n\n    // falsy value\n    equal(u.hasQuery('string', false), false, 'has falsy value check - failing string');\n    equal(u.hasQuery('number', false), false, 'has falsy value check - failing number');\n    equal(u.hasQuery('list', false), false, 'has falsy value check - failing list');\n    equal(u.hasQuery('empty', false), true, 'has falsy value check - passing empty');\n    equal(u.hasQuery('null', false), true, 'has falsy value check - passing null');\n\n    // match value\n    equal(u.hasQuery('string', 'bar'), true, 'value check - passing string');\n    equal(u.hasQuery('number', 123), true, 'value check - passing number');\n    equal(u.hasQuery('number', '123'), true, 'value check - passing number as string');\n    equal(u.hasQuery('list', 'one'), false, 'value check - failing list');\n    equal(u.hasQuery('empty', ''), true, 'value check - passing empty');\n    equal(u.hasQuery('null', ''), false, 'value check - failing null');\n\n    // matching RegExp\n    equal(u.hasQuery('string', /ar$/), true, 'RegExp check - passing string');\n    equal(u.hasQuery('number', /2/), true, 'RegExp check - passing number');\n    equal(u.hasQuery('string', /nono/), false, 'RegExp check - failing string');\n    equal(u.hasQuery('number', /999/), false, 'RegExp check - failing number');\n    equal(u.hasQuery(/^nested/), true, 'RegExp name check - passing');\n    equal(u.hasQuery(/^nested/, 2), true, 'RegExp name and value - passing number');\n    equal(u.hasQuery(/^nested/, '2'), true, 'RegExp name and value - passing number as string');\n    equal(u.hasQuery(/^nested/, 'nono'), false, 'RegExp name and value - failing string');\n    equal(u.hasQuery(/^nested/, /2/), true, 'RegExp name and value - passing RegExp number');\n    equal(u.hasQuery(/^nested/, /3/), false, 'RegExp name and value exists check - failing');\n    equal(u.hasQuery(/^lis/, ['one']), false, 'RegExp name andarray check - failing incomplete list');\n    equal(u.hasQuery(/^lis/, ['one', 'two']), true, 'RegExp name and array check - passing list');\n\n    // matching array\n    equal(u.hasQuery('string', ['one']), false, 'array check - failing string');\n    equal(u.hasQuery('list', ['one']), false, 'array check - failing incomplete list');\n    equal(u.hasQuery('list', ['one', 'two']), true, 'array check - passing list');\n    equal(u.hasQuery('list', ['two', 'one']), true, 'array check - passing unsorted list');\n\n    // matching part of array\n    equal(u.hasQuery('string', ['one'], true), false, 'in array check - failing string');\n    equal(u.hasQuery('list', 'one', true), true, 'in array check - passing value');\n    equal(u.hasQuery('list', ['one'], true), true, 'in array check - passing incomplete list');\n    equal(u.hasQuery('list', ['one', 'two'], true), true, 'in array check - passing list');\n    equal(u.hasQuery('list', ['two', 'one'], true), true, 'in array check - passing unsorted list');\n    equal(u.hasQuery('list', /ne$/, true), true, 'in array check - passing RegExp');\n    equal(u.hasQuery('list', [/ne$/], true), true, 'in array check - passing RegExp list');\n\n    // comparison function\n    equal(u.hasQuery('string', function(value, name, data) {\n      equal(value, 'bar', 'Function check - param value');\n      equal(name, 'string', 'Function check - param name');\n      equal(typeof data, 'object', 'Function check - param data');\n      return true;\n    }), true, 'Function check - passing true');\n    equal(u.hasQuery('string', function() {\n      return false;\n    }), false, 'Function check - passing false');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 46
+    },
+    {
+      "file": "test/test.js",
+      "line": 1329,
+      "group": "normalizing",
+      "name": "normalizeQuery",
+      "callback": "function() {\n    var u = new URI('http://example.org/foobar.html?');\n    u.normalizeQuery();\n    equal(u+'', 'http://example.org/foobar.html', 'dropping empty query sign');\n\n    u.query('?&foo=bar&&baz=bam&').normalizeQuery();\n    equal(u.query(), 'foo=bar&baz=bam', 'bad query resolution');\n\n    u.query('?&foo=bar&&baz=bam&&baz=bau&').normalizeQuery();\n    equal(u.query(), 'foo=bar&baz=bam&baz=bau', 'bad query resolution');\n\n    u.query('?&foo=bar&foo=bar').normalizeQuery();\n    equal(u.query(), 'foo=bar', 'duplicate key=value resolution');\n\n    u.query('?=bar').normalizeQuery();\n    equal(u.query(), '=bar', 'query without key');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 5
+    },
+    {
+      "file": "test/test.js",
+      "line": 1479,
+      "group": "resolving URLs",
+      "name": "absoluteTo - RFC3986 reference resolution",
+      "callback": "function() {\n    // http://tools.ietf.org/html/rfc3986#section-5.4\n    var base = 'http://a/b/c/d;p?q';\n    var map = {\n      // normal\n      // 'g:h'       :  'g:h', // identified as URN\n      'g'       :  'http://a/b/c/g',\n      './g'       :  'http://a/b/c/g',\n      'g/'      :  'http://a/b/c/g/',\n      '/g'      :  'http://a/g',\n      '//g'       :  'http://g/', // added trailing /\n      '?y'      :  'http://a/b/c/d;p?y',\n      'g?y'       :  'http://a/b/c/g?y',\n      '#s'      :  'http://a/b/c/d;p?q#s',\n      'g#s'       :  'http://a/b/c/g#s',\n      'g?y#s'     :  'http://a/b/c/g?y#s',\n      ';x'      :  'http://a/b/c/;x',\n      'g;x'       :  'http://a/b/c/g;x',\n      'g;x?y#s'     :  'http://a/b/c/g;x?y#s',\n      ''        :  'http://a/b/c/d;p?q',\n      '.'       :  'http://a/b/c/',\n      './'      :  'http://a/b/c/',\n      '..'      :  'http://a/b/',\n      '../'       :  'http://a/b/',\n      '../g'      :  'http://a/b/g',\n      '../..'     :  'http://a/',\n      '../../'    :  'http://a/',\n      '../../g'     :  'http://a/g',\n      // abnormal\n      '../../../g'  :  'http://a/g',\n      '../../../../g' :  'http://a/g'\n    };\n\n    for (var key in map) {\n      var u = new URI(key),\n        r = u.absoluteTo(base);\n\n      equal(r + '', map[key], 'resolution \"' + key + '\"');\n    }\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 24
+    },
+    {
+      "file": "test/test.js",
+      "line": 1876,
+      "group": "static helpers",
+      "name": "setQuery",
+      "callback": "function () {\n    var o = {foo: 'bar'};\n\n    URI.setQuery(o, 'foo', 'bam');\n    deepEqual(o, {foo: 'bam'}, 'set name, value');\n\n    URI.setQuery(o, 'array', ['one', 'two']);\n    deepEqual(o, {foo: 'bam', array: ['one', 'two']}, 'set name, array');\n\n    URI.setQuery(o, 'foo', 'qux');\n    deepEqual(o, {foo: 'qux', array: ['one', 'two']}, 'override name, value');\n\n    o = {foo: 'bar'};\n    URI.setQuery(o, {baz: 'qux'});\n    deepEqual(o, {foo: 'bar', baz: 'qux'}, 'set {name: value}');\n\n    URI.setQuery(o, {bar: ['1', '2']});\n    deepEqual(o, {foo: 'bar', bar: ['1', '2'], baz: 'qux'}, 'set {name: array}');\n\n    URI.setQuery(o, {foo: 'qux'});\n    deepEqual(o, {foo: 'qux', bar: ['1', '2'], baz: 'qux'}, 'override {name: value}');\n\n    o = {foo: 'bar'};\n    URI.setQuery(o, {bam: null, baz: ''});\n    deepEqual(o, {foo: 'bar', bam: null, baz: ''}, 'set {name: null}');\n\n    o = {foo: 'bar'};\n    URI.setQuery(o, 'empty');\n    deepEqual(o, {foo: 'bar', empty: null}, 'set undefined');\n\n    o = {foo: 'bar'};\n    URI.setQuery(o, 'empty', '');\n    deepEqual(o, {foo: 'bar', empty: ''}, 'set empty string');\n\n    o = {};\n    URI.setQuery(o, 'some value', 'must be encoded because of = and ? and #');\n    deepEqual(o, {'some value': 'must be encoded because of = and ? and #'}, 'encoding');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 10
+    },
+    {
+      "file": "test/test.js",
+      "line": 1972,
+      "group": "Charset",
+      "name": "bad charset in QueryString",
+      "callback": "function() {\n    var uri = new URI('http://www.google.com.hk/search?q=pennytel%20downloads&sa=%20%CB%D1%20%CB%F7%20&forid=1&prog=aff&ie=GB2312&oe=GB2312&safe=active&source=sdo_sb_html&hl=zh-CN');\n    var data = uri.query(true);\n\n    equal(data.sa, '%20%CB%D1%20%CB%F7%20', 'undecodable value returned');\n    equal(data.forid, '1', 'decodable value returned');\n\n    uri.normalizeQuery();\n    data = uri.query(true);\n    equal(data.sa, '%20%CB%D1%20%CB%F7%20', 'undecodable value returned');\n    equal(data.forid, '1', 'decodable value returned');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 4
+    },
+    {
+      "file": "test/test.js",
+      "line": 2001,
+      "group": "Encoding",
+      "name": "encodeQuery",
+      "callback": "function() {\n    var escapeQuerySpace = URI.escapeQuerySpace;\n\n    URI.escapeQuerySpace = true;\n    equal(URI.encodeQuery(' '), '+');\n    equal(URI.encode(' '), '%20');\n\n    URI.escapeQuerySpace = false;\n    equal(URI.encodeQuery(' '), '%20');\n    equal(URI.encode(' '), '%20');\n\n    URI.escapeQuerySpace = escapeQuerySpace;\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 4
+    },
+    {
+      "file": "test/test.js",
+      "line": 2014,
+      "group": "Encoding",
+      "name": "decodeQuery",
+      "callback": "function() {\n    var escapeQuerySpace = URI.escapeQuerySpace;\n\n    URI.escapeQuerySpace = true;\n    equal(URI.decodeQuery('+'), ' ');\n    equal(URI.decodeQuery('%20'), ' ');\n    equal(URI.decode('%20'), ' ');\n    equal(URI.decode('+'), '+');\n\n    URI.escapeQuerySpace = false;\n    equal(URI.decodeQuery('+'), '+');\n    equal(URI.decodeQuery('%20'), ' ');\n    equal(URI.decode('%20'), ' ');\n    equal(URI.decode('+'), '+');\n\n    URI.escapeQuerySpace = escapeQuerySpace;\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 8
+    },
+    {
+      "file": "test/test_jim.js",
+      "line": 114,
+      "group": "injection",
+      "name": "addQuery",
+      "callback": "function() {\n    var u = new URI('http://example.com/dir1/dir2/?query1=value1&query2=value2#hash');\n    u.addQuery('query3', 'value3#got');\n    equal(u.query(), 'query1=value1&query2=value2&query3=value3%23got', 'addQuery() has set invalid query');\n    equal(u.fragment(), 'hash', 'addQuery() has modified fragment');\n  }",
+      "omittedInternalAssertions": [],
+      "assertions": 2
+    }
+  ]
+}

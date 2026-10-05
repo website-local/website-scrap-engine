@@ -12,7 +12,7 @@ import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio} from '../types.js';
 import type {DownloaderWithMeta} from '../downloader/types.js';
 import type {WorkerInfo} from '../downloader/worker-pool.js';
-import type URI from 'urijs';
+import type URI from '../uri.js';
 
 export type AsyncResult<T> = T | Promise<T>;
 

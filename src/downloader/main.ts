@@ -7,7 +7,7 @@ import {BufferBudget} from '../buffer-budget.js';
 import {checkResourceSize, resourceBodyBytes} from '../resource-limits.js';
 import {adjust, resetAdjustment} from './adjust-concurrency.js';
 import PQueue from 'p-queue';
-import URI from 'urijs';
+import URI from '../uri.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';

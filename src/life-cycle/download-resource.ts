@@ -6,7 +6,7 @@ import {generateSavePath, ResourceType} from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
 import * as logger from '../logger/logger.js';
 import {isUrlHttp} from '../util.js';
-import URI from 'urijs';
+import URI from '../uri.js';
 import {ResourceSizeError} from '../resource-limits.js';
 import {currentCrawlContext} from '../crawl-context.js';
 import {canUseNativeHttp, nativeBufferedRequest} from './native-http.js';
