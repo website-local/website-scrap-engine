@@ -42,6 +42,8 @@ function prepare(URI, variant) {
   const references = inputs.map((_,i) => URI(`../asset-${i}.css?q=${i}#part`));
   const relativeInputs = inputs.map((_,i) => `../asset-${i}.css?q=${i}#part`);
   const nativeBases = inputs.map(value => new URL(value));
+  const partsInputs = inputs.map((_, i) => ({protocol: 'https', hostname: 'example.org',
+    username: 'user' + i, password: 'secret', path: '/asset-' + i}));
   const predicates = inputs.map((value,i) => URI(i & 1 ? value : relativeInputs[i]));
   const encoded = inputs.map((_,i) => ({'search terms': `汉字 /? !*'() ${i}`, x:['a b', 'c+d', 'e%f']}));
   const many = {x:Array.from({length:64}, (_,i) => 'value-' + (i % 32)), flag:null};
@@ -51,6 +53,7 @@ function prepare(URI, variant) {
   const encodedKeys = inputs.map(() => URI('?a+b=one&bad%ZZ=two&%E6%BC%A2%E5%AD%97=three&flag'));
   const cases = {
     'parse-absolute': i => URI(inputs[i & 127]).toString(),
+    'construct-parts': i => URI(partsInputs[i & 127]).toString(),
     'parse-bare': i => URI(bare[i & 127]).toString(),
     'query-read': i => JSON.stringify(objects[i & 127].query(true)),
     'query-bare-read': () => JSON.stringify(URI.parseQuery(bareQuery)),

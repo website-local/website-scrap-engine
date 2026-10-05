@@ -1,0 +1,572 @@
+{
+  "date": "2026-10-05",
+  "scope": "Direct credential parts construction; no whole-engine claim",
+  "checkpoint": "06d167f",
+  "artifacts": "/mnt/e/tmp/wse-uri-parts-fix-20261005",
+  "cause": "Credential assembly scans a concatenated temporary string; profiler attributes 13.1% constructor and 37.4% builder self time to buildUserinfo in the regressed version.",
+  "fix": [
+    "Encode/check original credential strings separately",
+    "Use endsWith/slice for optional protocol colon",
+    "Skip query builder when query absent"
+  ],
+  "paired": {
+    "checkpoint": {
+      "status": "unresolved-control",
+      "retained": 16,
+      "medianNs": [
+        1288.3668664383529,
+        945.1680222602765,
+        984.522153253425,
+        1000.9471318493322
+      ],
+      "beforePercent": {
+        "median": 1.7939301673271069,
+        "interval95": [
+          -5.184013870481625,
+          11.946389099910494
+        ]
+      },
+      "beforeControlPercent": {
+        "median": 1.0825628856194147,
+        "interval95": [
+          -2.6997592386113265,
+          9.219703198579744
+        ]
+      },
+      "urijsPercent": {
+        "median": -24.261172047419432,
+        "interval95": [
+          -29.135516713988007,
+          -11.303491730112025
+        ]
+      },
+      "controlPercent": {
+        "median": -0.30805360763234146,
+        "interval95": [
+          -5.004125091942136,
+          3.7267581558099394
+        ]
+      },
+      "controlPass": false,
+      "linuxLoadBefore": "0.52 0.58 0.59 2/166 20194",
+      "linuxLoadAfter": "0.52 0.58 0.59 1/166 20194",
+      "protocol": {
+        "targetSlowestBatchMs": 12,
+        "minimumOperations": 512,
+        "maximumOperations": 16384,
+        "warmupOperations": 32768,
+        "sizingOperations": 2048,
+        "operationQuantum": 128,
+        "calibrationRounds": 4,
+        "measuredRounds": 16,
+        "minimumRetained": 12,
+        "order": "Rotate four variants, alternate direction; reverse order for second observation",
+        "probes": "250000 integer operations before and after each batch; no profiling during timing",
+        "filter": "Whole round rejected above 1.5x median calibration maximum probe or 250ms round wall time",
+        "control": "Bootstrap 95% interval contains zero and lies inside [-5,+5] percent",
+        "bootstrapResamples": 10000,
+        "bootstrapSeed": 123456789,
+        "idle": "Before each measured round, up to ten 20ms waits until probe <=1.2x calibration median maximum; no measured-round retries",
+        "gc": "One forced GC before each whole round, outside probes and timing",
+        "consumption": "Length and changing character checksum inside timing; exact preflight and equal batch checksums"
+      }
+    },
+    "regressed": {
+      "status": "faster",
+      "retained": 16,
+      "medianNs": [
+        1260.0390624999905,
+        1178.3541666666686,
+        935.09635416666,
+        950.7734375000076
+      ],
+      "beforePercent": {
+        "median": -21.32875696001773,
+        "interval95": [
+          -22.478054333312148,
+          -19.646332440962524
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -18.891748932381226,
+        "interval95": [
+          -20.79626953423067,
+          -17.180595788836627
+        ]
+      },
+      "urijsPercent": {
+        "median": -25.4546021122811,
+        "interval95": [
+          -27.005543862211002,
+          -22.990503715935173
+        ]
+      },
+      "controlPercent": {
+        "median": 1.4307442022457484,
+        "interval95": [
+          -0.46025505801120525,
+          3.944336562251638
+        ]
+      },
+      "controlPass": true,
+      "linuxLoadBefore": "0.52 0.58 0.59 2/170 20251",
+      "linuxLoadAfter": "0.52 0.58 0.59 1/170 20251",
+      "protocol": {
+        "targetSlowestBatchMs": 12,
+        "minimumOperations": 512,
+        "maximumOperations": 16384,
+        "warmupOperations": 32768,
+        "sizingOperations": 2048,
+        "operationQuantum": 128,
+        "calibrationRounds": 4,
+        "measuredRounds": 16,
+        "minimumRetained": 12,
+        "order": "Rotate four variants, alternate direction; reverse order for second observation",
+        "probes": "250000 integer operations before and after each batch; no profiling during timing",
+        "filter": "Whole round rejected above 1.5x median calibration maximum probe or 250ms round wall time",
+        "control": "Bootstrap 95% interval contains zero and lies inside [-5,+5] percent",
+        "bootstrapResamples": 10000,
+        "bootstrapSeed": 123456789,
+        "idle": "Before each measured round, up to ten 20ms waits until probe <=1.2x calibration median maximum; no measured-round retries",
+        "gc": "One forced GC before each whole round, outside probes and timing",
+        "consumption": "Length and changing character checksum inside timing; exact preflight and equal batch checksums"
+      }
+    }
+  },
+  "profiles": {
+    "checkpoint": {
+      "construct": {
+        "entry": "/mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js",
+        "mode": "construct",
+        "sink": 132176464,
+        "samples": 1303,
+        "requestedIntervalUs": 100,
+        "self": [
+          {
+            "frame": "parse @ :0",
+            "percent": 34.796087303524196
+          },
+          {
+            "frame": "NativeUri @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js:59",
+            "percent": 30.510556761142148
+          },
+          {
+            "frame": "URL @ node:internal/url:802",
+            "percent": 8.961951467261178
+          },
+          {
+            "frame": "URI @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js:584",
+            "percent": 5.887595723209044
+          },
+          {
+            "frame": "(garbage collector) @ :0",
+            "percent": 4.2184995613716865
+          },
+          {
+            "frame": "buildParts @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js:566",
+            "percent": 3.5697913712246634
+          },
+          {
+            "frame": "_load @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js:89",
+            "percent": 3.107830010091749
+          },
+          {
+            "frame": "get hostname @ node:internal/url:1049",
+            "percent": 1.3303135038157365
+          },
+          {
+            "frame": "buildHost @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js:575",
+            "percent": 1.0703520239563615
+          },
+          {
+            "frame": "post @ node:inspector:112",
+            "percent": 1.043803468131839
+          },
+          {
+            "frame": "get hash @ node:internal/url:1120",
+            "percent": 0.9263137412686582
+          },
+          {
+            "frame": "batch @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:10",
+            "percent": 0.8065978932649117
+          },
+          {
+            "frame": "get username @ node:internal/url:1001",
+            "percent": 0.717058354055498
+          },
+          {
+            "frame": "buildQuery @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri-query.js:60",
+            "percent": 0.6425245203121187
+          },
+          {
+            "frame": "get pathname @ node:internal/url:1079",
+            "percent": 0.4901588955800777
+          },
+          {
+            "frame": "get password @ node:internal/url:1015",
+            "percent": 0.48859236588856864
+          },
+          {
+            "frame": "get href @ node:internal/url:945",
+            "percent": 0.3885818124253837
+          },
+          {
+            "frame": "get search @ node:internal/url:1096",
+            "percent": 0.3743181473395379
+          },
+          {
+            "frame": "markTransferMode @ node:internal/worker/js_transferable:91",
+            "percent": 0.16844316630279205
+          },
+          {
+            "frame": "(program) @ :0",
+            "percent": 0.1290325772216689
+          }
+        ]
+      },
+      "build": {
+        "entry": "/mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js",
+        "mode": "build",
+        "sink": 579748064,
+        "samples": 1239,
+        "requestedIntervalUs": 100,
+        "self": [
+          {
+            "frame": "batch @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:10",
+            "percent": 51.900618537666176
+          },
+          {
+            "frame": " @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:0",
+            "percent": 19.5854050168812
+          },
+          {
+            "frame": "buildParts @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js:566",
+            "percent": 13.913965235281704
+          },
+          {
+            "frame": "(garbage collector) @ :0",
+            "percent": 8.417684374340578
+          },
+          {
+            "frame": "buildHost @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri.js:575",
+            "percent": 3.123351445452627
+          },
+          {
+            "frame": "buildQuery @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/checkpoint/lib/uri-query.js:60",
+            "percent": 1.1946250527537454
+          },
+          {
+            "frame": "post @ node:inspector:112",
+            "percent": 1.0733738657944714
+          },
+          {
+            "frame": "now @ :0",
+            "percent": 0.7064056235492719
+          },
+          {
+            "frame": "(program) @ :0",
+            "percent": 0.0845708482802279
+          }
+        ]
+      }
+    },
+    "regressed": {
+      "construct": {
+        "entry": "/mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js",
+        "mode": "construct",
+        "sink": 112096960,
+        "samples": 1259,
+        "requestedIntervalUs": 100,
+        "self": [
+          {
+            "frame": "parse @ :0",
+            "percent": 30.46779516766701
+          },
+          {
+            "frame": "NativeUri @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:60",
+            "percent": 19.8186184521954
+          },
+          {
+            "frame": "buildUserinfo @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:589",
+            "percent": 13.110123686480584
+          },
+          {
+            "frame": "URL @ node:internal/url:802",
+            "percent": 7.699685464570644
+          },
+          {
+            "frame": "URI @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:617",
+            "percent": 6.672373497215034
+          },
+          {
+            "frame": "(garbage collector) @ :0",
+            "percent": 4.3509634812326095
+          },
+          {
+            "frame": "_load @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:90",
+            "percent": 4.344860801166437
+          },
+          {
+            "frame": "buildParts @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:573",
+            "percent": 3.6332388242609572
+          },
+          {
+            "frame": "get port @ node:internal/url:1065",
+            "percent": 1.3787933517073485
+          },
+          {
+            "frame": "post @ node:inspector:112",
+            "percent": 1.083060774446594
+          },
+          {
+            "frame": "buildHost @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:582",
+            "percent": 1.0707729456647055
+          },
+          {
+            "frame": "get hash @ node:internal/url:1120",
+            "percent": 0.892475725353007
+          },
+          {
+            "frame": "get href @ node:internal/url:945",
+            "percent": 0.75722714010269
+          },
+          {
+            "frame": "get hostname @ node:internal/url:1049",
+            "percent": 0.7398262550491431
+          },
+          {
+            "frame": "get username @ node:internal/url:1001",
+            "percent": 0.6153810628889428
+          },
+          {
+            "frame": "get password @ node:internal/url:1015",
+            "percent": 0.6139790958467138
+          },
+          {
+            "frame": "batch @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:10",
+            "percent": 0.5545191995263
+          },
+          {
+            "frame": "buildQuery @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri-query.js:60",
+            "percent": 0.48400850416714086
+          },
+          {
+            "frame": "get search @ node:internal/url:1096",
+            "percent": 0.4611646882437641
+          },
+          {
+            "frame": "get pathname @ node:internal/url:1079",
+            "percent": 0.3983235772920924
+          }
+        ]
+      },
+      "build": {
+        "entry": "/mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js",
+        "mode": "build",
+        "sink": 347990320,
+        "samples": 1258,
+        "requestedIntervalUs": 100,
+        "self": [
+          {
+            "frame": "buildUserinfo @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:589",
+            "percent": 37.378642378098064
+          },
+          {
+            "frame": "batch @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:10",
+            "percent": 29.859088254990382
+          },
+          {
+            "frame": " @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:0",
+            "percent": 10.290450066472472
+          },
+          {
+            "frame": "buildParts @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:573",
+            "percent": 10.187112587544082
+          },
+          {
+            "frame": "(garbage collector) @ :0",
+            "percent": 6.180043083399036
+          },
+          {
+            "frame": "buildHost @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri.js:582",
+            "percent": 2.973777186911356
+          },
+          {
+            "frame": "buildQuery @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/regressed/lib/uri-query.js:60",
+            "percent": 1.4924966928707861
+          },
+          {
+            "frame": "post @ node:inspector:112",
+            "percent": 1.0648791124687844
+          },
+          {
+            "frame": "now @ :0",
+            "percent": 0.5735106372450377
+          }
+        ]
+      }
+    },
+    "fix": {
+      "construct": {
+        "entry": "/mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js",
+        "mode": "construct",
+        "sink": 117429728,
+        "samples": 1261,
+        "requestedIntervalUs": 100,
+        "self": [
+          {
+            "frame": "parse @ :0",
+            "percent": 33.26190727359038
+          },
+          {
+            "frame": "NativeUri @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js:59",
+            "percent": 30.03092198955641
+          },
+          {
+            "frame": "URI @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js:616",
+            "percent": 7.376031831847671
+          },
+          {
+            "frame": "URL @ node:internal/url:802",
+            "percent": 6.759322749090142
+          },
+          {
+            "frame": "(garbage collector) @ :0",
+            "percent": 5.092320929373912
+          },
+          {
+            "frame": "encode @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri-query.js:5",
+            "percent": 4.231087478242523
+          },
+          {
+            "frame": "_load @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js:89",
+            "percent": 3.6723983332454244
+          },
+          {
+            "frame": "get port @ node:internal/url:1065",
+            "percent": 1.2151221055962866
+          },
+          {
+            "frame": "get hostname @ node:internal/url:1049",
+            "percent": 1.1140817026214462
+          },
+          {
+            "frame": "post @ node:inspector:112",
+            "percent": 1.0877090036394326
+          },
+          {
+            "frame": "batch @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:10",
+            "percent": 0.9807347433936389
+          },
+          {
+            "frame": "get search @ node:internal/url:1096",
+            "percent": 0.8199436942876734
+          },
+          {
+            "frame": "get href @ node:internal/url:945",
+            "percent": 0.754341605569914
+          },
+          {
+            "frame": "buildHost @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js:584",
+            "percent": 0.6921185189092252
+          },
+          {
+            "frame": "get password @ node:internal/url:1015",
+            "percent": 0.5492938709847566
+          },
+          {
+            "frame": "get protocol @ node:internal/url:990",
+            "percent": 0.5070151379292157
+          },
+          {
+            "frame": "get username @ node:internal/url:1001",
+            "percent": 0.4513028113297115
+          },
+          {
+            "frame": "markTransferMode @ node:internal/worker/js_transferable:91",
+            "percent": 0.36855846827364314
+          },
+          {
+            "frame": "get pathname @ node:internal/url:1079",
+            "percent": 0.3254555883749143
+          },
+          {
+            "frame": "get hash @ node:internal/url:1120",
+            "percent": 0.24856268790548025
+          }
+        ]
+      },
+      "build": {
+        "entry": "/mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js",
+        "mode": "build",
+        "sink": 571531248,
+        "samples": 1235,
+        "requestedIntervalUs": 100,
+        "self": [
+          {
+            "frame": "batch @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:10",
+            "percent": 51.305573588972116
+          },
+          {
+            "frame": " @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/profile.mjs:0",
+            "percent": 17.951369093323756
+          },
+          {
+            "frame": "encode @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri-query.js:5",
+            "percent": 17.72439520314781
+          },
+          {
+            "frame": "(garbage collector) @ :0",
+            "percent": 8.256000184545014
+          },
+          {
+            "frame": "buildHost @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js:584",
+            "percent": 2.7292065553025386
+          },
+          {
+            "frame": "post @ node:inspector:112",
+            "percent": 1.1264660618423523
+          },
+          {
+            "frame": "buildParts @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js:572",
+            "percent": 0.37040820698041516
+          },
+          {
+            "frame": "now @ :0",
+            "percent": 0.24938292760892275
+          },
+          {
+            "frame": "buildUserinfo @ file:///mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/uri.js:591",
+            "percent": 0.1225082303780866
+          },
+          {
+            "frame": "wrappedFn @ node:internal/errors:535",
+            "percent": 0.0832100287033406
+          },
+          {
+            "frame": "(program) @ :0",
+            "percent": 0.08147991919564737
+          }
+        ]
+      }
+    }
+  },
+  "validation": {
+    "publicProbe": {
+      "checks": 8452,
+      "beforeDifferences": 7,
+      "afterDifferences": 7,
+      "newlyDifferent": 0,
+      "changedSinceBefore": 0
+    },
+    "node22": "Build, lint, strict test types; 1002 tests / 49 suites passed",
+    "node26": "452 URI tests passed across five suites (initial command included nonexistent uri-corpus.spec.ts; corrected by running uri-mdn.spec.ts separately)",
+    "windowsNode24": "452 URI tests / 5 suites passed",
+    "packedConsumers": "Fresh tarball: strict installed declarations and 13 runtime checks each on Linux Node22 and Node26",
+    "whitespace": "git diff --check passed"
+  },
+  "limitations": "Checkpoint control failed narrowly; formal checkpoint non-regression is not established. No repeated unchanged-code attempts.",
+  "sourceSha256": "af9b911b86424ff492390a2aae076007443231afeedb5548a13df0dcc6d3ec8d",
+  "packageSha256": "f2f43cef83fd84dce434863b4bfa03346876ddc7d5584f2913d1e00ece89d7fb",
+  "compiledSha256": "1b725195e1bfe5ed0aa7924167be3beadab6f573e764e00e6d6cfc317bce2c76"
+}

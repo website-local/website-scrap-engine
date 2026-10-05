@@ -513,7 +513,7 @@ export class NativeUri {
     return copy.build().toString();
   }
   absoluteTo(base: UriInput): NativeUri {
-    return new NativeUri(new URL(this.toString(), baseHref(base)));
+    return configuredReference(new URL(this.toString(), baseHref(base)), this);
   }
   relativeTo(base: UriInput): NativeUri {
     const other = base instanceof NativeUri ? base : new NativeUri(base);
@@ -524,8 +524,8 @@ export class NativeUri {
       /^\/[a-z]:/i.exec(other._path)?.[0].toLowerCase()) return this.clone();
     if (this._path.includes('//') || other._path.includes('//')) return this.clone();
     if (this._path === other._path) {
-      if (this._search === other._search) return new NativeUri(this._hash);
-      if (this._search) return new NativeUri(this._search + this._hash);
+      if (this._search === other._search) return configuredReference(this._hash, this);
+      if (this._search) return configuredReference(this._search + this._hash, this);
     }
     const baseDir = other._path.endsWith('/') ? other._path : posix.dirname(other._path);
     const targetDir = this._path.endsWith('/') ? this._path : posix.dirname(this._path);
@@ -533,7 +533,7 @@ export class NativeUri {
     if (relative) relative += '/';
     relative += this._path.endsWith('/') ? (relative ? '' : './') : posix.basename(this._path);
     if (relative.split('/')[0].includes(':')) relative = './' + relative;
-    return new NativeUri(relative + this._search + this._hash);
+    return configuredReference(relative + this._search + this._hash, this);
   }
   equals(other: UriInput = ''): boolean {
     const one = this.clone().normalize(), two = new NativeUri(other).normalize();
@@ -544,6 +544,13 @@ export class NativeUri {
     return keys.length === Object.keys(b).length && keys.every(key =>
       queries.hasQuery(b, key, a[key] as QueryMatcher));
   }
+}
+
+function configuredReference(value: string | URL, source: NativeUri): NativeUri {
+  const result = new NativeUri(value);
+  result._duplicates = source._duplicates;
+  result._escapeSpaces = source._escapeSpaces;
+  return result;
 }
 
 function baseHref(base: UriInput): string {
@@ -558,22 +565,41 @@ function normalizePercent(value: string): string {
   });
 }
 function buildParts(parts: UriParts): string {
-  const protocol = (parts.protocol ?? '').replace(/:$/, '');
+  const scheme = parts.protocol ?? '';
+  const protocol = scheme.endsWith(':') ? scheme.slice(0, -1) : scheme;
   const host = buildHost(parts);
   const user = buildUserinfo(parts);
-  const query = typeof parts.query === 'string' ? parts.query : queries.buildQuery(parts.query ?? null);
+  const data = parts.query;
+  const query = typeof data === 'string' ? data : data ? queries.buildQuery(data) : '';
+  const path = parts.path ?? '';
   return (protocol ? protocol + ':' : '') + (host || protocol === 'file' ? '//' + user + host : '') +
-    (host && parts.path && !parts.path.startsWith('/') ? '/' : '') + (parts.path ?? '') +
+    (host && path && !path.startsWith('/') ? '/' : '') + path +
     (query ? '?' + query : '') + (parts.fragment ? '#' + parts.fragment : '');
 }
 function buildHost(parts: UriParts): string {
   const hostname = parts.hostname ?? '';
+  if (!hostname) return '';
   return (hostname.includes(':') && !hostname.startsWith('[') ? '[' + hostname + ']' : hostname) +
     (parts.port ? ':' + parts.port : '');
 }
 function buildUserinfo(parts: UriParts): string {
-  return (parts.username ?? '') + (parts.password ? ':' + parts.password : '') +
+  // Check the original components; scanning concatenated userinfo forces an
+  // extra temporary string to be flattened before the complete URL is parsed.
+  return (parts.username ? queries.encode(parts.username) : '') +
+    (parts.password ? ':' + queries.encode(parts.password) : '') +
     (parts.username || parts.password ? '@' : '');
+}
+
+// Public URIjs codecs are separate from the tolerant internal normalization path.
+function encodeSegment(value: string, urn = false): string {
+  try {
+    return queries.encode(value).replace(urn ? /%(?:21|24|27|28|29|2A|2B|2C|3B|3D|40)/g :
+      /%(?:24|26|2B|2C|3B|3D|3A|40)/g, part => String.fromCharCode(parseInt(part.slice(1), 16)));
+  } catch { return value; }
+}
+function decodeSegment(value: string, urn = false): string {
+  try { return queries.decode(value).replace(urn ? /[/?#:]/g : /[/?#]/g, queries.encode); }
+  catch { return value; }
 }
 
 export type URI = NativeUri;
@@ -595,17 +621,26 @@ export interface URIConstructor {
   encode: typeof queries.encode;
   decode: typeof queries.decode;
   encodeReserved(value: string): string;
+  encodePathSegment(value: string): string;
+  decodePathSegment(value: string): string;
+  encodeUrnPathSegment(value: string): string;
+  decodeUrnPathSegment(value: string): string;
+  decodePath(value: string): string;
+  decodeUrnPath(value: string): string;
+  recodePath(value: string): string;
+  recodeUrnPath(value: string): string;
   encodeQuery: typeof queries.encodeQuery;
   decodeQuery: typeof queries.decodeQuery;
   parseQuery: typeof queries.parseQuery;
   buildQuery: typeof queries.buildQuery;
+  buildQueryParameter(name: string, value: queries.QueryValue, spaces?: boolean): string;
   addQuery: typeof queries.addQuery;
   setQuery: typeof queries.setQuery;
   removeQuery: typeof queries.removeQuery;
   hasQuery: typeof queries.hasQuery;
   commonPath(one: string, two: string): string;
   joinPaths(...paths: UriInput[]): NativeUri;
-  withinString(source: string, callback: (url: string, start: number, end: number, source: string) => string): string;
+  withinString(source: string, callback: (url: string, start: number, end: number, source: string) => string | void): string;
   unicode(): void;
   iso8859(): never;
 }
@@ -622,8 +657,8 @@ URI.buildUserinfo = buildUserinfo;
 URI.buildAuthority = parts => buildUserinfo(parts) + buildHost(parts);
 URI.parse = value => {
   const uri = new NativeUri(value);
-  return {protocol: uri._protocol || null, username: uri._username || null,
-    password: uri._password || null, hostname: uri._hostname || null,
+  return {protocol: uri._protocol || null, username: decoded(uri._username) || null,
+    password: decoded(uri._password) || null, hostname: uri._hostname || null,
     port: uri._port || null, path: uri._path, query: uri.query() || null,
     fragment: uri.fragment() || null, urn: uri._opaque};
 };
@@ -635,20 +670,34 @@ URI.parseHost = (value, parts) => {
   return slash < 0 ? '/' : value.slice(slash);
 };
 URI.parseUserinfo = (value, parts) => {
-  const slash = value.indexOf('/'), at = value.lastIndexOf('@', slash < 0 ? value.length : slash);
-  if (at < 0) { parts.username = null; parts.password = null; return value; }
+  const normalized = value.includes('\\') ? value.replace(/\\/g, '/') : value;
+  const slash = normalized.indexOf('/'), at = normalized.lastIndexOf('@', slash < 0 ? normalized.length : slash);
+  if (at < 0) { parts.username = null; parts.password = null; return normalized; }
   const user = value.slice(0, at), colon = user.indexOf(':');
-  parts.username = (colon < 0 ? user : user.slice(0, colon)) || null;
-  parts.password = (colon < 0 ? '' : user.slice(colon + 1)) || null;
+  parts.username = queries.decode(colon < 0 ? user : user.slice(0, colon)) || null;
+  parts.password = queries.decode(colon < 0 ? '' : user.slice(colon + 1)) || null;
   return value.slice(at + 1);
 };
 URI.parseAuthority = (value, parts) => URI.parseHost(URI.parseUserinfo(value, parts), parts);
 URI.encode = queries.encode; URI.decode = queries.decode;
-URI.encodeReserved = value => encodeURI(value);
+URI.encodeReserved = value => {
+  try { return encodeURI(value).replace(/%5[BD]/g, part => part === '%5B' ? '[' : ']'); }
+  catch { return value; }
+};
+URI.encodePathSegment = value => encodeSegment(value);
+URI.decodePathSegment = value => decodeSegment(value);
+URI.encodeUrnPathSegment = value => encodeSegment(value, true);
+URI.decodeUrnPathSegment = value => decodeSegment(value, true);
+URI.decodePath = value => value.split('/').map(part => decodeSegment(part)).join('/');
+URI.decodeUrnPath = value => value.split(':').map(part => decodeSegment(part, true)).join(':');
+URI.recodePath = value => value.split('/').map(part => encodeSegment(queries.decode(part))).join('/');
+URI.recodeUrnPath = value => value.split(':').map(part => encodeSegment(queries.decode(part), true)).join(':');
 URI.encodeQuery = (value, spaces = URI.escapeQuerySpace) => queries.encodeQuery(value, spaces);
 URI.decodeQuery = (value, spaces = URI.escapeQuerySpace) => queries.decodeQuery(value, spaces);
 URI.parseQuery = (value, spaces = URI.escapeQuerySpace) => queries.parseQuery(value, spaces);
 URI.buildQuery = (data, duplicates = URI.duplicateQueryParameters, spaces = URI.escapeQuerySpace) => queries.buildQuery(data, duplicates, spaces);
+URI.buildQueryParameter = (name, value, spaces = URI.escapeQuerySpace) =>
+  queries.encodeQuery(name, spaces) + (value === null ? '' : '=' + queries.encodeQuery(value, spaces));
 URI.addQuery = queries.addQuery; URI.setQuery = queries.setQuery;
 URI.removeQuery = queries.removeQuery; URI.hasQuery = queries.hasQuery;
 URI.commonPath = (one, two) => {
@@ -658,10 +707,22 @@ URI.commonPath = (one, two) => {
 };
 URI.joinPaths = (...paths) => {
   const values = paths.map(value => new NativeUri(value).path());
-  return new NativeUri(values.join('/').replace(/\/{2,}/g, '/')).normalizePath();
+  const joined = values.join('/').replace(/\/{2,}/g, '/');
+  return new NativeUri(joined === '/' ? '' : joined).normalizePath();
 };
-URI.withinString = (source, callback) => source.replace(/\b[a-z][a-z\d+.-]*:\/\/[^\s<>"']+/gi,
-  (url: string, offset: number) => callback(url, offset, offset + url.length, source));
+URI.withinString = (source, callback) => {
+  const pattern = /\b[a-z][a-z\d+.-]*:\/\/[^\s<>"']+/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source))) {
+    const end = pattern.lastIndex;
+    const replacement = callback(match[0], match.index, end, source);
+    if (replacement === undefined) continue;
+    const text = String(replacement);
+    source = source.slice(0, match.index) + text + source.slice(end);
+    pattern.lastIndex = match.index + text.length;
+  }
+  return source;
+};
 URI.unicode = () => {};
 URI.iso8859 = () => { throw new TypeError('ISO-8859-1 URL encoding is not supported'); };
 export default URI;
