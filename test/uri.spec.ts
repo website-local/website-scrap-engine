@@ -42,6 +42,51 @@ describe('native URL compatibility adapter', () => {
       .toBe('//other.org/a');
   });
 
+  test('assigning a network scheme validates and canonicalizes a relative authority', () => {
+    for (const input of ['//EXAMPLE.org:80/a', '//0x7f.1/a', '//例子.测试/a', '//example.org']) {
+      for (const protocol of ['http', 'https', 'ftp']) {
+        const uri = URI(input).escapeQuerySpace(false).duplicateQueryParameters(true);
+        const expected = new URL(protocol + ':' + input);
+        expect(uri.protocol(protocol).href()).toBe(expected.href);
+        expect(uri.hostname()).toBe(expected.hostname);
+        expect(uri.clone().build().href()).toBe(expected.href);
+        expect(uri.query({x: ['a b', 'a b']}).query()).toBe('x=a%20b&x=a%20b');
+      }
+    }
+    const invalid = URI('//bad%FF.example/a');
+    expect(() => invalid.protocol('https')).toThrow('Invalid URL');
+    expect(invalid.href()).toBe('//bad%FF.example/a');
+  });
+
+  test('hostless hierarchical paths retain native structure after mutations', () => {
+    for (const base of ['custom:/a?x=1#old', 'custom:/', 'custom:/.//else/path']) {
+      for (const value of ['', 'a', 'a:b', '/a b', '//else/path', '///else/path']) {
+        const expected = new URL(base);
+        expected.pathname = value;
+        const uri = URI(base).path(value);
+        expect(uri.href()).toBe(expected.href);
+        expect(uri.path()).toBe(expected.pathname);
+        expect(uri.hostname()).toBe('');
+        expect(uri.is('urn')).toBe(false);
+        expect(uri.clone().build().href()).toBe(expected.href);
+        uri.hash('changed'); expected.hash = 'changed';
+        expect(uri.href()).toBe(expected.href);
+        expect(URI(uri.href()).hostname()).toBe('');
+      }
+    }
+  });
+
+  test('normalizing a relative first-segment colon cannot introduce a scheme', () => {
+    for (const input of ['./a:b', 'dir/../a:b', 'a%3Ab']) {
+      const uri = URI(input).normalize();
+      expect(uri.href()).toBe('./a:b');
+      expect(uri.protocol()).toBe('');
+      expect(uri.normalize().href()).toBe('./a:b');
+      expect(uri.absoluteTo('https://example.org/docs/page').href()).toBe('https://example.org/docs/a:b');
+      expect(URI(uri.href()).is('relative')).toBe(true);
+    }
+  });
+
   test('relative output references resolve back to their targets', () => {
     const targets = ['file:///site/a.html', 'file:///site/a/',
       'file:///site/a/b.html', 'file:///site/x%20y.html',

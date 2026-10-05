@@ -1,7 +1,7 @@
 # Native URL compatibility migration
 
-The engine replaces URIjs with a Node WHATWG URL adapter. The release version is
-not assigned. This remains a breaking migration with best-effort URIjs APIs;
+The engine replaces URIjs with a Node WHATWG URL adapter. It is part of the unreleased
+0.10.0 changes. This is a breaking migration with best-effort URIjs APIs;
 parsing and every historical URIjs quirk are not interchangeable.
 
 ## API coverage
@@ -49,6 +49,12 @@ configuration flags and a cached serialized string. It has no JavaScript private
 fields, symbols, WeakMap state, or retained native URL object. Native URL objects
 are temporary parsing/validation tools. The underscored fields are implementation
 details; direct mutation of them can invalidate the cached serialization.
+
+URIjs internal data structures are explicitly out of scope: `_parts`, `_string`,
+internal flags/cache layouts, and private scheduling need not match. Compatibility
+is assessed through supported public methods, return values, errors and serialized
+URLs. Internal-only upstream assertions do not count as missing functionality;
+public behavior around those assertions remains tested.
 
 `Resource.uri`, `refUri`, `replaceUri`, and save-path hook contexts expose this
 wrapper. Resource structured cloning remains supported, with `normalizeResource`
@@ -117,7 +123,7 @@ while segment setters recode the resulting path. Untouched components retain
 their spelling. `readable()` removes credentials and decodes components
 separately, preserving encoded path separators and query ampersands. Repeated
 leading fragment hashes survive normalization. See the
-[corpus probe and performance report](mdn-uri-probe.md).
+[corpus probe and performance report](uri-investigation-history.md).
 
 ## Best-effort limits
 
@@ -132,8 +138,10 @@ leading fragment hashes survive normalization. See the
   `iso8859()` throws. `readable()` is a display helper, not a round-trip URL format.
   It retains the native scheme form for opaque URLs and the `//` prefix of
   scheme-relative references, unlike URIjs's display quirks. Fragment
-  normalization decodes percent-encoded unreserved characters; URIjs leaves
-  nonempty fragments unchanged.
+  normalization decodes percent-encoded unreserved characters in ordinary
+  anchors; URIjs leaves nonempty fragments unchanged. Text directives and
+  encoded directive markers retain their original spelling, because decoding
+  even an unreserved hyphen can change text-selection grammar.
 - Opaque URL path/authority mutations remain unsupported. Credentials require
   a network authority and use native escaping.
   Opaque paths retain native spelling, including data-URL slashes; decoded
@@ -166,19 +174,9 @@ the expanded wrapper. The neighboring MDN checkout was not changed. Consumers
 must update the engine dependency, remove direct URIjs/type dependencies, and
 install `log4js` if using MDN's logger.
 
-The expanded wrapper passes 571 tests in 46 suites, lint, strict test types,
-build, installed-consumer checks, and native Windows runtime checks. The
-existing 6,000-case canonical corpus matches URIjs. Additional compatibility
-cases and native setter checks cover the new functions and mutation fast paths.
-See the [extension report](uri-extended-performance.md) for exact evidence and
-remaining semantic differences.
-
-Validation artifacts are under `/mnt/e/tmp/wse-uri-extended-20261005`. Build/tests
-use an isolated snapshot excluding the unrelated untracked
-`src/shared-context.ts` draft; tested formatting is copied back. No new tracked
-dependency was introduced, and Cheerio remains unchanged.
-
-Earlier whole-crawl results and the initial direct API campaign remain historical
-measurements in [native-url-performance.md](native-url-performance.md) and
-[uri-direct-performance.md](uri-direct-performance.md). This extension's profiling
-and direct-call measurements are separate; no accepted engine campaign is rerun.
+Current validation and merge requirements are maintained in the
+[merge-readiness audit](uri-merge-readiness.md). The
+[compact investigation history](uri-investigation-history.md) records retained
+optimizations, rejected experiments, corpus methodology and historical results.
+Earlier test counts and timings belong to their original snapshots; they are not
+current validation or a whole-engine speedup claim.

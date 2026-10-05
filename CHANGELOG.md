@@ -8,6 +8,7 @@ Breaking changes
 ------------
 
 * Drop Node 18 and 20; upgrade Got 13 to 16 and p-queue 8 to 9.
+* Replace URIjs with the exported `URI` native URL compatibility wrapper. Hooks must migrate URI imports and types; absolute parsing follows WHATWG URL rules. See the [native URL migration guide](docs/native-url-migration.md) for supported APIs and compatibility limits.
 * Downloaders wait for an explicit, awaitable `start()`. `dispose()` cancels and awaits cleanup by default; use its explicit drain mode to finish accepted work.
 * Require normalized `Resource.uri`, `refUri`, and `replaceUri`. Worker tasks/results use validated `WireResource` snapshots, preserve cloneable nested metadata, and exclude URI/DOM instances.
 * Custom workers use task/log channels and control messages on `parentPort`, announce readiness, and handle shutdown. Worker factories must forward all supplied transferred ports, including the publication/accounting channel.
@@ -28,7 +29,7 @@ Performance
 * Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.
 * Reduce temporary allocations in combined link creation, SVG processing and synchronous hook execution; remove unused CSS URL regex captures while preserving replacement offsets.
 * Reuse the path-segment array during save-path escaping, and avoid reparsing unchanged inline styles while preserving existing CSS-hook and rewriting behavior.
-* Reuse the existing relative-path helper when writing redirects with a supplied target save path, retaining URIjs fallback for unusual paths.
+* Reuse the existing relative-path helper when writing redirects with a supplied target save path, retaining the URI compatibility wrapper fallback for unusual paths.
 * Reuse completed synchronous status notifications and reduce pending-notification bookkeeping while preserving listener order, call receivers and disposal waiting.
 * Reduce query-ordering temporaries and encode long-query filename hashes directly as URL-safe base64, preserving existing output.
 * Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
@@ -58,7 +59,7 @@ Fixes and performance
 
 * Cache output-directory preparation per crawl by default; strictOutputChecks restores per-write preparation. Initialize worker pools once on demand and retain them until disposal; waitForWorkers restores eager readiness. Omit worker protocol-version fields and checks.
 
-* Calculate relative replacement paths directly for ordinary local filenames, with URIjs fallback for encoded and unusual paths. Reuse matching parsed response URLs and skip unused default path generation before the built-in legacy full-path adapter.
+* Calculate relative replacement paths directly for ordinary local filenames, with the URI compatibility wrapper fallback for encoded and unusual paths. Reuse matching parsed response URLs and skip unused default path generation before the built-in legacy full-path adapter.
 * Use Got's public option snapshots instead of private history-bearing internals. Preserve hook/agent configuration without mutation and wrap Got 16 binary responses as Buffer views without copying bytes.
 * Retain content-length validation, bounded transport retries and range-resume behavior; await previous streams before retrying and remove legacy manual retry timers.
 * Normalize resources only when decoding worker-boundary data. Hooks, factories and queue callers maintain Resource invariants; body-size limits remain independent.

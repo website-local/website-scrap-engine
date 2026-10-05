@@ -8,6 +8,9 @@
 | Upgrade from 0.9.1 | [Migration guide](../MIGRATION-0.10.0.md) |
 | Review user-visible changes | [Changelog](../CHANGELOG.md) |
 | Check validation and remaining release work | [Release audit](release-0.10.0-audit.md) |
+| Review the URIjs replacement and its remaining merge requirements | [URI merge-readiness audit](uri-merge-readiness.md) |
+| Migrate URI hooks and understand compatibility limits | [Native URL migration](native-url-migration.md) |
+| Trace URI optimization decisions and historical measurements | [URI investigation history](uri-investigation-history.md) |
 | Understand measured performance and retained optimizations | [Performance](performance.md) |
 | Understand dependency, parser and development-tool decisions | [Dependency audit](dependency-audit.md) |
 

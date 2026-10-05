@@ -15,5 +15,5 @@ cache invalidation, retained native parsing differences and opaque-URL limits.
 These are selected regression cases, not a claim of complete URIjs compatibility.
 
 The full corpus methodology, remaining differences and performance results are
-recorded in `docs/mdn-uri-probe.md`. `scripts/probe-uri-corpus.mjs` can repeat the
+recorded in `docs/uri-investigation-history.md`. `scripts/probe-uri-corpus.mjs` can repeat the
 API probe using a local URIjs entry, wrapper entry and JSON input corpus.

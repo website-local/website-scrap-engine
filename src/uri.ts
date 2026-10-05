@@ -128,7 +128,8 @@ export class NativeUri {
 
   toString(): string {
     return this._cached ??= (this._protocol ? this._protocol + ':' : '') +
-      (this._authority ? '//' + this.authority() : '') + this._path + this._search + this._hash;
+      (this._authority ? '//' + this.authority() :
+        this._protocol && this._path.startsWith('//') ? '/.' : '') + this._path + this._search + this._hash;
   }
   valueOf(): string { return this.toString(); }
   toJSON(): string { return this.toString(); }
@@ -148,7 +149,7 @@ export class NativeUri {
     const next = (text.endsWith(':') ? text.slice(0, -1) : text).toLowerCase();
     if (next && !/^[a-z][a-z\d+.-]*$/.test(next)) throw new TypeError('Invalid protocol');
     if (next === this._protocol) return this;
-    if (this._authority && (!next || next in defaultPorts && (!this._protocol || this._protocol in defaultPorts))) {
+    if (this._authority && (!next || next in defaultPorts && this._protocol in defaultPorts)) {
       this._protocol = next;
       if (this._port === defaultPorts[next]) this._port = '';
       return this.build();
@@ -258,9 +259,10 @@ export class NativeUri {
     if (next === this._path) return this;
     if (this._opaque) throw new TypeError('Cannot set the path of an opaque URL');
     if (this._authority || this._protocol) {
-      if (unsafePath.test(next)) {
+      if (!this._authority || unsafePath.test(next)) {
         const parsed = new URL((this._protocol ? '' : referenceScheme) + this.toString());
         parsed.pathname = next;
+        if (!this._authority) return this._load(parsed);
         this._path = parsed.pathname;
       } else this._path = this._authority && !next.startsWith('/') &&
         (next || this._protocol in defaultPorts || this._protocol === 'file') ? '/' + next : next;
@@ -476,15 +478,24 @@ export class NativeUri {
   normalizePort(): this { return this._port ? this.port(this._port) : this; }
   normalizePath(): this {
     if (!this._path || this._opaque) return this;
-    const path = recodePath(this._path);
-    if (!needsPathNormalization.test(path)) return path === this._path ? this : this.path(path);
-    const normalized = posix.normalize(/\/(?:\.|\.\.)$/.test(path) ? path + '/' : path);
-    return this.path(normalized === '.' || normalized === './' ? '' : normalized);
+    let path = recodePath(this._path);
+    if (needsPathNormalization.test(path)) {
+      path = posix.normalize(/\/(?:\.|\.\.)$/.test(path) ? path + '/' : path);
+      if (path === '.' || path === './') path = '';
+    }
+    if (!this._protocol && !this._authority && /^[^/]*:/.test(path)) path = './' + path;
+    return path === this._path ? this : this.path(path);
   }
   normalizePathname(): this { return this.normalizePath(); }
   normalizeQuery(): this { return this._search ? this.query(this.query(true)) : this; }
   normalizeSearch(): this { return this.normalizeQuery(); }
-  normalizeFragment(): this { return this._hash ? this.hash(this._hash === '#' ? '' : normalizePercent(this._hash)) : this; }
+  normalizeFragment(): this {
+    if (!this._hash) return this;
+    const normalized = this._hash === '#' ? '' : normalizePercent(this._hash);
+    // Text directives give even URL-unreserved '-' semantic meaning. Neither
+    // decode their payload nor introduce a directive by decoding its marker.
+    return normalized.includes(':~:') ? this : this.hash(normalized);
+  }
   normalizeHash(): this { return this.normalizeFragment(); }
   unicode(): this { return this; }
   iso8859(): never { throw new TypeError('ISO-8859-1 URL encoding is not supported'); }

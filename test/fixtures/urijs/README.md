@@ -10,7 +10,8 @@ query space encoding/decoding, query injection and RFC 3986 reference resolution
 Each record includes its original file and line; source SHA-256 digests are
 recorded. Callbacks and expected public results are preserved verbatim except
 for four `ok(u._parts.duplicateQueryParameters...)` assertions, retained in the
-`omittedInternalAssertions` metadata. Those inspect URIjs-only internal storage;
+`omittedInternalAssertions` metadata. Those inspect URIjs-only internal storage,
+an explicit non-goal;
 all the surrounding duplicate-mode serialization/clone checks still execute.
 The local runner implements the synchronous QUnit assertion calls with Node's
 assertions and verifies the expected assertion count for every callback.

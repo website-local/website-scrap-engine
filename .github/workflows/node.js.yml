@@ -7,7 +7,7 @@ permissions:
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, feat/native-url-compat ]
   pull_request:
     branches: [ master ]
 

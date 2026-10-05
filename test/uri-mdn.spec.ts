@@ -95,6 +95,18 @@ describe('MDN artifact and log URI regressions', () => {
     expect(URI('https://example.org/#').normalizeFragment().hash()).toBe('');
   });
 
+  test('normalization preserves text-fragment grammar and encoded markers', () => {
+    for (const hash of ['#:~:text=foo%2D,bar', '#:~:text=start,%2Dsuffix',
+      '#%70art:~:text=i64%2Emul%5Fwide%5Fu', '#:%7E:text=foo%2D,bar']) {
+      const uri = URI('https://example.org/' + hash);
+      expect(uri.normalizeFragment().hash()).toBe(hash);
+      expect(uri.normalize().href()).toBe('https://example.org/' + hash);
+      expect(uri.clone().build().hash()).toBe(hash);
+    }
+    expect(URI('https://example.org/#:~:text=foo%2D,bar')
+      .equals('https://example.org/#:~:text=foo-,bar')).toBe(false);
+  });
+
   test.each([
     ['//EXAMPLE.org./a', 'example.org.'], ['//localhost/a', 'localhost'],
     ['//a_b.example/a', 'a_b.example'], ['//0x7f.1/a', '127.0.0.1'],
