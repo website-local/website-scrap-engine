@@ -2,6 +2,7 @@
 // node --expose-gc scripts/profile-uri.mjs ENTRY CASE OUTPUT_PREFIX
 // CASE: parse, parse-bare, read, write, helpers, authority, resolve,
 // construct-wrapper, construct-string, has-key, predicate
+// segment-read-short, segment-read-long
 // For --prof runs, append --ticks to disable inspector sampling.
 import {Session} from 'node:inspector/promises';
 import {writeFile} from 'node:fs/promises';
@@ -13,11 +14,15 @@ const mod = await import(pathToFileURL(entry));
 const URI = mod.URI ?? mod.default;
 const inputs = Array.from({length:128}, (_,i) => `https://example.org:8080/docs/file-${i}.html?x=a%20b&x=${i}&y=~#part-${i}`);
 const objects = inputs.map(v => URI(v));
+const segmentObjects = inputs.map((_, i) => URI('https://example.org/' +
+  Array.from({length:32}, (_, n) => `part-${n}-${i}`).join('/') + '/'));
 const references = inputs.map((_,i) => URI(`../asset-${i}.css?q=${i}#part`));
 const relativeInputs = inputs.map((_,i) => `../asset-${i}.css?q=${i}#part`);
 const predicates = inputs.map((value,i) => URI(i & 1 ? value : relativeInputs[i]));
 const keyQuery = URI('?' + Array.from({length:24}, (_,i) => `k${i}=a%20b%2Bc-${i}`).join('&'));
 const fns = {
+  'segment-read-short': i => String(objects[i & 127].segment([0, 1, -1, -2][i & 3])),
+  'segment-read-long': i => String(segmentObjects[i & 127].segment([0, 15, -1, -16][i & 3])),
   parse: i => URI(inputs[i & 127]).toString(),
   'parse-bare': i => URI(`https://example.org/docs/file-${i & 127}.html`).toString(),
   read: i => JSON.stringify(objects[i & 127].query(true)),

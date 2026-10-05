@@ -1,0 +1,787 @@
+{
+  "date": "2026-10-06",
+  "scope": "User-authorized retry; broad adapter comparison conditional on host load",
+  "artifacts": "/mnt/e/tmp/wse-uri-remeasure-20261006",
+  "protocol": {
+    "baseline": "9b50cf8",
+    "cases": [
+      "segment-read-short",
+      "segment-read-long",
+      "segment-write",
+      "parse-absolute",
+      "construct-parts",
+      "parse-bare",
+      "query-read",
+      "query-bare-read",
+      "query-write",
+      "query-encoded",
+      "query-arrays",
+      "query-helpers",
+      "query-single-helper",
+      "query-remove-value",
+      "query-chain-long",
+      "query-batch",
+      "resolve-wrapper-base",
+      "resolve-string-base",
+      "construct-wrapper-base",
+      "construct-string-base",
+      "construct-native-base",
+      "construct-url-input",
+      "has-key",
+      "has-key-long",
+      "has-key-encoded",
+      "has-key-value",
+      "is-relative",
+      "mutate-authority"
+    ],
+    "policy": "One fixed pass; existing paired protocol unchanged; no retries. Host checks between groups, outside timing.",
+    "hostGate": {
+      "medianCpuBelow": 20,
+      "maxCpuBelow": 35,
+      "maxDiskQueue": 1
+    },
+    "sourceSha256": "08bacfb8d2a1fa5ec8aa8d6e69d0b3f47b5bde285d2a0479382853efddc84e55",
+    "benchmarkSha256": "f5ae5fd287edcaee1311224fbda3f74efea64105dbde714e483ad602bd0839f5"
+  },
+  "results": [
+    {
+      "case": "segment-read-short",
+      "status": "unresolved-control",
+      "retained": 16,
+      "beforePercent": {
+        "median": -65.38589646790213,
+        "interval95": [
+          -68.40117235866944,
+          -53.087151815234044
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -65.60966752389484,
+        "interval95": [
+          -69.60551972401392,
+          -53.64492663516587
+        ]
+      },
+      "urijsPercent": {
+        "median": -70.00194690822903,
+        "interval95": [
+          -76.86030877648491,
+          -60.19188665300099
+        ]
+      },
+      "urijsStatus": "unresolved-control",
+      "controlPercent": {
+        "median": 0.7327412859247096,
+        "interval95": [
+          -5.595405019609601,
+          8.188662699263372
+        ]
+      },
+      "controlPass": false,
+      "medianNs": [
+        274.12567138672057,
+        209.3673706054719,
+        90.2282714843744,
+        82.99560546875216
+      ]
+    },
+    {
+      "case": "segment-read-long",
+      "status": "unresolved-control",
+      "retained": 16,
+      "beforePercent": {
+        "median": -83.22992191627075,
+        "interval95": [
+          -84.37848516712853,
+          -81.66891433895668
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -79.80621390049106,
+        "interval95": [
+          -82.95689831514747,
+          -76.35774127893306
+        ]
+      },
+      "urijsPercent": {
+        "median": -83.78720085217248,
+        "interval95": [
+          -85.15992025656506,
+          -81.31469090160009
+        ]
+      },
+      "urijsStatus": "unresolved-control",
+      "controlPercent": {
+        "median": 13.194706044976122,
+        "interval95": [
+          -0.020442731143743842,
+          21.272893014004723
+        ]
+      },
+      "controlPass": false,
+      "medianNs": [
+        1343.9956202651542,
+        1347.3928740530248,
+        219.8567708333262,
+        277.4562026515092
+      ]
+    },
+    {
+      "case": "segment-write",
+      "status": "unresolved-control",
+      "retained": 16,
+      "beforePercent": {
+        "median": -4.5914558926899325,
+        "interval95": [
+          -12.000050073231295,
+          4.045990882268158
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -4.564785036007518,
+        "interval95": [
+          -22.171386869511554,
+          2.6453876036396595
+        ]
+      },
+      "urijsPercent": {
+        "median": -70.6103729404235,
+        "interval95": [
+          -76.31175465613474,
+          -66.66855739149852
+        ]
+      },
+      "urijsStatus": "unresolved-control",
+      "controlPercent": {
+        "median": -6.306473274054092,
+        "interval95": [
+          -16.084421586520637,
+          8.872656822707725
+        ]
+      },
+      "controlPass": false,
+      "medianNs": [
+        3296.149553571437,
+        1023.0259486607004,
+        955.238560267865,
+        840.7226562500147
+      ]
+    },
+    {
+      "stoppedBefore": "parse-absolute",
+      "reason": "Host gate exceeded"
+    }
+  ],
+  "host": {
+    "host-before": [
+      {
+        "utc": "2026-10-05T18:23:43.5121660Z",
+        "cpuPercent": 2,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "WindTerm",
+            "IDProcess": 7908,
+            "hostCpuPercent": 2.25
+          },
+          {
+            "Name": "Throne",
+            "IDProcess": 8844,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "conhost#9",
+            "IDProcess": 8708,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "svchost#15",
+            "IDProcess": 2024,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#16",
+            "IDProcess": 1832,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#18",
+            "IDProcess": 2224,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#19",
+            "IDProcess": 2236,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#17",
+            "IDProcess": 2144,
+            "hostCpuPercent": 0
+          }
+        ]
+      },
+      {
+        "utc": "2026-10-05T18:23:46.3634252Z",
+        "cpuPercent": 1,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "WindTerm",
+            "IDProcess": 7908,
+            "hostCpuPercent": 4.5
+          },
+          {
+            "Name": "svchost#66",
+            "IDProcess": 1432,
+            "hostCpuPercent": 2.25
+          },
+          {
+            "Name": "Throne",
+            "IDProcess": 8844,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "svchost#13",
+            "IDProcess": 1844,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#17",
+            "IDProcess": 2144,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#16",
+            "IDProcess": 1832,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#15",
+            "IDProcess": 2024,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#14",
+            "IDProcess": 1992,
+            "hostCpuPercent": 0
+          }
+        ]
+      },
+      {
+        "utc": "2026-10-05T18:23:49.2118153Z",
+        "cpuPercent": 4,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "WindTerm",
+            "IDProcess": 7908,
+            "hostCpuPercent": 3
+          },
+          {
+            "Name": "FlClash",
+            "IDProcess": 8716,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "Throne",
+            "IDProcess": 8844,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "svchost#14",
+            "IDProcess": 1992,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#15",
+            "IDProcess": 2024,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#18",
+            "IDProcess": 2224,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#19",
+            "IDProcess": 2236,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#16",
+            "IDProcess": 1832,
+            "hostCpuPercent": 0
+          }
+        ]
+      }
+    ],
+    "host-group-3": [
+      {
+        "utc": "2026-10-05T18:25:18.5697044Z",
+        "cpuPercent": 37,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "Throne",
+            "IDProcess": 8844,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "WmiPrvSE#2",
+            "IDProcess": 1580,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "System",
+            "IDProcess": 4,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "ninja",
+            "IDProcess": 13720,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "svchost#13",
+            "IDProcess": 1844,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#12",
+            "IDProcess": 1792,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#14",
+            "IDProcess": 1992,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#16",
+            "IDProcess": 1832,
+            "hostCpuPercent": 0
+          }
+        ]
+      },
+      {
+        "utc": "2026-10-05T18:25:21.4354925Z",
+        "cpuPercent": 20,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "clang#1",
+            "IDProcess": 5356,
+            "hostCpuPercent": 2.88
+          },
+          {
+            "Name": "WindTerm",
+            "IDProcess": 7908,
+            "hostCpuPercent": 2.12
+          },
+          {
+            "Name": "WmiPrvSE#2",
+            "IDProcess": 1580,
+            "hostCpuPercent": 0.62
+          },
+          {
+            "Name": "ThroneCore",
+            "IDProcess": 10140,
+            "hostCpuPercent": 0.62
+          },
+          {
+            "Name": "System",
+            "IDProcess": 4,
+            "hostCpuPercent": 0.62
+          },
+          {
+            "Name": "svchost#14",
+            "IDProcess": 1992,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#16",
+            "IDProcess": 1832,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#17",
+            "IDProcess": 2144,
+            "hostCpuPercent": 0
+          }
+        ]
+      },
+      {
+        "utc": "2026-10-05T18:25:24.3018912Z",
+        "cpuPercent": 46,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "lld",
+            "IDProcess": 9808,
+            "hostCpuPercent": 25.25
+          },
+          {
+            "Name": "WindTerm",
+            "IDProcess": 7908,
+            "hostCpuPercent": 2.88
+          },
+          {
+            "Name": "WmiPrvSE#2",
+            "IDProcess": 1580,
+            "hostCpuPercent": 0.62
+          },
+          {
+            "Name": "conhost#9",
+            "IDProcess": 8708,
+            "hostCpuPercent": 0.62
+          },
+          {
+            "Name": "ThroneCore",
+            "IDProcess": 10140,
+            "hostCpuPercent": 0.62
+          },
+          {
+            "Name": "svchost#14",
+            "IDProcess": 1992,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#18",
+            "IDProcess": 2224,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#15",
+            "IDProcess": 2024,
+            "hostCpuPercent": 0
+          }
+        ]
+      }
+    ],
+    "host-after": [
+      {
+        "utc": "2026-10-05T18:25:25.5155044Z",
+        "cpuPercent": 36,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "lld",
+            "IDProcess": 9808,
+            "hostCpuPercent": 24.75
+          },
+          {
+            "Name": "WindTerm",
+            "IDProcess": 7908,
+            "hostCpuPercent": 6.75
+          },
+          {
+            "Name": "System",
+            "IDProcess": 4,
+            "hostCpuPercent": 1.5
+          },
+          {
+            "Name": "cli-proxy-api",
+            "IDProcess": 8852,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "WmiPrvSE#2",
+            "IDProcess": 1580,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "svchost#15",
+            "IDProcess": 2024,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#18",
+            "IDProcess": 2224,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#17",
+            "IDProcess": 2144,
+            "hostCpuPercent": 0
+          }
+        ]
+      },
+      {
+        "utc": "2026-10-05T18:25:28.3825751Z",
+        "cpuPercent": 32,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "cli-proxy-api",
+            "IDProcess": 8852,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "svchost#17",
+            "IDProcess": 2144,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#15",
+            "IDProcess": 2024,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#16",
+            "IDProcess": 1832,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#20",
+            "IDProcess": 2256,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#19",
+            "IDProcess": 2236,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#18",
+            "IDProcess": 2224,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#10",
+            "IDProcess": 1624,
+            "hostCpuPercent": 0
+          }
+        ]
+      },
+      {
+        "utc": "2026-10-05T18:25:31.2297230Z",
+        "cpuPercent": 1,
+        "logicalProcessors": 8,
+        "disks": [
+          {
+            "Name": "0 E: F: G: H:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "1 C: D:",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          },
+          {
+            "Name": "_Total",
+            "CurrentDiskQueueLength": 0,
+            "PercentDiskTime": 0,
+            "DiskBytesPersec": 0
+          }
+        ],
+        "topProcesses": [
+          {
+            "Name": "taskhostw",
+            "IDProcess": 1008,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "WmiPrvSE#2",
+            "IDProcess": 1580,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "WindTerm",
+            "IDProcess": 7908,
+            "hostCpuPercent": 0.75
+          },
+          {
+            "Name": "svchost#18",
+            "IDProcess": 2224,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#15",
+            "IDProcess": 2024,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#16",
+            "IDProcess": 1832,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#17",
+            "IDProcess": 2144,
+            "hostCpuPercent": 0
+          },
+          {
+            "Name": "svchost#14",
+            "IDProcess": 1992,
+            "hostCpuPercent": 0
+          }
+        ]
+      }
+    ]
+  },
+  "outcome": "Three focused cases completed. Host gate stopped the remaining 25 broad cases. All three identical-code controls failed; no formal performance pass or whole-engine claim."
+}

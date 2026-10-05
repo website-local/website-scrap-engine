@@ -162,3 +162,33 @@ spelling to disk filenames, reachable links and deduplication groups. It found
 and fixed the existing reserved-filename mismatch, using offline replay and real
 writer fixtures rather than a full crawl. Final CI status and validation are
 centralized in the [merge status](uri-merge-readiness.md).
+
+## Post-merge indexed segment reads — 2026-10-06
+
+Against master `9b50cf8`, indexed `segment()` reads scan from the requested end
+without allocating every segment. Negative indexes retain clamp-to-first behavior;
+array reads and setters keep their implementation. `segmentCoded(index)` benefits
+from the same read. No caches/private fields or MDN engine hotspot are claimed.
+
+| Case | Initial time change (95% interval) | Authorized retry (95% interval) |
+| --- | --- | --- |
+| Short indexed reads | −66.54% (−68.19% to −60.15%) | −65.39% (−68.40% to −53.09%) |
+| Long indexed reads | −82.33% (−83.60% to −81.46%) | −83.23% (−84.38% to −81.67%) |
+| Segment writes | −0.81% (−10.19% to +10.22%) | −4.59% (−12.00% to +4.05%) |
+
+All six runs retained 16/16 rounds but failed identical-code controls: reductions
+remain provisional and setter non-regression is not formally established. The
+retry's planned 25 remaining cases stopped when CPU rose from 2/1/4% to 37/20/46%,
+exceeding the preset host gate. No broad result follows. Profiles show GC share
+falling from 4.97% to 0.78%; that diagnostic is not an elapsed-time estimate.
+
+Full local verification passes build/lint/strict types, 1,019 tests each on Linux
+Node 22/26, and 1,018 plus one existing skip on Windows Node 24. Packed consumers
+pass strict declarations and 13 runtime checks each on Node 22/26, 14 on Windows
+Node 24. The 51,376 segment differential checks, 8,452 public probe cases and
+1,000-case MDN output replay have zero behavior changes. The user authorized local
+merge with the performance uncertainty retained; this follow-up has no remote CI
+claim. [Initial evidence](evidence/uri-segment-performance.json) and
+[retry evidence](evidence/uri-segment-remeasure.json) preserve controls and provenance;
+full artifacts remain in `/mnt/e/tmp/wse-uri-segments-20261006` and
+`/mnt/e/tmp/wse-uri-remeasure-20261006`.

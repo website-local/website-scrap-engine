@@ -42,6 +42,8 @@ function prepare(URI, variant) {
   const references = inputs.map((_,i) => URI(`../asset-${i}.css?q=${i}#part`));
   const relativeInputs = inputs.map((_,i) => `../asset-${i}.css?q=${i}#part`);
   const nativeBases = inputs.map(value => new URL(value));
+  const segmentObjects = inputs.map((_, i) => URI('https://example.org/' +
+    Array.from({length:32}, (_, n) => `part-${n}-${i}`).join('/') + '/'));
   const partsInputs = inputs.map((_, i) => ({protocol: 'https', hostname: 'example.org',
     username: 'user' + i, password: 'secret', path: '/asset-' + i}));
   const predicates = inputs.map((value,i) => URI(i & 1 ? value : relativeInputs[i]));
@@ -53,6 +55,9 @@ function prepare(URI, variant) {
   const encodedKeys = inputs.map(() => URI('?a+b=one&bad%ZZ=two&%E6%BC%A2%E5%AD%97=three&flag'));
   const cases = {
     'parse-absolute': i => URI(inputs[i & 127]).toString(),
+    'segment-read-short': i => String(objects[i & 127].segment([0, 1, -1, -2][i & 3])),
+    'segment-read-long': i => String(segmentObjects[i & 127].segment([0, 15, -1, -16][i & 3])),
+    'segment-write': i => objects[i & 127].segment(-1, 'asset-' + i).toString(),
     'construct-parts': i => URI(partsInputs[i & 127]).toString(),
     'parse-bare': i => URI(bare[i & 127]).toString(),
     'query-read': i => JSON.stringify(objects[i & 127].query(true)),

@@ -1,0 +1,549 @@
+{
+  "date": "2026-10-06",
+  "baseline": "9b50cf8",
+  "branch": "perf/uri-segment-reads",
+  "artifacts": "/mnt/e/tmp/wse-uri-segments-20261006",
+  "scope": "Indexed segment reads only; no whole-engine performance claim",
+  "retention": "Allocation reduction retained provisionally; all timing controls failed, no unchanged-code retries",
+  "paired": {
+    "short": {
+      "case": "segment-read-short",
+      "node": "v22.13.0",
+      "protocol": {
+        "targetSlowestBatchMs": 12,
+        "minimumOperations": 512,
+        "maximumOperations": 16384,
+        "warmupOperations": 32768,
+        "sizingOperations": 2048,
+        "operationQuantum": 128,
+        "calibrationRounds": 4,
+        "measuredRounds": 16,
+        "minimumRetained": 12,
+        "order": "Rotate four variants, alternate direction; reverse order for second observation",
+        "probes": "250000 integer operations before and after each batch; no profiling during timing",
+        "filter": "Whole round rejected above 1.5x median calibration maximum probe or 250ms round wall time",
+        "control": "Bootstrap 95% interval contains zero and lies inside [-5,+5] percent",
+        "bootstrapResamples": 10000,
+        "bootstrapSeed": 123456789,
+        "idle": "Before each measured round, up to ten 20ms waits until probe <=1.2x calibration median maximum; no measured-round retries",
+        "gc": "One forced GC before each whole round, outside probes and timing",
+        "consumption": "Length and changing character checksum inside timing; exact preflight and equal batch checksums"
+      },
+      "status": "unresolved-control",
+      "retained": 16,
+      "excluded": [],
+      "medianNs": [
+        221.88110351562506,
+        193.75762939453054,
+        66.30859375000159,
+        60.757446289061086
+      ],
+      "beforePercent": {
+        "median": -66.54168041765357,
+        "interval95": [
+          -68.19364990661748,
+          -60.154139388414805
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -68.44915595667413,
+        "interval95": [
+          -69.82433172988873,
+          -61.17495917097162
+        ]
+      },
+      "urijsPercent": {
+        "median": -71.12681233346589,
+        "interval95": [
+          -74.75059768935172,
+          -66.99082784177133
+        ]
+      },
+      "controlPercent": {
+        "median": -4.086666247145865,
+        "interval95": [
+          -9.214906602546924,
+          0.2144727560245141
+        ]
+      },
+      "controlPass": false,
+      "linuxLoadBefore": "0.52 0.58 0.59 3/184 10182",
+      "linuxLoadAfter": "0.52 0.58 0.59 2/184 10182",
+      "rawSha256": "694a8cfe1f9b5266429ad7cd598bd958a9d311542f83b5ab60f54f7cfd977ba3"
+    },
+    "long": {
+      "case": "segment-read-long",
+      "node": "v22.13.0",
+      "protocol": {
+        "targetSlowestBatchMs": 12,
+        "minimumOperations": 512,
+        "maximumOperations": 16384,
+        "warmupOperations": 32768,
+        "sizingOperations": 2048,
+        "operationQuantum": 128,
+        "calibrationRounds": 4,
+        "measuredRounds": 16,
+        "minimumRetained": 12,
+        "order": "Rotate four variants, alternate direction; reverse order for second observation",
+        "probes": "250000 integer operations before and after each batch; no profiling during timing",
+        "filter": "Whole round rejected above 1.5x median calibration maximum probe or 250ms round wall time",
+        "control": "Bootstrap 95% interval contains zero and lies inside [-5,+5] percent",
+        "bootstrapResamples": 10000,
+        "bootstrapSeed": 123456789,
+        "idle": "Before each measured round, up to ten 20ms waits until probe <=1.2x calibration median maximum; no measured-round retries",
+        "gc": "One forced GC before each whole round, outside probes and timing",
+        "consumption": "Length and changing character checksum inside timing; exact preflight and equal batch checksums"
+      },
+      "status": "unresolved-control",
+      "retained": 16,
+      "excluded": [],
+      "medianNs": [
+        1226.235288149352,
+        1188.6160714285775,
+        211.93435470779076,
+        214.71185064934986
+      ],
+      "beforePercent": {
+        "median": -82.33076063834322,
+        "interval95": [
+          -83.5999355551472,
+          -81.45930834633384
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -82.19067646961656,
+        "interval95": [
+          -83.44608041264678,
+          -79.71659694664169
+        ]
+      },
+      "urijsPercent": {
+        "median": -82.4879845405118,
+        "interval95": [
+          -83.33571210957504,
+          -81.54464702316824
+        ]
+      },
+      "controlPercent": {
+        "median": 1.009125552451473,
+        "interval95": [
+          -0.4993696076745935,
+          11.144148949054488
+        ]
+      },
+      "controlPass": false,
+      "linuxLoadBefore": "0.52 0.58 0.59 3/184 10193",
+      "linuxLoadAfter": "0.52 0.58 0.59 2/182 10193",
+      "rawSha256": "1511537ff4c3cf20fa601bac200466010c927ee255ea80188274bdbc9fc6ba9d"
+    },
+    "write": {
+      "case": "segment-write",
+      "node": "v22.13.0",
+      "protocol": {
+        "targetSlowestBatchMs": 12,
+        "minimumOperations": 512,
+        "maximumOperations": 16384,
+        "warmupOperations": 32768,
+        "sizingOperations": 2048,
+        "operationQuantum": 128,
+        "calibrationRounds": 4,
+        "measuredRounds": 16,
+        "minimumRetained": 12,
+        "order": "Rotate four variants, alternate direction; reverse order for second observation",
+        "probes": "250000 integer operations before and after each batch; no profiling during timing",
+        "filter": "Whole round rejected above 1.5x median calibration maximum probe or 250ms round wall time",
+        "control": "Bootstrap 95% interval contains zero and lies inside [-5,+5] percent",
+        "bootstrapResamples": 10000,
+        "bootstrapSeed": 123456789,
+        "idle": "Before each measured round, up to ten 20ms waits until probe <=1.2x calibration median maximum; no measured-round retries",
+        "gc": "One forced GC before each whole round, outside probes and timing",
+        "consumption": "Length and changing character checksum inside timing; exact preflight and equal batch checksums"
+      },
+      "status": "unresolved-control",
+      "retained": 16,
+      "excluded": [],
+      "medianNs": [
+        3587.2540509259084,
+        899.8914930555659,
+        927.3437500000191,
+        906.8865740740803
+      ],
+      "beforePercent": {
+        "median": -0.8126426081450366,
+        "interval95": [
+          -10.188947329063803,
+          10.221110517070265
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -3.6309532110773812,
+        "interval95": [
+          -9.12778316988112,
+          4.838998668986072
+        ]
+      },
+      "urijsPercent": {
+        "median": -73.42434874681703,
+        "interval95": [
+          -75.6772301838522,
+          -70.99372693603097
+        ]
+      },
+      "controlPercent": {
+        "median": -3.2742275691259595,
+        "interval95": [
+          -16.459814189706123,
+          6.5580562829400835
+        ]
+      },
+      "controlPass": false,
+      "linuxLoadBefore": "0.52 0.58 0.59 2/168 12797",
+      "linuxLoadAfter": "0.52 0.58 0.59 2/168 12800",
+      "rawSha256": "1af21ade5fa4e7c222b51b9edf9a3d6084f054a8ebc761a1af5c7b8a2318e113"
+    }
+  },
+  "profiles": {
+    "before": {
+      "entry": "/mnt/e/tmp/wse-uri-segments-20261006/baseline/lib/uri.js",
+      "mode": "segment-read-long",
+      "node": "v22.13.0",
+      "intervalUs": 100,
+      "samples": 1249,
+      "sink": 7233923,
+      "self": [
+        {
+          "frame": "segment @ file:///mnt/e/tmp/wse-uri-segments-20261006/baseline/lib/uri.js:380",
+          "ms": 1101.26,
+          "percent": 90.67054841495735
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 60.353,
+          "percent": 4.969071434981677
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:40",
+          "ms": 19.379,
+          "percent": 1.595540161027785
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 13.242,
+          "percent": 1.0902597044393378
+        },
+        {
+          "frame": "(anonymous) @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:0",
+          "ms": 9.914,
+          "percent": 0.8162539427436638
+        },
+        {
+          "frame": "segment-read-long @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:24",
+          "ms": 8.472,
+          "percent": 0.6975290904704781
+        },
+        {
+          "frame": "now @ :0",
+          "ms": 0.992,
+          "percent": 0.08167479435159516
+        },
+        {
+          "frame": "(program) @ :0",
+          "ms": 0.961,
+          "percent": 0.07912245702810781
+        }
+      ],
+      "inclusive": [
+        {
+          "frame": "(root) @ :0",
+          "ms": 1214.573,
+          "percent": 100
+        },
+        {
+          "frame": "(anonymous) @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:0",
+          "ms": 1153.259,
+          "percent": 94.95180610799022
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:40",
+          "ms": 1129.111,
+          "percent": 92.96361766645562
+        },
+        {
+          "frame": "segment-read-long @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:24",
+          "ms": 1109.732,
+          "percent": 91.36807750542783
+        },
+        {
+          "frame": "segment @ file:///mnt/e/tmp/wse-uri-segments-20261006/baseline/lib/uri.js:380",
+          "ms": 1101.26,
+          "percent": 90.67054841495735
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 60.353,
+          "percent": 4.969071434981677
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 13.242,
+          "percent": 1.0902597044393378
+        },
+        {
+          "frame": "(anonymous) @ node:internal/util:441",
+          "ms": 13.242,
+          "percent": 1.0902597044393378
+        },
+        {
+          "frame": "fn @ node:internal/util:440",
+          "ms": 13.242,
+          "percent": 1.0902597044393378
+        },
+        {
+          "frame": "now @ :0",
+          "ms": 0.992,
+          "percent": 0.08167479435159516
+        },
+        {
+          "frame": "now @ node:internal/perf/performance:137",
+          "ms": 0.992,
+          "percent": 0.08167479435159516
+        },
+        {
+          "frame": "(program) @ :0",
+          "ms": 0.961,
+          "percent": 0.07912245702810781
+        }
+      ]
+    },
+    "after": {
+      "entry": "/mnt/e/tmp/wse-uri-segments-20261006/snapshot/lib/uri.js",
+      "mode": "segment-read-long",
+      "node": "v22.13.0",
+      "intervalUs": 100,
+      "samples": 1276,
+      "sink": 43050750,
+      "self": [
+        {
+          "frame": "segment @ file:///mnt/e/tmp/wse-uri-segments-20261006/snapshot/lib/uri.js:380",
+          "ms": 1033.547,
+          "percent": 85.17636102915726
+        },
+        {
+          "frame": "segment-read-long @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:24",
+          "ms": 105.537,
+          "percent": 8.697483146808196
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:40",
+          "ms": 41.054,
+          "percent": 3.3833297621598457
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 13.43,
+          "percent": 1.1067890755055958
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 9.473,
+          "percent": 0.7806859949564042
+        },
+        {
+          "frame": "(anonymous) @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:0",
+          "ms": 4.722,
+          "percent": 0.38914802788811786
+        },
+        {
+          "frame": "now @ node:internal/perf/performance:137",
+          "ms": 1.994,
+          "percent": 0.16432892156054787
+        },
+        {
+          "frame": "now @ :0",
+          "ms": 1.656,
+          "percent": 0.13647376835720526
+        },
+        {
+          "frame": "(anonymous) @ node:internal/validators:529",
+          "ms": 1.011,
+          "percent": 0.08331822452242423
+        },
+        {
+          "frame": "(program) @ :0",
+          "ms": 0.996,
+          "percent": 0.08208204908440606
+        }
+      ],
+      "inclusive": [
+        {
+          "frame": "(root) @ :0",
+          "ms": 1213.42,
+          "percent": 100
+        },
+        {
+          "frame": "(anonymous) @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:0",
+          "ms": 1202.951,
+          "percent": 99.1372319559592
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:40",
+          "ms": 1176.656,
+          "percent": 96.97021641311335
+        },
+        {
+          "frame": "segment-read-long @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:24",
+          "ms": 1135.602,
+          "percent": 93.5868866509535
+        },
+        {
+          "frame": "segment @ file:///mnt/e/tmp/wse-uri-segments-20261006/snapshot/lib/uri.js:380",
+          "ms": 1033.547,
+          "percent": 85.17636102915726
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 13.43,
+          "percent": 1.1067890755055958
+        },
+        {
+          "frame": "(anonymous) @ node:internal/util:441",
+          "ms": 13.43,
+          "percent": 1.1067890755055958
+        },
+        {
+          "frame": "fn @ node:internal/util:440",
+          "ms": 13.43,
+          "percent": 1.1067890755055958
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 9.473,
+          "percent": 0.7806859949564042
+        },
+        {
+          "frame": "now @ node:internal/perf/performance:137",
+          "ms": 4.661,
+          "percent": 0.3841209144401774
+        },
+        {
+          "frame": "now @ :0",
+          "ms": 1.656,
+          "percent": 0.13647376835720526
+        },
+        {
+          "frame": "(anonymous) @ node:internal/validators:529",
+          "ms": 1.011,
+          "percent": 0.08331822452242423
+        },
+        {
+          "frame": "wrappedFn @ node:internal/errors:535",
+          "ms": 1.011,
+          "percent": 0.08331822452242423
+        },
+        {
+          "frame": "(program) @ :0",
+          "ms": 0.996,
+          "percent": 0.08208204908440606
+        }
+      ]
+    }
+  },
+  "validation": {
+    "build": true,
+    "lint": true,
+    "strictTestTypes": true,
+    "fullNode22": {
+      "tests": 1019,
+      "suites": 50
+    },
+    "segmentDifferential": {
+      "checks": 51376,
+      "failures": []
+    },
+    "publicProbe": {
+      "checks": 8452,
+      "beforeDifferences": 7,
+      "afterDifferences": 7,
+      "newlyDifferent": 0,
+      "changedSinceBefore": 0
+    },
+    "outputReplay": {
+      "cases": 1000,
+      "differences": {},
+      "variants": [
+        {
+          "counts": {
+            "skipped": 856,
+            "accepted": 144,
+            "fileCollisions": 46,
+            "caseFoldFileCollisions": 46
+          },
+          "dedupGroups": 136,
+          "outputFingerprint": "b5ffdde3d3ecb873a48dda7236a01cd2dc5504bf47f3d24a8ef63819c6ebb320"
+        },
+        {
+          "counts": {
+            "skipped": 856,
+            "accepted": 144,
+            "fileCollisions": 46,
+            "caseFoldFileCollisions": 46
+          },
+          "dedupGroups": 136,
+          "outputFingerprint": "b5ffdde3d3ecb873a48dda7236a01cd2dc5504bf47f3d24a8ef63819c6ebb320"
+        }
+      ]
+    },
+    "focusedNode26": {
+      "tests": 469,
+      "suites": 6
+    },
+    "focusedWindowsNode24": {
+      "tests": 469,
+      "suites": 6
+    },
+    "sourceSnapshotMatches": true
+  },
+  "sourceSha256": "08bacfb8d2a1fa5ec8aa8d6e69d0b3f47b5bde285d2a0479382853efddc84e55",
+  "compiledHashes": {
+    "baseline": "1b725195e1bfe5ed0aa7924167be3beadab6f573e764e00e6d6cfc317bce2c76",
+    "snapshot": "57cad377f5d7c555987f21cbdab5d745ea61fead43cd34899bd9d557597f6562"
+  },
+  "baselineSourceSha256": "af9b911b86424ff492390a2aae076007443231afeedb5548a13df0dcc6d3ec8d",
+  "mergeVerification": {
+    "fullNode22": {
+      "passed": 1019,
+      "suites": 50
+    },
+    "fullNode26": {
+      "passed": 1019,
+      "suites": 50
+    },
+    "fullWindows24": {
+      "passed": 1018,
+      "skipped": 1,
+      "suites": 50
+    },
+    "build": true,
+    "lint": true,
+    "strictTestTypes": true,
+    "consumers": {
+      "consumer22.json": {
+        "node": "v22.13.0",
+        "strictDeclarations": true,
+        "runtimeChecks": 13
+      },
+      "consumer26.json": {
+        "node": "v26.10.0",
+        "strictDeclarations": true,
+        "runtimeChecks": 13
+      },
+      "consumer-windows24.log": {
+        "node": "v24.21.0",
+        "strictDeclarations": true,
+        "runtimeChecks": 14
+      }
+    },
+    "sourceAndPackedIntegrity": true,
+    "packageSha256": "9e0c5e67da2c902f73ea3744e9c0d27af74ff85c6c308dd949107c36b6b83c1e"
+  }
+}

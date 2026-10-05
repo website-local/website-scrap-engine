@@ -397,6 +397,28 @@ export class NativeUri {
   segment(index?: number | string | readonly string[], value?: string | null): string[] | string | undefined | this {
     const separator = this._opaque ? ':' : '/';
     const absolute = this._path.startsWith('/');
+    if (typeof index === 'number' && value === undefined) {
+      if (!Number.isInteger(index)) throw new TypeError('Segment index must be an integer');
+      const path = this._path, start = absolute ? 1 : 0;
+      if (index >= 0) {
+        let from = start;
+        for (let remaining = index; remaining > 0; remaining--) {
+          const end = path.indexOf(separator, from);
+          if (end < 0) return undefined;
+          from = end + 1;
+        }
+        const end = path.indexOf(separator, from);
+        return path.slice(from, end < 0 ? path.length : end);
+      }
+      let end = path.length;
+      let from = end > start ? path.lastIndexOf(separator, end - 1) : -1;
+      for (let remaining = -index; remaining > 1 && from >= start; remaining--) {
+        end = from;
+        from = end > start ? path.lastIndexOf(separator, end - 1) : -1;
+      }
+      // URIjs clamps negative indexes beyond the segment count to the first.
+      return path.slice(Math.max(start, from + 1), end);
+    }
     let parts = (absolute ? this._path.slice(1) : this._path).split(separator);
     if (index === undefined) return parts;
     if (typeof index === 'number') {

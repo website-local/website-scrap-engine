@@ -456,6 +456,30 @@ describe('URIjs compatibility functions', () => {
     expect(() => uri.iso8859()).toThrow('not supported');
   });
 
+  test('indexed segment reads preserve empty fields, negative clamping and mutation visibility', () => {
+    for (const [input, first, last] of [
+      ['', '', ''], ['/', '', ''], ['/a/b/', 'a', ''],
+      ['a//b', 'a', 'b'], ['urn::a:', '', ''], ['urn:a::b', 'a', 'b'],
+      ['/a%2Fb/%ZZ', 'a%2Fb', '%ZZ']
+    ]) {
+      const uri = URI(input);
+      expect(uri.segment(0)).toBe(first);
+      expect(uri.segment(-1)).toBe(last);
+      expect(uri.segment(-Number.MAX_SAFE_INTEGER)).toBe(first);
+      expect(uri.segment(Number.MAX_SAFE_INTEGER)).toBeUndefined();
+      for (const index of [NaN, Infinity, -Infinity, 0.5, -0.5]) {
+        expect(() => uri.segment(index)).toThrow('integer');
+      }
+    }
+    const uri = URI('/a//b/');
+    expect([uri.segment(1), uri.segment(-2), uri.segment(-3)]).toEqual(['', 'b', '']);
+    uri.segment(1, 'changed');
+    expect(uri.segment(1)).toBe('changed');
+    uri.path('/x%2Fy/z');
+    expect(uri.segmentCoded(0)).toBe('x/y');
+    expect(uri.segment(-1)).toBe('z');
+  });
+
   test('static parts and path utilities produce usable references', () => {
     const parts = {protocol: 'https', hostname: 'example.org', path: '/a', query: 'x=1'};
     expect(URI.build(parts)).toBe('https://example.org/a?x=1');
