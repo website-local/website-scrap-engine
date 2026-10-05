@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-05",
+  "runtimeRevision": "3c7247a",
+  "ci": "Passed as reported by user; no API polling",
+  "removed": [
+    {
+      "path": "/mnt/e/tmp/wse-uri-parts-fix-20261005/cache",
+      "bytes": 46374499
+    },
+    {
+      "path": "/mnt/e/tmp/wse-uri-parts-fix-20261005/tmp",
+      "bytes": 0
+    },
+    {
+      "path": "/mnt/e/tmp/wse-output-link-fix-20261005/published",
+      "bytes": 10010
+    },
+    {
+      "path": "/mnt/e/tmp/wse-mdn-output-audit-20261005/results/published",
+      "bytes": 10340
+    },
+    {
+      "path": "/mnt/e/tmp/wse-mdn-output-audit-20261005/tmp",
+      "bytes": 0
+    }
+  ],
+  "totalBytes": 46394849,
+  "preserved": [
+    "Tracked evidence including failed performance controls",
+    "Raw reports, profiles, corpus inputs and fixture inputs",
+    "Source snapshots, packed artifacts and dependency trees",
+    "Unrelated untracked workspace files and local AGENTS.md"
+  ],
+  "validation": "Documentation-only closeout; runtime and tests unchanged from CI-passed revision"
+}

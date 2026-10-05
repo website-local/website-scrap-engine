@@ -102,124 +102,63 @@ pruned. New validation artifacts are under `/mnt/e/tmp/wse-uri-merge-audit-20261
 
 ## Public source audit after the CI checkpoint
 
-Checkpoint `06d167f` preserves the validated CI test fixes. The subsequent audit
-compares URIjs 1.19.11's core `URI.js` source with the wrapper, excluding internal
-storage assertions. All 58 core instance method names are present; `iso8859()`
-explicitly rejects Latin-1 mode. Static callable coverage expands from 24 to 33
-of URIjs's 37 non-internal names. The four absent names are standalone hostname/
-port validators and the browser-only `getDomAttribute`/`noConflict` helpers.
-These counts measure names, not complete behavior or overload compatibility.
+The audit after `06d167f` added eight path/URN codecs and `buildQueryParameter`,
+corrected credential building/parsing, scanner callbacks and empty path joins,
+and preserved query policy through resolution. Ordinary string fields remain;
+no query caches or additional resolution parses were introduced.
 
-Retained changes:
+The [public probe](../scripts/probe-uri-public.mjs) reduced differences from 6,409
+to seven across 8,452 selected cases, with no newly differing case. Missing helpers
+accounted for much of the original count. Remaining differences are two encoded
+credential getters, four retained relative-reference results, and one URIjs
+userinfo parsing quirk. Coverage and exclusions live in the
+[migration guide](native-url-migration.md), rather than being duplicated here.
 
-- Add eight static path/URN codecs and `buildQueryParameter`; correct reserved
-  bracket encoding and malformed-input behavior without changing the tolerant
-  internal path normalizer.
-- Escape parts-object credentials before building URLs; decode parsed credentials
-  for public parts round trips. Empty host builders no longer emit a bare port.
-  Ordinary username/password pairs use one combined ASCII check; unsafe values
-  retain required escaping. No decoded-credential cache is introduced.
-- Preserve observer callbacks and updated-text offsets in `withinString`; recognize
-  backslash path boundaries in `parseUserinfo`; return empty for empty path joins.
-- Preserve source query spacing/duplicate settings through resolution with two
-  scalar copies, without additional parsing or shared mutable state.
+[Source-audit evidence](evidence/uri-source-audit.json) preserves the inventory,
+source hashes, compatibility cases and raw timings. That snapshot passed 1,002
+tests; the [merge status](uri-merge-readiness.md) reports final validation.
 
-The deterministic [public probe](../scripts/probe-uri-public.mjs) exercises
-8,452 selected cases, including malformed escapes, surrogate errors, Unicode,
-credential delimiters and resolution flags. URIjs differences fall from 6,409 to
-7, with zero previously matching cases becoming different. Missing functions
-account for much of the initial difference count. The remaining cases are two
-native encoded credential getters, four intentionally retained relative-reference
-results, and one URIjs empty-first-password-segment quirk. This selected corpus
-is not a global compatibility percentage and does not replace the MDN corpus.
-
-Remaining feature gaps include the SLD database, permissive URIjs parsing,
-Latin-1 mode, opaque-path mutation, optional URI template/fragment/browser
-extensions, complete text-scanner options, optional parse destination objects,
-and deferred-build arguments in TypeScript signatures. Their policies are in the
-[migration guide](native-url-migration.md); URIjs's private data structures remain
-an explicit non-goal.
-
-Raw source hashes, function inventory, probe differences, validation and short
-paired performance observations are in [source-audit evidence](evidence/uri-source-audit.json).
-Local artifacts are under `/mnt/e/tmp/wse-uri-source-audit-20261005`.
-
-The final source audit passes 1,002 tests in 49 suites, lint, strict test types and
-build. All five URI suites (452 tests) also pass on Linux Node 26 and native Windows
-Node 24. Fresh packed consumers pass strict declarations plus 13 runtime checks on
-Linux Node 22/26 and 14 on Windows Node 24. No dependencies, private fields, query
-caches or additional resolution parses were introduced.
-
-| Short direct API check vs checkpoint | Paired time estimate | 95% interval | Control |
+| Direct API case versus checkpoint | Paired time change | 95% interval | Control |
 | --- | ---: | --- | --- |
 | String construction | +0.93% | −9.00% to +8.83% | Failed |
 | Resolution with wrapper base | +4.71% | −20.14% to +7.54% | Failed |
-| Credential parts construction, initial fix | +30.89% | +15.50% to +39.53% | Failed |
-| Credential parts construction, combined ASCII check | +21.17% | +6.64% to +40.14% | Failed |
+| Credential parts, initial escaping fix | +30.89% | +15.50% to +39.53% | Failed |
+| Credential parts, combined ASCII check | +21.17% | +6.64% to +40.14% | Failed |
+| Unchanged-code follow-up | +36.67% | +32.32% to +42.25% | Failed |
 
-Each case uses the existing fixed 16-round, rotated/reversed four-slot protocol
-(URIjs, checkpoint, candidate, identical candidate), short batches, independent
-CPU probes and a ±5% identical-code gate. Validation and timing do not overlap.
-Only parts construction was measured again after changing its implementation;
-initial/unfavorable observations are retained. The two snapshots' estimates must
-not be subtracted to claim an optimization gain.
-
-**Performance preservation is not established.** Every control failed. The parts
-constructor's repeated positive estimates are a remaining concern: escaping now
-performs necessary work that the old builder omitted. Its common ASCII case uses
-one combined check; unsafe credentials still require encoding. String construction
-and query hot-path bodies are unchanged, and resolution adds only two scalar flag
-copies. No whole-engine result is claimed or reclassified. A controlled-host parts
-measurement remains useful before merging this follow-up.
-
-A user-requested short follow-up on the unchanged final implementation retained
-16/16 rounds in a 2.9-second campaign. Parts construction measured **+36.67%**
-versus checkpoint `06d167f` (95% interval +32.32% to +42.25%); the identical
-candidate slot independently measured +35.24%. Median times were 0.972 µs for
-the checkpoint and 1.319/1.304 µs for the candidate slots. The control narrowly
-failed at −5.18% to +1.12%, so the formal gate remains unresolved. Nevertheless,
-these consistent positive effects should be treated as a likely parts-construction
-regression before merge. Host CPU samples were 3/11/9% before and 0/2/0% afterward.
-No implementation changes, extra rounds or retries were made in this follow-up;
-its raw evidence is included in the source-audit JSON above.
+The follow-up retained 16/16 rounds in 2.9 seconds; its identical candidate slot
+also measured +35.24%. Median times were 0.972 µs for checkpoint and 1.319/1.304 µs
+for candidate slots. The control interval was −5.18% to +1.12%. Despite the failed
+formal control, repeated positive effects were treated as a regression and fixed.
 
 ## Parts-construction regression fix
 
-Node's built-in CPU profiler attributed 13.1% of constructor samples and 37.4%
-of builder-only samples to credential assembly in the regressed audit version.
-Both versions still inline the helper. Checking a concatenated userinfo string
-adds temporary-string scanning before native parsing. The fix checks/encodes the
-original username and password separately, avoids a trailing-colon regex and
-skips the query builder when there is no query. Native parsing and credential
-escaping remain in place; no caches or private fields were added.
-
-Two fixed short paired runs used the existing protocol, with 16/16 rounds
-retained in each. These compare the same fix with two different baselines; neither
-is an unchanged-code retry to obtain a pass. Profiling and validation did not
-overlap timing.
+Node's built-in profiler attributed 13.1% of constructor samples and 37.4% of
+builder-only samples to credential assembly. Inlining remained enabled. The fix
+checks/encodes the original credentials separately, avoids a trailing-colon regex
+and skips query building when absent. Native parsing and escaping remain intact.
 
 | Baseline | Paired time change | 95% interval | Identical-code control |
 | --- | ---: | --- | --- |
 | Regressed source audit | −21.33% | −22.48% to −19.65% | Pass: −0.46% to +3.94% |
 | Checkpoint `06d167f` | +1.79% | −5.18% to +11.95% | Fail: −5.004% to +3.73% |
 
-The passing comparison also measures −25.45% versus URIjs (interval −27.01%
-to −22.99%). This demonstrates an improvement over the regressed implementation;
-it does not formally establish non-regression against checkpoint. The original
-unfavorable observations above remain valid historical evidence. These are
-direct API timings, not whole-engine measurements.
+Both fixed runs retained 16/16 rounds. They compare different baselines, rather
+than repeating unchanged code to seek a pass. The passing comparison also measures
+−25.45% versus URIjs (−27.01% to −22.99%). Improvement over the regressed version
+is established; non-regression versus checkpoint is not. Snapshot estimates must
+not be subtracted to infer another gain. No whole-engine claim follows.
 
-The public probe finds identical before/after results in all 8,452 selected
-cases, including exceptions and malformed credentials. Seven existing URIjs
-policy differences remain. Builder coverage additionally checks optional scheme
-colons and absent, empty, string and object queries.
+All short cases use rotated/reversed four-slot pairs, independent CPU probes,
+fixed rounds and a ±5% identical-code gate. Profiling and validation do not overlap
+timing. All 8,452 compatibility results remain unchanged after the fix.
+[Parts-fix evidence](evidence/uri-parts-performance-fix.json) preserves results;
+raw profiles and rounds remain under `/mnt/e/tmp/wse-uri-parts-fix-20261005`.
 
-The final fix passes build, lint, strict test types and all 1,002 tests in 49
-suites on Node 22. All 452 URI tests also pass on Linux Node 26 and native Windows
-Node 24. Fresh packed consumers pass strict declaration checks and 13 runtime
-checks each on Linux Node 22/26. Source/snapshot and compiled/packed URI files
-match. No push or GitHub API polling was performed.
+## Output closeout
 
-Raw profiles, paired rounds and logs are under
-`/mnt/e/tmp/wse-uri-parts-fix-20261005`; compact results and provenance are in
-[parts-fix evidence](evidence/uri-parts-performance-fix.json).
+The later [MDN output audit](mdn-output-compatibility.md) shifts the gate from API
+spelling to disk filenames, reachable links and deduplication groups. It found
+and fixed the existing reserved-filename mismatch, using offline replay and real
+writer fixtures rather than a full crawl. Final CI status and validation are
+centralized in the [merge status](uri-merge-readiness.md).

@@ -1,30 +1,17 @@
 # MDN output compatibility without a crawl
 
-The migration gate should compare what a local reader opens: disk filenames,
-rewritten link destinations (including decoded fragments), and deduplication
-groups. URI API equivalence alone does not establish these properties.
+The final reserved-filename fix makes local links and redirect pages reach the
+actual written files, preserving saved names and deduplication keys. The audit
+uses existing MDN artifacts/logs and small real-writer fixtures, without fetching
+bodies or starting a crawler. Final validation is in the [merge status](uri-merge-readiness.md).
 
-The focused fix below now resolves the reserved-character defects found by the
-original replay. The original measurements are retained as before-fix evidence.
+## Broad replay before the output fix
 
-`scripts/probe-mdn-output.mjs` replays existing extracted inputs through each
-engine's actual MDN redirect, resource-type, save-path and pre-download hooks.
-It uses the actual downloader key function and the writer's `decodeURI` filename
-rule. The link check independently resolves the emitted reference from the
-decoded parent filename with Node's standard file-URL conversion.
+The URIjs baseline is master `1dd2214`; the native candidate includes the
+credential-builder performance fix. Each uses its matching MDN lifecycle from
+the prepared migration of MDN-local `a4979c8`.
 
-No crawler, body fetching or network requests run. Missing bodies outside the
-sample are not treated as broken links. Optional `--publish` exercises the real
-HTML/resource writers on small fixture bodies, reads the emitted parent HTML,
-and verifies that its link opens the expected written child content.
-
-## Recorded comparison, 2026-10-05
-
-The baseline is the URIjs engine at master `1dd2214`; the candidate is the native
-wrapper after the credential-construction performance fix. Each uses its matching
-MDN lifecycle from the prepared migration of MDN-local `a4979c8`.
-
-| Output property | Artifact replay: 180,171 cases | Package logs: 295,897 cases |
+| Output property | Artifacts: 180,171 cases | Logs: 295,897 cases |
 | --- | ---: | ---: |
 | Changed decoded disk filename | 0 | 0 |
 | Changed resolved destination | 0 | 0 |
@@ -33,87 +20,65 @@ MDN lifecycle from the prepared migration of MDN-local `a4979c8`.
 | Changed link spelling | 60 | 48 |
 | Changed deduplication key | 0 | 1 |
 
-The link spelling differences retain their destinations, for example a Unicode
-fragment versus its percent encoding, or an empty self-link versus an explicit
-filename. The one changed log key merges a Unicode path with its percent-encoded
-spelling. Both already map to the same disk filename and rewritten destination.
+The 108 spelling changes preserve their destinations. One Unicode path merges
+with its percent-encoded spelling, already mapped to the same disk filename.
 There are no observed deduplication splits or new link-to-file mismatches.
+Artifact inputs yield 167,751 accepted cases and 34,999 archive-scoped groups in
+both variants; logs yield 193,318 accepted cases, with groups decreasing from
+165,250 to 165,249. These are replay counts, not successful downloads.
 
-The artifact replay accepts 167,751 cases, grouped into 34,999 archive-scoped
-deduplication groups in both variants. The log replay accepts 193,318 cases;
-groups decrease from 165,250 to 165,249. These are replay inputs/groups, not counts
-of successfully downloaded pages.
+## Reserved-filename correction
 
-The selected writer replay verifies 26 cases per engine, including representative
-changed spellings and the merged Unicode key. An identical-candidate control has
-zero differences. One additional diagnostic deliberately exercises a known bad
-filename and reproduces the same missing target in both engines.
+Both engines initially had 14 log link mismatches and 32 file-URL conversion
+errors (one artifact, 31 logs). Writers use `decodeURI`, preserving reserved
+escapes such as `%23`, whereas the old links interpreted them as URL escapes.
+The writer diagnostic reproduced a missing file: the disk contained literal
+`%23`, but the link resolved to a filename containing `#`.
 
-## Existing output issues retained in the report
+`urlOfSavePath` now URL-encodes the writer's decoded filename: literal `%23` is
+linked with `%2523`, and literal `%2F` with `%252F`. Spaces, Unicode and percent
+signs also retain their proper meaning. Redirect writers preserve the completed
+URL and escape HTML attributes separately. The ordinary-filename fast path is
+unchanged.
 
-- Fourteen log observations have a mismatch between the decoded output filename
-  and local link destination in both variants. The writer diagnostic confirms
-  one: `%23` remains literal in the disk filename because `decodeURI` preserves
-  reserved characters, but resolving the link decodes it to `#`. This is an
-  existing output issue, not a migration regression. It is not fourteen verified
-  broken published pages; many log inputs came from historical 404 records.
-- One artifact and 31 log observations fail standard file-URL conversion, notably
-  encoded slashes. These are unresolved local-path cases in both variants.
-- Multiple distinct URL keys can map to one filename, for example `/en-US/` and
-  `/en-US/index.html`. Both variants have 173 artifact collision observations
-  (184 with case folding). Log observations decrease from 588 to 587 (2,854 to
-  2,853 with case folding) due to the Unicode-key merge. These are candidates for
-  publication conflicts, not proof of lost content; redirects and download
-  outcomes are not simulated.
+The focused replay selects all 1,000 artifact/log cases containing the tested
+reserved escapes. Its 144 accepted cases have **zero remaining link mismatches
+or conversion errors**, with no changed filenames, decisions, download URLs or
+deduplication groups. Of 52 changed link spellings, 46 correct destinations;
+the others preserve their destinations. Former conversion errors now have valid
+empty fragment/query fields.
 
-An initial probe incorrectly treated archived SVG documents as HTML seeds,
-producing two false deduplication/file warnings. The final probe derives document
-types from artifact filenames; both warnings disappear. Initial results remain
-in the local artifact directory for provenance.
+All 27 selected real-writer cases now pass, including the previously failing
+`%23` diagnostic. Sixteen new tests cover 14 filename pairs through HTML and
+binary writers, plus both redirect-writing paths. They read emitted HTML,
+resolve links independently and open the written files; redirect tests execute
+the generated JavaScript against a stub location. An identical-candidate replay
+control has zero differences.
 
-## Reserved-filename fix
+## Remaining limits
 
-`urlOfSavePath` now encodes the filename after applying the writer's `decodeURI`
-rule. A filename containing literal `%23` is linked with `%2523`; literal `%2F`
-is linked with `%252F`. Decoded spaces, Unicode and percent signs also receive
-the correct URL spelling. Saved filenames, resource URLs and deduplication keys
-are unchanged. The ordinary-filename relative-path fast path is unchanged.
+Distinct keys can still share a filename, such as `/en-US/` and `/en-US/index.html`.
+The broad replay records 173 artifact collision observations (184 with case
+folding), and 588 → 587 log observations (2,854 → 2,853 with case folding).
+The decrease follows the Unicode-key merge. These are existing conflict
+candidates, not verified lost files; redirects and download outcomes are not
+simulated. Many problematic log inputs are historical 404s.
 
-Redirect HTML uses the same URL spelling, without applying filename sanitization
-to the finished URL. Its refresh attribute escapes HTML entities independently
-of the JavaScript redirect string.
+Extracted inputs lack original DOM tags/attributes. Hrefs/log tokens are modeled
+as anchors, asset references as images, and document seeds use archive file types.
+An initial SVG-as-HTML classification produced two false warnings; both disappear
+in the corrected replay. Archive names select locale and deduplication scope;
+corpus order does not reproduce crawl scheduling. Missing unsampled bodies are
+not counted as broken links. Post-download redirects, full HTML/CSS transforms,
+response bodies, browser JavaScript and server routing are outside the replay.
+Case folding is not a complete Windows filesystem model.
 
-A focused replay selects all 1,000 artifact/log cases containing the tested
-reserved escapes. In the accepted 144 cases, all 14 link-target mismatches and
-32 file-URL conversion errors disappear. There are no new mismatches or changes
-to filenames, accept/skip decisions, download URLs or deduplication groups.
-The 52 changed relative-link spellings include corrections to 46 destinations;
-the other spelling changes preserve the destination. Missing fragment/query
-fields in the old conversion-error results become valid empty fields.
+## Reproduction and evidence
 
-The real-writer replay now passes all 27 selected cases; the URIjs baseline still
-fails the diagnostic `%23` case. Sixteen new tests exercise real HTML and binary
-files with 14 encoded/literal filename pairs, plus both redirect-writing paths.
-They read emitted HTML, resolve links independently and open the written files;
-redirect tests also execute the generated JavaScript against a stub location.
-
-Validation passes build, lint, strict test types and 1,018 tests in 50 suites on
-Linux Node 22. Native Windows Node 24 passes 1,017 tests with one existing skip.
-The 94 focused resource/output tests pass on Linux Node 26. Fresh package consumer
-checks and provenance are recorded in [fix evidence](evidence/output-link-fix.json).
-No full crawl or network download was needed.
-
-## Limits and reproduction
-
-Extracted records lack original DOM tags/attributes. Non-document `href` and log
-inputs are modeled as anchors, asset inputs as image references; document seeds
-use their archive file type. Log tokens are hypothetical inputs, not reconstructed
-full pages. Archive filenames select locale and scope deduplication groups.
-Recorded corpus order is not crawl scheduling. Post-download redirects, response
-bodies, JavaScript behavior, full HTML/CSS transforms and server routing are not
-covered by this check. Case folding is not a complete Windows filesystem model.
-
-Run with absolute paths and an allowed temporary/cache directory:
+`scripts/probe-mdn-output.mjs` runs actual MDN pre-download hooks, save-path
+rules and downloader key generation. It checks writer-decoded paths against
+standard file-URL resolution. Use absolute paths and configured local temp/cache
+directories:
 
 ```sh
 node scripts/probe-mdn-output.mjs \
@@ -121,8 +86,10 @@ node scripts/probe-mdn-output.mjs \
   INPUT_JSON OUTPUT_JSON
 ```
 
-Use `--publish` only with a small selected fixture set; published files are kept
-beside the output report. Reports preserve differences and diagnostics instead of
-silently ignoring historical failures. Compact provenance is in
-[output evidence](evidence/mdn-output-compatibility.json); full reports and writer
-fixtures are under `/mnt/e/tmp/wse-mdn-output-audit-20261005`.
+For a small selected fixture set, `--publish` invokes real HTML/resource writers
+and verifies emitted links against written content. Reports retain diagnostics.
+[Original output evidence](evidence/mdn-output-compatibility.json) and
+[fix evidence](evidence/output-link-fix.json) contain hashes, counts and provenance.
+Full inputs/reports remain in `/mnt/e/tmp/wse-mdn-output-audit-20261005` and
+`/mnt/e/tmp/wse-output-link-fix-20261005`. Generated writer files were removed
+at closeout; the recorded inputs and script reproduce them.
