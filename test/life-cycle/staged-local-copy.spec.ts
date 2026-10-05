@@ -25,7 +25,7 @@ async function setup(kind: string, action: ExistingResourceAction = 'overwrite')
   await fs.utimes(source, 100, 100);
   const url = kind === 'file' ? pathToFileURL(source).href : 'https://example.test/asset.bin';
   const resource = createResource({type: ResourceType.StreamingBinary, depth: 0,
-    url, refUrl: url, localRoot: output, localSrcRoot: sourceRoot, encoding: null});
+    url, refUrl: url, localRoot: output, localSrcRoot: pathToFileURL(sourceRoot).href.slice('file:///'.length), encoding: null});
   const destination = join(output, resource.savePath);
   await fs.mkdir(dirname(destination), {recursive: true});
   await fs.writeFile(destination, 'cached');

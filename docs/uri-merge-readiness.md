@@ -3,8 +3,8 @@
 The candidate is ready for review, with no known unaddressed correctness defect
 from this audit. It is not an unconditional performance-gate pass: the MDN replay
 remains noise-limited, and the full clean-install CI matrix still needs to run.
-This report covers checkpoint `634e2d2` plus the four fixes below. Remote CI on
-the prepared branch remains pending.
+This report covers checkpoint `634e2d2`, the four fixes below, and subsequent
+test portability fixes. Remote CI must be rerun after the test fixes.
 
 ## Correctness changes
 
@@ -41,10 +41,11 @@ and the [original corpus report](uri-investigation-history.md).
 
 | Check | Result |
 | --- | --- |
-| Node 22.13.0 Linux build, lint, strict test types and full Jest suite | Pass: 993 tests / 48 suites |
-| Node 24.21.0 and 26.10.0 Linux wrapper, MDN and upstream regression suites | Pass on each: 407 tests / 3 suites |
-| Fresh tarball, strict installed declarations and Linux runtime checks | Pass: 13 checks each on Node 22.13.0 and 26.10.0 |
-| Same tarball, strict installed declarations and native Windows runtime checks | Pass: 14 checks each on Node 22.13.0 and 24.21.0 |
+| Node 22.13.0 Linux build, lint and strict test types | Pass |
+| Full Jest on Linux Node 22.13.0, 22.23.3 and 26.10.0 | Pass on each: 994 tests / 48 suites |
+| Full Jest on native Windows Node 24.21.0 | 993 passed, one existing platform skip / 48 suites |
+| Fresh tarball, strict installed declarations and Linux runtime checks | Pass: 13 checks each on Node 22.13.0, 22.23.3 and 26.10.0 |
+| Same tarball, strict installed declarations and native Windows runtime checks | Pass: 14 checks on Node 24.21.0 |
 | Source/test snapshot integrity and whitespace | Pass |
 
 The package is built from an isolated snapshot excluding the unrelated untracked
@@ -53,13 +54,24 @@ existing production dependency trees, including real Undici declarations and
 the optional logging peer. No dependency was added. Package SHA-256:
 `01bf322c84392ab06172f35de1b8df923897ba536beae1b5237ca50ca0b6dfb1`.
 
-The initial audit reused dependency trees. Subsequent CI preparation passed a
-fresh `npm ci`, build and all 993 tests on Node 22.13.0, with runtime/test source
-bytes matching the audited snapshot. Linux Node 24's
-verified binary fails direct execution on this host; focused tests passed via
-the ELF loader, and full packed-consumer checks passed on native Windows Node
-24. Full Jest on every runtime and the latest Node 22 release remain CI work.
-The workflow matrix is 22.13.0, 22.x, 24.x and 26.x.
+CI subsequently exposed a hard-coded rejection of `xn--`: native URL rejects it
+on the tested Node 22 releases but accepts it on Node 24/26. The wrapper already
+matches each runtime. The regression now uses native construction as its oracle,
+checking rejection without mutation or the accepted serialized result. Invalid
+numeric hosts, spaces and malformed escapes retain explicit rejection assertions.
+
+Expanding to full Windows Jest also exposed four fixture files passing raw Windows
+paths to resource construction. They now use URL-style `localSrcRoot`, matching
+the existing runtime fixture and resource-construction contract. Production source
+and the packed artifact are unchanged. Windows retains its existing skip for the
+POSIX no-follow write-flags test.
+
+The initial cross-version audit ran only three focused suites and missed the
+failing compatibility suite. Follow-up validation runs the full suite instead.
+Linux Node 24's binary requires an ELF loader on this host, which breaks child
+processes expecting `process.execPath` to be Node. Full Node 24 validation therefore
+uses native Windows, with a native `npm ci` for platform-specific dependencies.
+The Linux CI matrix (22.13.0, 22.x, 24.x, 26.x) remains the remote release check.
 
 ## Focused performance versus master
 
@@ -136,4 +148,7 @@ The cleanup manifest records every removed path and byte count.
 
 CI preparation logs are under `/mnt/e/tmp/wse-uri-ci-prep-20261005`. The workflow
 runs on pushes to `feat/native-url-compat` and `master`, plus pull requests to
-`master`. Preparing the branch does not itself start a remote CI run.
+`master`. [Hostname CI follow-up evidence](evidence/uri-ci-hostname.json) records
+the final full-suite matrix, native acceptance differences and fixture corrections;
+logs are under `/mnt/e/tmp/wse-uri-ci-hostname-20261005`. The test fixes have not
+been pushed and no GitHub APIs were queried during local validation.

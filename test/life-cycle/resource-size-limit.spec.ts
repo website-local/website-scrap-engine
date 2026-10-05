@@ -80,7 +80,7 @@ describe.each([ResourceType.Binary, ResourceType.StreamingBinary])('resource byt
     const options = defaultDownloadOptions({...lifeCycle, localRoot: output, maxResourceBytes: 4});
     const pipeline = new PipelineExecutorImpl(options, options.req, options);
     const resource = createResource({type, depth: 0, url, refUrl: url,
-      localRoot: output, localSrcRoot: sourceRoot, encoding: null});
+      localRoot: output, localSrcRoot: pathToFileURL(sourceRoot).href.slice('file:///'.length), encoding: null});
     await expect(pipeline.download(resource)).rejects.toMatchObject({code: 'ERR_RESOURCE_SIZE_LIMIT'});
     await expect(fs.stat(join(output, resource.savePath))).rejects.toMatchObject({code: 'ENOENT'});
   });

@@ -39,7 +39,7 @@ describe('readOrCopyLocalResource', () => {
       depth: 1,
       url: pathToFileURL(srcPath).toString(),
       refUrl: pathToFileURL(srcPath).toString(),
-      localSrcRoot: tmpRoot,
+      localSrcRoot: pathToFileURL(tmpRoot).href.slice('file:///'.length),
       localRoot,
       encoding: 'utf8'
     });
@@ -59,7 +59,7 @@ describe('readOrCopyLocalResource', () => {
     await fs.utimes(directory, 2000000, 2000000);
     const url = pathToFileURL(directory).href + '/';
     const res = createResource({type: ResourceType.Html, depth: 0, url, refUrl: url,
-      localSrcRoot: tmpRoot, localRoot, encoding: 'utf8'});
+      localSrcRoot: pathToFileURL(tmpRoot).href.slice('file:///'.length), localRoot, encoding: 'utf8'});
     await readOrCopyLocalResource(res, {}, options());
     const actual = await fs.stat(input);
     expect(res.body).toBe('<html>fixture</html>');
@@ -75,7 +75,7 @@ describe('readOrCopyLocalResource', () => {
       depth: 1,
       url: pathToFileURL(srcPath).toString(),
       refUrl: pathToFileURL(srcPath).toString(),
-      localSrcRoot: tmpRoot,
+      localSrcRoot: pathToFileURL(tmpRoot).href.slice('file:///'.length),
       localRoot,
       encoding: null
     });

@@ -1,0 +1,122 @@
+{
+  "baseCommit": "d87d088",
+  "artifacts": "/mnt/e/tmp/wse-uri-ci-hostname-20261005",
+  "productionChanges": false,
+  "nativeAcceptance": [
+    {
+      "node": "v22.13.0",
+      "native": {
+        "error": "TypeError"
+      },
+      "wrapper": {
+        "error": "TypeError"
+      }
+    },
+    {
+      "node": "v22.23.3",
+      "native": {
+        "error": "TypeError"
+      },
+      "wrapper": {
+        "error": "TypeError"
+      }
+    },
+    {
+      "node": "v24.21.0",
+      "native": "https://user:pass@xn--:8080/a?x=1#h",
+      "wrapper": "https://user:pass@xn--:8080/a?x=1#h"
+    },
+    {
+      "node": "v26.10.0",
+      "native": "https://user:pass@xn--:8080/a?x=1#h",
+      "wrapper": "https://user:pass@xn--:8080/a?x=1#h"
+    }
+  ],
+  "fixes": [
+    "Use native URL construction as the IDNA acceptance oracle for xn--; assert atomic rejection or full accepted serialization.",
+    "Use URL-style localSrcRoot in four Windows file-resource test fixtures."
+  ],
+  "build": true,
+  "lint": true,
+  "strictTestTypes": true,
+  "fullSuites": {
+    "node22": {
+      "node": "22.13.0",
+      "platform": "linux",
+      "suitesPassed": 48,
+      "testsPassed": 994,
+      "skipped": 0,
+      "total": 994,
+      "logSha256": "796025bf4e6b4c545c633429c0b3ec7ccdea56f3bede43e0a065ff0ff3e7c0fa"
+    },
+    "node22latest": {
+      "node": "22.23.3",
+      "platform": "linux",
+      "suitesPassed": 48,
+      "testsPassed": 994,
+      "skipped": 0,
+      "total": 994,
+      "logSha256": "c1aceaedd5aa52dda31b90cdb75a3d7b8818be169965cce865a51a3511cf596c"
+    },
+    "node26": {
+      "node": "26.10.0",
+      "platform": "linux",
+      "suitesPassed": 48,
+      "testsPassed": 994,
+      "skipped": 0,
+      "total": 994,
+      "logSha256": "df36891fe92dc3e5d461840a12f9e993c32c0528b660d5b481ac9c9533f0c350"
+    },
+    "windows24": {
+      "node": "24.21.0",
+      "platform": "win32",
+      "suitesPassed": 48,
+      "testsPassed": 993,
+      "skipped": 1,
+      "total": 994,
+      "logSha256": "f840d1bcd47ab2a2924bc0ada24029b801427bb52a6b9e8f24c38185d28fc541"
+    }
+  },
+  "consumers": {
+    "consumer-node22": {
+      "node": "v22.13.0",
+      "strictDeclarations": true,
+      "checksPassed": 13,
+      "loggingPeer": false
+    },
+    "consumer-node22latest": {
+      "node": "v22.23.3",
+      "strictDeclarations": true,
+      "checksPassed": 13,
+      "loggingPeer": false
+    },
+    "consumer-node26": {
+      "node": "v26.10.0",
+      "strictDeclarations": true,
+      "checksPassed": 13,
+      "loggingPeer": false
+    },
+    "consumer-windows24": {
+      "node": "v24.21.0",
+      "strictDeclarations": true,
+      "checksPassed": 14,
+      "loggingPeer": false
+    }
+  },
+  "sourceSha256": {
+    "test/uri-compat.spec.ts": "84f3230cf35a408ae26b8d26758af8833de3ac1636f9e4220b086851184be9fb",
+    "test/life-cycle/resource-encoding.spec.ts": "e598ff37fc141a1136d3dab04b2add327c227e2e5255d61937af16e1f8cd1cd0",
+    "test/life-cycle/resource-size-limit.spec.ts": "49c3b4ebc632b9e6e1c5d3869f60a810c26a89ad195da57d6c96b4e9726cf534",
+    "test/life-cycle/staged-local-copy.spec.ts": "c0d6624f856f3e8ad63e27da3eef89171d4417b1b90bdb7bc683f569aafcfdf8",
+    "test/life-cycle/read-or-copy-local-resource.spec.ts": "a05a9bd3c45e2dfe712ef25e8f3097258bb385a366f3f1bf489c5d4d339958e4"
+  },
+  "packageSha256": "01bf322c84392ab06172f35de1b8df923897ba536beae1b5237ca50ca0b6dfb1",
+  "packageUnchanged": true,
+  "limitations": [
+    "Linux Node 24 ELF-loader launch breaks process.execPath subprocesses (16 failures in the first attempt); native Windows Node 24 used for the final full suite.",
+    "Windows requires native npm ci for platform-specific resolver packages.",
+    "Windows first full run exposed 14 fixture failures in four suites; final results follow fixture corrections.",
+    "Windows intentionally skips the POSIX no-follow write-flags test.",
+    "No GitHub API calls or pushes."
+  ]
+}

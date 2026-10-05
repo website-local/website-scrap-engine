@@ -387,12 +387,30 @@ describe('URIjs compatibility functions', () => {
       expected.hostname = hostname;
       expect(URI(base).hostname(hostname).href()).toBe(expected.href);
     }
-    for (const hostname of ['example.123', 'example.0xff', 'example.0xff.', 'xn--', 'bad host', '%ZZ']) {
+    for (const hostname of ['example.123', 'example.0xff', 'example.0xff.', 'bad host', '%ZZ']) {
       const uri = URI(base);
       expect(() => uri.hostname(hostname)).toThrow();
       expect(uri.href()).toBe(base);
     }
     expect(URI('custom://example.org/a').hostname('UPPER.Example').hostname()).toBe('UPPER.Example');
+  });
+
+  test('hostname fallback follows the runtime native IDNA acceptance', () => {
+    const base = 'https://user:pass@example.org:8080/a?x=1#h';
+    const uri = URI(base);
+    let expected: URL;
+    try {
+      // Native IDNA handling accepts this on some supported Node versions.
+      // Use construction: the native hostname setter silently ignores errors.
+      expected = new URL('https://user:pass@xn--:8080/a?x=1#h');
+    } catch {
+      expect(() => uri.hostname('xn--')).toThrow();
+      expect(uri.href()).toBe(base);
+      return;
+    }
+    expect(uri.hostname('xn--').href()).toBe(expected.href);
+    expect(uri.hostname()).toBe(expected.hostname);
+    expect(uri.clone().build().href()).toBe(expected.href);
   });
 
   test.each(['https://user:pass@example.org:8080/a', '//example.org/a',

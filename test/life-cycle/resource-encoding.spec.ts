@@ -39,7 +39,7 @@ describe.each(['file', 'mount'])('%s resource encoding', source => {
       const options = defaultDownloadOptions({
         ...lc,
         localRoot: path.join(root, 'output'),
-        localSrcRoot: sourceRoot,
+        localSrcRoot: pathToFileURL(sourceRoot).href.slice('file:///'.length),
         encoding: encodings,
         req: {},
         meta: {}

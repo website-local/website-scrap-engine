@@ -78,6 +78,8 @@ Canonical spelling defines resource URLs and deduplication. `rawUrl` preserves
 the original source. Output filenames and deduplication keys can therefore
 change; existing output trees should be rebuilt. Local-mount containment checks
 also inspect original source spelling so parsing cannot hide encoded traversal.
+Hostname validation follows the runtime's native URL implementation; acceptance
+of IDNA edge cases such as `xn--` can differ between supported Node versions.
 
 Relative references retain a lexical representation without a placeholder
 origin. `relativeTo` generates local links for compatible hierarchical URLs;
