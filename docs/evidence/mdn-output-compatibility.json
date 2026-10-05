@@ -1,0 +1,1619 @@
+{
+  "date": "2026-10-05",
+  "artifacts": "/mnt/e/tmp/wse-mdn-output-audit-20261005",
+  "baseline": "master 1dd221492221db5ceffaf9be4288f94e0c16a0ee",
+  "candidate": "native wrapper after parts-construction fix",
+  "mdnRevision": "a4979c82eaec38c9cdb385a0e15e4512dd3a5fc0",
+  "campaigns": {
+    "artifacts-final": {
+      "scope": "Offline MDN output contract, actual pre-download hooks and disk-name decoding; no body acquisition or after-download redirect processing",
+      "publication": "Virtual output graph; no publication",
+      "assumptions": [
+        "href/log inputs modeled as anchors; asset inputs modeled as images; original DOM attributes unavailable",
+        "Archive-scoped dedup groups, archive locale; corpus order is not crawl scheduling",
+        "Accepted targets assumed acquired successfully; missing unsampled bodies are not counted as broken links",
+        "Collision counts are observations against first group member, not unique lost files",
+        "Case-fold collisions are candidates, not a full Windows filesystem model"
+      ],
+      "entries": [
+        "/mnt/e/tmp/wse-master-wrapper-20261005/master/lib/index.js",
+        "/mnt/e/tmp/wse-master-wrapper-20261005/mdn-master/lib/mdn/life-cycle.js",
+        "/mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/index.js",
+        "/mnt/e/tmp/wse-mdn-output-audit-20261005/mdn-current/lib/mdn/life-cycle.js"
+      ],
+      "inputFile": "/mnt/e/tmp/wse-mdn-uri-probe-20261005/inputs.json",
+      "inputSha256": "21a075662ad069aa6b6d1280aaa6ae6891a56a9a5eeba5fb2bcaa86a3e284090",
+      "node": "v22.13.0",
+      "cases": 180171,
+      "differences": {
+        "replacement": 60
+      },
+      "variants": [
+        {
+          "counts": {
+            "accepted": 167751,
+            "skipped": 11188,
+            "fileCollisions": 173,
+            "caseFoldFileCollisions": 184,
+            "discarded": 1232,
+            "pathErrors": 1
+          },
+          "examples": {
+            "fileCollisions": [
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 15,
+                "input": "../../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                  "replacement": "../../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 95,
+                "input": "../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                  "replacement": "../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "caseFoldFileCollisions": [
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 15,
+                "input": "../../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                  "replacement": "../../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 95,
+                "input": "../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                  "replacement": "../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "pathErrors": [
+              {
+                "index": 12101,
+                "input": "../../../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                "base": "https://developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+                "member": "developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "downloadLink": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "savePath": "developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "refSavePath": "developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html",
+                  "replacement": "../../../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "key": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "pathError": "TypeError"
+                }
+              }
+            ]
+          },
+          "dedupGroups": 34999,
+          "outputFingerprint": "401d47750342f29ff6157c727d00260ba9e2c64c48c084d31558fb1955fb1603"
+        },
+        {
+          "counts": {
+            "accepted": 167751,
+            "skipped": 11188,
+            "fileCollisions": 173,
+            "caseFoldFileCollisions": 184,
+            "discarded": 1232,
+            "pathErrors": 1
+          },
+          "examples": {
+            "fileCollisions": [
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 15,
+                "input": "../../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                  "replacement": "../../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 95,
+                "input": "../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                  "replacement": "../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "caseFoldFileCollisions": [
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 15,
+                "input": "../../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/DocumentOrShadowRoot/activeElement.html",
+                  "replacement": "../../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 4,
+                  "key": "https://developer.mozilla.org/en-US/",
+                  "diskPath": "/developer.mozilla.org/en-US/index.html"
+                },
+                "index": 95,
+                "input": "../../../index.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/index.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/index.html",
+                  "savePath": "developer.mozilla.org/en-US/index.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color.html",
+                  "replacement": "../../../index.html",
+                  "key": "https://developer.mozilla.org/en-US/index.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/index.html",
+                  "destination": "/developer.mozilla.org/en-US/index.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "pathErrors": [
+              {
+                "index": 12101,
+                "input": "../../../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                "base": "https://developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html",
+                "kind": "href",
+                "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+                "member": "developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "downloadLink": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "savePath": "developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "refSavePath": "developer.mozilla.org/zh-CN/docs/Web/XPath/Functions/substring-after.html",
+                  "replacement": "../../../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "key": "https://developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/zh-CN/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "pathError": "TypeError"
+                }
+              }
+            ]
+          },
+          "dedupGroups": 34999,
+          "outputFingerprint": "e5d75b2b5aea53d68ab7ddece63c9b91506bc7d5e944a7036ccd7d1051093046"
+        }
+      ],
+      "examples": {
+        "replacement": [
+          {
+            "index": 77,
+            "input": "https://developer.mozilla.org/en-US/nsAString_(External).html",
+            "base": "https://developer.mozilla.org/en-US/nsAString_(External).html",
+            "kind": "document",
+            "archive": "developer.mozilla.org_20201202_en-US.7z",
+            "member": "developer.mozilla.org/en-US/nsAString_(External).html",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "downloadLink": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "savePath": "developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "refSavePath": "developer.mozilla.org/en-US/nsAString_(External).html",
+              "replacement": "",
+              "key": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "destination": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "downloadLink": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "savePath": "developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "refSavePath": "developer.mozilla.org/en-US/nsAString_(External).html",
+              "replacement": "nsAString_%28External%29.html",
+              "key": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "destination": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            }
+          },
+          {
+            "index": 9359,
+            "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+            "base": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+            "kind": "document",
+            "archive": "developer.mozilla.org_20201202_en-US.7z",
+            "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "downloadLink": "https://mdn.mozillademos.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "savePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "refSavePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "replacement": "",
+              "key": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "type": 3,
+              "diskPath": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "destination": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "downloadLink": "https://mdn.mozillademos.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "savePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "refSavePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your%20styles%20folder)/style/toolbars.css",
+              "replacement": "../../%28your%20styles%20folder%29/style/toolbars.css",
+              "key": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "type": 3,
+              "diskPath": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "destination": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            }
+          }
+        ]
+      },
+      "rawReportSha256": "cf484c4800a305534b6471f05b8ac852814b40f601204cdd252c36d5a689a35a"
+    },
+    "logs-final": {
+      "scope": "Offline MDN output contract, actual pre-download hooks and disk-name decoding; no body acquisition or after-download redirect processing",
+      "publication": "Virtual output graph; no publication",
+      "assumptions": [
+        "href/log inputs modeled as anchors; asset inputs modeled as images; original DOM attributes unavailable",
+        "Archive-scoped dedup groups, archive locale; corpus order is not crawl scheduling",
+        "Accepted targets assumed acquired successfully; missing unsampled bodies are not counted as broken links",
+        "Collision counts are observations against first group member, not unique lost files",
+        "Case-fold collisions are candidates, not a full Windows filesystem model"
+      ],
+      "entries": [
+        "/mnt/e/tmp/wse-master-wrapper-20261005/master/lib/index.js",
+        "/mnt/e/tmp/wse-master-wrapper-20261005/mdn-master/lib/mdn/life-cycle.js",
+        "/mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/index.js",
+        "/mnt/e/tmp/wse-mdn-output-audit-20261005/mdn-current/lib/mdn/life-cycle.js"
+      ],
+      "inputFile": "/mnt/e/tmp/wse-mdn-uri-probe-20261005/log-inputs.json",
+      "inputSha256": "ab3d198eb0e0521b4276f08e9b8a9495ed5c0beaa1c0b1b3ff8aeaf4f8c60172",
+      "node": "v22.13.0",
+      "cases": 295897,
+      "differences": {
+        "replacement": 48,
+        "key": 1,
+        "downloadLink": 1,
+        "mergedDedupGroups": 1
+      },
+      "variants": [
+        {
+          "counts": {
+            "skipped": 101089,
+            "accepted": 193318,
+            "discarded": 1490,
+            "pathErrors": 31,
+            "caseFoldFileCollisions": 2854,
+            "fileCollisions": 588,
+            "linkTargetMismatch": 14
+          },
+          "examples": {
+            "pathErrors": [
+              {
+                "index": 1102,
+                "input": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/EXSLT",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 691,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                  "savePath": "developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/EXSLT.html",
+                  "replacement": "../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "pathError": "TypeError"
+                }
+              },
+              {
+                "index": 3952,
+                "input": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                "base": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Releases/1.8.7",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 2986,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                  "downloadLink": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                  "savePath": "developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Releases/1.8.7.html",
+                  "replacement": "../../../../../../en%2FSpiderMonkey%2F1.8.5.html",
+                  "key": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5.html",
+                  "pathError": "TypeError"
+                }
+              }
+            ],
+            "caseFoldFileCollisions": [
+              {
+                "first": {
+                  "index": 1655,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/CSSRule/type",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/CSSRule/type.html"
+                },
+                "index": 1656,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/CSSRule",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 1128,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/CssRule/type.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/CSSRule.html",
+                  "replacement": "CssRule/type.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/CssRule/type.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/CssRule/type.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 1791,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIframeElement/sandbox",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/HTMLIframeElement/sandbox.html"
+                },
+                "index": 2030,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 1434,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement.html",
+                  "replacement": "HTMLIFrameElement/sandbox.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "fileCollisions": [
+              {
+                "first": {
+                  "index": 514,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Node.html"
+                },
+                "index": 8676,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/Node$samples/inheritance_diagram",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6276,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/Node$samples/inheritance_diagram.html",
+                  "replacement": "../Node.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 605,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Element.html"
+                },
+                "index": 8677,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement$samples/inheritance_diagram",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6277,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement$samples/inheritance_diagram.html",
+                  "replacement": "../Element.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "linkTargetMismatch": [
+              {
+                "index": 8694,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6287,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "savePath": "developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug___.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/tags.html",
+                  "replacement": "tag/%23%23%20lastIndex%20bug___.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/tag/%23%23 lastIndex bug___.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/tag/## lastIndex bug___.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": false
+                }
+              },
+              {
+                "index": 8696,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6288,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                  "savePath": "developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/tags.html",
+                  "replacement": "tag/%23B2G%20%23gaia.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/tag/%23B2G %23gaia.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/tag/#B2G #gaia.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": false
+                }
+              }
+            ]
+          },
+          "dedupGroups": 165250,
+          "outputFingerprint": "a4d9a14ac23934524906c8d23728272edeca987931c6c8ae7cfb48b8de0d761d"
+        },
+        {
+          "counts": {
+            "skipped": 101089,
+            "accepted": 193318,
+            "discarded": 1490,
+            "pathErrors": 31,
+            "caseFoldFileCollisions": 2853,
+            "fileCollisions": 587,
+            "linkTargetMismatch": 14
+          },
+          "examples": {
+            "pathErrors": [
+              {
+                "index": 1102,
+                "input": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/EXSLT",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 691,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                  "savePath": "developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/EXSLT.html",
+                  "replacement": "../Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Transforming_XML_with_XSLT/The_Netscape_XSLT%2F%2FXPath_Reference.html",
+                  "pathError": "TypeError"
+                }
+              },
+              {
+                "index": 3952,
+                "input": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                "base": "https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Releases/1.8.7",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 2986,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                  "downloadLink": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                  "savePath": "developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Releases/1.8.7.html",
+                  "replacement": "../../../../../../en%2FSpiderMonkey%2F1.8.5.html",
+                  "key": "https://developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en%2FSpiderMonkey%2F1.8.5.html",
+                  "pathError": "TypeError"
+                }
+              }
+            ],
+            "caseFoldFileCollisions": [
+              {
+                "first": {
+                  "index": 1655,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/CSSRule/type",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/CSSRule/type.html"
+                },
+                "index": 1656,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/CSSRule",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 1128,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/CssRule/type.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/CSSRule.html",
+                  "replacement": "CssRule/type.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/CssRule/type",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/CssRule/type.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/CssRule/type.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 1791,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIframeElement/sandbox",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/HTMLIframeElement/sandbox.html"
+                },
+                "index": 2030,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 1434,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement.html",
+                  "replacement": "HTMLIFrameElement/sandbox.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/HTMLIFrameElement/sandbox.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "fileCollisions": [
+              {
+                "first": {
+                  "index": 514,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Node.html"
+                },
+                "index": 8676,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/Node$samples/inheritance_diagram",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6276,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/Node$samples/inheritance_diagram.html",
+                  "replacement": "../Node.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/Node.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              },
+              {
+                "first": {
+                  "index": 605,
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Element.html"
+                },
+                "index": 8677,
+                "input": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                "base": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement$samples/inheritance_diagram",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6277,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "savePath": "developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement$samples/inheritance_diagram.html",
+                  "replacement": "../Element.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/Web/API/Element.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true
+                }
+              }
+            ],
+            "linkTargetMismatch": [
+              {
+                "index": 8694,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6287,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "savePath": "developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug___.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/tags.html",
+                  "replacement": "tag/%23%23%20lastIndex%20bug___.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/tag/%23%23 lastIndex bug___.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/tag/## lastIndex bug___.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": false
+                }
+              },
+              {
+                "index": 8696,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "line": 6288,
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                  "savePath": "developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/tags.html",
+                  "replacement": "tag/%23B2G%20%23gaia.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/tag/%23B2G%20%23gaia",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/tag/%23B2G %23gaia.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/tag/#B2G #gaia.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": false
+                }
+              }
+            ]
+          },
+          "dedupGroups": 165249,
+          "outputFingerprint": "8e0c8030f793c947a9b4b11d05a670d4b07e1cbebbdfc2e192b00ef8a3d021d8"
+        }
+      ],
+      "examples": {
+        "replacement": [
+          {
+            "index": 485,
+            "input": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https:/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09#webextensions\tAdd-ons\t\t\t\t\t\t\t\t\t\t\tComparison with XUL/XPCOM extensions",
+            "base": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/HTML",
+            "kind": "log-url-column",
+            "archive": "developer.mozilla.org_20201202_en-US.7z",
+            "member": "developer.mozilla.org/logs/404.log",
+            "line": 158,
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https:/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09#webextensionsAdd-onsComparison with XUL/XPCOM extensions",
+              "downloadLink": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https:/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09",
+              "savePath": "developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09.html",
+              "refSavePath": "developer.mozilla.org/en-US/docs/MDN/Doc_status/HTML.html",
+              "replacement": "Comparison%20with%20XUL/XPCOM%20extensions%09https_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09.html#webextensionsAdd-onsComparison with XUL/XPCOM extensions",
+              "key": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https:/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison with XUL/XPCOM extensions\thttps_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions\t.html",
+              "destination": "/developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison with XUL/XPCOM extensions\thttps_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions\t.html",
+              "fragment": "webextensionsAdd-onsComparison with XUL/XPCOM extensions",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https:/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09#webextensionsAdd-onsComparison%20with%20XUL/XPCOM%20extensions",
+              "downloadLink": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https:/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09",
+              "savePath": "developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09.html",
+              "refSavePath": "developer.mozilla.org/en-US/docs/MDN/Doc_status/HTML.html",
+              "replacement": "Comparison%20with%20XUL/XPCOM%20extensions%09https_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09.html#webextensionsAdd-onsComparison%20with%20XUL/XPCOM%20extensions",
+              "key": "https://developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison%20with%20XUL/XPCOM%20extensions%09https:/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions%09",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison with XUL/XPCOM extensions\thttps_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions\t.html",
+              "destination": "/developer.mozilla.org/en-US/docs/MDN/Doc_status/Comparison with XUL/XPCOM extensions\thttps_/developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Comparison_with_XUL_XPCOM_extensions\t.html",
+              "fragment": "webextensionsAdd-onsComparison with XUL/XPCOM extensions",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            }
+          },
+          {
+            "index": 4345,
+            "input": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/%22http:/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp#1970\"",
+            "base": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIMsgDBView",
+            "kind": "log-url-token",
+            "archive": "developer.mozilla.org_20201202_en-US.7z",
+            "member": "developer.mozilla.org/logs/404.log",
+            "line": 3272,
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/%22http:/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp#1970\"",
+              "downloadLink": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/%22http:/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp",
+              "savePath": "developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html",
+              "refSavePath": "developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIMsgDBView.html",
+              "replacement": "_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html#1970\"",
+              "key": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/%22http:/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html",
+              "destination": "/developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html",
+              "fragment": "1970\"",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/%22http:/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp#1970%22",
+              "downloadLink": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/%22http:/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp",
+              "savePath": "developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html",
+              "refSavePath": "developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIMsgDBView.html",
+              "replacement": "_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html#1970%22",
+              "key": "https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/%22http:/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html",
+              "destination": "/developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/_http_/mxr.mozilla.org/mozilla/source/mailnews/base/src/nsMsgDBView.cpp.html",
+              "fragment": "1970\"",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            }
+          }
+        ],
+        "key": [
+          {
+            "index": 17788,
+            "input": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+            "kind": "log-url-token",
+            "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+            "member": "developer.mozilla.org/logs/404.log",
+            "line": 5839,
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            }
+          }
+        ],
+        "downloadLink": [
+          {
+            "index": 17788,
+            "input": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+            "kind": "log-url-token",
+            "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+            "member": "developer.mozilla.org/logs/404.log",
+            "line": 5839,
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            }
+          }
+        ],
+        "mergedDedupGroups": [
+          {
+            "index": 184990,
+            "input": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+            "kind": "log-url-token",
+            "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+            "member": "developer.mozilla.org/logs/request.log",
+            "line": 36726,
+            "previousOtherKey": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true
+            }
+          }
+        ]
+      },
+      "rawReportSha256": "9caf01b31da2d7af2ffd2d21f877cea3bcdb370cd4ed510d234009d506c9cf75"
+    },
+    "writer-final": {
+      "scope": "Offline MDN output contract, actual pre-download hooks and disk-name decoding; no body acquisition or after-download redirect processing",
+      "publication": "Real HTML/binary writers with minimal fixture bodies and read-back of emitted links",
+      "assumptions": [
+        "href/log inputs modeled as anchors; asset inputs modeled as images; original DOM attributes unavailable",
+        "Archive-scoped dedup groups, archive locale; corpus order is not crawl scheduling",
+        "Accepted targets assumed acquired successfully; missing unsampled bodies are not counted as broken links",
+        "Collision counts are observations against first group member, not unique lost files",
+        "Case-fold collisions are candidates, not a full Windows filesystem model"
+      ],
+      "entries": [
+        "/mnt/e/tmp/wse-master-wrapper-20261005/master/lib/index.js",
+        "/mnt/e/tmp/wse-master-wrapper-20261005/mdn-master/lib/mdn/life-cycle.js",
+        "/mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/index.js",
+        "/mnt/e/tmp/wse-mdn-output-audit-20261005/mdn-current/lib/mdn/life-cycle.js"
+      ],
+      "inputFile": "/mnt/e/tmp/wse-mdn-output-audit-20261005/writer-inputs.json",
+      "inputSha256": "46a776a904be5ccf4f6efd9e13609b40f85a7ca80b538a2a17d5442fc6e4e84b",
+      "node": "v22.13.0",
+      "cases": 27,
+      "differences": {
+        "replacement": 24,
+        "key": 1,
+        "downloadLink": 1,
+        "mergedDedupGroups": 1
+      },
+      "variants": [
+        {
+          "counts": {
+            "accepted": 26,
+            "publishedLinksVerified": 26,
+            "fileCollisions": 1,
+            "caseFoldFileCollisions": 1,
+            "error": 1
+          },
+          "examples": {
+            "fileCollisions": [
+              {
+                "first": {
+                  "index": 24,
+                  "key": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html"
+                },
+                "index": 25,
+                "input": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+                "member": "developer.mozilla.org/logs/request.log",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+                  "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true,
+                  "publishedLinkWorks": true
+                }
+              }
+            ],
+            "caseFoldFileCollisions": [
+              {
+                "first": {
+                  "index": 24,
+                  "key": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html"
+                },
+                "index": 25,
+                "input": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+                "member": "developer.mozilla.org/logs/request.log",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+                  "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": true,
+                  "publishedLinkWorks": true
+                }
+              }
+            ],
+            "errors": [
+              {
+                "index": 26,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "result": {
+                  "status": "error",
+                  "error": "Error",
+                  "message": "ENOENT: no such file or directory, open '/mnt/e/tmp/wse-mdn-output-audit-20261005/results/published/26/0/developer.mozilla.org/en-US/docs/tag/## lastIndex bug___.html'"
+                }
+              }
+            ]
+          },
+          "dedupGroups": 26,
+          "outputFingerprint": "11b50c56633c7df3773f31b53675e64cb803d1fb4b652aedacd443978a4c3aae"
+        },
+        {
+          "counts": {
+            "accepted": 26,
+            "publishedLinksVerified": 26,
+            "error": 1
+          },
+          "examples": {
+            "errors": [
+              {
+                "index": 26,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "result": {
+                  "status": "error",
+                  "error": "Error",
+                  "message": "ENOENT: no such file or directory, open '/mnt/e/tmp/wse-mdn-output-audit-20261005/results/published/26/1/developer.mozilla.org/en-US/docs/tag/## lastIndex bug___.html'"
+                }
+              }
+            ]
+          },
+          "dedupGroups": 25,
+          "outputFingerprint": "3b947e745d7890384566feac0666291ffb6213c8c2fe3f55a8b232b2b0d17268"
+        }
+      ],
+      "examples": {
+        "replacement": [
+          {
+            "index": 0,
+            "input": "https://developer.mozilla.org/en-US/nsAString_(External).html",
+            "base": "https://developer.mozilla.org/en-US/nsAString_(External).html",
+            "kind": "document",
+            "archive": "developer.mozilla.org_20201202_en-US.7z",
+            "member": "developer.mozilla.org/en-US/nsAString_(External).html",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "downloadLink": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "savePath": "developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "refSavePath": "developer.mozilla.org/en-US/nsAString_(External).html",
+              "replacement": "",
+              "key": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "destination": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "downloadLink": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "savePath": "developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "refSavePath": "developer.mozilla.org/en-US/nsAString_(External).html",
+              "replacement": "nsAString_%28External%29.html",
+              "key": "https://developer.mozilla.org/en-US/nsAString_%28External%29.html",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "destination": "/developer.mozilla.org/en-US/nsAString_(External).html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            }
+          },
+          {
+            "index": 1,
+            "input": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+            "base": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+            "kind": "document",
+            "archive": "developer.mozilla.org_20201202_en-US.7z",
+            "member": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "downloadLink": "https://mdn.mozillademos.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "savePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "refSavePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "replacement": "",
+              "key": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "type": 3,
+              "diskPath": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "destination": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "downloadLink": "https://mdn.mozillademos.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "savePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "refSavePath": "developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your%20styles%20folder)/style/toolbars.css",
+              "replacement": "../../%28your%20styles%20folder%29/style/toolbars.css",
+              "key": "https://developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/%28your%20styles%20folder%29/style/toolbars.css",
+              "type": 3,
+              "diskPath": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "destination": "/developer.mozilla.org/en-US/docs/Archive/B2G_OS/Firefox_OS_apps/Building_blocks/Toolbars/2.0$samples/(your styles folder)/style/toolbars.css",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            }
+          }
+        ],
+        "key": [
+          {
+            "index": 24,
+            "input": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+            "kind": "log-url-token",
+            "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+            "member": "developer.mozilla.org/logs/404.log",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            }
+          }
+        ],
+        "downloadLink": [
+          {
+            "index": 24,
+            "input": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+            "kind": "log-url-token",
+            "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+            "member": "developer.mozilla.org/logs/404.log",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            }
+          }
+        ],
+        "mergedDedupGroups": [
+          {
+            "index": 25,
+            "input": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "base": "https://developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors",
+            "kind": "log-url-token",
+            "archive": "developer.mozilla.org_20201202_zh-CN.7z",
+            "member": "developer.mozilla.org/logs/request.log",
+            "previousOtherKey": "https://developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+            "before": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            },
+            "after": {
+              "status": "accepted",
+              "url": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "downloadLink": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "savePath": "developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "refSavePath": "developer.mozilla.org/zh-CN/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors.html",
+              "replacement": "../../../../../../%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "key": "https://developer.mozilla.org/%E5%92%8CCN/Learn/Getting_started_with_the_web/Dealing_with_files",
+              "type": 2,
+              "diskPath": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "destination": "/developer.mozilla.org/\u548cCN/Learn/Getting_started_with_the_web/Dealing_with_files.html",
+              "fragment": "",
+              "search": "",
+              "local": true,
+              "linkMatchesFile": true,
+              "publishedLinkWorks": true
+            }
+          }
+        ]
+      },
+      "rawReportSha256": "b620e647fbc897fe363a7314579a570b5232ffad50cd84465e7d4c2c06695a93"
+    },
+    "control": {
+      "scope": "Offline MDN output contract, actual pre-download hooks and disk-name decoding; no body acquisition or after-download redirect processing",
+      "publication": "Virtual output graph; no publication",
+      "assumptions": [
+        "href/log inputs modeled as anchors; asset inputs modeled as images; original DOM attributes unavailable",
+        "Archive-scoped dedup groups, archive locale; corpus order is not crawl scheduling",
+        "Accepted targets assumed acquired successfully; missing unsampled bodies are not counted as broken links",
+        "Collision counts are observations against first group member, not unique lost files",
+        "Case-fold collisions are candidates, not a full Windows filesystem model"
+      ],
+      "entries": [
+        "/mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/index.js",
+        "/mnt/e/tmp/wse-mdn-output-audit-20261005/mdn-current/lib/mdn/life-cycle.js",
+        "/mnt/e/tmp/wse-uri-parts-fix-20261005/snapshot/lib/index.js",
+        "/mnt/e/tmp/wse-mdn-output-audit-20261005/mdn-current/lib/mdn/life-cycle.js"
+      ],
+      "inputFile": "/mnt/e/tmp/wse-mdn-output-audit-20261005/writer-inputs.json",
+      "inputSha256": "46a776a904be5ccf4f6efd9e13609b40f85a7ca80b538a2a17d5442fc6e4e84b",
+      "node": "v22.13.0",
+      "cases": 27,
+      "differences": {},
+      "variants": [
+        {
+          "counts": {
+            "accepted": 27,
+            "linkTargetMismatch": 1
+          },
+          "examples": {
+            "linkTargetMismatch": [
+              {
+                "index": 26,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "savePath": "developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug___.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/tags.html",
+                  "replacement": "tag/%23%23%20lastIndex%20bug___.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/tag/%23%23 lastIndex bug___.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/tag/## lastIndex bug___.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": false
+                }
+              }
+            ]
+          },
+          "dedupGroups": 26,
+          "outputFingerprint": "84d5c55780dc1ac8ba15e5d4d19696158f5bc38e81fd93c037fc89e2a73d0ac5"
+        },
+        {
+          "counts": {
+            "accepted": 27,
+            "linkTargetMismatch": 1
+          },
+          "examples": {
+            "linkTargetMismatch": [
+              {
+                "index": 26,
+                "input": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                "base": "https://developer.mozilla.org/en-US/docs/tags",
+                "kind": "log-url-token",
+                "archive": "developer.mozilla.org_20201202_en-US.7z",
+                "member": "developer.mozilla.org/logs/404.log",
+                "result": {
+                  "status": "accepted",
+                  "url": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "downloadLink": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "savePath": "developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug___.html",
+                  "refSavePath": "developer.mozilla.org/en-US/docs/tags.html",
+                  "replacement": "tag/%23%23%20lastIndex%20bug___.html",
+                  "key": "https://developer.mozilla.org/en-US/docs/tag/%23%23%20lastIndex%20bug%3F%3F%3F",
+                  "type": 2,
+                  "diskPath": "/developer.mozilla.org/en-US/docs/tag/%23%23 lastIndex bug___.html",
+                  "destination": "/developer.mozilla.org/en-US/docs/tag/## lastIndex bug___.html",
+                  "fragment": "",
+                  "search": "",
+                  "local": true,
+                  "linkMatchesFile": false
+                }
+              }
+            ]
+          },
+          "dedupGroups": 26,
+          "outputFingerprint": "84d5c55780dc1ac8ba15e5d4d19696158f5bc38e81fd93c037fc89e2a73d0ac5"
+        }
+      ],
+      "examples": {},
+      "rawReportSha256": "1ed97ebce1a16be9d2ad43e4c141d72d9d5908c63189c7cc94eebdd17480abab"
+    }
+  },
+  "sourceSha256": {
+    "src/uri.ts": "af9b911b86424ff492390a2aae076007443231afeedb5548a13df0dcc6d3ec8d",
+    "scripts/probe-mdn-output.mjs": "5f6f8b2a1bc14e8693525a17bc62a3860c497e5752b2e522551aabdc8ac376ab"
+  }
+}

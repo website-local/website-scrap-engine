@@ -2,7 +2,6 @@ import type {DownloadResource} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {ResourceBody, ResourceEncoding} from '../resource.js';
 import {ResourceType, replacementUri} from '../resource.js';
-import {escapePath} from '../util.js';
 import {safeJoin, writeFile} from '../io.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 
@@ -21,11 +20,12 @@ export function getResourceBodyFromHtml(
 
 export function redirectHtml(relativePath: string, encoding?: ResourceEncoding): string {
   const jsPath = relativePath.replace(/'/g, '\\\'');
+  const htmlPath = relativePath.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   // language=HTML
   return `<html lang="en">
 <head>
 <meta charset="${encoding || 'utf8'}">
-<meta http-equiv="refresh" content="0; url=${relativePath}">
+<meta http-equiv="refresh" content="0; url=${htmlPath}">
 <script>location.replace('${jsPath}' + location.hash);</script>
 <title>Redirecting</title>
 </head>
@@ -49,7 +49,7 @@ export async function saveHtmlToDisk(
     if (res.redirectedSavePath) {
       if (res.redirectedSavePath !== res.savePath) {
         const replaceUri = replacementUri(res.redirectedSavePath, res.savePath);
-        const relativePath: string = escapePath(replaceUri.toString());
+        const relativePath: string = replaceUri.toString();
         await writeFile(safeJoin(localRoot, decodeURI(res.savePath)),
           redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot);
         const body: ResourceBody = getResourceBodyFromHtml(res, options);
@@ -66,7 +66,7 @@ export async function saveHtmlToDisk(
       res.depth, res.redirectedUrl, res.url, localRoot,
       undefined, res.refSavePath);
     if (redirectResource?.replacePath) {
-      const relativePath: string = escapePath(redirectResource.replacePath);
+      const relativePath: string = redirectResource.replacePath;
       const savePath = decodeURI(res.savePath);
       await writeFile(safeJoin(localRoot, savePath),
         redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot);

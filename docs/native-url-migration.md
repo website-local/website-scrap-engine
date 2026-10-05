@@ -32,15 +32,23 @@ included in that count. The adapter also adds `toJSON()`.
 
 Static utilities include `parse`, `build`, authority/host/userinfo parsers and
 builders, `encode`, `decode`, `encodeReserved`, query encoding/parsing/building
-and add/set/remove/has helpers, `commonPath`, `joinPaths`, and `withinString`.
+and add/set/remove/has helpers, `buildQueryParameter`, `commonPath`, `joinPaths`,
+and `withinString`. Path utilities include `encodePathSegment`,
+`decodePathSegment`, their `UrnPathSegment` equivalents, `decodePath`,
+`decodeUrnPath`, `recodePath`, and `recodeUrnPath`.
 Public types include `UriParts`, `UriInput`, `URIConstructor`, `UriPredicate`,
 `QueryData`, `QueryInput`, `QuerySetter`, `QueryMatcher`, and `QuerySelector`.
 
 Component setters mutate and return their receiver. Cloning and resolution
-return independent instances. `instanceof URI` and `instanceof NativeUri` work;
+return independent instances and preserve query-spacing/duplicate settings.
+`instanceof URI` and `instanceof NativeUri` work;
 identity with the third-party URIjs constructor does not. Convert an existing
 URIjs instance with `URI(oldUri.toString())` when crossing the migration boundary.
 The parts-object constructor is supported; DOM-element construction is not.
+Parts-object credentials are decoded strings: builders escape them, and `parse`
+decodes them for round trips. Instance `username()`/`password()` getters retain
+native percent-encoded spelling. Public recoding helpers throw on malformed
+percent escapes, while internal normalization retains its tolerant policy.
 
 ## String fields and thread boundaries
 
@@ -78,6 +86,10 @@ Canonical spelling defines resource URLs and deduplication. `rawUrl` preserves
 the original source. Output filenames and deduplication keys can therefore
 change; existing output trees should be rebuilt. Local-mount containment checks
 also inspect original source spelling so parsing cannot hide encoded traversal.
+Local replacement links encode the actual written filename. Reserved escapes
+retained by the writer, such as a literal `%23` or `%2F` in a filename, appear as
+`%2523` or `%252F` in the link. This corrects previously disconnected links without
+renaming the files or changing deduplication keys. Redirect pages use the same rule.
 Hostname validation follows the runtime's native URL implementation; acceptance
 of IDNA edge cases such as `xn--` can differ between supported Node versions.
 
@@ -155,7 +167,12 @@ leading fragment hashes survive normalization. See the
 - `build` accepts the legacy argument but serialization is lazily cached; its
   internal scheduling and private URIjs representation are not reproduced.
 - `withinString` provides basic scheme-URL scanning, without URIjs's full HTML,
-  punctuation, parentheses and scanning-option behavior.
+  punctuation, parentheses and scanning-option behavior. Observer callbacks may
+  return `undefined`; replacement callbacks receive offsets into the updated text.
+- Standalone `ensureValidHostname`/`ensureValidPort`, the optional destination
+  object for `URI.parse`, and legacy deferred-build arguments in TypeScript
+  signatures are not implemented. Native validation is performed by normal
+  constructors/setters; internal URIjs scheduling remains out of scope.
 - URI templates, fragment-query/fragment-URI extensions, jQuery integration,
   browser globals, DOM inputs, undocumented internals, and all obscure setter
   coercions are outside this adapter.
@@ -178,6 +195,9 @@ install `log4js` if using MDN's logger.
 
 Current validation and merge requirements are maintained in the
 [merge-readiness audit](uri-merge-readiness.md). The
+[offline MDN output audit](mdn-output-compatibility.md) compares actual disk-name
+and link-destination contracts without downloading pages; it separates harmless
+URI spelling changes from output differences and existing writer defects. The
 [compact investigation history](uri-investigation-history.md) records retained
 optimizations, rejected experiments, corpus methodology and historical results.
 Earlier test counts and timings belong to their original snapshots; they are not

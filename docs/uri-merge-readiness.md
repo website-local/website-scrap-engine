@@ -6,6 +6,25 @@ remains noise-limited, and the full clean-install CI matrix still needs to run.
 This report covers checkpoint `634e2d2`, the four fixes below, and subsequent
 test portability fixes. Remote CI must be rerun after the test fixes.
 
+The later [public source audit](uri-investigation-history.md#public-source-audit-after-the-ci-checkpoint)
+adds static helper compatibility and preserves query settings through resolution.
+Its 1,002-test validation supersedes the test totals below. The subsequent
+[parts-construction fix](uri-investigation-history.md#parts-construction-regression-fix)
+reduces time by 21.3% versus the regressed audit version with a passing control.
+Its +1.8% estimate versus checkpoint remains noise-limited; checkpoint performance
+preservation is not formally established. The whole-engine timings below predate this work.
+
+The later [offline MDN output audit](mdn-output-compatibility.md) checks final disk
+names, resolved links and deduplication groups on 476,068 artifact/log cases.
+It finds no changed disk names, link destinations or decoded fragments; one
+Unicode spelling pair gains deduplication. Representative real-writer fixtures
+confirm those results without a crawl. Its `%23` filename/link defect is now fixed,
+along with related reserved escapes: the focused 1,000-case replay eliminates all
+14 link mismatches and 32 conversion errors, preserving filenames and dedup keys.
+The final fix passes 1,018 Linux tests, 1,017 Windows tests plus one existing skip,
+and build/lint/types. See [output-fix evidence](evidence/output-link-fix.json).
+The historical conclusions below are not proof that every engine output is valid.
+
 ## Correctness changes
 
 | Trigger | Defect before this audit | Corrected behavior |

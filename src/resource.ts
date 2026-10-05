@@ -454,10 +454,11 @@ export function generateSavePath(
 }
 
 export const urlOfSavePath = (savePath: string): string => {
-  if (savePath.includes('\\')) {
-    return `file:///${savePath.replace(/\\/g, '/')}`;
-  }
-  return `file:///${savePath}`;
+  // Writers use decodeURI, which preserves escapes for reserved characters.
+  // Encode that disk name as a URL, so a literal %23 filename is linked as %2523.
+  let pathname = decodeURI(savePath.replace(/\\/g, '/'));
+  if (path.sep === '\\') pathname = pathname.replace(/\\/g, '/');
+  return 'file:///' + encodeURI(pathname).replace(/\?/g, '%3F').replace(/#/g, '%23');
 };
 
 /** @internal Avoid URL parsing for already-normalized, unescaped local paths. */

@@ -55,6 +55,8 @@ Crawl control and reliability
 Fixes and performance
 ------------
 
+* Keep local links and redirect pages consistent with written filenames containing reserved URL escapes such as `%23` and `%2F`. Preserve saved filenames and deduplication keys; escape the local URL rather than sanitizing it as a filename.
+
 * Bypass Got's response cache for requests containing Cache-Control: max-stale, including hook changes, redirects and retries in buffered and streaming downloads. This mitigates GHSA-ch52-4w7c-c8xp; http-cache-semantics has no patched release yet, so the dependency advisory remains open.
 
 * Cache output-directory preparation per crawl by default; strictOutputChecks restores per-write preparation. Initialize worker pools once on demand and retain them until disposal; waitForWorkers restores eager readiness. Omit worker protocol-version fields and checks.

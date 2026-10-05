@@ -1,0 +1,144 @@
+{
+  "date": "2026-10-05",
+  "artifacts": "/mnt/e/tmp/wse-output-link-fix-20261005",
+  "cause": "Links interpreted reserved escapes, while writers preserve them through decodeURI",
+  "fix": [
+    "Encode the decoded disk filename in urlOfSavePath",
+    "Preserve completed URLs in redirect writers and escape HTML attributes"
+  ],
+  "validation": {
+    "node22": {
+      "build": true,
+      "lint": true,
+      "strictTestTypes": true,
+      "tests": 1018,
+      "suites": 50
+    },
+    "windowsNode24": {
+      "passed": 1017,
+      "skipped": 1,
+      "suites": 50
+    },
+    "node26": {
+      "focusedPassed": 94,
+      "suites": 3
+    },
+    "sourceSnapshotMatches": true,
+    "diffCheck": true,
+    "consumer22": {
+      "node": "v22.13.0",
+      "strictDeclarations": true,
+      "runtimeChecks": 13
+    },
+    "consumer26": {
+      "node": "v26.10.0",
+      "strictDeclarations": true,
+      "runtimeChecks": 13
+    },
+    "consumerWindows24": {
+      "node": "v24.21.0",
+      "strictDeclarations": true,
+      "runtimeChecks": 14
+    },
+    "compiledPackedMatches": true
+  },
+  "sourceSha256": {
+    "src/resource.ts": "158df30843685f613c864352067b1b528e523d07c723a510214c00f941074acb",
+    "src/life-cycle/save-html-to-disk.ts": "48a64e2bd28d28ec080c53c4ad6db22438a226db2656eb58d53acd65e3d0118d",
+    "test/life-cycle/output-links.spec.ts": "9dd4f7ae230a484f54226000552b0808a3f9545ec075131128e663bfaa741d07"
+  },
+  "reserved": {
+    "cases": 1000,
+    "scope": "Offline MDN output contract, actual pre-download hooks and disk-name decoding; no body acquisition or after-download redirect processing",
+    "publication": "Virtual output graph; no publication",
+    "assumptions": [
+      "href/log inputs modeled as anchors; asset inputs modeled as images; original DOM attributes unavailable",
+      "Archive-scoped dedup groups, archive locale; corpus order is not crawl scheduling",
+      "Accepted targets assumed acquired successfully; missing unsampled bodies are not counted as broken links",
+      "Collision counts are observations against first group member, not unique lost files",
+      "Case-fold collisions are candidates, not a full Windows filesystem model"
+    ],
+    "differences": {
+      "destination": 46,
+      "fragment": 32,
+      "search": 32,
+      "replacement": 52
+    },
+    "inputSha256": "6993d775d4370acd49e7e379f902847d46f81e7538b0d651f4b6374d76786b60",
+    "variants": [
+      {
+        "counts": {
+          "skipped": 856,
+          "accepted": 144,
+          "pathErrors": 32,
+          "linkTargetMismatch": 14,
+          "fileCollisions": 46,
+          "caseFoldFileCollisions": 46
+        },
+        "dedupGroups": 136
+      },
+      {
+        "counts": {
+          "skipped": 856,
+          "accepted": 144,
+          "fileCollisions": 46,
+          "caseFoldFileCollisions": 46
+        },
+        "dedupGroups": 136
+      }
+    ],
+    "rawReportSha256": "040eab93c1f78d8a178bca36af1e84d454624828d4089d733b05df62718f8a15"
+  },
+  "writer": {
+    "cases": 27,
+    "scope": "Offline MDN output contract, actual pre-download hooks and disk-name decoding; no body acquisition or after-download redirect processing",
+    "publication": "Real HTML/binary writers with minimal fixture bodies and read-back of emitted links",
+    "assumptions": [
+      "href/log inputs modeled as anchors; asset inputs modeled as images; original DOM attributes unavailable",
+      "Archive-scoped dedup groups, archive locale; corpus order is not crawl scheduling",
+      "Accepted targets assumed acquired successfully; missing unsampled bodies are not counted as broken links",
+      "Collision counts are observations against first group member, not unique lost files",
+      "Case-fold collisions are candidates, not a full Windows filesystem model"
+    ],
+    "differences": {
+      "replacement": 21,
+      "key": 2,
+      "downloadLink": 2,
+      "mergedDedupGroups": 1,
+      "status": 1,
+      "error": 1,
+      "diskPath": 1,
+      "destination": 1,
+      "fragment": 1,
+      "search": 1,
+      "type": 1
+    },
+    "inputSha256": "46a776a904be5ccf4f6efd9e13609b40f85a7ca80b538a2a17d5442fc6e4e84b",
+    "variants": [
+      {
+        "counts": {
+          "accepted": 26,
+          "publishedLinksVerified": 26,
+          "fileCollisions": 1,
+          "caseFoldFileCollisions": 1,
+          "error": 1
+        },
+        "dedupGroups": 26
+      },
+      {
+        "counts": {
+          "accepted": 27,
+          "publishedLinksVerified": 27
+        },
+        "dedupGroups": 26
+      }
+    ],
+    "rawReportSha256": "cbe2ed20b9036be34d4bc6a84108af8b5406aa5383a77025280e71328406357f"
+  },
+  "packageSha256": "8f15bd49cb146c5779bc29c75f90e2222b71f7f36a7c359725540cf6ce44f98b",
+  "setupNotes": [
+    "Initial Windows consumer setup tried to junction package-lock.json; corrected to directories only, then all checks passed",
+    "Validation snapshot excludes unrelated untracked src/shared-context.ts",
+    "No push, GitHub API calls or full crawl"
+  ]
+}
