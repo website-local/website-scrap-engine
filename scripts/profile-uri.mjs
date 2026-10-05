@@ -3,6 +3,7 @@
 // CASE: parse, parse-bare, read, write, helpers, authority, resolve,
 // construct-wrapper, construct-string, has-key, predicate
 // segment-read-short, segment-read-long
+// relative-short, relative-deep
 // For --prof runs, append --ticks to disable inspector sampling.
 import {Session} from 'node:inspector/promises';
 import {writeFile} from 'node:fs/promises';
@@ -14,6 +15,9 @@ const mod = await import(pathToFileURL(entry));
 const URI = mod.URI ?? mod.default;
 const inputs = Array.from({length:128}, (_,i) => `https://example.org:8080/docs/file-${i}.html?x=a%20b&x=${i}&y=~#part-${i}`);
 const objects = inputs.map(v => URI(v));
+const relativeBase = URI('https://example.org:8080/docs/base.html');
+const deepRelative = inputs.map((_, i) => URI('https://example.org:8080/' +
+  Array.from({length:24}, (_, n) => `part-${n}`).join('/') + '/asset-' + i));
 const segmentObjects = inputs.map((_, i) => URI('https://example.org/' +
   Array.from({length:32}, (_, n) => `part-${n}-${i}`).join('/') + '/'));
 const references = inputs.map((_,i) => URI(`../asset-${i}.css?q=${i}#part`));
@@ -21,6 +25,8 @@ const relativeInputs = inputs.map((_,i) => `../asset-${i}.css?q=${i}#part`);
 const predicates = inputs.map((value,i) => URI(i & 1 ? value : relativeInputs[i]));
 const keyQuery = URI('?' + Array.from({length:24}, (_,i) => `k${i}=a%20b%2Bc-${i}`).join('&'));
 const fns = {
+  'relative-short': i => objects[i & 127].relativeTo(relativeBase).toString(),
+  'relative-deep': i => deepRelative[i & 127].relativeTo(relativeBase).toString(),
   'segment-read-short': i => String(objects[i & 127].segment([0, 1, -1, -2][i & 3])),
   'segment-read-long': i => String(segmentObjects[i & 127].segment([0, 15, -1, -16][i & 3])),
   parse: i => URI(inputs[i & 127]).toString(),

@@ -39,6 +39,9 @@ function prepare(URI, variant) {
     `https://example.org:8080/docs/file-${i}.html?x=a%20b&x=${i}&y=~#part-${i}`);
   const bare = inputs.map((_,i) => `https://example.org/docs/file-${i}.html`);
   const objects = inputs.map(v => URI(v));
+  const relativeBase = URI('https://example.org:8080/docs/base.html');
+  const deepRelative = inputs.map((_, i) => URI('https://example.org:8080/' +
+    Array.from({length:24}, (_, n) => `part-${n}`).join('/') + '/asset-' + i));
   const references = inputs.map((_,i) => URI(`../asset-${i}.css?q=${i}#part`));
   const relativeInputs = inputs.map((_,i) => `../asset-${i}.css?q=${i}#part`);
   const nativeBases = inputs.map(value => new URL(value));
@@ -58,6 +61,8 @@ function prepare(URI, variant) {
     'segment-read-short': i => String(objects[i & 127].segment([0, 1, -1, -2][i & 3])),
     'segment-read-long': i => String(segmentObjects[i & 127].segment([0, 15, -1, -16][i & 3])),
     'segment-write': i => objects[i & 127].segment(-1, 'asset-' + i).toString(),
+    'relative-short': i => objects[i & 127].relativeTo(relativeBase).toString(),
+    'relative-deep': i => deepRelative[i & 127].relativeTo(relativeBase).toString(),
     'construct-parts': i => URI(partsInputs[i & 127]).toString(),
     'parse-bare': i => URI(bare[i & 127]).toString(),
     'query-read': i => JSON.stringify(objects[i & 127].query(true)),

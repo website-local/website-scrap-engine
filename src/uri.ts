@@ -539,14 +539,19 @@ export class NativeUri {
   }
   relativeTo(base: UriInput): NativeUri {
     const other = base instanceof NativeUri ? base : new NativeUri(base);
-    if (!this._protocol || !other._protocol || this._protocol !== other._protocol || this.host() !== other.host() ||
+    if (!this._protocol || !other._protocol || this._protocol !== other._protocol ||
+      this._hostname !== other._hostname || this._port !== other._port ||
       this._username !== other._username || this._password !== other._password ||
       !this._path.startsWith('/') || !other._path.startsWith('/')) return this.clone();
-    if (this._protocol === 'file' && /^\/[a-z]:/i.exec(this._path)?.[0].toLowerCase() !==
-      /^\/[a-z]:/i.exec(other._path)?.[0].toLowerCase()) return this.clone();
+    // posix.relative treats differently cased drive prefixes as path segments.
+    // Preserve the absolute reference rather than emitting ../C:/ under c:/.
+    if (this._protocol === 'file' && /^\/[a-z]:/i.exec(this._path)?.[0] !==
+      /^\/[a-z]:/i.exec(other._path)?.[0]) return this.clone();
     if (this._path.includes('//') || other._path.includes('//')) return this.clone();
     if (this._path === other._path) {
-      if (this._search === other._search) return configuredReference(this._hash, this);
+      // Explicitly retain an empty query: native resolution of '' or '#...' can
+      // discard a base's trailing '?' even when both stored queries are equal.
+      if (this._search === other._search && this._search !== '?') return configuredReference(this._hash, this);
       if (this._search) return configuredReference(this._search + this._hash, this);
     }
     const baseDir = other._path.endsWith('/') ? other._path : posix.dirname(other._path);
@@ -554,7 +559,8 @@ export class NativeUri {
     let relative = posix.relative(baseDir, targetDir);
     if (relative) relative += '/';
     relative += this._path.endsWith('/') ? (relative ? '' : './') : posix.basename(this._path);
-    if (relative.split('/')[0].includes(':')) relative = './' + relative;
+    const colon = relative.indexOf(':');
+    if (colon >= 0 && relative.lastIndexOf('/', colon) < 0) relative = './' + relative;
     return configuredReference(relative + this._search + this._hash, this);
   }
   equals(other: UriInput = ''): boolean {

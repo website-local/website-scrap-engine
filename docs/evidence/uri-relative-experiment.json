@@ -1,0 +1,478 @@
+{
+  "date": "2026-10-06",
+  "baseline": "5fff228",
+  "branch": "perf/uri-relative-paths",
+  "status": "Fuzz-hardened relative-reference candidate; performance unmeasured because host checks exceeded gate",
+  "changes": [
+    "Compare stored hostname and port without constructing host strings",
+    "Inspect the first segment for a colon without splitting the entire relative path",
+    "Preserve explicit empty queries in same-path relative references",
+    "Return absolute file references when drive-prefix spelling differs",
+    "Add bounded deterministic fuzzing with native URL, collection and real-file oracles"
+  ],
+  "hostGate": {
+    "medianCpuBelow": 20,
+    "maxCpuBelow": 35,
+    "maxDiskQueue": 1
+  },
+  "host": {
+    "host-before": [
+      {
+        "utc": "2026-10-05T18:43:08.6617406Z",
+        "cpuPercent": 39,
+        "maxDiskQueue": 0
+      },
+      {
+        "utc": "2026-10-05T18:43:11.5473926Z",
+        "cpuPercent": 42,
+        "maxDiskQueue": 0
+      },
+      {
+        "utc": "2026-10-05T18:43:14.4138376Z",
+        "cpuPercent": 41,
+        "maxDiskQueue": 0
+      }
+    ],
+    "host-after-validation": [
+      {
+        "utc": "2026-10-05T18:47:32.4819522Z",
+        "cpuPercent": 28,
+        "maxDiskQueue": 0
+      },
+      {
+        "utc": "2026-10-05T18:47:35.3602188Z",
+        "cpuPercent": 27,
+        "maxDiskQueue": 0
+      },
+      {
+        "utc": "2026-10-05T18:47:38.2282004Z",
+        "cpuPercent": 33,
+        "maxDiskQueue": 0
+      }
+    ]
+  },
+  "profiles": {
+    "before": {
+      "entry": "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js",
+      "mode": "relative-deep",
+      "node": "v22.13.0",
+      "intervalUs": 100,
+      "samples": 1254,
+      "sink": 79573914,
+      "self": [
+        {
+          "frame": "relativeTo @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:542",
+          "ms": 514.32,
+          "percent": 41.08617295943148
+        },
+        {
+          "frame": "resolve @ node:path:1162",
+          "ms": 323.853,
+          "percent": 25.870820445307906
+        },
+        {
+          "frame": "relative @ node:path:1267",
+          "ms": 246.826,
+          "percent": 19.717560520463202
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 50.76,
+          "percent": 4.054934942099747
+        },
+        {
+          "frame": "NativeUri @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:59",
+          "ms": 27.682,
+          "percent": 2.211361486745571
+        },
+        {
+          "frame": "dirname @ node:path:1352",
+          "ms": 19.756,
+          "percent": 1.5781972954318872
+        },
+        {
+          "frame": "normalizeString @ node:path:77",
+          "ms": 16.042,
+          "percent": 1.2815064291009484
+        },
+        {
+          "frame": "relative-deep @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:29",
+          "ms": 14.241,
+          "percent": 1.137634525422429
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 13.465,
+          "percent": 1.0756441882461207
+        },
+        {
+          "frame": "configuredReference @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:580",
+          "ms": 9.912,
+          "percent": 0.7918147191901633
+        },
+        {
+          "frame": "host @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:159",
+          "ms": 9.393,
+          "percent": 0.750354686980751
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:47",
+          "ms": 3.563,
+          "percent": 0.28462831360719854
+        },
+        {
+          "frame": "wrappedFn @ node:internal/errors:535",
+          "ms": 1.995,
+          "percent": 0.15936948797259642
+        }
+      ],
+      "inclusive": [
+        {
+          "frame": "(root) @ :0",
+          "ms": 1251.808,
+          "percent": 100
+        },
+        {
+          "frame": "(anonymous) @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:0",
+          "ms": 1201.048,
+          "percent": 95.94506505790025
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:47",
+          "ms": 1187.583,
+          "percent": 94.86942086965414
+        },
+        {
+          "frame": "relative-deep @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:29",
+          "ms": 1184.02,
+          "percent": 94.58479255604693
+        },
+        {
+          "frame": "relativeTo @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:542",
+          "ms": 1163.816,
+          "percent": 92.97080702471945
+        },
+        {
+          "frame": "relative @ node:path:1267",
+          "ms": 586.081,
+          "percent": 46.81876134359263
+        },
+        {
+          "frame": "resolve @ node:path:1162",
+          "ms": 339.895,
+          "percent": 27.152326874408853
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 50.76,
+          "percent": 4.054934942099747
+        },
+        {
+          "frame": "configuredReference @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:580",
+          "ms": 37.594,
+          "percent": 3.0031762059357345
+        },
+        {
+          "frame": "NativeUri @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:59",
+          "ms": 27.682,
+          "percent": 2.211361486745571
+        },
+        {
+          "frame": "dirname @ node:path:1352",
+          "ms": 21.751,
+          "percent": 1.7375667834044837
+        },
+        {
+          "frame": "normalizeString @ node:path:77",
+          "ms": 16.042,
+          "percent": 1.2815064291009484
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 13.465,
+          "percent": 1.0756441882461207
+        },
+        {
+          "frame": "(anonymous) @ node:internal/util:441",
+          "ms": 13.465,
+          "percent": 1.0756441882461207
+        },
+        {
+          "frame": "fn @ node:internal/util:440",
+          "ms": 13.465,
+          "percent": 1.0756441882461207
+        },
+        {
+          "frame": "host @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/baseline/lib/uri.js:159",
+          "ms": 9.393,
+          "percent": 0.750354686980751
+        },
+        {
+          "frame": "wrappedFn @ node:internal/errors:535",
+          "ms": 1.995,
+          "percent": 0.15936948797259642
+        }
+      ]
+    },
+    "after": {
+      "entry": "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js",
+      "mode": "relative-deep",
+      "node": "v22.13.0",
+      "intervalUs": 100,
+      "samples": 1249,
+      "sink": 89230952,
+      "self": [
+        {
+          "frame": "resolve @ node:path:1162",
+          "ms": 442.247,
+          "percent": 36.09392891508545
+        },
+        {
+          "frame": "relative @ node:path:1267",
+          "ms": 352.409,
+          "percent": 28.76181273142915
+        },
+        {
+          "frame": "relativeTo @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js:542",
+          "ms": 230.236,
+          "percent": 18.79067990895046
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 62.684,
+          "percent": 5.11594615704169
+        },
+        {
+          "frame": "NativeUri @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js:59",
+          "ms": 41.779,
+          "percent": 3.4097874177628222
+        },
+        {
+          "frame": "relative-deep @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:29",
+          "ms": 30.601,
+          "percent": 2.497496464036002
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 20.508,
+          "percent": 1.6737576381311174
+        },
+        {
+          "frame": "normalizeString @ node:path:77",
+          "ms": 20.367,
+          "percent": 1.6622499422574835
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:47",
+          "ms": 6.855,
+          "percent": 0.5594698951330608
+        },
+        {
+          "frame": "configuredReference @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js:582",
+          "ms": 6.126,
+          "percent": 0.4999726590204421
+        },
+        {
+          "frame": "dirname @ node:path:1352",
+          "ms": 5.096,
+          "percent": 0.41590934873786695
+        },
+        {
+          "frame": "dispatch @ :0",
+          "ms": 1.993,
+          "percent": 0.1626584246535653
+        },
+        {
+          "frame": "(anonymous) @ node:internal/validators:161",
+          "ms": 1.868,
+          "percent": 0.15245656660956347
+        },
+        {
+          "frame": "(anonymous) @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:0",
+          "ms": 0.975,
+          "percent": 0.07957449274321433
+        },
+        {
+          "frame": "now @ :0",
+          "ms": 0.889,
+          "percent": 0.07255561440894107
+        },
+        {
+          "frame": "wrappedFn @ node:internal/errors:535",
+          "ms": 0.634,
+          "percent": 0.051743823999177326
+        }
+      ],
+      "inclusive": [
+        {
+          "frame": "(root) @ :0",
+          "ms": 1225.267,
+          "percent": 100
+        },
+        {
+          "frame": "(anonymous) @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:0",
+          "ms": 1162.583,
+          "percent": 94.88405384295831
+        },
+        {
+          "frame": "batch @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:47",
+          "ms": 1137.348,
+          "percent": 92.82450274103522
+        },
+        {
+          "frame": "relative-deep @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/profile-uri.mjs:29",
+          "ms": 1130.493,
+          "percent": 92.26503284590216
+        },
+        {
+          "frame": "relativeTo @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js:542",
+          "ms": 1098.105,
+          "percent": 89.6216906192691
+        },
+        {
+          "frame": "relative @ node:path:1267",
+          "ms": 812.487,
+          "percent": 66.31101629277538
+        },
+        {
+          "frame": "resolve @ node:path:1162",
+          "ms": 462.614,
+          "percent": 37.75617885734293
+        },
+        {
+          "frame": "(garbage collector) @ :0",
+          "ms": 62.684,
+          "percent": 5.11594615704169
+        },
+        {
+          "frame": "configuredReference @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js:582",
+          "ms": 47.905,
+          "percent": 3.9097600767832645
+        },
+        {
+          "frame": "NativeUri @ file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js:59",
+          "ms": 41.779,
+          "percent": 3.4097874177628222
+        },
+        {
+          "frame": "post @ node:inspector:112",
+          "ms": 22.501,
+          "percent": 1.8364160627846828
+        },
+        {
+          "frame": "(anonymous) @ node:internal/util:441",
+          "ms": 22.501,
+          "percent": 1.8364160627846828
+        },
+        {
+          "frame": "fn @ node:internal/util:440",
+          "ms": 22.501,
+          "percent": 1.8364160627846828
+        },
+        {
+          "frame": "normalizeString @ node:path:77",
+          "ms": 20.367,
+          "percent": 1.6622499422574835
+        },
+        {
+          "frame": "dirname @ node:path:1352",
+          "ms": 6.964,
+          "percent": 0.5683659153474304
+        },
+        {
+          "frame": "dispatch @ :0",
+          "ms": 1.993,
+          "percent": 0.1626584246535653
+        },
+        {
+          "frame": "(anonymous) @ node:internal/validators:161",
+          "ms": 1.868,
+          "percent": 0.15245656660956347
+        },
+        {
+          "frame": "wrappedFn @ node:internal/errors:535",
+          "ms": 1.665,
+          "percent": 0.1358887491461045
+        },
+        {
+          "frame": "now @ :0",
+          "ms": 0.889,
+          "percent": 0.07255561440894107
+        },
+        {
+          "frame": "now @ node:internal/perf/performance:137",
+          "ms": 0.889,
+          "percent": 0.07255561440894107
+        }
+      ]
+    }
+  },
+  "rawArtifacts": ".local-tmp/uri-relative-20261006",
+  "limitations": "Profiles are diagnostic; no paired timings ran and no speedup is claimed. No native parser or path-resolution replacement.",
+  "initialAllocationOnlyValidation": {
+    "build": true,
+    "lint": true,
+    "strictTestTypes": true,
+    "node22Tests": 1019,
+    "node22Suites": 50,
+    "differential": {
+      "checks": 41616,
+      "failures": []
+    },
+    "publicProbe": {
+      "checks": 8452,
+      "beforeDifferences": 7,
+      "afterDifferences": 7,
+      "newlyDifferent": 0,
+      "changedSinceBefore": 0
+    },
+    "outputReplay": {
+      "cases": 1000,
+      "differences": {},
+      "fingerprints": [
+        "b5ffdde3d3ecb873a48dda7236a01cd2dc5504bf47f3d24a8ef63819c6ebb320",
+        "b5ffdde3d3ecb873a48dda7236a01cd2dc5504bf47f3d24a8ef63819c6ebb320"
+      ]
+    }
+  },
+  "initialAllocationOnlySourceSha256": "99cc46321c83da3e7af585aa6953258f9c351fd15ace4d97b9b36f02bc77e4e1",
+  "profileScope": "Profiles and differential/output probes predate fuzz-discovered correctness fixes",
+  "sourceSha256": "68edaa821524ee8b6a1a4553cc68306b9ac5cbba4e5d7c434f721a61200e3945",
+  "fuzz": {
+    "seeds": [
+      "0x19b50cf8",
+      "0x5fff228",
+      "0x12345678"
+    ],
+    "relativePairs": 1200,
+    "baseRepresentations": 3,
+    "boundaryPairs": 121,
+    "segmentSequences": 540,
+    "statesPerSequence": 5,
+    "writtenFilePairs": 72,
+    "regressions": [
+      "empty query delimiter inheritance",
+      "file drive-prefix case round trip"
+    ],
+    "failureContext": "seed, sample and inputs; mutation steps and emitted links where applicable"
+  },
+  "validation": {
+    "build": true,
+    "lint": true,
+    "strictTestTypes": true,
+    "node22": {
+      "suites": 51,
+      "passed": 1029
+    },
+    "node26": {
+      "suites": 51,
+      "passed": 1029
+    },
+    "windows24": {
+      "suites": 51,
+      "passed": 1028,
+      "skipped": 1
+    },
+    "windowsRetry": "Initial inherited standard I/O produced open EISDIR; Windows-native input/output redirection resolved it. Full retry passed."
+  }
+}

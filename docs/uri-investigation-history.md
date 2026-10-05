@@ -192,3 +192,30 @@ claim. [Initial evidence](evidence/uri-segment-performance.json) and
 [retry evidence](evidence/uri-segment-remeasure.json) preserve controls and provenance;
 full artifacts remain in `/mnt/e/tmp/wse-uri-segments-20261006` and
 `/mnt/e/tmp/wse-uri-remeasure-20261006`.
+
+## Relative references and deterministic fuzz coverage after `5fff228`
+
+`relativeTo()` compares stored hostname/port fields and checks first-segment
+colons without splitting the path. Built-in profiles identify path resolution
+and reference construction as the main work. No paired timing ran: host CPU
+39/42/41%, then 28/27/33%, exceeded the gate; no speedup is claimed.
+
+The initial allocation-only candidate passed 41,616 differential checks, 8,452
+public probe cases and a 1,000-case offline MDN output replay without differences.
+Those checks predate the subsequent correctness fixes: seeded fuzzing found lost
+empty query delimiters and invalid relative paths between differently cased file
+drive prefixes. The final implementation retains explicit `?` references and
+returns an absolute reference when drive spelling differs.
+
+Three fixed seeds cover 1,200 target/base pairs through three base representations,
+540 segment mutation sequences with five states each, and 72 generated links
+verified against real HTML/binary files. A 121-pair boundary matrix and minimal
+empty-query examples retain the discoveries. Failures identify seed, sample and
+inputs; all generated files are removed after each test. Native URL resolution,
+public segment collections and actual disk reads provide the respective oracles.
+
+Build, lint and strict test types pass. All 51 suites pass: 1,029 tests each
+on Linux Node 22/26; 1,028 plus one existing skip on Windows Node 24. Windows
+required native standard-I/O redirection after an initial harness `EISDIR` error.
+[Evidence](evidence/uri-relative-experiment.json) records validation and diagnostic
+profiles. Raw artifacts remain in `.local-tmp/uri-relative-20261006` (ignored).
