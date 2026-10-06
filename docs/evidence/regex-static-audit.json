@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-06",
+  "baseline": "ed130d6",
+  "scope": "60 runtime source files; 57 regex literals on working tree with segment trim fix applied",
+  "runtime": "v22.13.0",
+  "method": "Static source review plus isolated 2-second-capped witnesses; diagnostic timings only, no host-noise gate",
+  "results": {
+    "cssComments": [
+      {
+        "inputLength": 6144,
+        "medianMs": 3.309
+      },
+      {
+        "inputLength": 12288,
+        "medianMs": 13.266
+      },
+      {
+        "inputLength": 24576,
+        "medianMs": 58.9
+      }
+    ],
+    "cssUrls": [
+      {
+        "inputLength": 133,
+        "medianMs": 0.889
+      },
+      {
+        "inputLength": 261,
+        "medianMs": 5.791
+      },
+      {
+        "inputLength": 517,
+        "medianMs": 47.791
+      }
+    ],
+    "metaRefresh": [
+      {
+        "inputLength": 133,
+        "medianMs": 0.662
+      },
+      {
+        "inputLength": 261,
+        "medianMs": 5.061
+      },
+      {
+        "inputLength": 517,
+        "medianMs": 41.943
+      }
+    ],
+    "withinString": [
+      {
+        "inputLength": 4097,
+        "medianMs": 8.875
+      },
+      {
+        "inputLength": 8193,
+        "medianMs": 35.335
+      },
+      {
+        "inputLength": 16385,
+        "medianMs": 174.937
+      }
+    ]
+  },
+  "limitations": [
+    "No CodeQL CLI installed; this is a manual static audit with a TypeScript AST inventory and bounded runtime witnesses.",
+    "No dependencies or third-party parsers audited.",
+    "Timings are diagnostic only on a noisy host; no performance gate or precise growth-rate fit is claimed."
+  ],
+  "rawArtifacts": ".local-tmp/uri-relative-20261006/results/static-regex-audit.json"
+}

@@ -1,0 +1,561 @@
+{
+  "baseline": "ed130d6",
+  "date": "2026-10-06",
+  "scope": "Short direct-API paired runs, not engine throughput",
+  "hostGate": {
+    "medianCpuBelow": 20,
+    "maxCpuBelow": 35,
+    "maxDiskQueue": 1,
+    "checkedBeforeEachFinalRun": true
+  },
+  "results": {
+    "within-observe": {
+      "status": "unresolved-control",
+      "retained": 12,
+      "medianNs": [
+        955.5834288990604,
+        956.7158830275058,
+        1144.1943807339526,
+        1175.0286697247668
+      ],
+      "beforePercent": {
+        "median": 19.881853112517014,
+        "interval95": [
+          17.24788342981134,
+          21.685327340460237
+        ]
+      },
+      "baselineControlPercent": {
+        "median": 1.01760359869133,
+        "interval95": [
+          -0.17996705563009807,
+          7.644809809761499
+        ]
+      },
+      "controlPercent": {
+        "median": 2.0958030920750383,
+        "interval95": [
+          -3.2127346719364014,
+          9.254808070911867
+        ]
+      },
+      "medianNsOrder": [
+        "before-control",
+        "before",
+        "after",
+        "after-control"
+      ],
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T02:15:30.8716246Z",
+          "cpu": 5,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:15:31.9101122Z",
+          "cpu": 2,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:15:32.9327719Z",
+          "cpu": 2,
+          "queue": 0
+        }
+      ],
+      "rawResult": ".local-tmp/uri-relative-20261006/results/idle-v6-master-within-observe.json",
+      "measuredHashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "dd1772f66396e8286daf88a04d08d2a5a94d278a224178a2892d77fe7e47b527",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      }
+    },
+    "within-generic": {
+      "status": "unresolved-control",
+      "retained": 12,
+      "medianNs": [
+        976.9919288079598,
+        1042.503104304641,
+        1248.1581125827893,
+        1251.1175496688684
+      ],
+      "beforePercent": {
+        "median": 20.75540223339386,
+        "interval95": [
+          15.876180090230495,
+          22.610145715819954
+        ]
+      },
+      "baselineControlPercent": {
+        "median": -6.242017103145647,
+        "interval95": [
+          -8.244701124492865,
+          -4.66326988046954
+        ]
+      },
+      "controlPercent": {
+        "median": 0.535274337295033,
+        "interval95": [
+          -2.377625731325528,
+          1.6560333288527684
+        ]
+      },
+      "medianNsOrder": [
+        "before-control",
+        "before",
+        "after",
+        "after-control"
+      ],
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T02:15:35.6274702Z",
+          "cpu": 12,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:15:36.6664542Z",
+          "cpu": 2,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:15:37.6891643Z",
+          "cpu": 0,
+          "queue": 0
+        }
+      ],
+      "rawResult": ".local-tmp/uri-relative-20261006/results/idle-v6-master-within-generic.json",
+      "measuredHashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "dd1772f66396e8286daf88a04d08d2a5a94d278a224178a2892d77fe7e47b527",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      }
+    },
+    "css-small": {
+      "status": "unresolved-control",
+      "retained": 12,
+      "medianNs": [
+        410.95412234042703,
+        433.3554964538994,
+        295.57014627659595,
+        293.1488253546069
+      ],
+      "beforePercent": {
+        "median": -30.197857764709255,
+        "interval95": [
+          -32.413462134893635,
+          -25.64241352704819
+        ]
+      },
+      "baselineControlPercent": {
+        "median": 1.6508580447307741,
+        "interval95": [
+          -6.986229747901163,
+          7.61090859098178
+        ]
+      },
+      "controlPercent": {
+        "median": -0.3811708049742957,
+        "interval95": [
+          -1.108730449511719,
+          4.807806035559537
+        ]
+      },
+      "medianNsOrder": [
+        "before-control",
+        "before",
+        "after",
+        "after-control"
+      ],
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T02:13:20.1691519Z",
+          "cpu": 15,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:13:21.2126019Z",
+          "cpu": 20,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:13:22.2342983Z",
+          "cpu": 17,
+          "queue": 0
+        }
+      ],
+      "rawResult": ".local-tmp/uri-relative-20261006/results/idle-v5-retry-master-css-small.json",
+      "measuredHashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "dda7b952ff05aa2aa57109cce278d3bcf4864e7c1d66d4c8b4c3799bb80c6bb3",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      }
+    },
+    "css-sheet": {
+      "status": "unresolved-control",
+      "retained": 12,
+      "medianNs": [
+        8772.265624999965,
+        8244.112723214268,
+        7391.629464285763,
+        6791.545758928708
+      ],
+      "beforePercent": {
+        "median": -13.199160667885728,
+        "interval95": [
+          -19.619947000246906,
+          3.79313828470414
+        ]
+      },
+      "baselineControlPercent": {
+        "median": 6.101243396471623,
+        "interval95": [
+          -14.639585049192185,
+          12.569942005891544
+        ]
+      },
+      "controlPercent": {
+        "median": -3.0563271683455517,
+        "interval95": [
+          -22.945459933112474,
+          13.332878104456347
+        ]
+      },
+      "medianNsOrder": [
+        "before-control",
+        "before",
+        "after",
+        "after-control"
+      ],
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T02:13:24.8766372Z",
+          "cpu": 21,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:13:25.9142208Z",
+          "cpu": 16,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T02:13:26.9365890Z",
+          "cpu": 13,
+          "queue": 0
+        }
+      ],
+      "rawResult": ".local-tmp/uri-relative-20261006/results/idle-v5-retry-master-css-sheet.json",
+      "measuredHashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "dda7b952ff05aa2aa57109cce278d3bcf4864e7c1d66d4c8b4c3799bb80c6bb3",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      }
+    },
+    "refresh": {
+      "status": "unresolved-control",
+      "retained": 12,
+      "medianNs": [
+        264.34742647058897,
+        264.8897058823517,
+        231.4445465686283,
+        224.9448529411762
+      ],
+      "beforePercent": {
+        "median": -13.761225245724727,
+        "interval95": [
+          -14.8669817436503,
+          -8.889000668125796
+        ]
+      },
+      "baselineControlPercent": {
+        "median": -0.01755831201747937,
+        "interval95": [
+          -0.8031376471981544,
+          3.825135700269855
+        ]
+      },
+      "controlPercent": {
+        "median": -1.2945086008821272,
+        "interval95": [
+          -6.678292140360986,
+          1.4267629088865585
+        ]
+      },
+      "medianNsOrder": [
+        "before-control",
+        "before",
+        "after",
+        "after-control"
+      ],
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T01:59:00.5032388Z",
+          "cpu": 8,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T01:59:01.5410275Z",
+          "cpu": 8,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T01:59:02.5659006Z",
+          "cpu": 1,
+          "queue": 0
+        }
+      ],
+      "rawResult": ".local-tmp/uri-relative-20261006/results/idle-final-master-refresh.json",
+      "measuredHashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "bc1b53d2ef8670300c0778177a14cbe7467ddca7985a4917e5905b06dbea834b",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "673a46d89745d37e6e38c1ee797c25dcb52327b9a1fd10d246351ec262f285f1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      }
+    },
+    "refresh-raw": {
+      "status": "unresolved-control",
+      "retained": 12,
+      "medianNs": [
+        317.87935932602073,
+        318.6471394984332,
+        218.2516163793078,
+        220.19249608150497
+      ],
+      "beforePercent": {
+        "median": -32.33759679873906,
+        "interval95": [
+          -32.83676011781084,
+          -31.397552758568544
+        ]
+      },
+      "baselineControlPercent": {
+        "median": -0.054188095306190176,
+        "interval95": [
+          -0.9403082082949543,
+          3.9673940745002523
+        ]
+      },
+      "controlPercent": {
+        "median": 2.083435329038219,
+        "interval95": [
+          -1.0869284598996942,
+          5.776424020531867
+        ]
+      },
+      "medianNsOrder": [
+        "before-control",
+        "before",
+        "after",
+        "after-control"
+      ],
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T01:59:05.2959956Z",
+          "cpu": 5,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T01:59:06.3335968Z",
+          "cpu": 8,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T01:59:07.3564118Z",
+          "cpu": 1,
+          "queue": 0
+        }
+      ],
+      "rawResult": ".local-tmp/uri-relative-20261006/results/idle-final-master-refresh-raw.json",
+      "measuredHashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "bc1b53d2ef8670300c0778177a14cbe7467ddca7985a4917e5905b06dbea834b",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "673a46d89745d37e6e38c1ee797c25dcb52327b9a1fd10d246351ec262f285f1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      }
+    }
+  },
+  "validation": {
+    "differentialCases": 124500,
+    "differences": 0,
+    "build": true,
+    "lint": true,
+    "strictTestTypes": true,
+    "node22": {
+      "suites": 53,
+      "passed": 1059
+    },
+    "node26Focused": {
+      "suites": 4,
+      "passed": 43
+    },
+    "windows24Focused": {
+      "suites": 4,
+      "passed": 43
+    }
+  },
+  "limitations": [
+    "Every final ordinary case failed at least one identical-code control; no formal regression-free performance gate.",
+    "Observer overhead remains unresolved for both common and generic schemes.",
+    "Refresh results are reused from the identical final refresh implementation; later edits affected CSS and URI observation only.",
+    "The final URI source has a comment-only edit after its ordinary timing runs.",
+    "No CodeQL or CI closure is claimed."
+  ],
+  "rawArtifacts": ".local-tmp/uri-relative-20261006",
+  "scaling": {
+    "comments": {
+      "rows": [
+        {
+          "n": 1024,
+          "beforeMs": 0.8272499999999923,
+          "afterMs": 0.010800000000003251
+        },
+        {
+          "n": 2048,
+          "beforeMs": 3.27355,
+          "afterMs": 0.02839999999999776
+        },
+        {
+          "n": 4096,
+          "beforeMs": 13.049549999999996,
+          "afterMs": 0.04015000000000413
+        }
+      ],
+      "candidateLarge": {
+        "n": 32768,
+        "ms": 0.3071999999999946
+      }
+    },
+    "css": {
+      "rows": [
+        {
+          "n": 128,
+          "beforeMs": 0.7818499999999915,
+          "afterMs": 0.04650000000000176
+        },
+        {
+          "n": 256,
+          "beforeMs": 5.905949999999997,
+          "afterMs": 0.018599999999999284
+        },
+        {
+          "n": 512,
+          "beforeMs": 45.1078,
+          "afterMs": 0.04804999999998927
+        }
+      ],
+      "candidateLarge": {
+        "n": 32768,
+        "ms": 1.5884999999999536
+      }
+    },
+    "refresh": {
+      "rows": [
+        {
+          "n": 128,
+          "beforeMs": 1.0512000000000086,
+          "afterMs": 0.024399999999999977
+        },
+        {
+          "n": 256,
+          "beforeMs": 4.907549999999993,
+          "afterMs": 0.007649999999998158
+        },
+        {
+          "n": 512,
+          "beforeMs": 37.31484999999998,
+          "afterMs": 0.004699999999999704
+        }
+      ],
+      "candidateLarge": {
+        "n": 32768,
+        "ms": 0.06720000000001392
+      }
+    },
+    "schemes": {
+      "rows": [
+        {
+          "n": 1024,
+          "beforeMs": 2.1744999999999948,
+          "afterMs": 0.013099999999994338
+        },
+        {
+          "n": 2048,
+          "beforeMs": 8.868749999999999,
+          "afterMs": 0.028799999999996828
+        },
+        {
+          "n": 4096,
+          "beforeMs": 33.95949999999999,
+          "afterMs": 0.039450000000002206
+        }
+      ],
+      "candidateLarge": {
+        "n": 32768,
+        "ms": 0.40210000000001855
+      }
+    },
+    "segments": {
+      "rows": [
+        {
+          "n": 1024,
+          "beforeMs": 0.9725500000000054,
+          "afterMs": 0.013550000000002171
+        },
+        {
+          "n": 2048,
+          "beforeMs": 3.900650000000006,
+          "afterMs": 0.0335500000000053
+        },
+        {
+          "n": 4096,
+          "beforeMs": 15.3219,
+          "afterMs": 0.01685000000000514
+        }
+      ],
+      "candidateLarge": {
+        "n": 32768,
+        "ms": 0.12649999999999295
+      }
+    }
+  },
+  "scalingRawResult": ".local-tmp/uri-relative-20261006/results/idle-closeout-scaling.json",
+  "sourceSha256": {
+    "src/uri.ts": "0c7fcf86b023d8a34b788b9bf0abe7431ac0dd5d92dc8f10addce1cff17efb00",
+    "src/life-cycle/parse-css-urls.ts": "f414bee4fced089a7ee4476ad2de3b49bfce8eff443ca706ffdd8ebd39dbdb43",
+    "src/life-cycle/process-html-meta.ts": "a82c1fd5e68b401297e38c159bf7f4de7bb8aa1976ad173c9b1497cb905a1452",
+    "test/uri-complexity.spec.ts": "1db431d4f13bebea8ffd1a8dc0529ec0c6e991720a585382cb25769e628d285d",
+    "test/life-cycle/parser-complexity.spec.ts": "858b01e31fb667d8b02cf151b0d9687298b42a6024c42dbc65659a839344d0f6"
+  }
+}

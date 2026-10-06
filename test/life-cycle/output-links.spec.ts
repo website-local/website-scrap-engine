@@ -4,6 +4,10 @@ import {join} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {runInNewContext} from 'node:vm';
 import {load} from 'cheerio';
+import type {Resource} from '../../src/resource.js';
+import {processCssText} from '../../src/life-cycle/process-css.js';
+import {parseCssUrlMatches} from '../../src/life-cycle/parse-css-urls.js';
+import {processHtmlMetaRefresh, parseRefreshLink} from '../../src/life-cycle/process-html-meta.js';
 import {createResource, ResourceType} from '../../src/resource.js';
 import {defaultDownloadOptions} from '../../src/options.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
@@ -73,4 +77,48 @@ test.each([false, true])('redirect pages reach written targets (explicit path: %
     hash: '#section', replace: (value: string) => { jsTarget = value; }
   }});
   expect(new URL(jsTarget, pathToFileURL(oldFile)).href).toBe(target.href + '#section');
+});
+
+
+test.each([32, 33])('CSS and refresh fallback links reach saved files with %i spaces', async spaces => {
+  const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
+    generateSavePath: [(_path, context) => 'example.org/' +
+      (context.type === ResourceType.Html ? 'child%23$&.html' : 'asset%2F$&.bin')]});
+  const pipeline = new PipelineExecutorImpl(options, options.req, options);
+  for (const length of [16, 257]) {
+    const target = 'https://example.org/' + 'a'.repeat(length);
+    const padding = ' '.repeat(spaces);
+    const parent = Object.assign(createResource({type: ResourceType.Html, depth: 0,
+      url: 'https://example.org/parent', refUrl: 'https://example.org/', localRoot: root,
+      savePath: 'example.org/parent.html'}), {body: '', encoding: 'utf8' as const});
+    const document = load('<meta http-equiv="refresh"><style></style>');
+    document('meta').attr('content', '0;' + padding + 'url="' + target + '"');
+    const assets: Resource[] = [];
+    const css = 'a{background:url(' + padding + '"' + target + '")}b{background:url("' + target + '")}';
+    document('style').text(await processCssText(css, parent, options, pipeline, 1, assets));
+    expect(assets).toHaveLength(1); // Repeated raw URLs still deduplicate.
+    parent.meta.doc = document;
+    const pages: Resource[] = [];
+    await processHtmlMetaRefresh(parent, value => { pages.push(...(Array.isArray(value) ? value : [value])); }, options, pipeline);
+    expect(pages).toHaveLength(1);
+    for (const resource of [...assets, ...pages]) {
+      const child = Object.assign(resource, {body: 'bytes for ' + resource.type, encoding: 'utf8' as const});
+      await (resource.type === ResourceType.Html ? saveHtmlToDisk : saveResourceToDisk)(child, options, pipeline);
+    }
+    await saveHtmlToDisk(parent, options, pipeline);
+    const parentFile = join(root, 'example.org', 'parent.html');
+    const written = load(await fs.readFile(parentFile, 'utf8'));
+    const urls = parseCssUrlMatches(written('style').text()).map(match => match.url);
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).toBe(urls[1]);
+    const refresh = parseRefreshLink(written('meta').attr('content')!);
+    expect(refresh).toBeDefined();
+    for (const [url, child, diskName] of [
+      [urls[0], assets[0], 'asset%2F$&.bin'], [refresh!, pages[0], 'child%23$&.html']
+    ] as const) {
+      const local = new URL(url, pathToFileURL(parentFile));
+      expect(fileURLToPath(local)).toBe(join(root, 'example.org', diskName));
+      expect(await fs.readFile(local, 'utf8')).toBe('bytes for ' + child.type);
+    }
+  }
 });

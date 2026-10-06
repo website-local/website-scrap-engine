@@ -7,12 +7,28 @@ import {parseHtml} from './adapters.js';
 import {skip} from '../logger/logger.js';
 
 /**
- * Originally create by https://github.com/stevenvachon at
- * https://github.com/stevenvachon/http-equiv-refresh
- * MIT license
+ * Preserve extraction from stevenvachon/http-equiv-refresh (MIT) without its
+ * overlapping whitespace backtracking.
  */
-const META_REFRESH_PATTERN =
-  /^\s*(\d+)(?:\s*;(?:\s*url\s*=)?\s*(?:["']\s*(.*?)\s*['"]|(.*?)))?\s*$/i;
+// Every fast-path repetition is bounded. Long whitespace, delays and targets
+// use the general linear parser instead of spending time on failed matches.
+const shortRefresh = /^\s{0,32}\d{1,16}\s{0,32};\s{0,32}(?:url\s{0,32}=\s{0,32})?["']\s{0,32}([^"'\r\n\u2028\u2029]{0,256})["']\s{0,32}$/i;
+
+export function parseRefreshLink(value: string): string | undefined {
+  if (value.endsWith('"') || value.endsWith('\'')) {
+    const short = shortRefresh.exec(value);
+    if (short) return short[1].trim() || undefined;
+  }
+  const prefix = /^\s*\d+\s*;\s*(?:url\s*=\s*)?/i.exec(value);
+  if (!prefix) return;
+  const target = value.slice(prefix[0].length).trimEnd();
+  const first = target[0], last = target.at(-1);
+  if ((first === '"' || first === '\'') && (last === '"' || last === '\'') && target.length > 1) {
+    const quoted = target.slice(1, -1).trim();
+    if (!/[\r\n\u2028\u2029]/.test(quoted)) return quoted || undefined;
+  }
+  return target && !/[\r\n\u2028\u2029]/.test(target) ? target : undefined;
+}
 
 export async function processHtmlMetaRefresh(
   res: DownloadResource,
@@ -42,11 +58,7 @@ export async function processHtmlMetaRefresh(
       if (!attrValue) {
         continue;
       }
-      const match = META_REFRESH_PATTERN.exec(attrValue);
-      if (!match) {
-        continue;
-      }
-      const originalLink = match[2] || match[3];
+      const originalLink = parseRefreshLink(attrValue);
       if (!originalLink) {
         continue;
       }

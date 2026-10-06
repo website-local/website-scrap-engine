@@ -41,6 +41,14 @@ const decodePathSegment = (value: string): string => decoded(value).replace(/[/?
 const decodePath = (value: string): string => value.split('/').map(decodePathSegment).join('/');
 const needsPathRecoding = /[^-a-z\d._~$&+,;=:@/]/i;
 const needsPathNormalization = /(?:^|\/)\.{1,2}(?:\/|$)|\/{2}/;
+function trimSegmentSlashes(value: string): string {
+  // Scan only the boundaries; an unanchored /+$/ can retry an interior run quadratically.
+  let start = 0, end = value.length;
+  while (start < end && value.charCodeAt(start) === 47) start++;
+  while (end > start && value.charCodeAt(end - 1) === 47) end--;
+  return start === 0 && end === value.length ? value : value.slice(start, end);
+}
+
 function recodePath(value: string): string {
   if (!needsPathRecoding.test(value)) return value;
   return value.split('/').map(segment => {
@@ -426,13 +434,13 @@ export class NativeUri {
       const at = index < 0 ? Math.max(0, parts.length + index) : index;
       if (value === undefined) return parts[at];
       if (at >= parts.length) {
-        if (value) { if (parts.at(-1) === '') parts.pop(); parts.push(value.replace(/^\/+|\/+$/g, '')); }
+        if (value) { if (parts.at(-1) === '') parts.pop(); parts.push(trimSegmentSlashes(value)); }
       } else if (!value) parts.splice(at, 1);
-      else parts[at] = value.replace(/^\/+|\/+$/g, '');
+      else parts[at] = trimSegmentSlashes(value);
     } else if (typeof index === 'string') {
       if (parts.at(-1) === '') parts.pop();
-      parts.push(index.replace(/^\/+|\/+$/g, ''));
-    } else parts = index.map(part => part.replace(/^\/+|\/+$/g, '')).filter((part, i, all) => part || i === all.length - 1);
+      parts.push(trimSegmentSlashes(index));
+    } else parts = index.map(trimSegmentSlashes).filter((part, i, all) => part || i === all.length - 1);
     return this.path(recodePath((absolute ? '/' : '') + parts.join(separator)));
   }
   segmentCoded(): string[];
@@ -739,15 +747,40 @@ URI.joinPaths = (...paths) => {
   return new NativeUri(joined === '/' ? '' : joined).normalizePath();
 };
 URI.withinString = (source, callback) => {
-  const pattern = /\b[a-z][a-z\d+.-]*:\/\/[^\s<>"']+/gi;
+  // Starting only at scheme-run boundaries prevents repeated failed searches.
+  // Numeric/punctuation prefixes use the delimiter-only fallback; normal URLs
+  // require neither a backward scan nor a separate tail search.
+  const pattern = /(?<![a-z\d+.-])\b[a-z][a-z\d+.-]*:\/\/[^\s<>"']+|:\/\//gi;
+  let stop: RegExp | undefined;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(source))) {
-    const end = pattern.lastIndex;
-    const replacement = callback(match[0], match.index, end, source);
+    let start = match.index, end = pattern.lastIndex, url = match[0];
+    if (url === '://') {
+      const colon = start;
+      while (start > 0) {
+        const c = source.charCodeAt(start - 1), lower = c | 32;
+        if (!(lower >= 97 && lower <= 122 || c >= 48 && c <= 57 || c === 43 || c === 45 || c === 46)) break;
+        start--;
+      }
+      while (start < colon) {
+        const c = source.charCodeAt(start) | 32, previous = source.charCodeAt(start - 1), lower = previous | 32;
+        if (c >= 97 && c <= 122 && !(lower >= 97 && lower <= 122 || previous >= 48 && previous <= 57 || previous === 95)) break;
+        start++;
+      }
+      if (start === colon) continue;
+      stop ??= /[\s<>"']/g;
+      stop.lastIndex = end;
+      end = stop.exec(source)?.index ?? source.length;
+      if (end === pattern.lastIndex) continue;
+      pattern.lastIndex = end;
+      url = source.slice(start, end);
+    }
+    const replacement = callback(url, start, end, source);
     if (replacement === undefined) continue;
     const text = String(replacement);
-    source = source.slice(0, match.index) + text + source.slice(end);
-    pattern.lastIndex = match.index + text.length;
+    if (text === url) continue;
+    source = source.slice(0, start) + text + source.slice(end);
+    pattern.lastIndex = start + text.length;
   }
   return source;
 };

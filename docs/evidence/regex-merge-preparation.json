@@ -1,0 +1,641 @@
+{
+  "baseline": "ed130d6",
+  "date": "2026-10-06",
+  "scope": "Final merge candidate; direct API timings, not engine throughput",
+  "decision": "Retain simpler observer implementation with fewer ordinary-path checks and lazy fallback allocation. Performance regression remains unresolved; no clean performance gate.",
+  "hostGate": {
+    "medianCpuBelow": 20,
+    "maxCpuBelow": 35,
+    "maxDiskQueue": 1
+  },
+  "runs": {
+    "merge-prior-within-observe": {
+      "case": "within-observe",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-06T03:03:56.346Z",
+      "finishedAt": "2026-10-06T03:03:58.106Z",
+      "hashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/uri.js": "0675f6b41ad427df515137ea789d93204a8e56b38dbbbcf6d2f478ce94be3ab6",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "c2a68837fda237bb1417fa0064a37c5955ee4996466514f4383fc41cee6c295c",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      },
+      "status": "unresolved-control",
+      "controlPass": false,
+      "retained": 12,
+      "excluded": [],
+      "operations": 6720,
+      "medianNs": [
+        1128.1882440476186,
+        1145.8593750000086,
+        1208.2886904761856,
+        1181.5104166666713
+      ],
+      "beforePercent": {
+        "median": 3.6163201090104624,
+        "interval95": [
+          -1.7628358594091453,
+          7.516961000109401
+        ]
+      },
+      "baselineReplicaPercent": {
+        "median": 5.403799796108255,
+        "interval95": [
+          4.137908866003404,
+          8.575449218356068
+        ]
+      },
+      "beforeControlPercent": {
+        "median": 3.314277136589572,
+        "interval95": [
+          -0.4185372684863853,
+          4.543313551937467
+        ]
+      },
+      "baselineReplicaControlPercent": {
+        "median": 4.550639538712275,
+        "interval95": [
+          2.7423395969622177,
+          6.453996526473982
+        ]
+      },
+      "baselineControlPercent": {
+        "median": -0.5128357244648996,
+        "interval95": [
+          -6.884813534043077,
+          0.3662462581885739
+        ]
+      },
+      "controlPercent": {
+        "median": -0.9877779617013471,
+        "interval95": [
+          -4.64518784654861,
+          0.5534461591739981
+        ]
+      },
+      "rawResult": ".local-tmp/uri-relative-20261006/results/merge-prior-within-observe.json",
+      "rawSha256": "ed32ff90944ef73517387c426eafc4fca6eec046e43918f4da279b68b6a4b109",
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T03:03:53.5825899Z",
+          "cpu": 6,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:03:54.6272170Z",
+          "cpu": 2,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:03:55.6492265Z",
+          "cpu": 4,
+          "queue": 0
+        }
+      ]
+    },
+    "merge-prior-within-generic": {
+      "case": "within-generic",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-06T03:04:28.681Z",
+      "finishedAt": "2026-10-06T03:04:30.200Z",
+      "hashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/uri.js": "0675f6b41ad427df515137ea789d93204a8e56b38dbbbcf6d2f478ce94be3ab6",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "c2a68837fda237bb1417fa0064a37c5955ee4996466514f4383fc41cee6c295c",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/merge-before/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      },
+      "status": "unresolved-control",
+      "controlPass": false,
+      "retained": 12,
+      "excluded": [],
+      "operations": 4736,
+      "medianNs": [
+        1250.9554476351386,
+        1375.3114442567626,
+        1273.801731418937,
+        1312.5686233108133
+      ],
+      "beforePercent": {
+        "median": -7.918642183404156,
+        "interval95": [
+          -9.580670727460383,
+          -4.168134106257337
+        ]
+      },
+      "baselineReplicaPercent": {
+        "median": 5.6467237988563905,
+        "interval95": [
+          -1.6833413909096984,
+          8.396261463532895
+        ]
+      },
+      "beforeControlPercent": {
+        "median": -2.6723292628478887,
+        "interval95": [
+          -8.621630094365091,
+          0.197511738130407
+        ]
+      },
+      "baselineReplicaControlPercent": {
+        "median": 8.404536396061745,
+        "interval95": [
+          2.9629798981536393,
+          10.811041855461868
+        ]
+      },
+      "baselineControlPercent": {
+        "median": -9.366514639905116,
+        "interval95": [
+          -14.075897364922557,
+          -3.236683214477176
+        ]
+      },
+      "controlPercent": {
+        "median": 3.790499657121482,
+        "interval95": [
+          -0.37533474603129724,
+          6.9308760626505705
+        ]
+      },
+      "rawResult": ".local-tmp/uri-relative-20261006/results/merge-prior-within-generic.json",
+      "rawSha256": "af616b6251d49a2c889c376af68d558cd89aa734736fea4c53e95822ac882ff3",
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T03:04:25.8921734Z",
+          "cpu": 7,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:04:26.9520143Z",
+          "cpu": 3,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:04:27.9765650Z",
+          "cpu": 7,
+          "queue": 0
+        }
+      ]
+    },
+    "merge-master-within-observe": {
+      "case": "within-observe",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-06T03:05:06.458Z",
+      "finishedAt": "2026-10-06T03:05:07.979Z",
+      "hashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "c2a68837fda237bb1417fa0064a37c5955ee4996466514f4383fc41cee6c295c",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      },
+      "status": "unresolved-control",
+      "controlPass": false,
+      "retained": 12,
+      "excluded": [],
+      "operations": 5440,
+      "medianNs": [
+        1004.0441176470672,
+        994.5312500000036,
+        1166.406250000009,
+        1204.2509191176493
+      ],
+      "beforePercent": {
+        "median": 16.88764584670458,
+        "interval95": [
+          10.189233110693275,
+          22.321380907684997
+        ]
+      },
+      "baselineReplicaPercent": {
+        "median": 15.634078852150735,
+        "interval95": [
+          5.24095852850514,
+          19.911215815359373
+        ]
+      },
+      "beforeControlPercent": {
+        "median": 20.79681478148636,
+        "interval95": [
+          12.656936536159613,
+          26.787050221924922
+        ]
+      },
+      "baselineReplicaControlPercent": {
+        "median": 20.84166742338615,
+        "interval95": [
+          18.86207331479872,
+          24.364267184661603
+        ]
+      },
+      "baselineControlPercent": {
+        "median": 1.579177897131978,
+        "interval95": [
+          -3.6780173826942986,
+          14.192364780267287
+        ]
+      },
+      "controlPercent": {
+        "median": 4.8659662489552,
+        "interval95": [
+          -0.27173337692427135,
+          7.452505835562063
+        ]
+      },
+      "rawResult": ".local-tmp/uri-relative-20261006/results/merge-master-within-observe.json",
+      "rawSha256": "3b0025db2c6bbff98754bfd8201a94792d61584c9bdac710df17fe6bd4678256",
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T03:05:03.7095601Z",
+          "cpu": 16,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:05:04.7491360Z",
+          "cpu": 2,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:05:05.7721834Z",
+          "cpu": 4,
+          "queue": 0
+        }
+      ]
+    },
+    "merge-master-within-generic": {
+      "case": "within-generic",
+      "node": "v22.13.0",
+      "startedAt": "2026-10-06T03:05:46.106Z",
+      "finishedAt": "2026-10-06T03:05:47.605Z",
+      "hashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "c2a68837fda237bb1417fa0064a37c5955ee4996466514f4383fc41cee6c295c",
+        "file:///mnt/d/UserData/Documents/web-local/website-scrap-engine/scripts/benchmark-parser-short.mjs": "aece50c3410c0d61f745f5f79341e587a7aa61a682004fa47e7e799d6ff7d553",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri-query.js": "421160e53b7c0879d4641baa00f9beb2eb3b1ed342524dc2e28d886644a9b6ea",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri-query.js": "d7ee853286b9842f6727a6f76216eb74c806f4d12aecb34a9b88e310bd212494",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      },
+      "status": "unresolved-control",
+      "controlPass": false,
+      "retained": 12,
+      "excluded": [],
+      "operations": 5088,
+      "medianNs": [
+        1009.6992924528577,
+        1063.3795204402443,
+        1277.7908805031427,
+        1263.109276729562
+      ],
+      "beforePercent": {
+        "median": 20.43626877425615,
+        "interval95": [
+          18.414287367067892,
+          23.387937946155837
+        ]
+      },
+      "baselineReplicaPercent": {
+        "median": 28.012489819408138,
+        "interval95": [
+          21.95589001643935,
+          30.945466697194835
+        ]
+      },
+      "beforeControlPercent": {
+        "median": 20.25597420512416,
+        "interval95": [
+          17.559172305140834,
+          20.893284288388557
+        ]
+      },
+      "baselineReplicaControlPercent": {
+        "median": 25.115146658509612,
+        "interval95": [
+          23.57892272716621,
+          29.38592779026449
+        ]
+      },
+      "baselineControlPercent": {
+        "median": -5.001481366071903,
+        "interval95": [
+          -7.056161860095401,
+          -1.8593290249002137
+        ]
+      },
+      "controlPercent": {
+        "median": -0.7850933040268515,
+        "interval95": [
+          -3.4291959464969324,
+          0.7566217752617677
+        ]
+      },
+      "rawResult": ".local-tmp/uri-relative-20261006/results/merge-master-within-generic.json",
+      "rawSha256": "576bfbdfdb4cacd0fd3841c125a48d0e31cb84fe837bba95aa854c7e1065e9c9",
+      "hostBefore": [
+        {
+          "utc": "2026-10-06T03:05:43.3501020Z",
+          "cpu": 5,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:05:44.3955230Z",
+          "cpu": 5,
+          "queue": 0
+        },
+        {
+          "utc": "2026-10-06T03:05:45.4180093Z",
+          "cpu": 2,
+          "queue": 0
+        }
+      ]
+    }
+  },
+  "deferredHostSamples": [
+    {
+      "utc": "2026-10-06T02:59:20.0149500Z",
+      "cpu": 34,
+      "queue": 0
+    },
+    {
+      "utc": "2026-10-06T02:59:21.0598538Z",
+      "cpu": 32,
+      "queue": 0
+    },
+    {
+      "utc": "2026-10-06T02:59:22.0830743Z",
+      "cpu": 31,
+      "queue": 0
+    }
+  ],
+  "scaling": {
+    "rawResult": ".local-tmp/uri-relative-20261006/results/merge-scaling.json",
+    "rawSha256": "9b3c8538f9fb61f2d4bdb6fbc0e6cbed44905153b4561c79a58c5db37cad719c",
+    "hostBefore": [
+      {
+        "utc": "2026-10-06T03:06:21.2709918Z",
+        "cpu": 2,
+        "queue": 0
+      },
+      {
+        "utc": "2026-10-06T03:06:22.3096982Z",
+        "cpu": 2,
+        "queue": 0
+      },
+      {
+        "utc": "2026-10-06T03:06:23.3329984Z",
+        "cpu": 2,
+        "queue": 0
+      }
+    ],
+    "result": {
+      "runtime": "v22.13.0",
+      "method": "Four alternating before/after pairs; five-second process cap per family; diagnostic timings, no host-noise gate",
+      "hashes": {
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/uri.js": "5b44de69374cf874aff65740161145a49898ff9840616fe727a66c977509980b",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/parse-css-urls.js": "478f4c827d4965390e87ee4e7c9cce9f00c661ab71d78061b223ff0750fb4abb",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/redos-baseline/lib/life-cycle/process-html-meta.js": "9d283b4fc55bdfef13882f063b1acac89c5fce788b737df8f3ea9d48467458c1",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/uri.js": "c2a68837fda237bb1417fa0064a37c5955ee4996466514f4383fc41cee6c295c",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/parse-css-urls.js": "86e071f54a450963162f45f9569064558b9dbcbe2e5174d8e195f4f1cc36eb94",
+        "/mnt/d/UserData/Documents/web-local/website-scrap-engine/.local-tmp/uri-relative-20261006/snapshot/lib/life-cycle/process-html-meta.js": "4cc57cdd0a648afd40c5fdfd6bdb0762484be196100bb85a206cec1913fb47f1"
+      },
+      "cases": {
+        "comments": {
+          "rows": [
+            {
+              "n": 1024,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 0.8232500000000016,
+                "candidate": 0.010650000000005377
+              }
+            },
+            {
+              "n": 2048,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 3.2754499999999993,
+                "candidate": 0.035799999999994725
+              }
+            },
+            {
+              "n": 4096,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 13.049000000000014,
+                "candidate": 0.04084999999999894
+              }
+            }
+          ],
+          "candidateLarge": {
+            "n": 32768,
+            "ms": 0.31219999999999004
+          }
+        },
+        "css": {
+          "rows": [
+            {
+              "n": 128,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 1.4200000000000017,
+                "candidate": 0.069500000000005
+              }
+            },
+            {
+              "n": 256,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 5.694100000000006,
+                "candidate": 0.025950000000001694
+              }
+            },
+            {
+              "n": 512,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 43.16744999999999,
+                "candidate": 0.03280000000000882
+              }
+            }
+          ],
+          "candidateLarge": {
+            "n": 32768,
+            "ms": 1.6000999999999976
+          }
+        },
+        "refresh": {
+          "rows": [
+            {
+              "n": 128,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 0.6611999999999938,
+                "candidate": 0.007249999999991985
+              }
+            },
+            {
+              "n": 256,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 4.841649999999994,
+                "candidate": 0.008150000000000546
+              }
+            },
+            {
+              "n": 512,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 37.2462,
+                "candidate": 0.004849999999990473
+              }
+            }
+          ],
+          "candidateLarge": {
+            "n": 32768,
+            "ms": 0.09719999999998663
+          }
+        },
+        "schemes": {
+          "rows": [
+            {
+              "n": 1024,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 2.144449999999999,
+                "candidate": 0.014299999999991542
+              }
+            },
+            {
+              "n": 2048,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 8.393700000000003,
+                "candidate": 0.02864999999999185
+              }
+            },
+            {
+              "n": 4096,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 33.38950000000001,
+                "candidate": 0.04934999999998979
+              }
+            }
+          ],
+          "candidateLarge": {
+            "n": 32768,
+            "ms": 0.4481999999999857
+          }
+        },
+        "segments": {
+          "rows": [
+            {
+              "n": 1024,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 0.9819499999999906,
+                "candidate": 0.012149999999998329
+              }
+            },
+            {
+              "n": 2048,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 3.896000000000001,
+                "candidate": 0.027049999999995578
+              }
+            },
+            {
+              "n": 4096,
+              "pairs": 4,
+              "medianMs": {
+                "baseline": 15.237400000000001,
+                "candidate": 0.017949999999999022
+              }
+            }
+          ],
+          "candidateLarge": {
+            "n": 32768,
+            "ms": 0.13009999999999877
+          }
+        }
+      }
+    }
+  },
+  "validation": {
+    "node22": {
+      "suitesPassed": 53,
+      "testsPassed": 1065,
+      "build": "pass",
+      "lint": "pass",
+      "strictTestTypes": "pass"
+    },
+    "windows24": {
+      "suitesPassed": 53,
+      "testsPassed": 1064,
+      "testsSkipped": 1
+    },
+    "node26": {
+      "scope": "URI compatibility, complexity, parser complexity and written-output tests",
+      "suitesPassed": 4,
+      "testsPassed": 90
+    },
+    "differential": {
+      "checks": 124500,
+      "differences": 0
+    },
+    "ci": "Not run; no push or merge"
+  },
+  "validationLogs": {
+    "merge-full.log": "b7afbe28e10dc5e565f0fe2d80a1f9d0bdc0e7eff2a2a9bd395f997b925e762f",
+    "merge-build.log": "501bf8f797dc5edbabab22bd0dd213032499bdc61b6f1c39ee4227e52e79f97d",
+    "merge-windows24.log": "a3f86170e6dc9f01eace52acd2c87f72dbfd39d5a7f488380d23425b11632c5c",
+    "merge-node26.log": "856c24f1372d3da1dc3a3f77dfda3099c98650199888f075a3e9dc62525c9584"
+  },
+  "sourceSha256": {
+    "src/uri.ts": "c25311fae8b866ade83785a188b0c0a0e7a8800b368708af1e02913765e0f5b6",
+    "src/uri-query.ts": "89f39589b7b83d23540d6653ef483d752062165720391ea717075da842dea4e5",
+    "src/life-cycle/parse-css-urls.ts": "f414bee4fced089a7ee4476ad2de3b49bfce8eff443ca706ffdd8ebd39dbdb43",
+    "src/life-cycle/process-html-meta.ts": "a82c1fd5e68b401297e38c159bf7f4de7bb8aa1976ad173c9b1497cb905a1452",
+    "test/uri-compat.spec.ts": "d4dfd6c9b6feabf5770a6d0c5cb44ff73a803b11c92d852a4f21b5f287d43fb8",
+    "test/uri-complexity.spec.ts": "dbf8bcada2bc59bb5eedbfb268d6c68dff2f7552bb2b049c7dff96a52e378865",
+    "test/life-cycle/parser-complexity.spec.ts": "858b01e31fb667d8b02cf151b0d9687298b42a6024c42dbc65659a839344d0f6",
+    "test/life-cycle/output-links.spec.ts": "2996a18ba0bb41926299103ec0cbb2ebae9adb5cde89e7671007c9b5451486a8"
+  },
+  "protocol": {
+    "targetSlowestBatchMs": 8,
+    "minimumOperations": 128,
+    "maximumOperations": 32768,
+    "warmupOperations": 2048,
+    "sizingOperations": 256,
+    "operationQuantum": 32,
+    "calibrationRounds": 4,
+    "measuredRounds": 12,
+    "minimumRetained": 8,
+    "order": "Rotate four variants, alternate direction; reverse order for second observation",
+    "probes": "250000 integer operations before and after each batch; no profiling during timing",
+    "filter": "Whole round rejected above 1.5x median calibration maximum probe or 250ms round wall time",
+    "control": "Bootstrap 95% interval contains zero and lies inside [-5,+5] percent",
+    "bootstrapResamples": 10000,
+    "bootstrapSeed": 123456789,
+    "idle": "Before each measured round, up to ten 20ms waits until probe <=1.2x calibration median maximum; no measured-round retries",
+    "gc": "One forced GC before each whole round, outside probes and timing",
+    "consumption": "Length and changing character checksum inside timing; exact preflight and equal batch checksums"
+  }
+}

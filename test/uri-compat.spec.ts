@@ -438,6 +438,21 @@ describe('URIjs compatibility functions', () => {
     expect(URI('a/b').segment(['x', 'y']).segment('z').path()).toBe('x/y/z');
   });
 
+  test.each([
+    ['', ''], ['/', ''], ['////', ''], ['plain', 'plain'],
+    ['///a//b///', 'a//b'], ['/%2F/', '%2F'],
+    ['///a\nb///', 'a%0Ab'],
+    ['/'.repeat(16384), ''],
+    ['a' + '/'.repeat(16384) + 'b', 'a' + '/'.repeat(16384) + 'b'],
+  ])('segment setters trim only boundary slashes (case %#)', (input, expected) => {
+    expect(URI('/base/').segment(input).path()).toBe('/base/' + expected);
+    expect(URI('/base/').segment(99, input).path()).toBe('/base/' + expected);
+    expect(URI('/old/tail').segment(0, input).path()).toBe(
+      input ? '/' + expected + '/tail' : '/tail');
+    expect(URI('/old').segment([input, 'tail', input]).path()).toBe(
+      '/' + (expected ? expected + '/' : '') + 'tail/' + expected);
+  });
+
   test('normalization and equality handle query order without mutating inputs', () => {
     const uri = URI('https://example.org/a?x=1&x=2&y=a%20b#%70art');
     expect(uri.equals('https://example.org/a?y=a+b&x=2&x=1#part')).toBe(true);

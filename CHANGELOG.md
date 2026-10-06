@@ -55,6 +55,8 @@ Crawl control and reliability
 Fixes and performance
 ------------
 
+* Replace polynomial-time segment trimming, CSS URL/comment parsing, refresh-target parsing and URI scheme discovery with bounded scans. Preserve legacy extraction and callback behavior; use indexed multiset matching for large query arrays.
+
 * Preserve empty query delimiters and Windows drive spelling when generating relative URI references. Add deterministic fuzz coverage for URL round trips, segment mutations and links to written files.
 
 * Keep local links and redirect pages consistent with written filenames containing reserved URL escapes such as `%23` and `%2F`. Preserve saved filenames and deduplication keys; escape the local URL rather than sanitizing it as a filename.

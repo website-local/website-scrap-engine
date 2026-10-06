@@ -140,8 +140,12 @@ export function removeQuery(data: QueryInput, name: QuerySelector | readonly str
         if (old === undefined || (Array.isArray(value) ?
           value.some(item => matches(old as QueryValue, item)) : matches(old as QueryValue, value))) delete data[name];
       } else {
+        const wanted = Array.isArray(value) && value.length > 2 && old.length > 8 ?
+          new Set(value.map(item => item === null ? null : String(item))) : undefined;
         const remaining = Array.isArray(value) ?
-          old.filter(item => !value.some(wanted => matches(item, wanted))) :
+          old.filter(item => wanted ? !(item === null ? wanted.has(null) :
+            wanted.has(String(item)) || String(item) === 'null' && wanted.has(null)) :
+            !value.some(wanted => matches(item, wanted))) :
           old.filter(item => !matches(item, value));
         if (!remaining.length) delete data[name];
         else data[name] = remaining;
@@ -194,6 +198,7 @@ export function hasQuery(data: QueryInput, name: QuerySelector,
   if (typeof value === 'boolean') return value === !!(Array.isArray(actual) ? actual.length : actual);
   if (Array.isArray(value)) {
     if (!Array.isArray(actual) || !withinArray && actual.length !== value.length) return false;
+    if (actual.length > 8 && value.length > 2) return containsValues(actual, value, withinArray);
     const available = [...actual];
     return value.every(item => {
       const index = available.findIndex(v => matches(v, item));
@@ -204,4 +209,26 @@ export function hasQuery(data: QueryInput, name: QuerySelector,
   }
   if (Array.isArray(actual)) return withinArray && actual.some(item => matches(item, value));
   return actual !== undefined && matches(actual as QueryValue, value);
+}
+
+function containsValues(actual: readonly QueryValue[], wanted: readonly QueryValue[], reuse: boolean): boolean {
+  const positions = new Map<string | null, {indexes: number[]; used: number}>();
+  for (let index = 0; index < actual.length; index++) {
+    const key = actual[index] === null ? null : String(actual[index]);
+    const bucket = positions.get(key);
+    if (bucket) bucket.indexes.push(index);
+    else positions.set(key, {indexes: [index], used: 0});
+  }
+  for (const item of wanted) {
+    let bucket = positions.get(String(item));
+    if (item === null) {
+      // Legacy matching lets null match either null or "null", but a string
+      // cannot match an actual null. Preserve the first available position.
+      const nulls = positions.get(null);
+      if ((nulls?.indexes[nulls.used] ?? Infinity) < (bucket?.indexes[bucket.used] ?? Infinity)) bucket = nulls;
+    }
+    if (!bucket || bucket.used === bucket.indexes.length) return false;
+    if (!reuse) bucket.used++;
+  }
+  return true;
 }
