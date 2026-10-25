@@ -1,5 +1,6 @@
 import {WorkerPublicationClient} from './worker-publication.js';
 import {createDiscoverySubmit} from './discovery.js';
+import {withResourceHtmlParser} from '../cheerio.js';
 import {resourceBodyBytes} from '../resource-limits.js';
 import {parentPort, workerData} from 'node:worker_threads';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
@@ -58,42 +59,44 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
   let discovery: ReturnType<typeof createDiscoverySubmit> | undefined;
   try {
     const pipeline = await asyncPipeline;
-    if (pipeline.options.maxBufferedBytes !== undefined) {
-      if (!publications) throw new Error('Buffered-byte accounting requires the parent publication channel');
-      currentCrawlContext()!.bufferAccount = publications.bufferForTask(msg.taskId);
-    }
-    controller.signal.throwIfAborted();
-    const res = msg.body;
-    const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
-    discovery = createDiscoverySubmit(resource => {
-      // The parent admits only the first eligible resource for a URL. Avoid
-      // cloning/validating transport data for links that will never cross the
-      // boundary. Discovery/size limits still run before this filter. Retain
-      // the original stream when byte credits or depth affect admission.
-      const coalesce = pipeline.options.maxBufferedBytes === undefined && resource.body === undefined &&
-        resource.depth <= pipeline.options.maxDepth;
-      if (coalesce && discoveredUrls.has(resource.url)) return;
-      const wire = prepareResourceForClone(resource);
-      // A caught serialization failure must allow a corrected resubmission.
-      if (coalesce) discoveredUrls.add(wire.url);
-      const reserved = currentCrawlContext()?.bufferAccount?.reserveChild(resourceBodyBytes(wire.body, wire.encoding));
-      if (reserved) return reserved.then(() => { collectedResource.push(wire); });
-      collectedResource.push(wire);
-    }, controller.signal, pipeline.options.maxDiscoveredResources, pipeline.options.maxResourceBytes);
-    const processedResource: DownloadResource | void =
-      await pipeline.processAfterDownload(downloadResource, discovery.submit);
-    const flushing = discovery.flush();
-    if (flushing) await flushing;
-    if (!processedResource) {
-      await pipeline.notifyStatusChange(downloadResource, 'processAfterDownload');
-    } else if (await pipeline.saveToDisk(processedResource)) {
-      await pipeline.notifyStatusChange(downloadResource, 'saveToDisk');
-    }
+    await withResourceHtmlParser(pipeline.options, async () => {
+      if (pipeline.options.maxBufferedBytes !== undefined) {
+        if (!publications) throw new Error('Buffered-byte accounting requires the parent publication channel');
+        currentCrawlContext()!.bufferAccount = publications.bufferForTask(msg.taskId);
+      }
+      controller.signal.throwIfAborted();
+      const res = msg.body;
+      const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
+      discovery = createDiscoverySubmit(resource => {
+        // The parent admits only the first eligible resource for a URL. Avoid
+        // cloning/validating transport data for links that will never cross the
+        // boundary. Discovery/size limits still run before this filter. Retain
+        // the original stream when byte credits or depth affect admission.
+        const coalesce = pipeline.options.maxBufferedBytes === undefined && resource.body === undefined &&
+          resource.depth <= pipeline.options.maxDepth;
+        if (coalesce && discoveredUrls.has(resource.url)) return;
+        const wire = prepareResourceForClone(resource);
+        // A caught serialization failure must allow a corrected resubmission.
+        if (coalesce) discoveredUrls.add(wire.url);
+        const reserved = currentCrawlContext()?.bufferAccount?.reserveChild(resourceBodyBytes(wire.body, wire.encoding));
+        if (reserved) return reserved.then(() => { collectedResource.push(wire); });
+        collectedResource.push(wire);
+      }, controller.signal, pipeline.options.maxDiscoveredResources, pipeline.options.maxResourceBytes);
+      const processedResource: DownloadResource | void =
+        await pipeline.processAfterDownload(downloadResource, discovery.submit);
+      const flushing = discovery.flush();
+      if (flushing) await flushing;
+      if (!processedResource) {
+        await pipeline.notifyStatusChange(downloadResource, 'processAfterDownload');
+      } else if (await pipeline.saveToDisk(processedResource)) {
+        await pipeline.notifyStatusChange(downloadResource, 'saveToDisk');
+      }
 
-    if (processedResource && processedResource.redirectedUrl &&
-      processedResource.redirectedUrl !== processedResource.url) {
-      redirectedUrl = processedResource.redirectedUrl;
-    }
+      if (processedResource && processedResource.redirectedUrl &&
+        processedResource.redirectedUrl !== processedResource.url) {
+        redirectedUrl = processedResource.redirectedUrl;
+      }
+    });
   } catch (e) {
     // handle if object could not be cloned here
     // https://github.com/website-local/website-scrap-engine/issues/340

@@ -1,4 +1,4 @@
-import {load} from '../cheerio.js';
+import {load, assertHtmlParserScope, trackHtmlResource} from '../cheerio.js';
 import {fullSavePathHooks} from './save-path-hook-state.js';
 import type {Resource, ResourceEncoding} from '../resource.js';
 import {ResourceType} from '../resource.js';
@@ -119,6 +119,8 @@ export const parseHtml = (
   res: DownloadResource & { type: ResourceType.Html | ResourceType.Svg },
   options: StaticDownloadOptions
 ): CheerioStatic => {
+  assertHtmlParserScope(options);
+  trackHtmlResource(res);
   const encoding: ResourceEncoding =
     res.encoding || options.encoding[res.type] || 'utf8';
   if (options.cheerioParse) {

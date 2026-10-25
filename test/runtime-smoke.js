@@ -8,6 +8,8 @@ import {pathToFileURL} from 'node:url';
 const entryUrl = process.argv[2] ?
   pathToFileURL(path.resolve(process.argv[2])).href :
   new URL('../lib/index.js', import.meta.url).href;
+const htmlParser = process.argv[3] ?? 'cheerio';
+assert.ok(htmlParser === 'cheerio' || htmlParser === 'grovedom', 'Unknown HTML parser');
 const {downloader, io} = await import(entryUrl);
 const root = await fs.mkdtemp(path.join(tmpdir(), 'wse-runtime-'));
 const bytes = Buffer.from([0xff, 0x00, 0x80, 0x42]);
@@ -75,6 +77,9 @@ const lc = lifeCycle.defaultLifeCycle();
 lc.generateSavePath.push(savePath => path.join('hooks', savePath));
 lc.processAfterDownload.push(res => {
   if (res.type === resource.ResourceType.Html) {
+    if (${JSON.stringify(htmlParser)} === 'grovedom' && typeof res.meta.doc.dispose !== 'function') {
+      throw new Error('The consumer-installed GroveDOM parser was not selected');
+    }
     res.meta.doc('body').attr('data-executor', isMainThread ? 'main' : 'worker');
   }
   return res;
@@ -85,6 +90,7 @@ export default options.defaultDownloadOptions({
   initialUrl: [${JSON.stringify(url)}],
   concurrency: 1,
   workerCount: 1,
+  htmlParser: ${JSON.stringify(htmlParser)},
   req: {retry: {limit: 0}, timeout: {request: 2000}},
   createLogger: () => ({
     trace() {}, debug() {}, info() {}, warn() {}, error() {},
@@ -110,7 +116,7 @@ export default options.defaultDownloadOptions({
       assert.ok(html.includes(`data-executor="${mode}"`));
       assert.deepEqual(await fs.readFile(path.join(savedRoot, 'image.bin')), bytes);
       assert.deepEqual(overrides, before);
-      console.log(`${process.version}: ${mode} downloader and save-path hooks passed`);
+      console.log(`${process.version}: ${mode} downloader and save-path hooks passed (${htmlParser})`);
     } finally {
       await crawler.dispose();
     }

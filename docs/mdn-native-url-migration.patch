@@ -1,15 +1,16 @@
+diff --git a/src/mdn/custom-dns-lookup.ts b/src/mdn/custom-dns-lookup.ts
+index 072363e..1026ddb 100755
 --- a/src/mdn/custom-dns-lookup.ts
 +++ b/src/mdn/custom-dns-lookup.ts
 @@ -1,3 +1,4 @@
 +import type {LookupFunction} from 'node:net';
  import type {EntryObject, Options} from 'cacheable-lookup';
  import CacheableLookup from 'cacheable-lookup';
- 
-@@ -7,6 +8,21 @@
- 
+
+@@ -8,6 +9,21 @@ export function preferIpv6Comparator(a: EntryObject, b: EntryObject): number {
  export class CustomDnsLookup extends CacheableLookup {
    public preferIpv6 = false;
-+
+
 +  readonly nativeLookup: LookupFunction = (hostname, options, callback) => {
 +    const family = options.family;
 +    if (family !== undefined && family !== 0 && family !== 4 && family !== 6) {
@@ -24,9 +25,12 @@
 +      else callback(null, entries[0].address, entries[0].family);
 +    }, error => callback(error, '', 0));
 +  };
- 
++
    constructor(options?: Options) {
      super(options);
+   }
+diff --git a/src/mdn/generate-save-path.ts b/src/mdn/generate-save-path.ts
+index f7fa9b7..b3af717 100755
 --- a/src/mdn/generate-save-path.ts
 +++ b/src/mdn/generate-save-path.ts
 @@ -1,10 +1,10 @@
@@ -34,7 +38,7 @@
  import {generateSavePath} from 'website-scrap-engine/lib/resource.js';
 -import type {GenerateSavePathFn} from 'website-scrap-engine/lib/resource.js';
 +import type {URI} from 'website-scrap-engine';
- 
+
 -export const generateMdnSavePath: GenerateSavePathFn = (
 -  uri, isHtml, keepSearch, localSrcRoot
 -) => {
@@ -44,6 +48,8 @@
    // BCD query names are case-sensitive. Preserve their request URLs, but give
    // each response a portable filename on case-insensitive filesystems.
    if (uri.hostname() === 'developer.mozilla.org' &&
+diff --git a/src/mdn/life-cycle.ts b/src/mdn/life-cycle.ts
+index 4553e19..cac6414 100755
 --- a/src/mdn/life-cycle.ts
 +++ b/src/mdn/life-cycle.ts
 @@ -1,3 +1,4 @@
@@ -51,26 +57,28 @@
  import {
    defaultLifeCycle,
    downloadResource
-@@ -36,7 +37,7 @@
+@@ -36,7 +37,7 @@ import {
  } from './process-url/official-external-redirect.js';
- 
+
  const lifeCycle = defaultLifeCycle();
 -lifeCycle.generateSavePath = generateMdnSavePath;
 +lifeCycle.generateSavePath.push(wrapLegacyGenerateSavePath(generateMdnSavePath));
  lifeCycle.init.push(interactiveExampleDeps);
  lifeCycle.linkRedirect.push(skipProcess, redirectUrl);
  lifeCycle.detectResourceType.push(detectLinkType);
-@@ -84,6 +85,6 @@
+@@ -84,6 +85,6 @@ options.req.headers = {
  };
- 
+
  const lookup = new CustomDnsLookup();
 -options.req.dnsCache = lookup;
 +options.req.dnsCache = {lookup: lookup.nativeLookup};
- 
+
  export default options;
+diff --git a/src/mdn/mdn-downloader.ts b/src/mdn/mdn-downloader.ts
+index c061879..9aef509 100755
 --- a/src/mdn/mdn-downloader.ts
 +++ b/src/mdn/mdn-downloader.ts
-@@ -8,7 +8,6 @@
+@@ -8,7 +8,6 @@ import type {
  import {CookieJar} from 'tough-cookie';
  import {HttpAgent, HttpsAgent} from 'agentkeepalive';
  import {localesMap, redirectLocale} from './process-url/consts.js';
@@ -78,17 +86,17 @@
  import path from 'path';
  import {defaultInitialUrl} from './process-url/default-initial-url.js';
  import {mkdirpSync as mkdir} from 'mkdirp';
-@@ -44,7 +43,7 @@
+@@ -44,7 +43,7 @@ export class MdnDownloader extends SingleThreadDownloader {
        options.req.headers['accept-language'] = locale;
      }
- 
+
 -    options.req.hooks.beforeRedirect.push(function (options: NormalizedOptions) {
 +    options.req.hooks.beforeRedirect.push(function (options) {
        const optionsUrl = options.url;
        if (!optionsUrl) {
          return;
-@@ -77,12 +76,9 @@
- 
+@@ -77,12 +76,9 @@ export class MdnDownloader extends SingleThreadDownloader {
+
      // optional prefer ipv6 config
      if (options.meta.preferIpv6) {
 -      let dnsCache = options.req.dnsCache;
@@ -103,20 +111,24 @@
      }
      return super._internalInit(options);
    }
+diff --git a/src/mdn/mdn-merge-samples.ts b/src/mdn/mdn-merge-samples.ts
+index c131912..161b84d 100755
 --- a/src/mdn/mdn-merge-samples.ts
 +++ b/src/mdn/mdn-merge-samples.ts
-@@ -45,7 +45,7 @@
+@@ -45,7 +45,7 @@ const mkdir = (dir: string): ReturnType<typeof mkdirRetry> => {
      return mkdirCache[dir] = Promise.resolve();
    }
    // console.debug('mkdir', dir);
 -  return mkdirCache[dir] = mkdirRetry(dir, 5);
 +  return mkdirCache[dir] = mkdirRetry(dir);
  };
- 
+
  const copyAndMkdir = async (src: string, dest: string) => {
+diff --git a/src/mdn/process-html/live-sample-assets.ts b/src/mdn/process-html/live-sample-assets.ts
+index 29ca1ef..0f5b033 100755
 --- a/src/mdn/process-html/live-sample-assets.ts
 +++ b/src/mdn/process-html/live-sample-assets.ts
-@@ -146,6 +146,7 @@
+@@ -146,6 +146,7 @@ export async function submitLiveSampleAssets(
        // use the canonical URL and normal localized fallback handling.
        const alias = await pipeline.createResource(
          ResourceType.Binary, resource.depth, aliasUrl, page.href, res.localRoot);
@@ -124,9 +136,11 @@
        alias.downloadLink = resource.downloadLink;
        if (body) alias.body = body;
        if (encoding !== undefined) alias.encoding = encoding;
+diff --git a/src/mdn/process-html/process-yari-main-css.ts b/src/mdn/process-html/process-yari-main-css.ts
+index b1a0ad7..1488279 100755
 --- a/src/mdn/process-html/process-yari-main-css.ts
 +++ b/src/mdn/process-html/process-yari-main-css.ts
-@@ -2,7 +2,7 @@
+@@ -2,7 +2,7 @@ import type {
    DownloadResource,
    SubmitResourceFunc
  } from 'website-scrap-engine/lib/life-cycle/types.js';
@@ -134,8 +148,8 @@
 +import {ResourceType, normalizeResource} from 'website-scrap-engine/lib/resource.js';
  import {toString} from 'website-scrap-engine/lib/util.js';
  import type {StaticDownloadOptions} from 'website-scrap-engine/lib/options.js';
- 
-@@ -40,7 +40,7 @@
+
+@@ -40,7 +40,7 @@ export const processYariMainCss = (
    // this should be never downloaded from since body exists
    newRes.url = res.url.replace(/\.css$/, '_file.css');
    newRes.redirectedUrl = newRes.url;
@@ -145,9 +159,11 @@
 +  submit(normalizeResource(newRes));
    return res;
  };
+diff --git a/src/mdn/process-url/drop-resource.ts b/src/mdn/process-url/drop-resource.ts
+index 88d7ed8..216c250 100755
 --- a/src/mdn/process-url/drop-resource.ts
 +++ b/src/mdn/process-url/drop-resource.ts
-@@ -3,7 +3,7 @@
+@@ -3,7 +3,7 @@ import type {Resource} from 'website-scrap-engine/lib/resource.js';
  import {ResourceType} from 'website-scrap-engine/lib/resource.js';
  import {skipExternal} from 'website-scrap-engine/lib/logger/logger.js';
  import type {StaticDownloadOptions} from 'website-scrap-engine/lib/options.js';
@@ -155,7 +171,9 @@
 +import {URI} from 'website-scrap-engine';
  import type {Cheerio} from 'website-scrap-engine/lib/types.js';
  import {isMdnLoginUrl} from './login-url.js';
- 
+
+diff --git a/src/mdn/process-url/interactive-example-deps.ts b/src/mdn/process-url/interactive-example-deps.ts
+index d0615da..3eaddeb 100755
 --- a/src/mdn/process-url/interactive-example-deps.ts
 +++ b/src/mdn/process-url/interactive-example-deps.ts
 @@ -1,10 +1,10 @@
@@ -171,7 +189,7 @@
    AbstractDownloader
  } from 'website-scrap-engine/lib/downloader/index.js';
  import {ResourceType} from 'website-scrap-engine/lib/resource.js';
-@@ -12,27 +12,33 @@
+@@ -12,27 +12,33 @@ import {ResourceType} from 'website-scrap-engine/lib/resource.js';
  export async function interactiveExampleDeps(
    pipeline: PipelineExecutor,
    downloader?: DownloaderWithMeta) {
@@ -184,32 +202,40 @@
      'https://developer.mozilla.org/static/js/codemirror.js',
      'https://developer.mozilla.org/static/js/inject.js',
    );
+-  codemirror.downloadLink = 'https://codemirror.net/codemirror.js';
+-  d.addProcessedResource(codemirror);
 +  if (codemirror) {
-   codemirror.downloadLink = 'https://codemirror.net/codemirror.js';
-   d.addProcessedResource(codemirror);
++    codemirror.downloadLink = 'https://codemirror.net/codemirror.js';
++    d.addProcessedResource(codemirror);
 +  }
    const watify = await pipeline.createResource(
      ResourceType.Binary, 0,
      'https://developer.mozilla.org/static/js/watify.js',
      'https://developer.mozilla.org/static/js/inject.js',
    );
+-  watify.downloadLink = 'https://unpkg.com/@mdn/watify@1.1.3/watify.js';
+-  d.addProcessedResource(watify);
 +  if (watify) {
-   watify.downloadLink = 'https://unpkg.com/@mdn/watify@1.1.3/watify.js';
-   d.addProcessedResource(watify);
++    watify.downloadLink = 'https://unpkg.com/@mdn/watify@1.1.3/watify.js';
++    d.addProcessedResource(watify);
 +  }
    const watifyWasm = await pipeline.createResource(
      ResourceType.Binary, 0,
      'https://developer.mozilla.org/static/js/watify_bg.wasm',
      'https://developer.mozilla.org/static/js/inject.js',
    );
+-  watifyWasm.downloadLink = 'https://unpkg.com/@mdn/watify@1.1.3/watify_bg.wasm';
+-  d.addProcessedResource(watifyWasm);
 +  if (watifyWasm) {
-   watifyWasm.downloadLink = 'https://unpkg.com/@mdn/watify@1.1.3/watify_bg.wasm';
-   d.addProcessedResource(watifyWasm);
++    watifyWasm.downloadLink = 'https://unpkg.com/@mdn/watify@1.1.3/watify_bg.wasm';
++    d.addProcessedResource(watifyWasm);
 +  }
  }
+diff --git a/src/mdn/process-url/official-external-redirect.ts b/src/mdn/process-url/official-external-redirect.ts
+index cfa6ad4..667edab 100755
 --- a/src/mdn/process-url/official-external-redirect.ts
 +++ b/src/mdn/process-url/official-external-redirect.ts
-@@ -4,7 +4,7 @@
+@@ -4,7 +4,7 @@ import {
  import type {StaticDownloadOptions} from 'website-scrap-engine/lib/options.js';
  import type {Resource} from 'website-scrap-engine/lib/resource.js';
  import type {Cheerio} from 'website-scrap-engine/lib/types.js';
@@ -218,6 +244,8 @@
  import {
    officialExternalRedirectFallbackExclusions,
    officialExternalRedirects
+diff --git a/src/mdn/process-url/redirect-download-link.ts b/src/mdn/process-url/redirect-download-link.ts
+index e05a45e..c9b7e4c 100755
 --- a/src/mdn/process-url/redirect-download-link.ts
 +++ b/src/mdn/process-url/redirect-download-link.ts
 @@ -1,5 +1,5 @@
@@ -225,11 +253,13 @@
 -import URI from 'urijs';
 +import {URI} from 'website-scrap-engine';
  import {externalHosts} from './consts.js';
- 
+
  // updated 20250503
+diff --git a/src/mdn/process-url/redirect-url-after-fetch.ts b/src/mdn/process-url/redirect-url-after-fetch.ts
+index 672ea82..6e84c1b 100755
 --- a/src/mdn/process-url/redirect-url-after-fetch.ts
 +++ b/src/mdn/process-url/redirect-url-after-fetch.ts
-@@ -3,7 +3,7 @@
+@@ -3,7 +3,7 @@ import type {
    DownloadResource,
    SubmitResourceFunc
  } from 'website-scrap-engine/lib/life-cycle/types.js';
@@ -238,9 +268,11 @@
  import {
    externalHostMap,
    mdnHosts,
+diff --git a/src/mdn/process-url/redirect-url.ts b/src/mdn/process-url/redirect-url.ts
+index 350243b..c5c854f 100755
 --- a/src/mdn/process-url/redirect-url.ts
 +++ b/src/mdn/process-url/redirect-url.ts
-@@ -17,7 +17,7 @@
+@@ -17,7 +17,7 @@ import {
    mdnLocaleRedirectPath,
    mdnRedirectPath
  } from './redirect-path.js';
@@ -249,9 +281,24 @@
  import {processPathWithMultiLocale} from './process-path-with-multi-locale.js';
  import {
    resolveOfficialExternalRedirect
+@@ -167,7 +167,11 @@ export function redirectUrl(
+   }
+   if (!url) return url;
+   try {
+-    let u = URI(url).normalize(), host, needToRebuildUrl = false;
++    const parsed = URI(url);
++    // Keep the previous URIjs policy for malformed percent-encoded paths.
++    // The engine's URI implementation deliberately preserves invalid escapes.
++    if (parsed.path().includes('%')) decodeURI(parsed.path());
++    let u = parsed.normalize(), host, needToRebuildUrl = false;
+     const mdnHost: string = options.meta.host as string | void
+       || 'developer.mozilla.org';
+     if (rewriteMdnDevLegacySitePath(u, mdnHost)) {
+diff --git a/src/mdn/process-url/skip-process.ts b/src/mdn/process-url/skip-process.ts
+index a6361dc..8059673 100755
 --- a/src/mdn/process-url/skip-process.ts
 +++ b/src/mdn/process-url/skip-process.ts
-@@ -2,7 +2,7 @@
+@@ -2,7 +2,7 @@ import {
    error as errorLogger,
    skipExternal as skipExternalLogger
  } from 'website-scrap-engine/lib/logger/logger.js';
@@ -260,6 +307,48 @@
  import {downloadableHosts} from './consts.js';
  import type {Resource} from 'website-scrap-engine/lib/resource.js';
  import type {Cheerio} from 'website-scrap-engine/lib/types.js';
+diff --git a/test/mdn/calculate-retry-delay.spec.ts b/test/mdn/calculate-retry-delay.spec.ts
+index 3696b15..580f3b7 100755
+--- a/test/mdn/calculate-retry-delay.spec.ts
++++ b/test/mdn/calculate-retry-delay.spec.ts
+@@ -25,10 +25,10 @@ function context({
+ afterEach(() => jest.restoreAllMocks());
+
+ describe('minimum fast retry delay', () => {
+-  test.each([0, 0.004, 0.00499])('repairs first-retry jitter %s', async random => {
++  test.each([0, 0.004, 0.00499])('preserves the upstream minimum for first-retry jitter %s', async random => {
+     jest.spyOn(Math, 'random').mockReturnValue(random);
+     const args = context();
+-    expect(await calculateFastDelay(args)).toBe(0);
++    expect(await calculateFastDelay(args)).toBe(1);
+     expect(await calculateMdnRetryDelay(args)).toBe(1);
+   });
+
+diff --git a/test/mdn/process-url/redirect-url.spec.ts b/test/mdn/process-url/redirect-url.spec.ts
+index 90b9324..10caa34 100755
+--- a/test/mdn/process-url/redirect-url.spec.ts
++++ b/test/mdn/process-url/redirect-url.spec.ts
+@@ -728,15 +728,15 @@ describe('redirect-url', function () {
+       .toBe('https://developer.mozilla.org/en-US/docs/Web/API/GLboolean');
+   });
+
+-  test('skip malformed percent-encoded urls instead of throwing', () => {
++  test.each(['%E0%A4%A', '%FF', '%ZZ'])('skip malformed percent-encoded path %s instead of throwing', path => {
+     expect(() => redirectUrl(
+-      'https://developer.mozilla.org/%E0%A4%A',
++      'https://developer.mozilla.org/' + path,
+       null,
+       fakeRes('https://developer.mozilla.org/zh-CN/docs/Web/HTML'),
+       opt('zh-CN')))
+       .not.toThrow();
+     expect(redirectUrl(
+-      'https://developer.mozilla.org/%E0%A4%A',
++      'https://developer.mozilla.org/' + path,
+       null,
+       fakeRes('https://developer.mozilla.org/zh-CN/docs/Web/HTML'),
+       opt('zh-CN')))
+diff --git a/tsconfig.json b/tsconfig.json
+index 235ddc8..4622508 100755
 --- a/tsconfig.json
 +++ b/tsconfig.json
 @@ -2,8 +2,8 @@

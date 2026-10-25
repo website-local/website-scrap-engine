@@ -1,4 +1,6 @@
-import {resource, downloader, options, lifeCycle, URI, NativeUri} from 'website-scrap-engine';
+import {resource, downloader, options, lifeCycle, URI, NativeUri, loadHtml, withHtmlParser}
+  from 'website-scrap-engine';
+import type {HtmlParserOptions} from 'website-scrap-engine';
 import type {Dispatcher} from 'undici';
 
 const res = resource.createResource({type: resource.ResourceType.Binary,
@@ -26,6 +28,15 @@ const close: (crawler: downloader.MultiThreadDownloader) => Promise<void> = craw
 
 const configuration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   maxBufferedBytes: 4096, maxResourceBytes: 1024, maxDiscoveredResources: 16, maxConcurrency: 4});
+const parserOptions: HtmlParserOptions = {
+  htmlParser: 'grovedom', grovedom: {poolSize: 4, poolMaxBytes: 8 * 1024 * 1024}
+};
+const parserConfiguration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(), ...parserOptions});
+const parsedHtml: Promise<string> = withHtmlParser(parserOptions, () => {
+  const $ = loadHtml('<p>example</p>');
+  $('p').attr('class', 'saved');
+  return $.html();
+});
 declare const crawler: downloader.SingleThreadDownloader;
 const currentBytes: number = crawler.bufferedBytes;
 const peakBytes: number = crawler.peakBufferedBytes;
@@ -46,3 +57,4 @@ if (outcome) {
 void host; void realUndici; void close; void configuration;
 void currentBytes; void peakBytes; void outcome; void progress;
 void compatibleUri; void nativeUri; void query;
+void parserConfiguration; void parsedHtml;

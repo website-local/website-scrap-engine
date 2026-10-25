@@ -1,5 +1,6 @@
 import {AbstractDownloader} from './main.js';
 import {createDiscoverySubmit} from './discovery.js';
+import {withResourceHtmlParser, trackHtmlResource} from '../cheerio.js';
 import type {Resource} from '../resource.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import type {
@@ -23,7 +24,12 @@ export class SingleThreadDownloader extends AbstractDownloader {
     }
   }
 
-  async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
+  downloadAndProcessResource(res: Resource): Promise<boolean | void> {
+    return withResourceHtmlParser(this.options, () => this.processResource(res));
+  }
+
+  private async processResource(res: Resource): Promise<boolean | void> {
+    trackHtmlResource(res);
     let r: DownloadResource | void;
     try {
       r = await this.pipeline.download(res);
@@ -31,6 +37,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
         await this.pipeline.notifyStatusChange(res, 'download');
         return;
       }
+      trackHtmlResource(r);
     } catch (e) {
       this.handleError(e, 'downloading resource', res);
       return false;

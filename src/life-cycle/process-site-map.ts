@@ -1,4 +1,4 @@
-import {load} from '../cheerio.js';
+import {load, assertHtmlParserScope} from '../cheerio.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {Resource} from '../resource.js';
@@ -15,6 +15,7 @@ export async function processSiteMap(
   if (res.type !== ResourceType.SiteMap) {
     return res;
   }
+  assertHtmlParserScope(options);
   const $: CheerioStatic = load(toString(res.body,
     res.encoding || options.encoding[ResourceType.SiteMap] || 'utf8'));
   const urlSet: Set<string> = new Set();

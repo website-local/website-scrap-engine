@@ -1,4 +1,5 @@
 import {withCrawlContext, createResourceProgress} from '../crawl-context.js';
+import {withHtmlStatusChange} from '../cheerio.js';
 import type {CrawlContext} from '../crawl-context.js';
 import {OutputDirectories, StagingDirectories} from '../output-store.js';
 import {PublicationReservations} from '../publication-reservations.js';
@@ -286,9 +287,11 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
 
   private notifyStatus(resource: RawResource, status: ResourceStatus): void {
+    const pipeline = this._pipeline;
+    if (!pipeline) return;
     const result = withCrawlContext(this.context, () =>
-      this._pipeline?.notifyStatusChange(resource, status));
-    if (!result || result === completedStatusChange) return;
+      withHtmlStatusChange(pipeline.options, () => pipeline.notifyStatusChange(resource, status)));
+    if (result === completedStatusChange) return;
     const pending = Promise.resolve(result);
     this.notifications.add(pending);
     const settled = () => { this.notifications.delete(pending); };
@@ -353,7 +356,12 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
       // Cancelled tasks enter their wrapper, observe the signal, and do no I/O.
       this.queue.start();
       await this.queue.onIdle();
-      await Promise.all(this.notifications);
+      // A failed notification must not interrupt worker/pipeline cleanup.
+      while (this.notifications.size) {
+        for (const result of await Promise.allSettled(this.notifications)) {
+          if (result.status === 'rejected') errors.push(result.reason);
+        }
+      }
       try { await this.disposeResources(); } catch (error) { errors.push(error); }
       try {
         await this._pipeline?.dispose(this._pipeline, this);

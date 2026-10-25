@@ -2,6 +2,7 @@ import {MessageChannel, Worker} from 'node:worker_threads';
 import type {Transferable} from 'node:worker_threads';
 import {WorkerPublicationCoordinator} from './worker-publication.js';
 import {DiscoveryLimitError} from './discovery.js';
+import {withResourceHtmlParser, trackHtmlResource} from '../cheerio.js';
 import {BufferReservation} from '../buffer-budget.js';
 import type {WorkerChannels} from './worker-channel.js';
 import {currentCrawlContext} from '../crawl-context.js';
@@ -104,7 +105,12 @@ export class MultiThreadDownloader extends AbstractDownloader {
     return this._pool ?? this.createPool(this.options);
   }
 
-  async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
+  downloadAndProcessResource(res: Resource): Promise<boolean | void> {
+    return withResourceHtmlParser(this.options, () => this.processResource(res));
+  }
+
+  private async processResource(res: Resource): Promise<boolean | void> {
+    trackHtmlResource(res);
     let r: DownloadResource | void;
     try {
       r = await this.pipeline!.download(res);
@@ -112,6 +118,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
         await this.pipeline.notifyStatusChange(res, 'download');
         return;
       }
+      trackHtmlResource(r);
     } catch (e) {
       this.handleError(e, 'downloading resource', res);
       return false;

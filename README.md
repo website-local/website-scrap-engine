@@ -36,6 +36,9 @@ for save-path hooks, custom-worker channels, and other breaking changes.
 See the [0.10 documentation index](docs/README.md) for release validation,
 performance measurements, and dependency decisions.
 
+For the experimental GroveDOM 0.1.2 backend and its downstream pool controls, see
+the [GroveDOM adapter guide](docs/grovedom.md). Cheerio remains the default.
+
 ## Usage
 
 The downloader takes a path (or `file://` URL) to a module that default-exports a `DownloadOptions` object. This pattern allows worker threads to independently load the same configuration.

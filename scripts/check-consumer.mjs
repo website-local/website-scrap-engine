@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {promises as fs} from 'node:fs';
+import {createRequire} from 'node:module';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
 
 // Install the tarball into a separate consumer first. This check uses that
 // installed runtime and its declarations, never a source/consumer module alias.
-if (!process.argv[2]) throw new Error('Usage: node scripts/check-consumer.mjs CONSUMER [with-peer] [--smoke-only]');
+if (!process.argv[2]) {
+  throw new Error('Usage: node scripts/check-consumer.mjs CONSUMER [with-peer] [--smoke-only] [--grovedom]');
+}
 const consumer = path.resolve(process.argv[2]);
 const project = fileURLToPath(new URL('../', import.meta.url));
 assert.notEqual(consumer, path.resolve(project), 'Use a separate packed consumer');
@@ -30,17 +33,26 @@ const scripts = process.argv.includes('--smoke-only') ? ['runtime-smoke', 'runti
   'runtime-native-http', 'runtime-single-import', 'runtime-log4js-peer'
 ];
 if (process.platform === 'win32' && !process.argv.includes('--smoke-only')) scripts.push('runtime-windows-files');
+const checks = scripts.map(script => ({script, parser: 'cheerio', extra: []}));
+if (process.argv.includes('--grovedom')) {
+  const parserEntry = createRequire(entry).resolve('grovedom');
+  checks.push(
+    {script: 'runtime-smoke', parser: 'grovedom', extra: ['grovedom']},
+    {script: 'runtime-html-parser', parser: 'grovedom', extra: [parserEntry]},
+    {script: 'runtime-html-parser-aliases', parser: 'grovedom', extra: [parserEntry]}
+  );
+}
 const results = [];
-for (const script of scripts) {
+for (const {script, parser, extra} of checks) {
   const args = [path.join(project, 'test', script + '.js'),
-    script === 'runtime-single-import' ? path.dirname(entry) : entry];
+    script === 'runtime-single-import' ? path.dirname(entry) : entry, ...extra];
   if (script === 'runtime-log4js-peer' && process.argv.includes('with-peer')) args.push('with-peer');
   const env = script === 'runtime-native-http' ? {...process.env,
     NODE_EXTRA_CA_CERTS: path.join(project, 'test/fixtures/native-http-cert.pem')} : process.env;
   const result = await execute(process.execPath, args,
     {cwd: consumer, env, timeout: 60000, maxBuffer: 1024 * 1024});
-  results.push({script, output: result.stdout.trim()});
-  process.stderr.write(script + ': passed\n');
+  results.push({script, parser, output: result.stdout.trim()});
+  process.stderr.write(script + ' (' + parser + '): passed\n');
 }
 console.log(JSON.stringify({node: process.version, consumer, entry, strictDeclarations: true,
-  loggingPeer: process.argv.includes('with-peer'), results}, null, 2));
+  loggingPeer: process.argv.includes('with-peer'), grovedom: process.argv.includes('--grovedom'), results}, null, 2));

@@ -13,6 +13,7 @@
 | Trace URI optimization decisions and historical measurements | [URI investigation history](uri-investigation-history.md) |
 | Understand measured performance and retained optimizations | [Performance](performance.md) |
 | Understand dependency, parser and development-tool decisions | [Dependency audit](dependency-audit.md) |
+| Opt in to GroveDOM and configure per-worker pool limits | [GroveDOM adapter](grovedom.md) |
 
 The three maintained reports above describe the latest state and identify the
 commit or working tree covered by each result. Earlier experiments are summarized in the

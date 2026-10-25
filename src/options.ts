@@ -14,6 +14,8 @@ import {createDefaultLogger} from './logger/default-logger.js';
 import type {DownloaderWithMeta} from './downloader/types.js';
 import type {SourceDefinition} from './sources.js';
 import type {CheerioOptionsInterface} from './types.js';
+import type {HtmlParserOptions} from './cheerio.js';
+import {validateHtmlParserOptions} from './cheerio.js';
 
 /**
  * Extra options for custom life cycle
@@ -27,7 +29,7 @@ export interface StaticDownloadMeta
 /**
  * Options which should not be changed at runtime, and safe for cloning
  */
-export interface StaticDownloadOptions {
+export interface StaticDownloadOptions extends HtmlParserOptions {
   /** Opt-in native GET/HEAD transport; unsupported request options fall back to Got. Default: got. */
   httpTransport?: 'got' | 'native';
   /**
@@ -346,6 +348,8 @@ function snapshotOptions(options: Options, explicit: RequestOptions): RequestOpt
 export function defaultDownloadOptions(
   options: ProcessingLifeCycle & Partial<DownloadOptions>): DownloadOptions {
   const merged: DownloadOptions = {...defaultOptions, ...options};
+  validateHtmlParserOptions(merged);
+  if (merged.grovedom) merged.grovedom = {...merged.grovedom};
   if (merged.httpTransport !== undefined && merged.httpTransport !== 'got' && merged.httpTransport !== 'native') {
     throw new TypeError('Unknown httpTransport: ' + merged.httpTransport);
   }
@@ -462,6 +466,9 @@ export function mergeOverrideOptions(
     return validateDownloadOptions(defaultDownloadOptions(opt));
   }
   const merged: DownloadOptions = Object.assign({}, opt, overrideOptions);
+  if (opt.grovedom && overrideOptions.grovedom) {
+    merged.grovedom = {...opt.grovedom, ...overrideOptions.grovedom};
+  }
   if (opt.meta && overrideOptions.meta) {
     merged.meta = Object.assign({}, opt.meta, overrideOptions.meta);
   }

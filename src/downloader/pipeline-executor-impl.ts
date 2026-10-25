@@ -1,5 +1,5 @@
 import {currentCrawlContext, throwIfCancelled, markResourceDownloaded, markResourceSkipped} from '../crawl-context.js';
-import {prepareHtmlParser} from '../cheerio.js';
+import {prepareHtmlParser, trackHtmlResource, trackHtmlStatusChange} from '../cheerio.js';
 import {fullSavePathHooks} from '../life-cycle/save-path-hook-state.js';
 import {isPromiseLike} from '../util.js';
 import {checkResourceBody, checkAndAccountResourceBody} from '../resource-limits.js';
@@ -328,6 +328,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     requestOptions?: RequestOptions,
     options?: StaticDownloadOptions
   ): Promise<DownloadResource | void> {
+    trackHtmlResource(res);
     throwIfCancelled(this.signal);
     if (res.shouldBeDiscardedFromDownload) {
       return undefined;
@@ -366,6 +367,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         === undefined) {
         return undefined;
       }
+      trackHtmlResource(downloadedResource);
       throwIfCancelled(this.signal);
       const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
       if (accounting) await accounting;
@@ -390,13 +392,12 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     submit: SubmitResourceFunc,
     options?: StaticDownloadOptions
   ): Promise<DownloadResource | void> {
+    trackHtmlResource(res);
     throwIfCancelled(this.signal);
+    options ??= this.options;
     if (res.type === ResourceType.Html || res.type === ResourceType.Svg || res.type === ResourceType.SiteMap) {
-      const loading = prepareHtmlParser();
+      const loading = prepareHtmlParser(options);
       if (loading) await loading;
-    }
-    if (!options) {
-      options = this.options;
     }
     let downloadedResource: DownloadResource | void = res;
     const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
@@ -408,6 +409,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         === undefined) {
         return undefined;
       }
+      trackHtmlResource(downloadedResource);
       const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
       if (accounting) await accounting;
     }
@@ -419,6 +421,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     res: DownloadResource,
     options?: StaticDownloadOptions
   ): Promise<DownloadResource | void> {
+    trackHtmlResource(res);
     throwIfCancelled(this.signal);
     if (!options) {
       options = this.options;
@@ -435,6 +438,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
         // already downloaded
         return undefined;
       }
+      trackHtmlResource(downloadedResource);
       const accounting = checkAndAccountResourceBody(downloadedResource, this.options.maxResourceBytes);
       if (accounting) await accounting;
     }
@@ -482,9 +486,10 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   ): Promise<void> {
     try {
       const listeners = this.lifeCycle.statusChange;
-      return listeners?.length ?
-        this.runStatusListeners(res, status, listeners, 0) || completedStatusChange :
-        completedStatusChange;
+      if (!listeners?.length) return completedStatusChange;
+      trackHtmlResource(res);
+      const pending = this.runStatusListeners(res, status, listeners, 0);
+      return pending ? trackHtmlStatusChange(pending) : completedStatusChange;
     } catch (error) { return Promise.reject(error); }
   }
 
