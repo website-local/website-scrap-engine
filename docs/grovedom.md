@@ -29,10 +29,10 @@ Without `module`, the engine resolves `grovedom` from its own package location.
 For dependency layouts that isolate undeclared packages, pass
 `module: import.meta.resolve('grovedom')` from the application's options module.
 Absolute paths and file URLs to packaged Wasm entries are also supported.
-Specifiers resolving to the same loaded entry share initialization, pool settings
-and nested document ownership. This includes file URLs with query strings or
-fragments and packages exposing only a CommonJS entry. Conflicting pool settings
-are rejected across aliases.
+Specifiers resolving to the same loaded entry share initialization and pool
+settings, including file URLs with query strings or fragments and packages
+exposing only a CommonJS entry. Conflicting pool settings are rejected across
+aliases. Documents keep independent lifetimes.
 The module must expose GroveDOM's Wasm `init()` and `load()` APIs. Native addon
 initialization is not supported by this adapter. There is no silent fallback
 when the selected package is missing or a parser option is unsupported.
@@ -58,38 +58,67 @@ not load or initialize the parser.
 
 ## Hooks and standalone transformations
 
-Use the engine's `loadHtml` export for documents created by hooks, including
-generated examples. It selects the current resource's backend and tracks each
-document, as does the document's `$.load()` method. Direct imports from Cheerio
-or GroveDOM bypass this ownership contract.
+Use the engine's `loadHtml` export and pass parser options as its **fourth
+argument**. Its first three arguments keep the Cheerio `load(content, options,
+isDocument)` shape. Omitting parser options selects Cheerio; there is no ambient
+parser selection or document scope.
+
+A resource owns its parsed document in `res.meta.doc`. Built-in HTML, SVG and
+sitemap processing creates documents only when needed. A hook that needs the
+document earlier can attach it explicitly:
 
 ```js
-import {loadHtml, withHtmlParser} from 'website-scrap-engine';
+import {lifeCycle, loadHtml, resource, util} from 'website-scrap-engine';
 
-const html = await withHtmlParser({htmlParser: 'grovedom'}, () => {
-  const $ = loadHtml('<p>example</p>');
+const lc = lifeCycle.defaultLifeCycle();
+lc.processAfterDownload.unshift((res, _submit, options, pipeline) => {
+  if (res.type !== resource.ResourceType.Html) return res;
+  const $ = res.meta.doc ??= loadHtml(
+    util.toString(res.body, res.encoding), options.cheerioParse, undefined, options
+  );
   $('p').attr('class', 'saved');
-  return $.html();
+  pipeline.logger.debug('custom.html', 'Updated', res.url);
+  return res;
 });
 ```
 
-The built-in single-thread and worker downloaders keep the scope alive through
-transformation, nested processing, serialization, save hooks and associated
-status hooks. They dispose all owned documents on success, discard, failure or
-cancellation. Nested scopes for the same backend reuse their parent's ownership.
-Resources are cleared of owned documents on exit so retries parse fresh input.
-Resource completion also waits for pending error and admission-status listeners,
-including further notifications started by those listeners. Notifications raised
-outside resource processing get their own scope with the configured parser.
-Multi-thread parent download hooks have a separate scope from worker processing;
-documents never cross the worker boundary. Serialize any intended body changes
-before handing a resource to a worker.
+Built-in save and discard paths dispose and clear `res.meta.doc`, including
+failure and cancellation. `disposeHtmlResource(res)` provides this cleanup for
+direct pipeline callers; await it in `finally`. It waits for pending resource
+status work, including notifications started by earlier listeners, before
+releasing the document. A status hook that creates a document must select its
+parser explicitly and attach the document to that resource.
 
-Standalone pipeline callers must wrap processing **and saving/serialization**
-in `withHtmlParser`. Return strings or other detached results. Documents,
-selections and nodes must not be used after scope completion; asynchronous hook
-work must be awaited. Standalone sample-merging utilities need their own scope.
-Lifecycle init/dispose hooks outside resource processing can use explicit scopes.
+Temporary documents have their own lifetime. Dispose each in `finally` after
+serialization. This also applies to documents returned by `$.load()`; disposing
+one document does not dispose another:
+
+```js
+import {loadHtml} from 'website-scrap-engine';
+
+const parserOptions = {
+  htmlParser: 'grovedom',
+  grovedom: {module: import.meta.resolve('grovedom')},
+};
+const $ = loadHtml('<p>example</p>', undefined, undefined, parserOptions);
+let html;
+try {
+  $('p').attr('class', 'saved');
+  html = $.html();
+} finally {
+  $.dispose?.(); // GroveDOM releases its Wasm document; Cheerio needs no disposal.
+}
+```
+
+Custom hooks replacing `res.meta.doc` must dispose the old document before
+assignment. The `processHtml` and `processHtmlAsync` adapters handle replacements
+returned by their callbacks. Await asynchronous work that uses the document;
+documents, selections and nodes are invalid after disposal.
+
+Documents never cross the worker boundary. Serialize changes made by main-thread
+download hooks into `res.body` before worker processing. For generated child
+resources, serialize and dispose the temporary document before calling
+`submit(child, res, pipeline)`. Resources retain no child array or pipeline.
 
 ## Compatibility
 
@@ -99,7 +128,11 @@ Cheerio method, parser option, plugin or raw domhandler operation available.
 Cross-document node adoption is unsupported. Some positional selectors and
 HTML/XML options differ. Pass only options supported by the selected backend.
 
-Use published 0.1.2 for this integration. Fresh installed-consumer checks on
+Use published 0.1.2 for this integration. The explicit-ownership qualification
+below covers the completed quality pass. Earlier scoped-ownership results are
+retained separately as historical evidence.
+
+Installed-consumer checks for those earlier revisions on
 Node 22.22.2 and 24.18.0 passed strict declarations, both downloader modes,
 the optional logging peer, and all 16 ownership/pool scenarios per runtime.
 The published tarball matched npm's SHA-512 integrity and SHA-1 checksum, and
@@ -113,10 +146,31 @@ documents were disposed. A further **32 saved-file/link checks** matched and
 resolved to the expected file bytes. These offline checks do not establish
 arbitrary hook compatibility or a whole-crawl performance improvement.
 
+## Explicit ownership qualification (2026-10-25)
+
+Fresh builds and all **52 suites / 1,114 tests** pass on Node 22.22.2 and
+24.18.0. A newly packed engine also passes all 15 installed-consumer check
+groups on each runtime with published GroveDOM 0.1.2 and the optional logging
+peer. These include strict declarations, both downloaders, publication conflicts,
+retries, discovery limits, HTTP transport, all 16 ownership/pool cases, and
+module aliases including a reserved package name and CommonJS-only exports.
+
+Regression coverage includes lazy parsing, asynchronous status listeners,
+replacement/error/cancellation cleanup, discarded duplicate children, and
+documents released after worker child serialization or serialization failure.
+The same already-queued resource can be resubmitted without disposing its active
+document. Ordinary input-limit breaches are logged discards.
+
+This pass reused the existing published package and dependencies. The older
+193-case and frozen MDN replay results below were not rerun and remain evidence
+for their recorded engine revisions. Full-archive/browser adoption validation
+and an admissible consumer performance measurement remain open. Cheerio remains
+the default; the focused link-array experiment found no reliable speedup.
+
 ## Published 0.1.2 qualification
 
 The 2026-10-24 checks used a fresh npm installation of the published tarball and
-a package built from the current development engine working tree. The engine
+a package built from the then-current development engine working tree. The engine
 build and its **1,075 tests** passed with the existing development tools; those
 tool versions differ from the lockfile. The separate consumer used real
 Cheerio 1.2.0 and Undici 7.30.1, without the engine's development Undici stub.
@@ -162,32 +216,24 @@ including 39 saved files; all 326 GroveDOM documents were disposed per runtime.
 
 ## MDN ownership migration
 
-The inspected MDN checkout uses engine 0.9.1. The migration was built and tested
-in an isolated copy against this branch's development engine 0.10.0, leaving the
-original checkout and its installed dependencies intact.
+The [engine API patch](mdn-native-url-migration.patch) and
+[document ownership patch](mdn-grovedom-migration.patch) preserve the migration
+tested in isolated MDN copies on 2026-10-24. That evidence left the original
+MDN checkout and engine 0.9.1 installation unchanged. The ownership patch uses
+the removed `withHtmlParser` API and requires adaptation before use with the
+current engine; it is retained as historical evidence.
 
-Apply the [engine API migration](mdn-native-url-migration.patch), then the
-[document ownership migration](mdn-grovedom-migration.patch), with a built
-development engine package. Engine 0.9.1 lacks the ownership exports.
-Run the migrated consumer on Node >=22.13.0.
+For current MDN hooks, pass parser options to each `loadHtml` call and store the
+page document in `res.meta.doc`. Generated playground runners must be serialized
+and disposed before `submit(child, res, pipeline)`. Standalone sample merging
+must dispose every temporary document in `finally`, after extracting detached
+values or serialized HTML. Keep Cheerio as the default and pass parser options
+explicitly when opting into GroveDOM. Apply the other API changes in the
+[0.10 migration guide](../MIGRATION-0.10.0.md), including `pipeline.logger`, and
+run consumers on Node >=22.13.0.
 
-The playground hook uses `loadHtml` and serializes each generated runner before
-queue submission. The queued resource contains its processed body and no
-document handle, so it can outlive the parent scope and cross worker boundaries.
-Sample merging owns documents per file and waits for all pending scopes before
-reporting a batch failure.
-
-The existing `mergeSamples(...paths)` entry point keeps Cheerio as its default.
-For an explicit parser, pass the same parser options used by the downloader:
-
-```js
-import {mergeSamplesWithHtmlParser} from './lib/mdn/mdn-merge-samples.js';
-
-await mergeSamplesWithHtmlParser({
-  htmlParser: 'grovedom',
-  grovedom: {module: import.meta.resolve('grovedom')},
-}, './offline-en', './offline-zh');
-```
+Any adopted MDN revision still needs its own validation, including
+full-archive/browser checks and an admissible consumer performance measurement.
 
 ## Validate an installed consumer
 
@@ -195,12 +241,13 @@ After building and installing the engine package and GroveDOM 0.1.2 in a separat
 consumer, run this command from the engine repository:
 
 ```sh
-node scripts/check-consumer.mjs /path/to/consumer --smoke-only --grovedom
+node scripts/check-consumer.mjs /path/to/consumer --grovedom
 ```
 
 This checks the installed declarations, default package resolution in both
 downloaders, and lifecycle cleanup with the installed GroveDOM package. It covers
 success, discarded resources, download/processing/save failures, retries,
 cancellation, binary-only work and downstream pool overrides. Add `with-peer`
-when the consumer also has the optional `log4js` peer installed. No GroveDOM
+when the consumer also has the optional `log4js` peer installed. Add
+`--smoke-only` for the shorter declarations/parser check. No GroveDOM
 development dependency is required by the engine's default test suite.

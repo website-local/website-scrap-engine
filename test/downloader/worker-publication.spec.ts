@@ -1,24 +1,26 @@
-import {afterEach, beforeEach, expect, test} from '@jest/globals';
+import {afterEach, beforeEach, expect, jest, test} from '@jest/globals';
 import {EventEmitter} from 'node:events';
 import {promises as fs} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {MessageChannel} from 'node:worker_threads';
 import type {Worker} from 'node:worker_threads';
 import {WorkerPublicationClient, WorkerPublicationCoordinator} from '../../src/downloader/worker-publication.js';
-import {createResourceProgress} from '../../src/crawl-context.js';
-import {withCrawlContext} from '../../src/crawl-context.js';
+import {SingleThreadDownloader} from '../../src/downloader/single.js';
+import {createResource, ResourceType} from '../../src/resource.js';
 import {noFollowWriteFlags, publishFile} from '../../src/output-store.js';
-import {createDefaultLogger} from '../../src/logger/default-logger.js';
-import {BufferBudget} from '../../src/buffer-budget.js';
 
 let root: string;
-beforeEach(async () => { root = await fs.mkdtemp(join(process.cwd(), '.wse-publication-test-')); });
+beforeEach(async () => { root = await fs.mkdtemp(join(tmpdir(), 'wse-publication-test-')); });
 afterEach(async () => { await fs.rm(root, {recursive: true, force: true}); });
 
-function setup(directWrites = false) {
-  const owners = new Map([[1, 101]]);
+async function setup(directWrites = false) {
+  const downloader = new SingleThreadDownloader(new URL('./budget-options.js', import.meta.url).href,
+    {localRoot: root, atomicWrites: !directWrites});
+  await downloader.init;
+  const owners: Record<number, number> = {1: 101};
   const failures: Error[] = [];
-  const coordinator = new WorkerPublicationCoordinator((worker, task) => owners.get(task) === worker,
+  const coordinator = new WorkerPublicationCoordinator(downloader, (worker, task) => owners[task] === worker,
     (_worker, error) => { failures.push(error); });
   const workers: Worker[] = [];
   const requests: string[] = [];
@@ -30,138 +32,140 @@ function setup(directWrites = false) {
     coordinator.attach(worker, channel.port1);
     return new WorkerPublicationClient(channel.port2);
   });
-  const progress = createResourceProgress();
-  const budget = new BufferBudget(10);
-  const bufferAccount = budget.reserve(0);
-  const controller = new AbortController();
-  coordinator.register(1, {logger: createDefaultLogger(), signal: controller.signal,
-    resourceProgress: progress, bufferAccount, directWrites});
-  return {owners, failures, coordinator, clients, workers, requests, progress, budget, bufferAccount, controller};
+  const resource = createResource({type: ResourceType.Binary, depth: 0,
+    url: 'https://example.test/asset', refUrl: 'https://example.test/', localRoot: root});
+  resource.publishedFiles = 0;
+  const workerResource = {...resource, workerTaskId: 1};
+  coordinator.register(1, resource);
+  return {downloader, owners, failures, coordinator, clients, workers, requests, resource, workerResource};
+}
+
+async function cleanup(state: Awaited<ReturnType<typeof setup>>) {
+  state.workers.forEach(worker => worker.emit('exit', 0));
+  await state.coordinator.dispose();
+  state.clients.forEach(client => client.close());
+  await state.downloader.dispose();
 }
 
 test('crawl cancellation rejects every allocation sharing a task lease', async () => {
-  const {coordinator, clients, progress, controller} = setup();
+  const state = await setup();
+  const {coordinator, clients, resource, workerResource, downloader} = state;
   try {
     const handles = [];
     for (const name of ['first', 'second']) {
       const destination = join(root, name);
       await fs.writeFile(destination, 'cached');
-      const handle = await clients[0].forTask(1).create(destination, undefined, root);
+      const handle = await clients[0].create(destination, undefined, root, false, workerResource);
       await fs.writeFile(handle.stagingPath, 'replacement');
       handles.push(handle);
     }
-    controller.abort(new Error('crawl cancelled'));
-    for (const handle of handles) await expect(handle.publish()).rejects.toThrow('crawl cancelled');
+    await downloader.dispose();
+    for (const handle of handles) await expect(handle.publish()).rejects.toThrow('Downloader disposed');
     await coordinator.finish(1, false);
-    expect(progress.publishedFiles).toBe(0);
+    expect(resource.publishedFiles).toBe(0);
     for (const name of ['first', 'second']) expect(await fs.readFile(join(root, name), 'utf8')).toBe('cached');
     expect((await fs.readdir(root)).sort()).toEqual(['first', 'second']);
-  } finally {
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });
 
 test('foreign allocation and late publication cannot change cached output', async () => {
-  const {owners, coordinator, clients, failures} = setup();
+  const state = await setup();
+  const {owners, coordinator, clients, failures, workerResource} = state;
   try {
     const destination = join(root, 'asset');
     await fs.writeFile(destination, 'cached');
-    await expect(clients[1].forTask(1).create(destination, undefined, root)).rejects.toThrow('owned');
+    await expect(clients[1].create(destination, undefined, root, false, workerResource)).rejects.toThrow('owned');
     expect(await fs.readdir(root)).toEqual(['asset']);
-    const handle = await clients[0].forTask(1).create(destination, undefined, root);
+    const handle = await clients[0].create(destination, undefined, root, false, workerResource);
     await fs.writeFile(handle.stagingPath, 'partial');
-    owners.delete(1);
+    delete owners[1];
     await coordinator.finish(1, false);
     await expect(handle.publish()).rejects.toThrow('owned');
     expect(await fs.readFile(destination, 'utf8')).toBe('cached');
     expect(await fs.readdir(root)).toEqual(['asset']);
     expect(failures).toEqual([]);
-  } finally {
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });
 
-test('remote publication is confirmed in the parent context exactly once', async () => {
-  const {coordinator, clients, progress} = setup();
+test('remote publication is counted on the parent resource exactly once', async () => {
+  const state = await setup();
+  const {coordinator, clients, resource, workerResource} = state;
   try {
     const destination = join(root, 'asset');
-    const handle = await clients[0].forTask(1).create(destination, undefined, root);
+    const handle = await clients[0].create(destination, undefined, root, false, workerResource);
     await fs.writeFile(handle.stagingPath, 'complete');
     const publishing = handle.publish();
     expect(handle.publish()).toBe(publishing);
     await publishing;
     await handle.cleanup();
     await coordinator.finish(1, false);
-    expect(progress.publishedFiles).toBe(1);
+    expect(resource.publishedFiles).toBe(1);
+    expect(workerResource.publishedFiles).toBe(0);
     expect(await fs.readFile(destination, 'utf8')).toBe('complete');
     expect(await fs.readdir(root)).toEqual(['asset']);
-  } finally {
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });
 
 (noFollowWriteFlags === undefined ? test.skip : test)('remote direct writers retain symlink rejection without a duplicate probe', async () => {
-  const {coordinator, clients, progress} = setup(true);
+  const state = await setup(true);
+  const {coordinator, clients, resource, workerResource} = state;
   const target = join(root, 'target');
   const destination = join(root, 'asset');
   await fs.writeFile(target, 'cached');
   await fs.symlink(target, destination);
   let writerCalled = false;
   try {
-    const context = {logger: createDefaultLogger(), signal: new AbortController().signal,
-      publicationStore: clients[0].forTask(1)};
     const write = async (path: string) => {
       writerCalled = true;
       // Node accepts numeric flags although the Node 22 type omits them.
       await fs.writeFile(path, 'replacement', {flag: noFollowWriteFlags} as unknown as Parameters<typeof fs.writeFile>[2]);
     };
     // Generic writers must fail allocation before their callback can run.
-    await expect(withCrawlContext(context, () => publishFile(destination, write, undefined, root)))
+    await expect(publishFile(destination, write, undefined, root, undefined, false, workerResource, clients[0]))
       .rejects.toThrow('symlink');
     expect(writerCalled).toBe(false);
     // The built-in no-follow writer rejects the same symlink at open instead.
-    await expect(withCrawlContext(context, () => publishFile(destination, write, undefined, root, undefined, true)))
+    await expect(publishFile(destination, write, undefined, root, undefined, true, workerResource, clients[0]))
       .rejects.toMatchObject({code: 'ELOOP'});
     expect(writerCalled).toBe(true);
     expect(await fs.readFile(target, 'utf8')).toBe('cached');
-    expect(progress.publishedFiles).toBe(0);
+    expect(resource.publishedFiles).toBe(0);
     await coordinator.finish(1, false);
-  } finally {
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });
 
-test('worker byte reservations enforce parent ownership and preserve structured budget errors', async () => {
-  const {coordinator, clients, budget, bufferAccount, owners} = setup();
+test('worker output conflicts retain their error code and release failed ownership', async () => {
+  const state = await setup();
+  const {coordinator, clients, owners, resource, workerResource} = state;
+  const second = {...resource, url: 'https://example.test/second', workerTaskId: 2};
+  owners[2] = 102;
+  coordinator.register(2, second);
   try {
-    const account = clients[0].bufferForTask(1);
-    await account.observeBody(4);
-    await expect(clients[1].bufferForTask(1).reserveChild(1)).rejects.toThrow('owned');
-    await account.reserveChild(6);
-    await expect(account.observeBody(5)).rejects.toMatchObject({code: 'ERR_BUFFER_BUDGET', limit: 10, actual: 11});
-    await expect(account.reserveChild(NaN)).rejects.toThrow('Invalid');
-    expect(budget.used).toBe(10);
-    owners.delete(1);
+    const destination = join(root, 'asset');
+    const first = await clients[0].create(destination, undefined, root, false, workerResource);
+    await expect(clients[1].create(destination, undefined, root, false, second))
+      .rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
+    await first.cleanup();
+    const replacement = await clients[1].create(destination, undefined, root, false, second);
+    await fs.writeFile(replacement.stagingPath, 'complete');
+    await replacement.publish();
+    await replacement.cleanup();
+    await expect(clients[0].create(destination, undefined, root, false, workerResource))
+      .rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
+    expect(await fs.readFile(destination, 'utf8')).toBe('complete');
+    expect(resource.publishedFiles).toBe(0);
+    expect(second.publishedFiles).toBe(1);
     await coordinator.finish(1, false);
-    await expect(account.reserveChild(1)).rejects.toThrow('owned');
-    bufferAccount.release();
-    expect(budget.used).toBe(0);
-  } finally {
-    bufferAccount.release();
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+    await coordinator.finish(2, false);
+  } finally { await cleanup(state); }
 });
 
 test.each([false, true])('successful publication releases its allocation in the parent (direct=%s)', async direct => {
-  const {coordinator, clients, requests, progress} = setup(direct);
+  const state = await setup(direct);
+  const {coordinator, clients, requests, resource, workerResource} = state;
   try {
     const destination = join(root, 'asset');
-    const handle = await clients[0].forTask(1).create(destination, undefined, root);
+    const handle = await clients[0].create(destination, undefined, root, false, workerResource);
     await fs.writeFile(handle.stagingPath, 'complete');
     await handle.publish();
     // Atomic staging is already gone when the parent confirms publication.
@@ -169,22 +173,20 @@ test.each([false, true])('successful publication releases its allocation in the 
     await handle.cleanup();
     await handle.cleanup();
     expect(requests).toEqual(['create', 'publish']);
-    expect(progress.publishedFiles).toBe(1);
+    expect(resource.publishedFiles).toBe(1);
     await coordinator.finish(1, false);
     expect(await fs.readFile(destination, 'utf8')).toBe('complete');
-  } finally {
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });
 
 test('failed worker allocations remain until the writer exits', async () => {
-  const {coordinator, clients, workers} = setup();
+  const state = await setup();
+  const {coordinator, clients, workers, workerResource} = state;
   try {
     coordinator.assign(1, workers[0]);
     const destination = join(root, 'asset');
     await fs.writeFile(destination, 'cached');
-    const handle = await clients[0].forTask(1).create(destination, undefined, root);
+    const handle = await clients[0].create(destination, undefined, root, false, workerResource);
     await fs.writeFile(handle.stagingPath, 'partial');
     let finished = false;
     const finishing = coordinator.finish(1, true).then(() => { finished = true; });
@@ -195,94 +197,89 @@ test('failed worker allocations remain until the writer exits', async () => {
     await finishing;
     expect(await fs.readdir(root)).toEqual(['asset']);
     expect(await fs.readFile(destination, 'utf8')).toBe('cached');
-  } finally {
-    workers[0].emit('exit', 1);
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });
 
 test('completed tasks with no allocations reject late publication requests', async () => {
-  const {coordinator, clients, workers} = setup();
+  const state = await setup();
+  const {coordinator, clients, workers, workerResource} = state;
   try {
     coordinator.assign(1, workers[0]);
     await coordinator.finish(1, false);
     await coordinator.finish(1, false);
-    await expect(clients[0].forTask(1).create(join(root, 'late'), undefined, root))
-      .rejects.toThrow('owned');
+    await expect(clients[0].create(join(root, 'late'), undefined, root, false, workerResource)).rejects.toThrow('owned');
     expect(await fs.readdir(root)).toEqual([]);
-  } finally {
-    workers[0].emit('exit', 0);
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });
 
-test('failed tasks without allocations still wait for worker exit before releasing credits', async () => {
-  const {coordinator, clients, workers, bufferAccount, budget} = setup();
+test('failed tasks without allocations retain their lease until worker exit', async () => {
+  const state = await setup();
+  const {coordinator, workers} = state;
   try {
     coordinator.assign(1, workers[0]);
-    bufferAccount.observeBody(4);
     const finishing = coordinator.finish(1, true);
-    const released = finishing.then(() => bufferAccount.release());
+    let finished = false;
+    void finishing.then(() => { finished = true; });
     // A later successful close must not bypass an existing failure's exit wait.
     expect(coordinator.finish(1, false)).toBe(finishing);
     await new Promise(resolve => setImmediate(resolve));
-    expect(budget.used).toBe(4);
+    expect(finished).toBe(false);
+    expect(coordinator.leases.has(1)).toBe(true);
     workers[0].emit('exit', 1);
-    await released;
-    expect(budget.used).toBe(0);
-  } finally {
-    workers[0].emit('exit', 1);
-    await coordinator.dispose();
-    bufferAccount.release();
-    clients.forEach(client => client.close());
-  }
+    await finishing;
+    expect(finished).toBe(true);
+    expect(coordinator.leases.has(1)).toBe(false);
+  } finally { await cleanup(state); }
 });
 
-test('successful close waits for pending operations even without allocations', async () => {
-  const {coordinator, clients, workers, owners} = setup();
+test('successful close waits for a pending allocation and removes its staging', async () => {
+  const state = await setup();
+  const {coordinator, clients, workerResource, downloader} = state;
   let unblock!: () => void;
   const blocked = new Promise<void>(resolve => { unblock = resolve; });
   let onStarted!: () => void;
   const started = new Promise<void>(resolve => { onStarted = resolve; });
-  owners.set(2, workers[0].threadId);
-  coordinator.register(2, {logger: createDefaultLogger(), signal: new AbortController().signal,
-    bufferAccount: {observeBody: () => { onStarted(); return blocked; }, reserveChild: () => {}}});
+  const acquire = downloader.stagingDirectories.acquire.bind(downloader.stagingDirectories);
+  const allocating = jest.spyOn(downloader.stagingDirectories, 'acquire').mockImplementation(async parent => {
+    onStarted();
+    await blocked;
+    return acquire(parent);
+  });
   try {
-    const reserving = clients[0].bufferForTask(2).observeBody(4);
+    const creating = clients[0].create(join(root, 'asset'), undefined, root, false, workerResource);
+    const rejected = expect(creating).rejects.toThrow('cancelled');
     await started;
     let finished = false;
-    const finishing = coordinator.finish(2, false).then(() => { finished = true; });
+    const finishing = coordinator.finish(1, false).then(() => { finished = true; });
     await new Promise(resolve => setImmediate(resolve));
     expect(finished).toBe(false);
     unblock();
-    await reserving;
+    await rejected;
     await finishing;
     expect(finished).toBe(true);
-    await expect(clients[0].bufferForTask(2).observeBody(5)).rejects.toThrow('owned');
+    expect(await fs.readdir(root)).toEqual([]);
+    await expect(clients[0].create(join(root, 'late'), undefined, root, false, workerResource)).rejects.toThrow('owned');
   } finally {
     unblock();
-    workers[0].emit('exit', 0);
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
+    allocating.mockRestore();
+    await cleanup(state);
   }
 });
 
 test('assignment requires the attached worker object and rejects exited workers', async () => {
-  const {coordinator, clients, workers, budget} = setup();
+  const state = await setup();
+  const {coordinator, clients, workers, workerResource} = state;
   try {
     expect(() => coordinator.assign(1, {threadId: workers[0].threadId} as Worker))
       .toThrow('no registered worker');
     workers[1].emit('exit', 0);
     expect(() => coordinator.assign(1, workers[1])).toThrow('no registered worker');
     coordinator.assign(1, workers[0]);
-    await clients[0].bufferForTask(1).observeBody(4);
-    expect(budget.used).toBe(4);
+    const handle = await clients[0].create(join(root, 'asset'), undefined, root, false, workerResource);
+    await fs.writeFile(handle.stagingPath, 'complete');
+    await handle.publish();
+    await handle.cleanup();
+    expect(await fs.readFile(join(root, 'asset'), 'utf8')).toBe('complete');
     await coordinator.finish(1, false);
-  } finally {
-    workers[0].emit('exit', 0);
-    await coordinator.dispose();
-    clients.forEach(client => client.close());
-  }
+  } finally { await cleanup(state); }
 });

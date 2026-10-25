@@ -98,11 +98,14 @@ new SingleThreadDownloader(pathToFileURL(path.resolve('my-options.js')).href, {
 
 ### Crawl limits and outcomes
 
-For large crawls, configure queue, discovery, resource-size and aggregate-body
-limits rather than relying on concurrency alone. `outcomes` records each URL's
-last attempt; `bufferedBytes` and `peakBufferedBytes` report body reservations.
-The byte budget excludes DOMs, metadata, stream buffers and temporary hook
-allocations, so allow additional memory headroom. See the
+For large crawls, configure `maxResources`, `maxQueuedResources`,
+`maxDiscoveredResources`, `maxResourceBytes`, and concurrency together.
+`maxDiscoveredResources` counts every child submission, including duplicates and
+rejected admissions. Routine limit breaches are logged and discard the affected
+resource. `outcomes` records each accepted URL's last attempt.
+`maxResourceBytes` limits input bytes, including decompressed HTTP data; it does
+not measure heap or Wasm memory. Allow room for parsed documents, metadata and
+temporary allocations. See the
 [migration guide's scheduling and output details](MIGRATION-0.10.0.md).
 
 ### Adapter Helpers
@@ -217,7 +220,7 @@ URL
 6. download ----------> fetch resource via HTTP (loop ends early once body is set)
  |
  v
-7. processAfterDownload -> parse content, discover child resources via submit() callback
+7. processAfterDownload -> parse content, discover children via submit(child, res, pipeline)
  |
  v
 8. saveToDisk --------> write to local filesystem
@@ -227,6 +230,30 @@ dispose (once per downloader shutdown / worker exit)
 ```
 
 Consumers extend the pipeline by prepending or appending functions to any stage array via `defaultLifeCycle()`. See [Usage](#usage) for examples.
+
+Lifecycle hooks receive the executor explicitly. Use `pipeline.logger` for
+logging and `pipeline.signal` for cancellation. A processing hook receives
+`(res, submit, options, pipeline)`; its shared submission handler requires both
+the parent resource and executor:
+
+```ts
+import {lifeCycle, resource} from 'website-scrap-engine';
+
+const lc = lifeCycle.defaultLifeCycle();
+lc.processAfterDownload.push(async (res, submit, _options, pipeline) => {
+  const child = await pipeline.createAndProcessResource(
+    '/extra.html', resource.ResourceType.Html, undefined, null, res
+  );
+  if (child) submit(child, res, pipeline);
+  pipeline.logger.debug('custom.discovery', 'Processed', res.url);
+  return res;
+});
+```
+
+Await asynchronous discovery before the hook returns. Resources retain their own
+data and reference parent URLs as strings; they do not retain executors,
+downloaders, or child-resource arrays. Disposal hooks run in order and stop if a
+hook fails.
 
 ### Default Pipeline Handlers
 
@@ -247,11 +274,11 @@ Defined in `ResourceType` enum:
 | Type | Encoding | Description |
 |---|---|---|
 | `Binary` | null | Not parsed, saved as-is |
-| `Html` | utf8 | Parsed with cheerio, links discovered and rewritten |
+| `Html` | utf8 | Parsed with the configured HTML backend, links discovered and rewritten |
 | `Css` | utf8 | CSS `url()` references extracted and rewritten |
 | `CssInline` | utf8 | Inline `<style>` blocks and `style` attributes |
 | `SiteMap` | utf8 | URLs discovered but not rewritten |
-| `Svg` | utf8 | Parsed with cheerio (same as HTML) |
+| `Svg` | utf8 | Parsed with the configured backend (same as HTML) |
 | `StreamingBinary` | null | Streamed directly to disk, for large files |
 
 ### HTML Source Definitions
@@ -271,9 +298,9 @@ Override via `options.sources` with an array of `{selector, attr, type}` definit
 
 ### Key Abstractions
 
-- **`Resource`** (`src/resource.ts`) - Central data object carrying URL, save path, replacement path, body, and metadata. `RawResource` is the serializable subset used for cross-thread communication.
-- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution. `createAndProcessResource()` runs stages 1-5 in one call.
-- **`AbstractDownloader`** (`src/downloader/main.ts`) - Base class with PQueue-based concurrency, URL deduplication, and the download loop.
+- **`Resource`** (`src/resource.ts`) - Carries URL, save path, replacement path, body, and metadata. A parsed document is created lazily, owned by `res.meta.doc`, and disposed and cleared when saved or discarded. `WireResource` is the document-free transport shape.
+- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution and exposes the crawl's logger and cancellation signal. `createAndProcessResource()` runs stages 1-5 in one call.
+- **`AbstractDownloader`** (`src/downloader/main.ts`) - Owns PQueue concurrency, URL deduplication, output conflict records in `outputReservations`, and the download loop. Concurrency sampling history is visible in its `meta: DownloaderStats` object.
 - **`SingleThreadDownloader`** (`src/downloader/single.ts`) - Runs all pipeline stages in the main thread.
 - **`MultiThreadDownloader`** (`src/downloader/multi.ts`) - Downloads in main thread, sends to worker pool for post-processing.
 
@@ -304,14 +331,15 @@ Use multi-thread processing when post-download work (HTML/CSS parsing, link disc
 - Execute stages 7-8 (processAfterDownload + saveToDisk)
 - Parse HTML/CSS/SVG, discover child resources
 - Run stages 1-5 on discovered children to prepare them
-- Send prepared child resources back to the main thread as `RawResource[]`
+- Send prepared child resources back to the main thread as `WireResource[]`, then release the result batch
 
 Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses a 2-pass water-fill algorithm to balance tasks across workers by load.
 
 Custom worker implementations should use `workerData.workerChannels.taskPort`
-for task/result messages and `workerData.workerChannels.logPort` for worker
-logs. The default `parentPort` is reserved for lightweight worker control
-messages.
+for task/result messages and `workerData.workerChannels.logPort` for relayed
+logs. Configured loggers that declare `workerSafe: true` are created in each
+built-in worker and write locally. The default `parentPort` is reserved for
+lightweight worker control messages.
 
 On close, custom workers should close both transferred ports and send a
 `{type: 'closed'}` control message on `parentPort` so the pool can drain queued
@@ -395,25 +423,49 @@ successful buffered work is reported as `processed`.
 
 ## Logging
 
-The library exposes dedicated logger categories through a pluggable logger
-interface. The default logger writes to `console`; a log4js adapter is available
+Lifecycle hooks log through `pipeline.logger`, using a category as the first
+argument. Each downloader owns its logger. The default logger writes to
+`console`; a log4js adapter is available
 for file-based logging. Install its optional peer explicitly with `npm install log4js`
 when using `website-scrap-engine/lib/logger/log4js-adapter.js`. The default logger
 does not install or load log4js.
 
-| Logger | Purpose |
+| Category | Purpose |
 |---|---|
-| `skip` | Resources filtered/discarded at any pipeline stage |
-| `skipExternal` | External resources skipped by scope |
-| `retry` | HTTP retry attempts with backoff details |
-| `error` | Download and processing errors |
-| `notFound` | 404 responses |
-| `request` / `response` | HTTP request/response logging |
-| `complete` | Successfully processed resources |
-| `mkdir` | Directory creation |
-| `adjustConcurrency` | Runtime concurrency changes |
+| `system.skip` | Resources filtered/discarded at any pipeline stage |
+| `system.skipExternal` | External resources skipped by scope |
+| `io.http.retry` | HTTP retry attempts with backoff details |
+| `system.error` | Download and processing errors |
+| `io.http.notFound` | 404 responses |
+| `io.http.request` / `io.http.response` | HTTP request/response logging |
+| `system.complete` | Successfully processed resources |
+| `io.disk.mkdir` | Directory creation |
+| `system.adjustConcurrency` | Runtime concurrency changes |
+| `custom.*` | Application-defined events |
 
 Configure logging via `options.createLogger` and `options.logSubDir`.
+The factory belongs in the options module so workers can load it independently.
+To let a logger write directly from each worker, return a logger with
+`workerSafe: true`. For example, a factory using the built-in console logger can
+opt in as follows:
+
+```ts
+import {createDefaultLogger, lifeCycle, options} from 'website-scrap-engine';
+
+export default options.defaultDownloadOptions({
+  ...lifeCycle.defaultLifeCycle(),
+  localRoot: './output',
+  createLogger: () => {
+    const logger = createDefaultLogger();
+    logger.workerSafe = true;
+    return logger;
+  },
+});
+```
+
+Opt in only when independent logger instances can write concurrently to their
+configured destinations. Loggers without this flag retain worker-to-parent
+relay through the logging port.
 
 ## Key Dependencies
 

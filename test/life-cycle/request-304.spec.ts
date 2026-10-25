@@ -25,17 +25,6 @@ jest.unstable_mockModule('got', () => {
   return mod;
 });
 
-jest.mock('log4js', () => ({
-  configure: jest.fn(),
-  getLogger: jest.fn().mockReturnValue({
-    trace: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-}));
-
 const {requestForResource} = await import(
   '../../src/life-cycle/download-resource.js'
 );

@@ -1,14 +1,14 @@
-import type {OptionsInit, Response} from 'got';
+import type {BeforeRetryHook, OptionsInit, Response} from 'got';
 import got, {HTTPError} from 'got';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {Resource} from '../resource.js';
 import {generateSavePath, ResourceType} from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
-import * as logger from '../logger/logger.js';
+import type {Logger} from '../logger/types.js';
+import type {PipelineExecutor} from './pipeline-executor.js';
 import {isUrlHttp} from '../util.js';
 import URI from '../uri.js';
-import {ResourceSizeError} from '../resource-limits.js';
-import {currentCrawlContext} from '../crawl-context.js';
+import {checkResourceSize, ResourceSizeError} from '../resource-limits.js';
 import {canUseNativeHttp, nativeBufferedRequest} from './native-http.js';
 import type {NativeHttpResponse} from './native-http.js';
 import {withHttpCacheSafety} from './http-cache-safety.js';
@@ -24,29 +24,22 @@ export interface DownloadError extends Partial<Error> {
 export async function getRetry(
   url: string,
   options: OptionsInit,
-  maxResourceBytes?: number
+  maxResourceBytes?: number,
+  resource?: Resource, logger?: Logger, retryLogger?: BeforeRetryHook
 ): Promise<Response<Buffer | string> | void> {
   // Got owns retry limits and hooks; successful empty bodies are valid responses.
-  const account = currentCrawlContext()?.bufferAccount;
-  const limitController = maxResourceBytes === undefined && !account ? undefined : new AbortController();
+  const limitController = maxResourceBytes === undefined ? undefined : new AbortController();
   // This helper consumes a response promise, across Got 13–16 overloads.
   const request = got(url, withHttpCacheSafety({...options, signal: limitController ?
     options.signal ? AbortSignal.any([options.signal, limitController.signal]) : limitController.signal :
-    options.signal} as OptionsInit & {isStream?: false; resolveBodyOnly?: false}));
+    options.signal} as OptionsInit & {isStream?: false; resolveBodyOnly?: false}, retryLogger));
   let sizeError: unknown;
-  if (maxResourceBytes !== undefined || account) {
-    const failed = (error: unknown) => {
-      sizeError ??= error;
-      limitController!.abort(error);
-    };
+  if (maxResourceBytes !== undefined) {
     request.on('downloadProgress', ({transferred}) => {
-      try {
-        if (maxResourceBytes !== undefined && transferred > maxResourceBytes) {
-          throw new ResourceSizeError(maxResourceBytes, transferred);
-        }
-        const accounting = account?.observeBody(transferred);
-        if (accounting) void accounting.catch(failed);
-      } catch (error) { failed(error); }
+      if (!sizeError && transferred > maxResourceBytes) {
+        sizeError = new ResourceSizeError(maxResourceBytes, transferred);
+        limitController!.abort(sizeError);
+      }
     });
   }
   try {
@@ -60,6 +53,10 @@ export async function getRetry(
     }
     return response as Response<Buffer | string>;
   } catch (error) {
+    if (sizeError instanceof ResourceSizeError && resource) {
+      checkResourceSize(sizeError.actual, sizeError.limit, resource, logger);
+      return;
+    }
     throw sizeError ?? error;
   }
 }
@@ -67,8 +64,10 @@ export async function getRetry(
 export async function requestForResource(
   res: Resource & { downloadStartTimestamp: number },
   requestOptions: RequestOptions,
-  options?: StaticDownloadOptions
+  options?: StaticDownloadOptions,
+  pipeline?: PipelineExecutor
 ): Promise<DownloadResource | Resource | void> {
+  const logger = pipeline?.logger;
   let downloadLink: string;
   try {
     downloadLink = encodeURI(decodeURI(res.downloadLink));
@@ -82,14 +81,14 @@ export async function requestForResource(
     headers.referer = res.refUrl;
     reqOptions.headers = headers;
   }
-  logger.request.info(res.url, downloadLink, res.refUrl,
+  logger?.info('io.http.request', res.url, downloadLink, res.refUrl,
     res.encoding, res.type);
   let response: Response<string | Buffer> | (NativeHttpResponse & {body: Buffer}) | void;
   try {
-    const native = options?.httpTransport === 'native' && canUseNativeHttp(reqOptions);
+    const native = options?.httpTransport === 'native' && canUseNativeHttp(reqOptions, pipeline?.retryLogger);
     if (options?.httpTransport === 'native') res.meta.httpTransport = native ? 'native' : 'got';
-    response = native ? await nativeBufferedRequest(downloadLink, reqOptions, options?.maxResourceBytes) :
-      await getRetry(downloadLink, reqOptions, options?.maxResourceBytes);
+    response = native ? await nativeBufferedRequest(downloadLink, reqOptions, options?.maxResourceBytes, res, logger) :
+      await getRetry(downloadLink, reqOptions, options?.maxResourceBytes, res, logger, pipeline?.retryLogger);
   } catch (e) {
     if (e instanceof HTTPError &&
       (e as HTTPError).response.statusCode === 304) {
@@ -107,12 +106,12 @@ export async function requestForResource(
     return resource;
   }
   if (!response.body) {
-    logger.error.warn('Empty response body:', downloadLink, response);
+    logger?.warn('system.error', 'Empty response body:', downloadLink, response);
     return res as Resource;
   }
   res.meta.headers = response.headers;
 
-  logger.response.info(response.statusCode, response.requestUrl, res.url,
+  logger?.info('io.http.response', response.statusCode, response.requestUrl, res.url,
     downloadLink, res.refUrl, res.encoding, res.type);
   res.finishTimestamp = Date.now();
   res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp;
@@ -124,7 +123,7 @@ export async function requestForResource(
       URI(res.redirectedUrl),
       res.type === ResourceType.Html,
       !options?.deduplicateStripSearch,
-      options?.localSrcRoot);
+      options?.localSrcRoot, logger);
   }
   res.body = response.body;
   return res;
@@ -133,8 +132,10 @@ export async function requestForResource(
 export async function downloadResource(
   res: Resource,
   requestOptions: RequestOptions,
-  options: StaticDownloadOptions
+  options: StaticDownloadOptions,
+  pipeline?: PipelineExecutor
 ): Promise<DownloadResource | Resource | void> {
+  const logger = pipeline?.logger;
   if (res.body !== undefined) {
     return res as DownloadResource;
   }
@@ -149,7 +150,7 @@ export async function downloadResource(
     res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
   }
   let downloadedResource: DownloadResource | Resource | void = await requestForResource(
-    res as (Resource & { downloadStartTimestamp: number }), requestOptions, options);
+    res as (Resource & { downloadStartTimestamp: number }), requestOptions, options, pipeline);
   if (!downloadedResource || !downloadedResource.body) {
     return downloadedResource;
   }
@@ -176,7 +177,7 @@ export async function downloadResource(
           }
         }
         if (nonHtml) {
-          logger.error.warn('Detected non-html content type for resource typed as',
+          logger?.warn('system.error', 'Detected non-html content type for resource typed as',
             downloadedResource.type,
             downloadedResource.downloadLink, downloadedResource.rawUrl, contentType);
         }
@@ -187,17 +188,17 @@ export async function downloadResource(
         Buffer.isBuffer(downloadedResource.body)) &&
       downloadedResource.body.length > 0) {
       if (!downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
-        logger.error.info('Detected incomplete html, try again',
+        logger?.info('system.error', 'Detected incomplete html, try again',
           downloadedResource.downloadLink);
         downloadedResource = await requestForResource(
-          res as (Resource & { downloadStartTimestamp: number }), requestOptions, options);
+          res as (Resource & { downloadStartTimestamp: number }), requestOptions, options, pipeline);
       }
       // probably more retries here?
       if (!downloadedResource ||
         (typeof downloadedResource.body === 'string' ||
           Buffer.isBuffer(downloadedResource.body)) &&
         !downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
-        logger.error.warn('Detected incomplete html twice', res.downloadLink);
+        logger?.warn('system.error', 'Detected incomplete html twice', res.downloadLink);
         return downloadedResource;
       }
     }

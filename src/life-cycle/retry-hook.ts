@@ -1,22 +1,23 @@
-import type {BeforeRetryHook, RequestError} from 'got';
+import type {RequestError} from 'got';
 import {TimeoutError} from 'got';
-import * as logger from '../logger/logger.js';
+import type {Logger} from '../logger/types.js';
 
 /** Take logs before retry */
-export const beforeRetryHook: BeforeRetryHook = (
+export const beforeRetryHook = (
   error: RequestError,
-  retryCount: number | undefined
+  retryCount: number | undefined,
+  logger?: Logger
 ) => {
   const options = error.options;
-  if (!options) {
+  if (!options || !logger) {
     return;
   }
   const url = String(options.url);
-  const log = retryCount && retryCount > 1 ? logger.retry.warn : logger.retry.info;
+  const log = retryCount && retryCount > 1 ? logger.warn : logger.info;
   if (error instanceof TimeoutError || error.name === 'TimeoutError') {
-    log.call(logger.retry, retryCount, url, error.name, error.code,
+    log.call(logger, 'io.http.retry', retryCount, url, error.name, error.code,
       error.message, (error as TimeoutError).event);
   } else {
-    log.call(logger.retry, retryCount, url, error.name, error.code, error.message);
+    log.call(logger, 'io.http.retry', retryCount, url, error.name, error.code, error.message);
   }
 };

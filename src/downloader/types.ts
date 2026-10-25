@@ -7,6 +7,9 @@ export interface DownloaderStats {
   lastPeriodTotalCount: number;
   currentPeriodCount: number;
   lastPeriodCount: number;
+  /** Last concurrency measurement, exposed for custom adjustment functions. */
+  lastPeriodTime?: number;
+  lastPeriodRate?: number;
 }
 
 export interface DownloaderWithMeta {

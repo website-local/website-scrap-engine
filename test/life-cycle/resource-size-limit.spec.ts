@@ -1,8 +1,9 @@
-import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {promises as fs} from 'node:fs';
 import {createServer} from 'node:http';
 import type {Server} from 'node:http';
 import type {AddressInfo} from 'node:net';
+import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {gzipSync} from 'node:zlib';
@@ -14,7 +15,7 @@ import {createResource, ResourceType} from '../../src/resource.js';
 
 let root: string;
 let server: Server | undefined;
-beforeEach(async () => { root = await fs.mkdtemp(join(process.cwd(), '.wse-size-test-')); });
+beforeEach(async () => { root = await fs.mkdtemp(join(tmpdir(), 'wse-size-test-')); });
 afterEach(async () => {
   if (server) {
     const closing = new Promise<void>(resolve => server!.close(() => resolve()));
@@ -40,11 +41,18 @@ describe.each([ResourceType.Binary, ResourceType.StreamingBinary])('resource byt
     const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
       maxResourceBytes: 64, req: {retry: {limit: 0}, timeout: {request: 2000}}});
     const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const warn = jest.spyOn(pipeline.logger, 'warn').mockImplementation(() => {});
     const resource = createResource({type, depth: 0, url, refUrl: url, localRoot: root, encoding: null});
     const destination = join(root, resource.savePath);
     await fs.mkdir(dirname(destination), {recursive: true});
     await fs.writeFile(destination, 'cached');
-    await expect(pipeline.download(resource)).rejects.toMatchObject({code: 'ERR_RESOURCE_SIZE_LIMIT'});
+    await expect(pipeline.download(resource)).resolves.toBeUndefined();
+    expect(resource.shouldBeDiscardedFromDownload).toBe(true);
+    expect(resource.meta.resourceSize).toBeGreaterThan(64);
+    expect(resource.meta.resourceSizeLimit).toBe(64);
+    expect(resource.meta.error).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith('system.skip', 'Resource exceeds maxResourceBytes',
+      resource.url, resource.meta.resourceSize, 64);
     expect(await fs.readFile(destination, 'utf8')).toBe('cached');
     expect(await fs.readdir(dirname(destination))).toEqual(['asset']);
     expect(requests).toBe(1);
@@ -79,20 +87,33 @@ describe.each([ResourceType.Binary, ResourceType.StreamingBinary])('resource byt
     ]));
     const options = defaultDownloadOptions({...lifeCycle, localRoot: output, maxResourceBytes: 4});
     const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const warn = jest.spyOn(pipeline.logger, 'warn').mockImplementation(() => {});
     const resource = createResource({type, depth: 0, url, refUrl: url,
       localRoot: output, localSrcRoot: pathToFileURL(sourceRoot).href.slice('file:///'.length), encoding: null});
-    await expect(pipeline.download(resource)).rejects.toMatchObject({code: 'ERR_RESOURCE_SIZE_LIMIT'});
+    await expect(pipeline.download(resource)).resolves.toBeUndefined();
+    expect(resource.shouldBeDiscardedFromDownload).toBe(true);
+    expect(resource.meta.resourceSize).toBeGreaterThan(4);
+    expect(resource.meta.resourceSizeLimit).toBe(4);
+    expect(resource.meta.error).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith('system.skip', 'Resource exceeds maxResourceBytes',
+      resource.url, resource.meta.resourceSize, 4);
     await expect(fs.stat(join(output, resource.savePath))).rejects.toMatchObject({code: 'ENOENT'});
   });
 });
 
 test('counts encoded bytes in hook-provided strings', async () => {
-  const lifeCycle = defaultLifeCycle();
-  lifeCycle.processBeforeDownload = [res => ({...res, body: '😀'})];
-  const options = defaultDownloadOptions({...lifeCycle, localRoot: root, maxResourceBytes: 3});
-  const pipeline = new PipelineExecutorImpl(options, options.req, options);
   const res = createResource({type: ResourceType.Binary, depth: 0,
     url: 'https://example.test/a', refUrl: 'https://example.test/', localRoot: root, encoding: 'utf8'});
-  await expect(pipeline.processBeforeDownload(res, null, null))
-    .rejects.toMatchObject({code: 'ERR_RESOURCE_SIZE_LIMIT', actual: 4});
+  const replacement = {...res, body: '😀'};
+  const lifeCycle = defaultLifeCycle();
+  lifeCycle.processBeforeDownload = [() => replacement];
+  const options = defaultDownloadOptions({...lifeCycle, localRoot: root, maxResourceBytes: 3});
+  const pipeline = new PipelineExecutorImpl(options, options.req, options);
+  const warn = jest.spyOn(pipeline.logger, 'warn').mockImplementation(() => {});
+  expect(await pipeline.processBeforeDownload(res, null, null)).toBeUndefined();
+  expect(replacement.shouldBeDiscardedFromDownload).toBe(true);
+  expect(replacement.meta).toMatchObject({resourceSize: 4, resourceSizeLimit: 3});
+  expect(replacement.meta.error).toBeUndefined();
+  expect(warn).toHaveBeenCalledWith('system.skip', 'Resource exceeds maxResourceBytes',
+    replacement.url, 4, 3);
 });

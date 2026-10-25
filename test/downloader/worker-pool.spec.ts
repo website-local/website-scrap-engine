@@ -2,7 +2,6 @@ import {describe, expect, jest, test} from '@jest/globals';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Worker} from 'node:worker_threads';
-import {setLogger} from '../../src/logger/logger.js';
 import {createDefaultLogger} from '../../src/logger/default-logger.js';
 import type {Logger} from '../../src/logger/types.js';
 // noinspection ES6PreferShortImport
@@ -306,14 +305,14 @@ describe('worker-pool', function () {
 
   test('pool drains worker logs before dispose resolves', async () => {
     const logs: unknown[][] = [];
-    setLogger({
+    const logger: Logger = {
       ...createDefaultLogger(),
       info(_type, ...contents) {
         logs.push(contents);
       }
-    });
+    };
     const pool = new WorkerPool(1,
-      join(__dirname, 'log-after-complete-worker.js'), {});
+      join(__dirname, 'log-after-complete-worker.js'), {}, -1, undefined, undefined, logger);
     try {
       await pool.ready;
       const result = await pool.submitTask([4, 5]);
@@ -321,7 +320,7 @@ describe('worker-pool', function () {
       await pool.dispose();
       expect(logs.length).toBe(100);
     } finally {
-      setLogger(createDefaultLogger());
+      await pool.dispose();
     }
   }, 10000);
 
@@ -408,9 +407,9 @@ describe('worker-pool', function () {
   test('malformed logs and throwing loggers cannot interrupt task delivery', async () => {
     const info = jest.fn<Logger['info']>(() => { throw new Error('consumer logger failed'); });
     const isTraceEnabled = jest.fn(() => false);
-    setLogger({...createDefaultLogger(), info, isTraceEnabled});
+    const logger = {...createDefaultLogger(), info, isTraceEnabled};
     const pool = new WorkerPool(1,
-      join(__dirname, 'delay-calc-worker.js'), {});
+      join(__dirname, 'delay-calc-worker.js'), {}, -1, undefined, undefined, logger);
     try {
       await pool.ready;
       const worker = pool.workers[0];
@@ -430,7 +429,6 @@ describe('worker-pool', function () {
       expect((await pool.submitTask([5, 6])).body).toBe(11);
     } finally {
       await pool.dispose();
-      setLogger(createDefaultLogger());
     }
   }, 10000);
 

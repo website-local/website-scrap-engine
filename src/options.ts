@@ -1,4 +1,4 @@
-import type {RequestError, RetryFunction, RetryObject, TimeoutError} from 'got';
+import type {RequestError, RetryObject, TimeoutError} from 'got';
 import got, {Options} from 'got';
 import {isDeepStrictEqual} from 'node:util';
 import type {ResourceEncoding, ResourceType} from './resource.js';
@@ -6,7 +6,6 @@ import {createResource} from './resource.js';
 import type {ProcessingLifeCycle, RequestOptions} from './life-cycle/types.js';
 // noinspection ES6PreferShortImport
 import {beforeRetryHook} from './life-cycle/retry-hook.js';
-import {error} from './logger/logger.js';
 // noinspection ES6PreferShortImport
 import {adjust} from './downloader/adjust-concurrency.js';
 import type {Logger} from './logger/types.js';
@@ -95,8 +94,6 @@ export interface StaticDownloadOptions extends HtmlParserOptions {
   maxDiscoveredResources?: number;
   /** Maximum downloaded bytes per resource, including decompressed HTTP data. */
   maxResourceBytes?: number;
-  /** Aggregate task-body/child-body reservation budget; not a process-heap limit. */
-  maxBufferedBytes?: number;
 
   /**
    * If url search params should be stripped.
@@ -164,6 +161,8 @@ export interface StaticDownloadOptions extends HtmlParserOptions {
 }
 
 export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
+  /** Last normalized request settings, retained for reuse during option merging. */
+  normalizedRequestOptions?: RequestOptions;
   /**
    * Functions or class callbacks can only be here.
    *
@@ -179,7 +178,7 @@ export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCy
    * Note: this would not affect worker_threads
    */
   adjustConcurrencyPeriod?: number;
-  adjustConcurrencyFunc?: (downloader: DownloaderWithMeta) => void;
+  adjustConcurrencyFunc?: (downloader: DownloaderWithMeta, logger: Logger) => void;
 
   /**
    * Use a custom function to create a logger instance.
@@ -221,7 +220,7 @@ const retryErrorCodes: Set<string> = new Set([
  * if attemptCount > retryOptions.limit
  * or you think retry should end
  */
-export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): number => {
+export const calculateFastDelay = (retryObject: RetryObject, logger?: Logger): number => {
   const {attemptCount, retryOptions, error: err} = retryObject;
 
   if (attemptCount > retryOptions.limit) {
@@ -247,7 +246,7 @@ export const calculateFastDelay: RetryFunction = (retryObject: RetryObject): num
 
     if (err && !((err.name === 'HTTPError' &&
       err.response && err.response.statusCode === 404))) {
-      error.error('calculateDelay SKIPPED',
+      logger?.error('system.error', 'calculateDelay SKIPPED',
         err.name, err.code, (err as TimeoutError).event, err.message,
         err.response && err.response.statusCode);
     }
@@ -329,9 +328,6 @@ function cloneConfig<T>(value: T): T {
 }
 
 const requestDefaults = got.defaults.options.toJSON();
-// Weak keys retain no merge history. A private copy detects callers mutating
-// a previously normalized request object before another downloader uses it.
-const normalizedRequests = new WeakMap<RequestOptions, RequestOptions>();
 
 function snapshotOptions(options: Options, explicit: RequestOptions): RequestOptions {
   // Got takes the request URL as its first argument, never as an options key.
@@ -342,7 +338,7 @@ function snapshotOptions(options: Options, explicit: RequestOptions): RequestOpt
   // Retain supplied keys and any settings changed by init hooks.
   const defaults = requestDefaults as Record<string, unknown>;
   return Object.fromEntries(Object.entries(snapshot).filter(([key, value]) =>
-    Object.hasOwn(explicit, key) || !isDeepStrictEqual(value, defaults[key]))) as RequestOptions;
+    (key in explicit) || !isDeepStrictEqual(value, defaults[key]))) as RequestOptions;
 }
 
 export function defaultDownloadOptions(
@@ -367,7 +363,7 @@ export function defaultDownloadOptions(
     merged.concurrency = 12;
   }
   for (const key of ['concurrency', 'minConcurrency', 'maxConcurrency',
-    'maxResources', 'maxQueuedResources', 'maxDiscoveredResources', 'maxResourceBytes', 'maxBufferedBytes',
+    'maxResources', 'maxQueuedResources', 'maxDiscoveredResources', 'maxResourceBytes',
     'adjustConcurrencyPeriod'] as const) {
     const value = merged[key];
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
@@ -426,12 +422,12 @@ export function defaultDownloadOptions(
     !options.adjustConcurrencyFunc) {
     merged.adjustConcurrencyFunc = adjust;
   }
-  const previous = options.req && normalizedRequests.get(options.req);
+  const previous = options.normalizedRequestOptions;
   if (!previous || !isDeepStrictEqual(merged.req, previous)) {
     merged.req = snapshotOptions(new Options(merged.req), merged.req);
   }
   // Init hooks are observable and must still execute at every normalization.
-  if (!merged.req.hooks?.init?.length) normalizedRequests.set(merged.req, cloneConfig(merged.req));
+  merged.normalizedRequestOptions = merged.req.hooks?.init?.length ? undefined : cloneConfig(merged.req);
   return merged;
 }
 

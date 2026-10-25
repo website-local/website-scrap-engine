@@ -59,7 +59,7 @@ export function detectResourceType(
   if (type === ResourceType.Html) {
     const extension: string | void = lowerCaseExtension(url);
     if (extension) {
-      if (binaryExtension[extension]) {
+      if (binaryExtension[extension] === 1) {
         return ResourceType.Binary;
       } else if ('css' === extension) {
         return ResourceType.Css;

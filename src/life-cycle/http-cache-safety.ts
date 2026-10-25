@@ -1,4 +1,4 @@
-import type {BeforeRequestHook, OptionsInit} from 'got';
+import type {BeforeRequestHook, BeforeRetryHook, OptionsInit} from 'got';
 import {beforeRetryHook} from './retry-hook.js';
 
 const bypassMaxStaleCache: BeforeRequestHook = options => {
@@ -11,12 +11,12 @@ const bypassMaxStaleCache: BeforeRequestHook = options => {
 };
 
 /** Guard the final request headers, including changes made by caller hooks. */
-export function withHttpCacheSafety<T extends OptionsInit>(options: T): T {
+export function withHttpCacheSafety<T extends OptionsInit>(options: T, retryLogger?: BeforeRetryHook): T {
   const hooks = options.hooks;
   // No cache and no hooks that can enable it: retain the ordinary request path.
   if (!options.cache && !hooks?.init?.length && !hooks?.beforeRequest?.length &&
       !hooks?.beforeRedirect?.length && !hooks?.afterResponse?.length &&
-      !hooks?.beforeRetry?.some(hook => hook !== beforeRetryHook)) return options;
+      !hooks?.beforeRetry?.some(hook => hook !== beforeRetryHook && hook !== retryLogger)) return options;
 
   return {...options, hooks: {...hooks,
     beforeRequest: [...hooks?.beforeRequest ?? [], bypassMaxStaleCache]

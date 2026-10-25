@@ -20,8 +20,9 @@ try {
       let requests = 0;
       server.removeAllListeners('request');
       server.on('request', (_request, response) => {
+        ++requests;
         response.setHeader('Connection', 'close');
-        response.statusCode = stage === 'download' && ++requests === 1 ? 500 : 200;
+        response.statusCode = stage === 'download' && requests === 1 ? 500 : 200;
         response.end('complete');
       });
       const output = path.join(root, Downloader.name, stage);
@@ -59,13 +60,25 @@ export default options.defaultDownloadOptions({...lc,
         assert.equal(crawler.addProcessedResource(make()), false, 'active duplicate');
         await crawler.start();
         await crawler.onIdle();
+        assert.equal(crawler.outcomes.get(url).attempt, 1);
+        await assert.rejects(fs.stat(path.join(output, '127.0.0.1', 'file.bin')), {code: 'ENOENT'});
+        if (stage === 'process-size') {
+          assert.equal(crawler.downloadedCount, 1, 'acquisition remains counted after a size discard');
+          assert.equal(first.shouldBeDiscardedFromDownload, true);
+          assert.equal(first.meta.error, undefined);
+          assert.equal(first.meta.errorCause, undefined);
+          assert.equal(crawler.outcomes.get(url).status, 'skipped');
+          assert.equal(crawler.outcomes.get(url).downloaded, true);
+          assert.equal(crawler.outcomes.get(url).publishedFiles, 0);
+          assert.equal(crawler.queuedUrl.has(url), true, 'discarded acquisition keeps its URL reservation');
+          assert.equal(crawler.addProcessedResource(make()), false, 'size discard remains deduplicated');
+          assert.equal(requests, 1);
+          continue;
+        }
         assert.equal(crawler.downloadedCount, 0, `${Downloader.name}/${stage} failed count`);
         assert.ok(first.meta.errorCause);
         assert.equal(crawler.outcomes.get(url).status, 'failed');
-        assert.equal(crawler.outcomes.get(url).attempt, 1);
-        if (stage === 'process-size') assert.equal(first.meta.error.code, 'ERR_RESOURCE_SIZE_LIMIT');
         assert.equal(crawler.queuedUrl.has(url), false, 'failed reservation released');
-        await assert.rejects(fs.stat(path.join(output, '127.0.0.1', 'file.bin')), {code: 'ENOENT'});
         assert.equal(crawler.addProcessedResource(make()), true, 'explicit retry admitted');
         await crawler.onIdle();
         assert.equal(crawler.downloadedCount, 1);
@@ -73,11 +86,12 @@ export default options.defaultDownloadOptions({...lc,
         assert.equal(crawler.outcomes.get(url).attempt, 2);
         assert.equal(crawler.outcomes.get(url).publishedFiles, 1);
         assert.equal(crawler.addProcessedResource(make()), false, 'success remains deduplicated');
+        assert.equal(requests, 2);
         assert.equal(await fs.readFile(path.join(output, '127.0.0.1', 'file.bin'), 'utf8'), 'complete');
       } finally { await crawler.dispose(); }
     }
   }
-  console.log(`${process.version}: failed work is not counted and explicit retries succeed in both modes`);
+  console.log(`${process.version}: failures retry and size discards stay counted and deduplicated in both modes`);
 } finally {
   clearTimeout(deadline);
   await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });

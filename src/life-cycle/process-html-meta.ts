@@ -4,7 +4,6 @@ import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import {parseHtml} from './adapters.js';
-import {skip} from '../logger/logger.js';
 
 /**
  * Preserve extraction from stevenvachon/http-equiv-refresh (MIT) without its
@@ -40,10 +39,7 @@ export async function processHtmlMetaRefresh(
   if (res.type !== ResourceType.Html) {
     return res;
   }
-  if (!res.meta.doc) {
-    res.meta.doc = parseHtml(res, options);
-  }
-  const $ = res.meta.doc;
+  const $ = res.meta.doc ?? parseHtml(res, options);
 
   const metaLinks = $('meta[http-equiv="refresh"][content]');
   if (metaLinks.length) {
@@ -71,8 +67,8 @@ export async function processHtmlMetaRefresh(
       const linkType: ResourceType | void =
         await pipeline.detectResourceType(link, ResourceType.Html, elem, res);
       if (!linkType) {
-        if (skip.isTraceEnabled()) {
-          skip.trace('skip detectResourceType',
+        if (pipeline.logger.isTraceEnabled()) {
+          pipeline.logger.trace('system.skip', 'skip detectResourceType',
             originalLink, link, refUrl);
         }
         continue;
@@ -82,22 +78,22 @@ export async function processHtmlMetaRefresh(
         res.localRoot, options.encoding[linkType],
         savePath, res.type);
       if (!resource) {
-        if (skip.isTraceEnabled()) {
-          skip.trace('skip generateSavePath',
+        if (pipeline.logger.isTraceEnabled()) {
+          pipeline.logger.trace('system.skip', 'skip generateSavePath',
             originalLink, link, linkType, refUrl);
         }
         continue;
       }
       resource = await pipeline.processBeforeDownload(resource, elem, res, options);
       if (!resource) {
-        if (skip.isTraceEnabled()) {
-          skip.trace('skip processBeforeDownload',
+        if (pipeline.logger.isTraceEnabled()) {
+          pipeline.logger.trace('system.skip', 'skip processBeforeDownload',
             originalLink, link, linkType, refUrl);
         }
         continue;
       }
       if (!resource.shouldBeDiscardedFromDownload) {
-        submit(resource);
+        submit(resource, res, pipeline);
       }
       // Use a positional splice rather than String.prototype.replace: the
       // replacement string may contain '$' sequences ($&, $1, ...) that

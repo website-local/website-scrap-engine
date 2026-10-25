@@ -51,27 +51,27 @@ import {lifeCycle, options, resource, loadHtml} from ${JSON.stringify(entry)};
 const phase = ${JSON.stringify(phase)};
 const lc = lifeCycle.defaultLifeCycle();
 let failedDocument;
-const downloadDocuments = new WeakMap();
 export const statusEvents = [];
-lc.download.unshift(res => {
-  // Download hooks run in the parent for multi-thread crawls. They must also
-  // select the configured parser, including the synchronous first-load path.
-  if (phase !== 'binary') {
-    const doc = loadHtml('<p>download hook</p>');
-    assert.ok(doc.html());
-    downloadDocuments.set(res, doc);
-  }
-  if (phase === 'download-failure') throw new Error('injected download failure');
+lc.download.unshift((res, _request, options) => {
   res.type = phase === 'binary' ? resource.ResourceType.Binary : resource.ResourceType.Html;
   res.body = res.url.endsWith('/child.html') ? '<p>child resource</p>' :
     '<html><body><a href="/child.html">child</a><iframe srcdoc="&lt;p&gt;nested&lt;/p&gt;"></iframe></body></html>';
+  // Download hooks run in the parent for multi-thread crawls. They must also
+  // select the configured parser, including the synchronous first-load path.
+  if (phase !== 'binary') {
+    res.meta.doc = loadHtml(res.body, undefined, undefined, options);
+    assert.ok(res.meta.doc.html());
+  }
+  if (phase === 'download-failure') throw new Error('injected download failure');
   return res;
 });
-lc.processAfterDownload.push(async (res, _submit, _options, pipeline) => {
+lc.processAfterDownload.push(async (res, _submit, options, pipeline) => {
   if (res.type !== resource.ResourceType.Html) return res;
   assert.ok(res.meta.doc.html());
-  assert.ok(loadHtml('<em>generated</em>').html());
-  res.meta.doc('body').attr('data-scoped', 'yes');
+  const generated = loadHtml('<em>generated</em>', undefined, undefined, options);
+  try { assert.ok(generated.html()); }
+  finally { generated.dispose(); }
+  res.meta.doc('body').attr('data-owned', 'yes');
   if (phase === 'retry' && res.url.endsWith('/index.html')) {
     if (!failedDocument) {
       failedDocument = res.meta.doc;
@@ -97,22 +97,25 @@ lc.saveToDisk.unshift(res => {
   return res;
 });
 lc.statusChange = [
-  async (res, status) => {
+  async (res, status, options) => {
     if (status !== 'error') return;
-    const doc = res.meta.doc || downloadDocuments.get(res);
+    // A failed pipeline has already discarded its document. Status reporting
+    // can create a new one that remains owned until every listener finishes.
+    const doc = res.meta.doc ||= loadHtml('<p>error status</p>', undefined, undefined, options);
     statusEvents.push({event: 'start', url: res.url});
     await new Promise(resolve => setImmediate(resolve));
     assert.ok(doc.html());
-    const generated = loadHtml('<p>error report</p>');
+    const generated = loadHtml('<p>error report</p>', undefined, undefined, options);
     assert.equal(typeof generated.dispose, 'function');
-    assert.ok(generated.html());
+    try { assert.ok(generated.html()); }
+    finally { generated.dispose(); }
     statusEvents.push({event: 'resumed', url: res.url});
     throw new Error('the following status listener must still run');
   },
   async (res, status) => {
     if (status !== 'error') return;
     await new Promise(resolve => setImmediate(resolve));
-    assert.ok((res.meta.doc || downloadDocuments.get(res)).html());
+    assert.ok(res.meta.doc.html());
     statusEvents.push({event: 'following', url: res.url});
   }
 ];
@@ -163,7 +166,7 @@ export default options.defaultDownloadOptions({
           else assert.equal(errors.length, 0, String(errors));
           if (phase === 'success' || phase === 'retry') {
             const html = await fs.readFile(path.join(output, 'example.test/index.html'), 'utf8');
-            assert.ok(html.includes('data-scoped="yes"'));
+            assert.ok(html.includes('data-owned="yes"'));
             assert.ok(html.includes('srcdoc='));
             assert.ok((await fs.readFile(path.join(output, 'example.test/child.html'), 'utf8')).includes('child resource'));
           }

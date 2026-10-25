@@ -156,6 +156,63 @@ test('explicit lifecycle and crawl isolation in real Node processes', async () =
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
 
+test.each([false, true])('worker logger writes locally when workerSafe=%s', async workerSafe => {
+  const caseRoot = await fs.mkdtemp(path.join(root, 'logger-'));
+  const logPath = path.join(caseRoot, 'events.jsonl');
+  const optionsPath = path.join(caseRoot, 'options.mjs');
+  const entry = pathToFileURL(path.join(buildRoot, 'index.js')).href;
+  await fs.writeFile(optionsPath, [
+    'import {appendFileSync} from "node:fs";',
+    'import {threadId} from "node:worker_threads";',
+    'import {lifeCycle, options} from ' + JSON.stringify(entry) + ';',
+    'const record = event => appendFileSync(' + JSON.stringify(logPath) +
+      ', JSON.stringify({...event, threadId}) + "\\n");',
+    'const lc = lifeCycle.defaultLifeCycle();',
+    'lc.processAfterDownload.push((res, _submit, _options, pipeline) => {',
+    '  pipeline.logger.info("custom.worker", res.url);',
+    '  return res;',
+    '});',
+    'export default options.defaultDownloadOptions({',
+    '  ...lc, localRoot: ' + JSON.stringify(caseRoot) + ', initialUrl: [],',
+    '  concurrency: 1, workerCount: 1,',
+    '  createLogger: () => {',
+    '    record({event: "factory"});',
+    '    return {workerSafe: ' + workerSafe + ',',
+    '      trace() {}, debug() {}, warn() {}, error() {},',
+    '      isTraceEnabled: () => false,',
+    '      info(type, ...args) {',
+    '        if (type === "custom.worker") record({event: "log", args});',
+    '      }',
+    '    };',
+    '  }',
+    '});'
+  ].join('\n'));
+  const crawler = new Downloader(pathToFileURL(optionsPath).href);
+  try {
+    await crawler.init;
+    const relayed = jest.spyOn(crawler.pool, 'takeLog');
+    const url = 'https://example.test/logged.bin';
+    const resource = await crawler.pipeline.createResource(ResourceType.Binary, 0, url, url);
+    if (!resource) throw new Error('Resource was discarded');
+    resource.body = 'logger test';
+    crawler.addProcessedResource(resource);
+    await crawler.start();
+    await crawler.onIdle();
+    await crawler.dispose();
+    const events = (await fs.readFile(logPath, 'utf8')).trim().split('\n')
+      .map(line => JSON.parse(line) as {event: string; threadId: number; args?: unknown[]});
+    const factories = events.filter(event => event.event === 'factory');
+    const logs = events.filter(event => event.event === 'log');
+    expect(factories).toHaveLength(workerSafe ? 2 : 1);
+    expect(logs).toHaveLength(1);
+    expect(logs[0].threadId > 0).toBe(workerSafe);
+    expect(logs[0].args).toContain(url);
+    expect(relayed.mock.calls.filter(([, message]) => message.body?.logType === 'custom.worker'))
+      .toHaveLength(workerSafe ? 0 : 1);
+    expect(crawler.outcomes.get(url)?.status).toBe('saved');
+  } finally { await crawler.dispose(); }
+}, 15000);
+
 test('native HTTPS uses Node certificate verification with the configured CA', async () => {
   await promisify(execFile)(process.execPath, [path.join(projectRoot, 'test/runtime-native-http.js'),
     path.join(buildRoot, 'index.js')], {cwd: projectRoot, timeout: 15000,
@@ -232,13 +289,6 @@ test('automatic adjustment backs off while an HTTP origin is stalled in both mod
   ], {cwd: projectRoot, timeout: 35000});
 }, 40000);
 
-test('aggregate body reservations bound admission, processing and worker discovery', async () => {
-  await promisify(execFile)(process.execPath, [
-    path.join(projectRoot, 'test/runtime-buffer-budget.js'),
-    path.join(buildRoot, 'index.js')
-  ], {cwd: projectRoot, timeout: 50000});
-}, 55000);
-
 test('oversized custom-worker discovery batches reject before decoding children', async () => {
   const crawler = new Downloader(pathToFileURL(path.join(projectRoot,
     'test/downloader/budget-options.js')).href,
@@ -254,7 +304,7 @@ test('oversized custom-worker discovery batches reject before decoding children'
     expect(crawler.addProcessedResource(resource)).toBe(true);
     await crawler.start();
     await crawler.onIdle();
-    expect(resource.meta.error).toMatchObject({code: 'ERR_DISCOVERY_LIMIT', limit: 1, actual: 2});
+    expect(resource.meta.error).toEqual(new Error('Worker result exceeds maxDiscoveredResources'));
     expect(crawler.outcomes.size).toBe(1);
     expect(crawler.outcomes.get(url)?.status).toBe('failed');
   } finally { await crawler.dispose(); }

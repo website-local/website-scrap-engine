@@ -24,7 +24,7 @@ describe('redirect reservations', () => {
     let resolveAlias!: () => void;
     const aliased = new Promise<void>(resolve => { resolveAlias = resolve; });
     try {
-      await crawler._initOptions;
+      await crawler.init;
       crawler.work = async res => {
         if (res.url.endsWith('/source')) {
           crawler.retainAlias('https://example.test/target#fragment');
@@ -51,7 +51,7 @@ describe('redirect reservations', () => {
   test('redirect aliases use the same query normalization as admission', async () => {
     const crawler = new Crawler(true);
     try {
-      await crawler._initOptions;
+      await crawler.init;
       crawler.work = async () => crawler.retainAlias('https://example.test/target?a=1#fragment');
       expect(crawler.addProcessedResource(resource('source'))).toBe(true);
       await crawler.start();

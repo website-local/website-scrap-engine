@@ -1,4 +1,3 @@
-import {markResourceDownloaded} from '../crawl-context.js';
 import type {WriteStream} from 'node:fs';
 import {constants, createWriteStream, promises as fs} from 'node:fs';
 import {finished as streamFinished, pipeline} from 'node:stream/promises';
@@ -15,7 +14,7 @@ import type {
 import {safeJoin} from '../io.js';
 import {noFollowWriteFlags, publishFile} from '../output-store.js';
 import {limitResourceStream} from '../resource-limits.js';
-import {error as errorLogger} from '../logger/logger.js';
+import type {Logger} from '../logger/types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {isUrlHttp} from '../util.js';
@@ -69,13 +68,13 @@ export async function streamingDownloadToFile(
       direct && executor ? async () => {
         skipped = !await executor.shouldSaveResource(res);
         return !skipped;
-      } : undefined, !!direct && noFollowWriteFlags !== undefined, options?.httpTransport === 'native');
+      } : undefined, !!direct && noFollowWriteFlags !== undefined, options?.httpTransport === 'native', executor);
     if (response && response.statusCode !== 304) {
-      markResourceDownloaded();
+      res.downloaded = true;
       res.redirectedUrl = response.url;
     }
     if (!skipped && response?.statusCode !== 304 && options) {
-      await optionallySetLastModifiedTime(res, options, staging);
+      await optionallySetLastModifiedTime(res, options, staging, executor?.logger);
     }
     if (skipped || response?.statusCode === 304) return false;
   }, requestOptions.signal, res.localRoot, async () => {
@@ -83,7 +82,7 @@ export async function streamingDownloadToFile(
     if (!response) return true;
     if (response?.statusCode === 304) return false;
     return executor ? executor.shouldSaveResource(res) : true;
-  }, noFollowWriteFlags !== undefined);
+  }, noFollowWriteFlags !== undefined, res, executor?.publicationStore);
   return response;
 }
 
@@ -94,13 +93,18 @@ async function streamToStagingFile(
   maxResourceBytes?: number,
   beforeWrite?: () => Promise<boolean>,
   rejectSymlinks = false,
-  preferNative = false
+  preferNative = false,
+  executor?: PipelineExecutor
 ): Promise<Response | NativeHttpResponse> {
-  if (preferNative && canUseNativeHttp(requestOptions)) {
+  if (preferNative && canUseNativeHttp(requestOptions, executor?.retryLogger)) {
     res.meta.httpTransport = 'native';
     return withNativeHttp(res.downloadLink, requestOptions, async (response, body) => {
       res.meta.headers = response.headers;
-      if (response.statusCode === 304 || beforeWrite && !await beforeWrite()) {
+      const allowed = response.statusCode !== 304 && (!beforeWrite || await beforeWrite());
+      // The response can be cancelled or fail while a save-policy hook awaits.
+      // Recheck before opening an output that may still contain cached data.
+      if (body.destroyed) throw body.errored ?? new Error('Response closed before output was opened');
+      if (!allowed) {
         // Finish acquisition without opening or replacing cached output.
         body.resume();
         await streamFinished(body, {cleanup: true});
@@ -109,7 +113,7 @@ async function streamToStagingFile(
       const output = createWriteStream(savePath, {highWaterMark: 256 * 1024,
         flags: rejectSymlinks ? noFollowWriteFlags : 'w'} as Parameters<typeof createWriteStream>[1]);
       if (maxResourceBytes === undefined) await pipeline(body, output);
-      else await pipeline(body, limitResourceStream(maxResourceBytes), output);
+      else await pipeline(body, limitResourceStream(maxResourceBytes, 0, res, executor?.logger), output);
       return response;
     });
   }
@@ -118,11 +122,11 @@ async function streamToStagingFile(
     isStream: true, headers: {...requestOptions.headers}
   }) as RequestOptions & {
     isStream?: true
-  });
+  }, executor?.retryLogger);
   let fileWriteStream: WriteStream | void;
   let activeRequest: ReturnType<typeof got.stream> | undefined;
 
-  const activePumps = new Set<Promise<void>>();
+  let handling: Promise<void> | undefined;
   let finished = false;
   try {
     return await new Promise<Response>((resolve, reject) => {
@@ -144,73 +148,74 @@ async function streamToStagingFile(
         activeRequest = request;
         request.retryCount = retryCount;
 
-        request.once('response', async (response: Response) => {
-          response.retryCount = retryCount;
-          if (response.statusCode === 304) {
-            // Drain the response without opening or modifying the cached file.
-            request.once('end', () => resolve(response));
-            request.resume();
-            return;
-          }
-          res.meta.headers = response.headers;
-          if (rangeIsSupported === undefined) {
-            if (isBytesAccepted(response.headers['accept-ranges'])) {
-              rangeIsSupported = true;
+        const handleResponse = async (response: Response): Promise<void> => {
+          try {
+            response.retryCount = retryCount;
+            if (response.statusCode === 304) {
+              // Drain the response without opening or modifying the cached file.
+              request.once('end', () => resolve(response));
+              request.resume();
+              return;
             }
-          }
-          if (rangeIsSupported && rangeStart &&
-            (response.statusCode !== 206 ||
-              !isSameRangeStart(rangeStart, response.headers['content-range']))) {
-            errorLogger.warn('Unexpected response for range',
-              rangeStart, response.headers['content-range'], response.statusCode);
-            rangeIsSupported = false;
-            rangeStart = undefined;
-          }
+            res.meta.headers = response.headers;
+            if (rangeIsSupported === undefined) {
+              if (isBytesAccepted(response.headers['accept-ranges'])) {
+                rangeIsSupported = true;
+              }
+            }
+            if (rangeIsSupported && rangeStart &&
+              (response.statusCode !== 206 ||
+                !isSameRangeStart(rangeStart, response.headers['content-range']))) {
+              executor?.logger.warn('system.error', 'Unexpected response for range',
+                rangeStart, response.headers['content-range'], response.statusCode);
+              rangeIsSupported = false;
+              rangeStart = undefined;
+            }
 
-          if (response.request.isAborted) {
-            // Cancellation is reported through the request error event.
-            return;
-          }
-          if (beforeWrite) {
-            try {
-              if (!await beforeWrite()) {
+            if (response.request.isAborted) {
+              // Cancellation is reported through the request error event.
+              return;
+            }
+            if (beforeWrite) {
+              const allowed = await beforeWrite();
+              if (request.destroyed) return;
+              if (!allowed) {
                 request.once('end', () => resolve(response));
                 request.resume();
                 return;
               }
-            } catch (error) {
-              request.destroy(error as Error);
-              reject(error);
+            }
+            // Download body
+            if (!fileWriteStream) {
+              const flags = rejectSymlinks ? noFollowWriteFlags! : undefined;
+              // Numeric open flags are supported at runtime but missing from Node 22 typings.
+              fileWriteStream = createWriteStream(savePath, (rangeIsSupported && rangeStart ?
+                {flags: flags === undefined ? 'a' : (flags & ~constants.O_TRUNC) | constants.O_APPEND,
+                  start: rangeStart, highWaterMark: 256 * 1024} :
+                {flags: flags ?? 'w', highWaterMark: 256 * 1024}) as Parameters<typeof createWriteStream>[1]);
+            }
+
+            const pumping = maxResourceBytes === undefined ? pipeline(request, fileWriteStream) :
+              pipeline(request, limitResourceStream(maxResourceBytes, rangeStart || 0, res, executor?.logger), fileWriteStream);
+            try {
+              await pumping;
+            } catch (e) {
+              // Request errors also arrive on request.once('error'); write errors do not.
+              // Got closes the previous stream when retrying.
+              if (!isRetry && !shouldWaitForRequestError(e)) {
+                reject(e);
+              }
               return;
             }
-          }
-          // Download body
-          if (!fileWriteStream) {
-            const flags = rejectSymlinks ? noFollowWriteFlags! : undefined;
-            // Numeric open flags are supported at runtime but missing from Node 22 typings.
-            fileWriteStream = createWriteStream(savePath, (rangeIsSupported && rangeStart ?
-              {flags: flags === undefined ? 'a' : (flags & ~constants.O_TRUNC) | constants.O_APPEND,
-                start: rangeStart, highWaterMark: 256 * 1024} :
-              {flags: flags ?? 'w', highWaterMark: 256 * 1024}) as Parameters<typeof createWriteStream>[1]);
-          }
 
-          const pumping = maxResourceBytes === undefined ? pipeline(request, fileWriteStream) :
-            pipeline(request, limitResourceStream(maxResourceBytes, rangeStart || 0), fileWriteStream);
-          activePumps.add(pumping);
-          try {
-            await pumping;
-          } catch (e) {
-            // Request errors also arrive on request.once('error'); write errors do not.
-            // Got closes the previous stream when retrying.
-            if (!isRetry && !shouldWaitForRequestError(e)) {
-              reject(e);
-            }
-            return;
-          } finally {
-            activePumps.delete(pumping);
+            resolve(response);
+          } catch (error) {
+            request.destroy(error as Error);
+            reject(error);
           }
-
-          resolve(response);
+        };
+        request.once('response', (response: Response) => {
+          handling = handleResponse(response);
         });
 
         const destroyStream = () => {
@@ -235,7 +240,7 @@ async function streamToStagingFile(
           // https://developer.mozilla.org/docs/Web/HTTP/Headers/Range
           // https://developer.mozilla.org/docs/Web/HTTP/Status/416
           if (error instanceof HTTPError && error.response.statusCode === 416) {
-            errorLogger.warn('Unexpected response for range',
+            executor?.logger.warn('system.error', 'Unexpected response for range',
               rangeStart, error.response.headers['content-range'],
               error.response.statusCode);
             rangeIsSupported = false;
@@ -258,9 +263,9 @@ async function streamToStagingFile(
         request.once('retry', (newRetryCount: number) => {
           isRetry = true;
           destroyStream();
-          void Promise.allSettled(activePumps).then(() => {
+          void Promise.resolve(handling).then(() => {
             try { makeRequest(newRetryCount); } catch (error) { reject(error); }
-          });
+          }, reject);
         });
 
       };
@@ -269,15 +274,15 @@ async function streamToStagingFile(
     });
   } finally {
     finished = true;
-    await Promise.allSettled(activePumps);
     // Got streams disable autoDestroy. Release their abort listener after EOF,
     // rather than retaining completed requests until the downloader is disposed.
-    activeRequest?.destroy();
+    try { await handling; }
+    finally { activeRequest?.destroy(); }
   }
 }
 
 export async function optionallySetLastModifiedTime(
-  res: Resource, options: StaticDownloadOptions, stagingPath?: string
+  res: Resource, options: StaticDownloadOptions, stagingPath?: string, logger?: Logger
 ): Promise<void> {
   // https://github.com/website-local/website-scrap-engine/issues/174
   let mtime: number | void = void 0;
@@ -291,7 +296,7 @@ export async function optionallySetLastModifiedTime(
     try {
       await fs.utimes(savePath, mtime, mtime);
     } catch (e) {
-      errorLogger.warn('skipping utimes ' + savePath, e);
+      logger?.warn('system.error', 'skipping utimes ' + savePath, e);
     }
   }
 }

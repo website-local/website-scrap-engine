@@ -6,12 +6,9 @@ import {pathToFileURL} from 'node:url';
 
 assert.equal(process.platform, 'win32', 'Run this check with native Windows Node');
 const entry = pathToFileURL(path.resolve(process.argv[2]));
-const {downloader, resource, io, createDefaultLogger} = await import(entry.href);
-const {withCrawlContext} = await import(new URL('crawl-context.js', entry));
+const {downloader, resource, io} = await import(entry.href);
 const {publishFile, createFilePublication} = await import(new URL('output-store.js', entry));
-const {PublicationReservations} = await import(new URL('publication-reservations.js', entry));
 const root = await fs.mkdtemp(path.join(tmpdir(), 'wse-windows-'));
-const context = {signal: new AbortController().signal, logger: createDefaultLogger()};
 const checks = [];
 const limitations = [];
 try {
@@ -20,56 +17,65 @@ try {
     const outside = path.join(root, 'outside-' + directWrites);
     await fs.mkdir(output);
     await fs.mkdir(outside);
-    await withCrawlContext({...context, directWrites}, async () => {
+    const config = path.join(root, 'publication-' + directWrites + '.mjs');
+    await fs.writeFile(config, `
+import {lifeCycle, options} from ${JSON.stringify(entry.href)};
+export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
+  localRoot: ${JSON.stringify(output)}, initialUrl: [], atomicWrites: ${!directWrites}, strictOutputChecks: true,
+  createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})
+});
+`);
+    const crawler = new downloader.SingleThreadDownloader(pathToFileURL(config).href);
+    try {
+      await crawler.init;
+      const res = resource.createResource({type: resource.ResourceType.Binary, depth: 0,
+        url: 'https://example.test/one', refUrl: 'https://example.test/', localRoot: output});
       const destination = path.join(output, 'asset');
       await fs.writeFile(destination, 'cached');
       await assert.rejects(publishFile(destination, async target => {
         await fs.writeFile(target, 'partial');
         throw new Error('writer failed');
-      }, undefined, output), /writer failed/);
+      }, crawler.signal, output, undefined, false, res, crawler), /writer failed/);
       assert.equal(await fs.readFile(destination, 'utf8'), directWrites ? 'partial' : 'cached');
       assert.deepEqual(await fs.readdir(output), ['asset']);
-      await io.writeFile(destination.toUpperCase(), 'case', 'utf8', undefined, undefined, output);
+      await io.writeFile(destination.toUpperCase(), 'case', 'utf8', undefined, undefined, output, res, crawler.pipeline);
       assert.equal(await fs.readFile(destination, 'utf8'), 'case');
       const otherDrive = path.parse(output).root.toLowerCase() === 'c:\\' ? 'D:\\' : 'C:\\';
       for (const escaped of [path.join(output, '..', 'escape'), otherDrive + 'wse-escape']) {
-        await assert.rejects(io.writeFile(escaped, 'bad', 'utf8', undefined, undefined, output), /escapes/);
+        await assert.rejects(io.writeFile(escaped, 'bad', 'utf8', undefined, undefined, output, res, crawler.pipeline), /escapes/);
       }
       await fs.symlink(outside, path.join(output, 'junction'), 'junction');
       await assert.rejects(io.writeFile(path.join(output, 'junction', 'asset'), 'bad',
-        'utf8', undefined, undefined, output), /symlink/);
+        'utf8', undefined, undefined, output, res, crawler.pipeline), /symlink/);
       assert.deepEqual(await fs.readdir(outside), []);
       const alias = path.join(root, 'alias-' + directWrites);
       await fs.symlink(output, alias, 'junction');
-      await io.writeFile(path.join(alias, 'trusted'), 'ok', 'utf8', undefined, undefined, alias);
+      await io.writeFile(path.join(alias, 'trusted'), 'ok', 'utf8', undefined, undefined, alias, res, crawler.pipeline);
       assert.equal(await fs.readFile(path.join(output, 'trusted'), 'utf8'), 'ok');
-      const reservations = new PublicationReservations();
-      const first = await withCrawlContext({...context, directWrites,
-        publicationReservations: reservations, publicationOwner: 'one'},
-      () => createFilePublication(destination, undefined, output));
+      const first = await createFilePublication(destination, crawler.signal, output, false, res, crawler);
       try {
-        await assert.rejects(withCrawlContext({...context, directWrites,
-          publicationReservations: reservations, publicationOwner: 'two'},
-        () => createFilePublication(destination.toUpperCase(), undefined, output.toUpperCase())),
+        await assert.rejects(createFilePublication(destination.toUpperCase(), crawler.signal, output.toUpperCase(),
+          false, {...res, publicationOwner: 'two'}, crawler),
         {code: 'ERR_OUTPUT_CONFLICT'});
       } finally { await first.cleanup(); }
       const link = path.join(output, 'file-link');
       const target = path.join(outside, 'target');
       await fs.writeFile(target, 'keep');
+      let fileSymlink = true;
       try { await fs.symlink(target, link, 'file'); }
       catch (error) {
         if (error.code !== 'EPERM') throw error;
         limitations.push(`${directWrites ? 'direct' : 'atomic'} file symlink: EPERM`);
-        return;
+        fileSymlink = false;
       }
-      if (directWrites) {
-        await assert.rejects(io.writeFile(link, 'new', 'utf8', undefined, undefined, output), /symlink/);
-      } else {
-        await io.writeFile(link, 'new', 'utf8', undefined, undefined, output);
+      if (fileSymlink && directWrites) {
+        await assert.rejects(io.writeFile(link, 'new', 'utf8', undefined, undefined, output, res, crawler.pipeline), /symlink/);
+      } else if (fileSymlink) {
+        await io.writeFile(link, 'new', 'utf8', undefined, undefined, output, res, crawler.pipeline);
         assert.equal((await fs.lstat(link)).isSymbolicLink(), false);
       }
       assert.equal(await fs.readFile(target, 'utf8'), 'keep');
-    });
+    } finally { await crawler.dispose(); }
     checks.push(`${directWrites ? 'direct' : 'atomic'} publication, cleanup, case, drive containment, junctions`);
   }
   const source = path.join(root, 'source space #%');
@@ -108,7 +114,6 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
         await crawler.start();
         await crawler.onIdle();
         assert.equal(crawler.downloadedCount, 2);
-        assert.equal(crawler.bufferedBytes, 0);
         for (const type of [resource.ResourceType.Binary, resource.ResourceType.StreamingBinary]) {
           assert.deepEqual(await fs.readFile(path.join(output, type + '.bin')), bytes);
         }

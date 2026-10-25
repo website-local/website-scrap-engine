@@ -1,3 +1,6 @@
+import type {Logger} from '../logger/types.js';
+import type {PublicationStore} from '../output-store.js';
+import type {BeforeRetryHook} from 'got';
 import type {RawResource, Resource, ResourceEncoding, ResourceType} from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {
@@ -13,6 +16,11 @@ import type {DownloaderWithMeta} from '../downloader/types.js';
 import type {WorkerInfo} from '../downloader/worker-pool.js';
 
 export interface PipelineExecutor {
+  readonly logger: Logger;
+  readonly options: StaticDownloadOptions;
+  readonly publicationStore?: PublicationStore;
+  /** Retained Got callback, also recognized by native transport selection. */
+  readonly retryLogger?: BeforeRetryHook;
   /** Crawl cancellation, available to cooperative custom hooks. */
   readonly signal?: AbortSignal;
   /** Recheck the existing-resource save policy immediately before publication. */

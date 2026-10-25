@@ -11,17 +11,8 @@ import {
   PipelineExecutorImpl
 } from '../../src/downloader/pipeline-executor-impl.js';
 import type {StaticDownloadOptions} from '../../src/options.js';
-
-jest.mock('log4js', () => ({
-  configure: jest.fn(),
-  getLogger: jest.fn().mockReturnValue({
-    trace: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-}));
+import {defaultStatusListener} from '../../src/life-cycle/default-status-listener.js';
+import {createDefaultLogger} from '../../src/logger/default-logger.js';
 
 const fakeOpt = {
   concurrency: 1,
@@ -156,7 +147,6 @@ describe('PipelineExecutorImpl.notifyStatusChange', () => {
 
 describe('defaultLifeCycle includes statusChange', () => {
   test('statusChange array is non-empty', async () => {
-    // dynamic import to avoid log4js mock issues
     const {defaultLifeCycle} =
       await import('../../src/life-cycle/default-life-cycle.js');
     const lc = defaultLifeCycle();
@@ -166,87 +156,44 @@ describe('defaultLifeCycle includes statusChange', () => {
 });
 
 describe('defaultStatusListener', () => {
-  test('handles download status', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
+  test.each(['download', 'processAfterDownload', 'saveToDisk'] as const)(
+    'logs %s through its pipeline logger', async status => {
+      const log = jest.fn();
+      const logger = {...createDefaultLogger(), debug: log, warn: log};
+      const pipeline = new PipelineExecutorImpl(makeLifeCycle([defaultStatusListener]), {}, fakeOpt, undefined, logger);
+      const res = makeResource();
+      await pipeline.notifyStatusChange(res, status);
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(log.mock.calls[0][0]).toBe('system.skip');
+      expect(log.mock.calls[0]).toContain(res.url);
+    });
+
+  test.each([
+    {error: {name: 'HTTPError', response: {statusCode: 404}}, category: 'io.http.notFound'},
+    {error: {name: 'LocalUrlMountNotFoundError', statusCode: 404}, category: 'io.http.notFound'},
+    {error: new Error('something broke'), category: 'system.error'},
+    {error: null, category: 'system.error'}
+  ])('logs $category errors through the owning pipeline', async ({error, category}) => {
+    const log = jest.fn();
+    const logger = {...createDefaultLogger(), error: log};
+    const pipeline = new PipelineExecutorImpl(makeLifeCycle([defaultStatusListener]), {}, fakeOpt, undefined, logger);
     const res = makeResource();
-    // should not throw
-    defaultStatusListener(
-      res, 'download');
+    res.meta.errorCause = 'downloading resource';
+    res.meta.error = error;
+    await pipeline.notifyStatusChange(res, 'error');
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][0]).toBe(category);
+    expect(log.mock.calls[0]).toContain(res.url);
   });
 
-  test('handles processAfterDownload status', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    defaultStatusListener(
-      res, 'processAfterDownload');
-  });
-
-  test('handles saveToDisk status', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    defaultStatusListener(
-      res, 'saveToDisk');
-  });
-
-  test('handles error status with HTTPError 404', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    res.meta['errorCause'] = 'downloading resource';
-    res.meta['error'] = {
-      name: 'HTTPError',
-      response: {statusCode: 404}
-    };
-    defaultStatusListener(
-      res, 'error');
-  });
-
-  test('handles error status with generic error', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    res.meta['errorCause'] = 'post-process';
-    res.meta['error'] = new Error('something broke');
-    defaultStatusListener(
-      res, 'error');
-  });
-
-  test('handles error status with null error', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    res.meta['errorCause'] = 'unknown';
-    res.meta['error'] = null;
-    defaultStatusListener(
-      res, 'error');
-  });
-
-  test('handles dispose status', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    defaultStatusListener(
-      res, 'dispose');
-  });
-
-  test('handles createResource status', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    defaultStatusListener(
-      res, 'createResource');
-  });
-
-  test('handles processBeforeDownload status', async () => {
-    const {defaultStatusListener} =
-      await import('../../src/life-cycle/default-status-listener.js');
-    const res = makeResource();
-    defaultStatusListener(
-      res, 'processBeforeDownload');
-  });
+  test.each(['dispose', 'createResource', 'processBeforeDownload'] as const)(
+    'keeps %s silent', async status => {
+      const log = jest.fn();
+      const logger = {...createDefaultLogger(), trace: log, debug: log, info: log, warn: log, error: log};
+      const pipeline = new PipelineExecutorImpl(makeLifeCycle([defaultStatusListener]), {}, fakeOpt, undefined, logger);
+      await pipeline.notifyStatusChange(makeResource(), status);
+      expect(log).not.toHaveBeenCalled();
+    });
 });
 
 describe('downloader integration with statusChange', () => {

@@ -12,10 +12,9 @@ import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {createResource, ResourceType} from '../../src/resource.js';
 import {requestForResource} from '../../src/life-cycle/download-resource.js';
 import {streamingDownloadToFile} from '../../src/life-cycle/download-streaming-resource.js';
-import {withCrawlContext} from '../../src/crawl-context.js';
+import {SingleThreadDownloader} from '../../src/downloader/single.js';
 import {createDefaultLogger} from '../../src/logger/default-logger.js';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
-import {BufferBudget} from '../../src/buffer-budget.js';
 
 const payload = Buffer.alloc(32 * 1024, 97);
 const seen = new Map<string, IncomingHttpHeaders[]>();
@@ -65,14 +64,19 @@ const server = createServer((request, response) => {
 });
 let origin: string;
 let root: string;
+let directDownloader: SingleThreadDownloader;
 beforeAll(async () => {
   root = await fs.mkdtemp(join(process.cwd(), '.wse-native-http-'));
+  directDownloader = new SingleThreadDownloader(new URL('../downloader/budget-options.js', import.meta.url).href,
+    {localRoot: root});
+  await directDownloader.init;
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve));
   targetOrigin = 'http://127.0.0.1:' + (target.address() as AddressInfo).port;
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   origin = 'http://127.0.0.1:' + (server.address() as AddressInfo).port;
 });
 afterAll(async () => {
+  await directDownloader.dispose();
   server.closeAllConnections();
   target.closeAllConnections();
   await Promise.all([new Promise<void>(resolve => server.close(() => resolve())),
@@ -102,8 +106,8 @@ test('native defaults are usable; Got-specific options select Got', () => {
 test('native status retries honor limits, Retry-After bounds and zero retry', async () => {
   const options = {...config().req, retry: {limit: 2, backoffLimit: 0, noise: 0}};
   const response = await nativeBufferedRequest(origin + '/retry-native-success', options);
-  expect(response.body).toEqual(payload);
-  expect(response.retryCount).toBe(1);
+  expect(response?.body).toEqual(payload);
+  expect(response?.retryCount).toBe(1);
   await expect(nativeBufferedRequest(origin + '/retry-native-exhausted', options))
     .rejects.toMatchObject({response: {statusCode: 503, retryCount: 2}});
   expect(seen.get('/retry-native-exhausted')).toHaveLength(3);
@@ -119,8 +123,9 @@ test.each([true, false])('native retries restart interrupted output (direct=%s)'
   options.req.retry = {limit: 1, backoffLimit: 0, noise: 0};
   const path = '/retry-stream-' + directWrites;
   const res = resource(path, true);
-  const context = {directWrites, signal: new AbortController().signal, logger: createDefaultLogger()};
-  const response = await withCrawlContext(context, () => streamingDownloadToFile(res, options.req, undefined, options));
+  const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, createDefaultLogger(),
+    directWrites ? directDownloader : undefined);
+  const response = await streamingDownloadToFile(res, options.req, pipeline, options);
   expect(res.meta.httpTransport).toBe('native');
   expect(response?.retryCount).toBe(1);
   expect(seen.get(path)).toHaveLength(2);
@@ -132,8 +137,7 @@ test('exhausted native streaming retries preserve cached atomic output', async (
   options.req.retry = {limit: 1, backoffLimit: 0, noise: 0};
   const res = resource('/retry-stream-always', true);
   await fs.writeFile(join(root, res.savePath), 'cached');
-  const context = {directWrites: false, signal: new AbortController().signal, logger: createDefaultLogger()};
-  await expect(withCrawlContext(context, () => streamingDownloadToFile(res, options.req, undefined, options)))
+  await expect(streamingDownloadToFile(res, options.req, undefined, options))
     .rejects.toMatchObject({code: 'ECONNRESET'});
   expect(seen.get('/retry-stream-always')).toHaveLength(2);
   expect(await fs.readFile(join(root, res.savePath), 'utf8')).toBe('cached');
@@ -171,26 +175,18 @@ test('native status errors, redirect bounds and decoded body limits are enforced
   await expect(nativeBufferedRequest(origin + '/error', config().req)).rejects.toBeInstanceOf(NativeHttpError);
   await expect(nativeBufferedRequest(origin + '/loop', {...config().req, maxRedirects: 1}))
     .rejects.toMatchObject({code: 'ERR_TOO_MANY_REDIRECTS'});
-  await expect(nativeBufferedRequest(origin + '/gzip', config().req, 1024))
-    .rejects.toMatchObject({code: 'ERR_RESOURCE_SIZE_LIMIT'});
+  const res = resource('/gzip');
+  await expect(nativeBufferedRequest(origin + '/gzip', config().req, 1024, res)).resolves.toBeUndefined();
+  expect(res.shouldBeDiscardedFromDownload).toBe(true);
+  expect(res.meta.resourceSizeLimit).toBe(1024);
+  expect(res.meta.error).toBeUndefined();
 });
 
 test('HEAD, 204 and disabled HTTP errors preserve their response semantics', async () => {
-  expect((await nativeBufferedRequest(origin + '/gzip', {...config().req, method: 'HEAD'})).body.length).toBe(0);
-  expect((await nativeBufferedRequest(origin + '/empty', config().req)).body.length).toBe(0);
-  expect((await nativeBufferedRequest(origin + '/error', {...config().req, throwHttpErrors: false})).body.toString())
+  expect((await nativeBufferedRequest(origin + '/gzip', {...config().req, method: 'HEAD'}))?.body.length).toBe(0);
+  expect((await nativeBufferedRequest(origin + '/empty', config().req))?.body.length).toBe(0);
+  expect((await nativeBufferedRequest(origin + '/error', {...config().req, throwHttpErrors: false}))?.body.toString())
     .toBe('unavailable');
-});
-
-test('native buffered acquisition honors the crawl byte budget', async () => {
-  const budget = new BufferBudget(1024);
-  const reservation = budget.reserve(0);
-  const context = {signal: new AbortController().signal, logger: createDefaultLogger(), bufferAccount: reservation};
-  try {
-    await expect(withCrawlContext(context, () => nativeBufferedRequest(origin + '/gzip', config().req)))
-      .rejects.toMatchObject({code: 'ERR_BUFFER_BUDGET'});
-  } finally { reservation.release(); }
-  expect(budget.used).toBe(0);
 });
 
 test('native stream limits preserve cached files in atomic mode', async () => {
@@ -200,9 +196,8 @@ test('native stream limits preserve cached files in atomic mode', async () => {
   await fs.writeFile(destination, 'cached');
   const res = resource('/gzip', true);
   res.savePath = 'limited';
-  const context = {directWrites: false, signal: new AbortController().signal, logger: createDefaultLogger()};
-  await expect(withCrawlContext(context, () => streamingDownloadToFile(res,
-    options.req, undefined, options))).rejects.toMatchObject({code: 'ERR_RESOURCE_SIZE_LIMIT'});
+  await expect(streamingDownloadToFile(res, options.req, undefined, options))
+    .rejects.toMatchObject({code: 'ERR_RESOURCE_SIZE_LIMIT'});
   expect(await fs.readFile(destination, 'utf8')).toBe('cached');
   expect((await fs.readdir(root)).some(name => name.startsWith('.wse-stage-'))).toBe(false);
 });
@@ -235,18 +230,18 @@ test('unsupported retry and request hooks execute through Got', async () => {
 
 test('native streams save decoded output and preserve cached output on 304, skip and error', async () => {
   const options = config();
-  const context = {directWrites: true, signal: new AbortController().signal, logger: createDefaultLogger()};
+  const signal = new AbortController().signal;
   for (const path of ['/gzip', '/not-modified', '/skip', '/error']) {
     const destination = join(root, path.slice(1));
     await fs.writeFile(destination, 'cached');
     options.existingResource = () => path === '/skip' ? 'skip' : 'overwrite';
-    const executor = new PipelineExecutorImpl(options, options.req, options);
+    const executor = new PipelineExecutorImpl(options, options.req, options, signal, createDefaultLogger(),
+      directDownloader);
     const res = resource(path, true);
-    const result = withCrawlContext(context, () => streamingDownloadToFile(res,
-      {...options.req, signal: context.signal}, executor, options));
+    const result = streamingDownloadToFile(res, {...options.req, signal}, executor, options);
     if (path === '/error') await expect(result).rejects.toBeInstanceOf(NativeHttpError);
     else await result;
     expect(await fs.readFile(destination)).toEqual(path === '/gzip' ? payload : Buffer.from('cached'));
-    expect(getEventListeners(context.signal, 'abort')).toHaveLength(0);
+    expect(getEventListeners(signal, 'abort')).toHaveLength(0);
   }
 });

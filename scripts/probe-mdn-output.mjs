@@ -16,7 +16,6 @@ const variants = [];
 const silent = {trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled() { return false; }};
 for (const [entry, lifecycle] of [[beforeEngine, beforeMdn], [afterEngine, afterMdn]]) {
   const api = await import(pathToFileURL(path.resolve(entry)));
-  api.logger.setLogger(silent);
   const {default: base} = await import(pathToFileURL(path.resolve(lifecycle)));
   variants.push({id: variants.length, api, base, contexts: new Map(), groups: new Map(), files: new Map(),
     counts: {}, examples: {}, hash: createHash('sha256')});
@@ -34,7 +33,7 @@ function context(v, row) {
   if (!v.contexts.has(locale)) {
     const options = {...v.base, meta: {...v.base.meta, locale},
       localRoot: path.resolve(path.dirname(outputFile), 'virtual-output', locale)};
-    const pipeline = new v.api.downloader.PipelineExecutorImpl(options, options.req, options);
+    const pipeline = new v.api.downloader.PipelineExecutorImpl(options, options.req, options, undefined, silent);
     v.contexts.set(locale, {options, pipeline, parents: new Map()});
   }
   return v.contexts.get(locale);

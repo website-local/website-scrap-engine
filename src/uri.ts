@@ -23,8 +23,7 @@ export type UriPredicate = 'relative' | 'absolute' | 'url' | 'urn' | 'domain' | 
   'sld' | 'idn' | 'punycode' | 'ip' | 'ip4' | 'ipv4' | 'inet4' | 'ip6' | 'ipv6' | 'inet6';
 
 const schemeExpression = /^[a-z][a-z\d+.-]*:/i;
-const defaultPorts: Record<string, string> = Object.assign(Object.create(null),
-  {http: '80', https: '443', ws: '80', wss: '443', ftp: '21'});
+const defaultPorts: Partial<Record<string, string>> = {http: '80', https: '443', ws: '80', wss: '443', ftp: '21'};
 const referenceScheme = 'reference:';
 const simpleHostname = /^(?:[a-z\d_-]+\.)*[a-z\d_-]+\.?$/i;
 const nativeHostname = /xn--|(?:^|\.)(?:\d+|0x[\da-f]+)\.?$/i;
@@ -157,7 +156,8 @@ export class NativeUri {
     const next = (text.endsWith(':') ? text.slice(0, -1) : text).toLowerCase();
     if (next && !/^[a-z][a-z\d+.-]*$/.test(next)) throw new TypeError('Invalid protocol');
     if (next === this._protocol) return this;
-    if (this._authority && (!next || next in defaultPorts && this._protocol in defaultPorts)) {
+    if (this._authority && (!next ||
+      typeof defaultPorts[next] === 'string' && typeof defaultPorts[this._protocol] === 'string')) {
       this._protocol = next;
       if (this._port === defaultPorts[next]) this._port = '';
       return this.build();
@@ -192,7 +192,8 @@ export class NativeUri {
   hostname(value?: string): string | this {
     if (value === undefined) return this._hostname;
     if (value === this._hostname) return this;
-    if (this._authority && this._protocol in defaultPorts && simpleHostname.test(value) && !nativeHostname.test(value)) {
+    if (this._authority && typeof defaultPorts[this._protocol] === 'string' &&
+      simpleHostname.test(value) && !nativeHostname.test(value)) {
       this._hostname = value.toLowerCase();
       return this.build();
     }
@@ -273,7 +274,7 @@ export class NativeUri {
         if (!this._authority) return this._load(parsed);
         this._path = parsed.pathname;
       } else this._path = this._authority && !next.startsWith('/') &&
-        (next || this._protocol in defaultPorts || this._protocol === 'file') ? '/' + next : next;
+        (next || typeof defaultPorts[this._protocol] === 'string' || this._protocol === 'file') ? '/' + next : next;
     } else this._path = next;
     return this.build();
   }

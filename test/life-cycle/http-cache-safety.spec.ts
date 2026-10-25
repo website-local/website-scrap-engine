@@ -11,6 +11,10 @@ import type {OptionsInit} from 'got';
 import {getRetry} from '../../src/life-cycle/download-resource.js';
 import {streamingDownloadToFile} from '../../src/life-cycle/download-streaming-resource.js';
 import {createResource, ResourceType} from '../../src/resource.js';
+import {defaultDownloadOptions} from '../../src/options.js';
+import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
+import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
+import {withHttpCacheSafety} from '../../src/life-cycle/http-cache-safety.js';
 
 let server: Server;
 let root: string;
@@ -57,6 +61,21 @@ async function primeCache(route = '/private'): Promise<void> {
   for (let attempt = 0; attempt < 20 && cache.size === 0; attempt++) await delay(5);
   expect(cache.size).toBe(1);
 }
+
+test('reuses default request options with the retained retry logger and still guards custom retry hooks', () => {
+  const config = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root});
+  const pipeline = new PipelineExecutorImpl(config, config.req, config);
+  expect(pipeline.requestOptions.cache).toBeUndefined();
+  expect(pipeline.requestOptions.hooks?.beforeRetry).toEqual([pipeline.retryLogger]);
+  expect(withHttpCacheSafety(pipeline.requestOptions, pipeline.retryLogger)).toBe(pipeline.requestOptions);
+
+  const custom = {...pipeline.requestOptions, hooks: {...pipeline.requestOptions.hooks,
+    beforeRetry: [pipeline.retryLogger, () => {}]}};
+  const guarded = withHttpCacheSafety(custom, pipeline.retryLogger);
+  expect(guarded).not.toBe(custom);
+  expect(guarded.hooks?.beforeRequest).toHaveLength(1);
+  expect(custom.hooks.beforeRequest).toHaveLength(0);
+});
 
 describe.each(['buffered', 'streaming'] as const)('%s HTTP cache safety', mode => {
   async function download(route: string, options: OptionsInit) {

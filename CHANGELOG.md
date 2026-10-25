@@ -11,7 +11,7 @@ Breaking changes
 * Replace URIjs with the exported `URI` native URL compatibility wrapper. Hooks must migrate URI imports and types; absolute parsing follows WHATWG URL rules. See the [native URL migration guide](docs/native-url-migration.md) for supported APIs and compatibility limits.
 * Downloaders wait for an explicit, awaitable `start()`. `dispose()` cancels and awaits cleanup by default; use its explicit drain mode to finish accepted work.
 * Require normalized `Resource.uri`, `refUri`, and `replaceUri`. Worker tasks/results use validated `WireResource` snapshots, preserve cloneable nested metadata, and exclude URI/DOM instances.
-* Custom workers use task/log channels and control messages on `parentPort`, announce readiness, and handle shutdown. Worker factories must forward all supplied transferred ports, including the publication/accounting channel.
+* Custom workers use task/log channels and control messages on `parentPort`, announce readiness, and handle shutdown. Worker factories must forward all supplied transferred ports, including the publication channel.
 * Replace the full save-path callback with composable `GenerateSavePathFunc[]` hooks. Manually constructed lifecycles need `generateSavePath: []`; the legacy-generator adapter supports migration. Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`; pipeline resource creation can return `void` when a hook discards a resource.
 * Count successful streamed/local-copy acquisitions in `downloadedCount`, while excluding failed/cancelled attempts. Streaming error hooks propagate failure and do not run success hooks afterward.
 * Successful empty HTTP responses finish without extra retries; supplied empty-string bodies are treated as content. Implement an explicit empty-response retry policy when required.
@@ -19,13 +19,14 @@ Breaking changes
 * Make log4js an optional peer: file-logging adapter users must install it explicitly; default consumers omit its dependency tree.
 * Change `WorkerPool.workingTasks` to a Map and split task/log handlers. Remove `waitForInitBeforeIdle` and the retry argument from `io.mkdirRetry`. See the migration guide for custom pool interfaces.
 * Reject discovery submissions after their parent task completes. The opt-in concurrency controller now backs off on stalls and grows gradually within bounds; adjustment periods must fit Node's positive-integer timer range.
+* Pass the parent resource and pipeline to discovery submissions. Use `PipelineExecutor.logger` in lifecycle hooks and pass resource/publication dependencies to custom I/O helpers. Resource owns `meta.doc`; parser selection is explicit and documents are disposed when saved or discarded.
 
 Performance
 ------------
 
 * Add opt-in native HTTP(S) for GET/HEAD with bounded retries, request deadlines, redirects, decompression and resource limits. Native defaults to two retries, supports retry backoff and Retry-After, and restarts interrupted streams without retaining partial bytes. Custom retry callbacks and unsupported request options fall back to Got before I/O; Got remains the default.
 * Cache unchanged normalized request snapshots without retaining merge history, and avoid promise turns for prepared output directories.
-* Reuse URI parsing during resource creation and deduplication; reuse a private parsed reference URL across links without sharing mutable URI instances with hooks.
+* Reuse URI parsing during resource creation and deduplication; reuse a parsed reference URL across links without sharing mutable URI instances with hooks.
 * Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.
 * Reduce temporary allocations in combined link creation, SVG processing and synchronous hook execution; remove unused CSS URL regex captures while preserving replacement offsets.
 * Reuse the path-segment array during save-path escaping, and avoid reparsing unchanged inline styles while preserving existing CSS-hook and rewriting behavior.
@@ -36,7 +37,7 @@ Performance
 * Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
 * Reuse normalized publication destinations and reservation paths instead of resolving and reconstructing the same paths repeatedly.
 * Keep worker logging imports out of the direct single-thread entry and defer the HTML parser until markup processing. Pools remain one-shot and live until downloader disposal.
-* Keep synchronous link/type/before-download pipelines synchronous; coalesce duplicate bodyless discoveries before serialization and worker transfer, retaining discovery counting and byte-budget behavior. Validate actual transport payloads; unused duplicate metadata is not cloned.
+* Share discovery submission handlers across resources. Count every submission before filtering, and retain serialized child payloads only until worker transfer.
 * Avoid URI hostname classification for already-absolute URLs, reduce redundant URI copies, overlap local metadata/body reads, and use callback file I/O behind promise interfaces.
 * Use kernel no-follow opens for supported direct writes instead of a separate destination probe, forwarding this guarantee through worker publication requests. Generic writers and Windows retain explicit destination checks. Increase the streaming write buffer to 256 KiB.
 * Add a combined synthetic/MDN regression runner and an isolated HTTP transport probe. Remaining regressions are reported per workload, without an aggregate performance pass.
@@ -45,12 +46,14 @@ Crawl control and reliability
 ------------
 
 * Expose readonly per-attempt resource outcomes for acquisition, confirmed publication, skipping, failure and cancellation. Failed URL reservations release after settlement for explicit retries; successful redirect aliases survive concurrent target failures.
-* Add optional `maxResources`, `maxQueuedResources`, `maxConcurrency`, `maxDiscoveredResources`, `maxResourceBytes` and `maxBufferedBytes`. Report exceeded limits rather than blocking recursive discovery. Current/peak byte statistics describe logical body reservations, not total process memory.
-* Keep worker byte credits in the parent, transfer child credits without double charging, and await failed-worker exit before releasing transferred bodies—even before the first worker RPC. Previously acknowledged children remain eligible after a later parent failure.
+* Add optional `maxResources`, `maxQueuedResources`, `maxConcurrency`, `maxDiscoveredResources` and `maxResourceBytes`. Routine limit breaches are logged discards. Discovery limits count duplicates and rejected submissions; resource-byte limits describe input bytes, not heap use.
+* Remove aggregate body-byte reservations, worker byte credits, `maxBufferedBytes` and current/peak buffered-byte statistics. Previously submitted children remain eligible after a later parent processing failure.
 * Bound worker initialization and optional task deadlines; validate message ownership, payloads and duplicate completions. Retire failed workers while healthy workers continue undispatched tasks without replaying failed work.
-* Scope logging and cancellation to each crawl. Worker disposal supports cooperative cancellation followed by forced termination after the configured grace period.
+* Pass logging and cancellation explicitly through each crawl's pipeline. Loggers declaring `workerSafe: true` are created locally in workers and write directly; other loggers retain main-thread relay. Worker disposal supports cooperative cancellation followed by forced termination after the configured grace period.
 * Default downloader output to direct writes; failures/cancellation may leave partial files. Set atomicWrites for staged publication and preservation of cached files on failure. Save-policy skips and 304 responses preserve cached output in both modes.
 * Let the parent own worker output reservations and publication. Clean atomic staging after worker failure; direct partial output remains. Preserve confirmed publication counts after later failure.
+* Keep output ownership in `AbstractDownloader.outputReservations` and concurrency history in `DownloaderStats`. Remove ambient contexts and redundant initialization fields without adding separate Resource state objects.
+* Add opt-in GroveDOM 0.1.2 support with explicit document ownership and per-worker idle-pool limits; Cheerio remains the default. Dispose replaced, discarded and serialized child documents after their asynchronous status work.
 
 Fixes and performance
 ------------
@@ -70,20 +73,18 @@ Fixes and performance
 * Retain content-length validation, bounded transport retries and range-resume behavior; await previous streams before retrying and remove legacy manual retry timers.
 * Normalize resources only when decoding worker-boundary data. Hooks, factories and queue callers maintain Resource invariants; body-size limits remain independent.
 * Avoid redundant output-directory creation while retaining containment checks. Reuse a single owned chunk in bounded local reads, but compact slices to avoid retaining oversized backing buffers.
-* Avoid accounting RPC for empty child bodies and unchanged worker body sizes.
-* Share body-size calculations between adjacent resource-limit checks and buffer accounting, including queue admission, preserving validation order and recalculating after hooks change bodies or encodings.
 * Track processed CSS URLs with a Set instead of retaining unused resource values, and remove the worker fallback for runtimes without structuredClone.
 * Fix CSS replacement offsets when a URL matches the surrounding url()/@import syntax or a quoted value contains whitespace.
 * Coalesce pending worker dispatch callbacks while retaining asynchronous dispatch and worker capacity limits; skip task-timer cleanup when deadlines are disabled.
 * Complete successful worker publications in the parent for both output modes, avoiding a separate release request for atomic writes while preserving ownership and failed-worker cleanup.
-* Skip empty cleanup for completed worker tasks and look up publication connections by worker. Failed tasks still await worker exit before releasing allocations or transferred-body credits.
+* Skip empty cleanup for completed worker tasks and look up publication connections by worker. Failed tasks still await worker exit before releasing allocations.
 * Reuse the synchronous-hook promise check, consolidate retry defaults and logging, and resolve the default worker path directly from the module URL without changing custom worker-factory arguments.
 * Keep eligible Got retries at a minimum delay of 1 ms so rounded jitter and Retry-After: 0 cannot accidentally stop retries; exhausted limits and ineligible requests still stop.
 
 Tooling and validation
 ------------
 
-* Retain TypeScript 6.0.3, Node 22 typings and Jest after compiler/runner audits; update compatible lint dependencies. `npm test` now checks the complete source/test TypeScript suite before Jest.
+* Retain TypeScript 6.0.3 and Jest after compiler/runner audits; update compatible lint dependencies and Node typings. `npm test` now checks the complete source/test TypeScript suite before Jest.
 * Remove the declaration-copy postinstall. Keep the development Undici shim through TypeScript configuration; consumers retain Cheerio's declared dependency graph.
 * Add deterministic worker/transport/outcome/budget regressions, repeated-crawl stress checks, strict packed-consumer fixtures and reproducible alternating crawl/queue benchmarks. CI covers Node 22.13, latest 22, 24 and 26.
 

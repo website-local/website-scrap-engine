@@ -1,14 +1,13 @@
 import type {CategoryLogger, Logger, LogType} from './types.js';
 import type {LogWorkerMessage} from '../downloader/worker-type.js';
 import {WorkerMessageType} from '../downloader/types.js';
-import {getWorkerChannels} from '../downloader/worker-channel.js';
+import type {MessagePort} from 'node:worker_threads';
 
 export const logLevels = [
   'trace', 'debug', 'info', 'warn', 'error'
 ] as const;
 
-export function createWorkerCategoryLogger(type: LogType): CategoryLogger {
-  const {logPort} = getWorkerChannels();
+export function createWorkerCategoryLogger(type: LogType, logPort: MessagePort): CategoryLogger {
 
   function send<T>(level: typeof logLevels[number], content: T[]): void {
     const msg: LogWorkerMessage<T> = {
@@ -34,8 +33,7 @@ export function createWorkerCategoryLogger(type: LogType): CategoryLogger {
 }
 
 /** Installed by the worker entry point; main-thread logging has no worker imports. */
-export function createWorkerLogger(): Logger {
-  const {logPort} = getWorkerChannels();
+export function createWorkerLogger(logPort: MessagePort): Logger {
   const send = (level: typeof logLevels[number], logType: LogType, content: unknown[]) => {
     logPort.postMessage({taskId: -1,
       type: WorkerMessageType.Log, body: {level, logType, content}});

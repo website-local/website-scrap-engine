@@ -1,11 +1,10 @@
-import {currentCrawlContext, throwIfCancelled} from './crawl-context.js';
+import type {Resource} from './resource.js';
+import type {PipelineExecutor} from './life-cycle/pipeline-executor.js';
 import type {ObjectEncodingOptions} from 'node:fs';
 import fs from 'node:fs';
 import {join, resolve, sep} from 'node:path';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
-import {error as errorLogger} from './logger/logger.js';
 import {noFollowWriteFlags, publishFile} from './output-store.js';
-import {accountBufferedBody} from './resource-limits.js';
 
 const writeFileBytes = (target: string, data: string | Uint8Array,
   options?: ObjectEncodingOptions & {flag?: number}): Promise<void> =>
@@ -39,11 +38,11 @@ export const writeFile = async (
   encoding: ResourceEncoding,
   mtime?: number | void,
   atime?: number | void,
-  localRoot?: string
+  localRoot?: string,
+  resource?: Resource,
+  pipeline?: PipelineExecutor
 ): Promise<void> => {
-  throwIfCancelled();
-  const accounting = accountBufferedBody(data, encoding);
-  if (accounting) await accounting;
+  pipeline?.signal?.throwIfAborted();
   let fileData: Uint8Array | string;
   let options: ObjectEncodingOptions | void = void 0;
   if (typeof data === 'string') {
@@ -71,8 +70,8 @@ export const writeFile = async (
       try {
         await fs.promises.utimes(stagingPath, atime ?? mtime, mtime);
       } catch (e) {
-        errorLogger.warn('skipping utimes ' + filePath, e);
+        pipeline?.logger.warn('system.error', 'skipping utimes ' + filePath, e);
       }
     }
-  }, currentCrawlContext()?.signal, localRoot, undefined, noFollowWriteFlags !== undefined);
+  }, pipeline?.signal, localRoot, undefined, noFollowWriteFlags !== undefined, resource, pipeline?.publicationStore);
 };

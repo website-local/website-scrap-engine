@@ -7,7 +7,7 @@
 | Install, configure or use the scraper | [Project README](../README.md) |
 | Upgrade from 0.9.1 | [Migration guide](../MIGRATION-0.10.0.md) |
 | Review user-visible changes | [Changelog](../CHANGELOG.md) |
-| Check validation and remaining release work | [Release audit](release-0.10.0-audit.md) |
+| Review the 2026-10-04 release candidate's validation | [Release audit](release-0.10.0-audit.md) |
 | Review the URIjs replacement and its remaining merge requirements | [URI merge-readiness audit](uri-merge-readiness.md) |
 | Migrate URI hooks and understand compatibility limits | [Native URL migration](native-url-migration.md) |
 | Trace URI optimization decisions and historical measurements | [URI investigation history](uri-investigation-history.md) |
@@ -15,9 +15,15 @@
 | Understand dependency, parser and development-tool decisions | [Dependency audit](dependency-audit.md) |
 | Opt in to GroveDOM and configure per-worker pool limits | [GroveDOM adapter](grovedom.md) |
 
-The three maintained reports above describe the latest state and identify the
-commit or working tree covered by each result. Earlier experiments are summarized in the
-[historical index](archive/0.10.0-experiments.md); full narratives remain in Git. Their
-raw JSON remains in [evidence/](evidence/); the latest benchmark is included there
-with its harnesses and fingerprints. Historical measurements are not pooled or
+The README, migration guide and GroveDOM ownership examples describe the current
+APIs, including explicit lifecycle dependencies, resource-owned documents and
+input-byte limits. Dated audits and qualification tables identify the older
+commit or working tree they validated; they do not validate later changes.
+The [2026-10-25 qualification](grovedom.md#explicit-ownership-qualification-2026-10-25)
+and [layout/allocation measurements](performance.md) cover the quality pass.
+The GroveDOM guide labels the preserved MDN patches that still use parser scopes.
+
+Earlier experiments are summarized in the [historical index](archive/0.10.0-experiments.md);
+full narratives remain in Git. Their raw JSON remains in [evidence/](evidence/)
+with harnesses and fingerprints. Historical measurements are not pooled or
 presented as validation of a newer artifact.

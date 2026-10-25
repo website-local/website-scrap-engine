@@ -1,29 +1,40 @@
-import {afterEach, beforeEach, describe, expect, test} from '@jest/globals';
+import {afterEach, beforeEach, describe, expect, jest, test} from '@jest/globals';
 import {promises as fs} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
-import {publishFile, createFilePublication, OutputDirectories, StagingDirectories} from '../src/output-store.js';
+import {publishFile, createFilePublication} from '../src/output-store.js';
 import {writeFile} from '../src/io.js';
 import {createResource, ResourceType} from '../src/resource.js';
 import {saveResourceToDisk} from '../src/life-cycle/save-resource-to-disk.js';
-import {PublicationReservations} from '../src/publication-reservations.js';
-import {withCrawlContext} from '../src/crawl-context.js';
-import {createDefaultLogger} from '../src/logger/default-logger.js';
+import type {Resource} from '../src/resource.js';
+import {SingleThreadDownloader} from '../src/downloader/single.js';
 
 let root: string;
-beforeEach(async () => { root = await fs.mkdtemp(join(process.cwd(), '.wse-output-test-')); });
-afterEach(async () => { await fs.rm(root, {recursive: true, force: true}); });
+let downloader: SingleThreadDownloader;
+let resource: Resource;
+beforeEach(async () => {
+  root = await fs.mkdtemp(join(tmpdir(), 'wse-output-test-'));
+  downloader = new SingleThreadDownloader(new URL('./downloader/budget-options.js', import.meta.url).href,
+    {localRoot: root, atomicWrites: true});
+  await downloader.init;
+  resource = createResource({type: ResourceType.Binary, depth: 0,
+    url: 'https://example.test/asset', refUrl: 'https://example.test/', localRoot: root});
+});
+afterEach(async () => {
+  await downloader.dispose();
+  await fs.rm(root, {recursive: true, force: true});
+});
 
 test('direct output avoids staging and intentionally leaves partial failed writes', async () => {
   const destination = join(root, 'asset');
   await fs.writeFile(destination, 'cached');
-  const context = {directWrites: true, outputDirectories: new OutputDirectories(),
-    signal: new AbortController().signal, logger: createDefaultLogger()};
-  await expect(withCrawlContext(context, () => publishFile(destination, async (target, direct) => {
+  downloader.options.atomicWrites = false;
+  await expect(publishFile(destination, async (target, direct) => {
     expect(direct).toBe(true);
     expect(target).toBe(destination);
     await fs.writeFile(target, 'partial');
     throw new Error('writer failed');
-  }, undefined, root))).rejects.toThrow('writer failed');
+  }, downloader.signal, root, undefined, false, resource, downloader)).rejects.toThrow('writer failed');
   expect(await fs.readFile(destination, 'utf8')).toBe('partial');
   expect(await fs.readdir(root)).toEqual(['asset']);
 });
@@ -31,10 +42,10 @@ test('direct output avoids staging and intentionally leaves partial failed write
 test('direct output evaluates skip policy before touching a cached file', async () => {
   const destination = join(root, 'asset');
   await fs.writeFile(destination, 'cached');
-  const context = {directWrites: true, signal: new AbortController().signal, logger: createDefaultLogger()};
-  const saved = await withCrawlContext(context, () => publishFile(destination, async () => {
+  downloader.options.atomicWrites = false;
+  const saved = await publishFile(destination, async () => {
     throw new Error('writer must not run');
-  }, undefined, root, async () => false));
+  }, downloader.signal, root, async () => false, false, resource, downloader);
   expect(saved).toBe(false);
   expect(await fs.readFile(destination, 'utf8')).toBe('cached');
 });
@@ -44,9 +55,9 @@ test('direct output rejects an existing destination symlink', async () => {
   const destination = join(root, 'alias');
   await fs.writeFile(target, 'cached');
   await fs.symlink(target, destination);
-  const context = {directWrites: true, signal: new AbortController().signal, logger: createDefaultLogger()};
-  await expect(withCrawlContext(context, () => writeFile(destination, 'new', 'utf8',
-    undefined, undefined, root))).rejects.toThrow('symlink');
+  downloader.options.atomicWrites = false;
+  await expect(writeFile(destination, 'new', 'utf8',
+    undefined, undefined, root, resource, downloader.pipeline)).rejects.toThrow('symlink');
   expect(await fs.readFile(target, 'utf8')).toBe('cached');
 });
 
@@ -114,9 +125,7 @@ describe('staged file publication', () => {
       type: ResourceType.Binary, depth: 0, url: 'https://example.test/deep/asset',
       refUrl: 'https://example.test/', localRoot: output
     }), body: 'new'};
-    await expect(saveResourceToDisk(resource,
-      {localRoot: output} as Parameters<typeof saveResourceToDisk>[1],
-      {} as Parameters<typeof saveResourceToDisk>[2])).rejects.toThrow('symlink');
+    await expect(saveResourceToDisk(resource, downloader.options, downloader.pipeline)).rejects.toThrow('symlink');
     expect(await fs.readdir(outside)).toEqual([]);
     expect(await fs.readdir(output)).toEqual(['example.test']);
   });
@@ -192,11 +201,9 @@ test('cleanup waits for an admitted publication and repeated publication shares 
 });
 
 test('destination ownership covers active writes, failures, retries and completed output', async () => {
-  const context = {publicationReservations: new PublicationReservations(),
-    signal: new AbortController().signal, logger: createDefaultLogger()};
   const destination = join(root, 'asset');
-  const allocate = (owner: string) => withCrawlContext({...context, publicationOwner: owner},
-    () => createFilePublication(destination, undefined, root));
+  const allocate = (owner: string) => createFilePublication(destination, downloader.signal, root,
+    false, {...resource, publicationOwner: owner}, downloader);
   const first = await allocate('first');
   await expect(allocate('second')).rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
   await first.cleanup();
@@ -212,23 +219,46 @@ test('destination ownership covers active writes, failures, retries and complete
   expect(await fs.readdir(root)).toEqual(['asset']);
 });
 
+test('failed staging cleanup preserves its error and releases destination ownership', async () => {
+  const destination = join(root, 'asset');
+  const allocation = await createFilePublication(destination, downloader.signal, root,
+    false, {...resource, publicationOwner: 'first'}, downloader);
+  await fs.writeFile(allocation.stagingPath, 'partial');
+  const failure = Object.assign(new Error('Staging unlink failed'), {code: 'EBUSY'});
+  const removing = jest.spyOn(fs, 'rm').mockImplementationOnce(async () => { throw failure; });
+  try {
+    await expect(allocation.cleanup()).rejects.toBe(failure);
+  } finally { removing.mockRestore(); }
+  expect(await fs.readdir(root)).toEqual([]);
+  expect(downloader.outputReservations).toEqual({});
+  const replacement = await createFilePublication(destination, downloader.signal, root,
+    false, {...resource, publicationOwner: 'second'}, downloader);
+  await fs.writeFile(replacement.stagingPath, 'complete');
+  await replacement.publish();
+  await replacement.cleanup();
+  expect(await fs.readFile(destination, 'utf8')).toBe('complete');
+});
+
 test('root aliases share destination ownership while independent crawls remain independent', async () => {
-  const context = {publicationReservations: new PublicationReservations(),
-    signal: new AbortController().signal, logger: createDefaultLogger()};
   const output = join(root, 'output');
   const alias = join(root, 'alias');
   await fs.mkdir(output);
   await fs.symlink(output, alias, 'dir');
-  const first = await withCrawlContext({...context, publicationOwner: 'first'},
-    () => createFilePublication(join(output, 'asset'), undefined, output));
-  await expect(withCrawlContext({...context, publicationOwner: 'second'},
-    () => createFilePublication(join(alias, 'asset'), undefined, alias)))
-    .rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
-  const independent = await withCrawlContext({...context, publicationOwner: 'second',
-    publicationReservations: new PublicationReservations()},
-  () => createFilePublication(join(alias, 'asset'), undefined, alias));
-  await independent.cleanup();
-  await first.cleanup();
+  const first = await createFilePublication(join(output, 'asset'), downloader.signal, output,
+    false, {...resource, publicationOwner: 'first'}, downloader);
+  const other = new SingleThreadDownloader(new URL('./downloader/budget-options.js', import.meta.url).href,
+    {localRoot: alias, atomicWrites: true});
+  try {
+    await other.init;
+    await expect(createFilePublication(join(alias, 'asset'), downloader.signal, alias,
+      false, {...resource, publicationOwner: 'second'}, downloader)).rejects.toMatchObject({code: 'ERR_OUTPUT_CONFLICT'});
+    const independent = await createFilePublication(join(alias, 'asset'), other.signal, alias,
+      false, {...resource, publicationOwner: 'second'}, other);
+    await independent.cleanup();
+  } finally {
+    await first.cleanup();
+    await other.dispose();
+  }
   expect(await fs.readdir(output)).toEqual([]);
 });
 
@@ -272,12 +302,10 @@ test('rechecks directory symlinks immediately before publication', async () => {
 });
 
 test('overlapping publications share staging without deleting another writer on failure', async () => {
-  const context = {stagingDirectories: new StagingDirectories(),
-    signal: new AbortController().signal, logger: createDefaultLogger()};
-  const [failed, successful] = await withCrawlContext(context, () => Promise.all([
-    createFilePublication(join(root, 'failed'), undefined, root),
-    createFilePublication(join(root, 'successful'), undefined, root)
-  ]));
+  const [failed, successful] = await Promise.all([
+    createFilePublication(join(root, 'failed'), downloader.signal, root, false, resource, downloader),
+    createFilePublication(join(root, 'successful'), downloader.signal, root, false, resource, downloader)
+  ]);
   expect(failed.stagingPath).not.toBe(successful.stagingPath);
   expect(dirname(failed.stagingPath)).toBe(dirname(successful.stagingPath));
   await fs.writeFile(failed.stagingPath, 'partial');
@@ -287,8 +315,7 @@ test('overlapping publications share staging without deleting another writer on 
   await successful.publish();
   await successful.cleanup();
   expect(await fs.readdir(root)).toEqual(['successful']);
-  const next = await withCrawlContext(context,
-    () => createFilePublication(join(root, 'next'), undefined, root));
+  const next = await createFilePublication(join(root, 'next'), downloader.signal, root, false, resource, downloader);
   expect(dirname(next.stagingPath)).not.toBe(dirname(successful.stagingPath));
   await next.cleanup();
   expect(await fs.readdir(root)).toEqual(['successful']);

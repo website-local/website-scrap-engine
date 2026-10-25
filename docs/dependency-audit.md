@@ -1,12 +1,17 @@
 # Dependency and tooling decisions for 0.10
 
-This records the accepted 0.10 baseline. The subsequent native URL branch
-replaces URIjs; see the [migration guide](native-url-migration.md).
+This preserves the accepted **2026-10-04** baseline and its dependency decisions.
+The subsequent native URL integration replaces URIjs; see the
+[migration guide](native-url-migration.md). The optional
+[GroveDOM adapter](grovedom.md) was also added later; Cheerio remains the default.
+Statements and measurements below describe the audited baseline.
 
 Keep the current runtime dependencies and TypeScript/Jest toolchain for 0.10.
 The consumer installation reduction comes from making log4js an optional peer.
 Parser replacement and compiler/test-runner migration are outside this release.
-See the [release audit](release-0.10.0-audit.md) for current validation status.
+See the [release audit](release-0.10.0-audit.md) for that baseline's validation,
+and the [quality-pass qualification](grovedom.md#explicit-ownership-qualification-2026-10-25)
+for the later ownership changes.
 
 ## Runtime packages
 

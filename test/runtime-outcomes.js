@@ -81,9 +81,9 @@ if (name === 'cancel-active') lc.processAfterDownload.unshift(async (res, submit
 });
 if (name === 'process-handled') lc.processAfterDownload.unshift(() => undefined);
 if (name === 'process-failed') lc.processAfterDownload.unshift(() => { throw new Error('processing failed'); });
-if (name === 'partial-failure') lc.saveToDisk.unshift(async res => {
+if (name === 'partial-failure') lc.saveToDisk.unshift(async (res, opt, pipeline) => {
   await io.writeFile(path.join(res.localRoot, 'partial.bin'), res.body, res.encoding,
-    undefined, undefined, res.localRoot);
+    undefined, undefined, res.localRoot, res, pipeline);
   throw new Error('failed after one publication');
 });
 if (name === 'stream-failed') lc.download = lc.download.map(handler =>

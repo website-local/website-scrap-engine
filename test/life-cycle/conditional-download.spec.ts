@@ -9,7 +9,6 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
 import {defaultDownloadOptions} from '../../src/options.js';
 import {ResourceType} from '../../src/resource.js';
-import {getLogger, setLogger} from '../../src/logger/logger.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {preferNewerRemote} from '../../src/life-cycle/adapters.js';
 import {
@@ -18,14 +17,10 @@ import {
 
 let root: string;
 let server: Server;
-const previousLogger = getLogger();
+const logger = {trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false};
 
 beforeEach(async () => {
   root = await fs.mkdtemp(path.join(tmpdir(), 'wse-conditional-'));
-  setLogger({
-    trace() {}, debug() {}, info() {}, warn() {}, error() {},
-    isTraceEnabled: () => false
-  });
 });
 
 afterEach(async () => {
@@ -36,7 +31,6 @@ afterEach(async () => {
     });
   }
   await fs.rm(root, {recursive: true, force: true});
-  setLogger(previousLogger);
 });
 
 const variants = [
@@ -62,7 +56,7 @@ describe('staged HTTP streaming', () => {
             const parent = path.dirname(destination);
             const entries = await fs.readdir(parent).catch(() => []);
             const stage = entries.find(name => name.startsWith('.wse-stage-'));
-            const stat = stage ? await fs.stat(path.join(parent, stage, 'content'))
+            const stat = stage ? await fs.stat(path.join(parent, stage, 'file'))
               .catch(() => undefined) : undefined;
             if (stat?.size) break;
             await delay(5);
@@ -75,7 +69,7 @@ describe('staged HTTP streaming', () => {
       const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/file.bin`;
       const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
         req: {retry: {limit: 0}, timeout: {request: failure === 'timeout' ? 100 : 2000}}});
-      const pipeline = new PipelineExecutorImpl(options, options.req, options, controller.signal);
+      const pipeline = new PipelineExecutorImpl(options, options.req, options, controller.signal, logger);
       const resource = await pipeline.createResource(ResourceType.StreamingBinary, 0, url, url);
       if (!resource) throw new Error('Resource discarded');
       destination = path.join(root, resource.savePath);
@@ -103,7 +97,7 @@ describe('staged HTTP streaming', () => {
         stages.push(stage);
         return stage === 'download' ? 'overwrite' : 'skipSave';
       }, req: {retry: {limit: 0}}});
-    const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
     const resource = await pipeline.createResource(ResourceType.StreamingBinary, 0, url, url);
     if (!resource) throw new Error('Resource discarded');
     const destination = path.join(root, resource.savePath);
@@ -151,7 +145,7 @@ describe.each(variants)('conditional $name downloads', ({type, hooked}) => {
         req: {retry: {limit: 0}, timeout: {request: 2000}},
         meta: {}
       });
-      const pipeline = new PipelineExecutorImpl(options, options.req, options);
+      const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
       const resource = await pipeline.createResource(type, 0, url, url);
       expect(resource).toBeDefined();
       if (!resource) throw new Error('Resource was discarded');
@@ -201,7 +195,7 @@ describe.each(variants)('conditional $name downloads', ({type, hooked}) => {
       req: {retry: {limit: 0}, timeout: {request: 2000}},
       meta: {}
     });
-    const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
     const resource = await pipeline.createResource(type, 0, url, url);
     if (!resource) throw new Error('Resource was discarded');
     const file = path.join(root, resource.savePath);
@@ -244,7 +238,7 @@ describe('streaming retries', () => {
               const parent = path.dirname(destination);
               const entries = await fs.readdir(parent).catch(() => []);
               const stage = entries.find(name => name.startsWith('.wse-stage-'));
-              const stat = stage ? await fs.stat(path.join(parent, stage, 'content'))
+              const stat = stage ? await fs.stat(path.join(parent, stage, 'file'))
                 .catch(() => undefined) : undefined;
               if (stat?.size === prefixLength) break;
               await delay(10);
@@ -280,7 +274,7 @@ describe('streaming retries', () => {
         },
         meta: {}
       });
-      const pipeline = new PipelineExecutorImpl(options, options.req, options);
+      const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
       const resource = await pipeline.createResource(ResourceType.StreamingBinary,
         0, url, url);
       if (!resource) throw new Error('Resource was discarded');

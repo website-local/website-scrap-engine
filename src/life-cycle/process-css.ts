@@ -67,6 +67,6 @@ export async function processCss(
   cssText = await processCssText(cssText, res, options, pipeline, depth, resources);
   res.body = cssText;
   res.meta.cssProcessed = 1;
-  submit(resources);
+  submit(resources, res, pipeline);
   return res;
 }

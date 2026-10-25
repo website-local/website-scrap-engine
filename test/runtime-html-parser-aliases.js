@@ -15,51 +15,52 @@ const aliases = process.argv[3] ? ['grovedom', parserUrl, parserPath, relative] 
 aliases.push(parserUrl + '?alias=1', parserUrl + '#alias');
 if (path.extname(parserPath) === '.js') aliases.push(parserPath.slice(0, -3));
 if (process.argv[3]) assert.equal(createRequire(entry).resolve('grovedom'), parserPath);
-const {withHtmlParser, loadHtml} = await import(entry.href);
+const {loadHtml} = await import(entry.href);
 const {prepareHtmlParser} = await import(new URL('./cheerio.js', entry).href);
 const options = module => ({htmlParser: 'grovedom', grovedom: {module}});
 
 async function checkAliases(aliases) {
-  // Preparation and synchronous first load must agree across concurrent scopes.
-  await Promise.all([
-    withHtmlParser(options(aliases[0]), async () => {
-      await prepareHtmlParser(options(aliases[0]));
-      assert.ok(loadHtml('<p>asynchronous preparation</p>').html());
-    }),
-    withHtmlParser(options(aliases[1]), () => {
-      assert.ok(loadHtml('<p>synchronous load</p>').html());
-    })
-  ]);
+  // Preparation and synchronous first load must use the same module instance.
+  const preparing = Promise.resolve(prepareHtmlParser(options(aliases[0])));
+  const immediate = loadHtml('<p>synchronous load</p>', undefined, undefined, options(aliases[1]));
+  try {
+    assert.ok(immediate.html());
+    await preparing;
+  } finally { immediate.dispose(); }
 
   for (let index = 0; index < aliases.length; index++) {
     const outer = options(aliases[index]);
     const inner = options(aliases[(index + 1) % aliases.length]);
-    let child;
-    await withHtmlParser(outer, async () => {
-      await withHtmlParser(inner, async () => {
-        await prepareHtmlParser(inner);
-        child = loadHtml('<p>nested alias</p>');
-      });
+    const parent = loadHtml('<p>outer alias</p>', undefined, undefined, outer);
+    await prepareHtmlParser(inner);
+    const child = loadHtml('<p>nested alias</p>', undefined, undefined, inner);
+    parent.dispose();
+    try {
+      assert.throws(() => parent.html(), /disposed/i);
       assert.ok(child.html().includes('nested alias'));
-    });
+      const nested = child.load('<p>document load</p>');
+      try { assert.ok(nested.html().includes('document load')); }
+      finally { nested.dispose(); }
+    } finally { child.dispose(); }
     assert.throws(() => child.html(), /disposed/i);
     for (const key of ['poolSize', 'poolMaxBytes']) {
-      assert.throws(() => withHtmlParser({...outer, grovedom: {...outer.grovedom, [key]: 0}}, () => {
-        assert.fail('a conflicting alias must not enter its callback');
-      }), /pool options must agree/);
+      assert.throws(() => loadHtml('<p>conflict</p>', undefined, undefined,
+        {...outer, grovedom: {...outer.grovedom, [key]: 0}}), /pool options must agree/);
     }
   }
 }
 
 await checkAliases(aliases);
 
-// A package exposing only a require condition exercises the loader fallback.
+// A reserved object-property name must still resolve as a package, and a
+// require-only export exercises the synchronous loader fallback.
 // Keep this fixture next to the tested entry so that its package lookup finds it.
 const lookup = path.join(path.dirname(fileURLToPath(entry)), 'node_modules');
 let createdLookup = false;
 try { await fs.mkdir(lookup); createdLookup = true; }
 catch (error) { if (error.code !== 'EEXIST') throw error; }
-const fixture = await fs.mkdtemp(path.join(lookup, 'wse-parser-alias-'));
+const fixture = path.join(lookup, 'constructor');
+await fs.mkdir(fixture);
 try {
   const name = path.basename(fixture), file = path.join(fixture, 'index.cjs');
   await fs.writeFile(path.join(fixture, 'package.json'), JSON.stringify({name, exports: {require: './index.cjs'}}));
@@ -71,4 +72,4 @@ try {
     await fs.rmdir(lookup).catch(error => { if (error.code !== 'ENOTEMPTY') throw error; });
   }
 }
-console.log('HTML parser aliases: shared initialization, nested ownership, pool conflicts and CommonJS exports passed');
+console.log('HTML parser aliases: shared initialization, explicit ownership, pool conflicts, reserved names and CommonJS exports passed');

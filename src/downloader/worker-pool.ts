@@ -1,7 +1,8 @@
 import type {MessagePort, Transferable, WorkerOptions} from 'node:worker_threads';
 import {MessageChannel, Worker} from 'node:worker_threads';
 import type {URL} from 'node:url';
-import {error as errorLogger, getLogger} from '../logger/logger.js';
+import type {Logger} from '../logger/types.js';
+import {createDefaultLogger} from '../logger/default-logger.js';
 import type {LogWorkerMessage} from './worker-type.js';
 import type {
   PendingPromise,
@@ -65,17 +66,17 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
   readonly workingTasks: Map<number, PendingPromise> = new Map();
   readonly ready: Promise<void>;
   taskIdCounter = 0;
-  private _isDisposing = false;
-  private _disposePromise?: Promise<number[]>;
-  private readonly _unavailableWorkers = new Set<WorkerInfo>();
-  private _lastWorkerError?: Error;
-  private _initialized = false;
-  private _nextTaskScheduled = false;
-  private readonly _taskTimeout?: number;
-  private readonly _shutdownTimeout: number;
-  private readonly _taskTimers = new Map<number, ReturnType<typeof setTimeout>>();
-  private readonly _terminations = new Map<WorkerInfo, Promise<number>>();
-  private readonly _starting = new Map<WorkerInfo, {
+  _isDisposing = false;
+  _disposePromise?: Promise<number[]>;
+  readonly _unavailableWorkers = new Set<WorkerInfo>();
+  _lastWorkerError?: Error;
+  _initialized = false;
+  _nextTaskScheduled = false;
+  readonly _taskTimeout?: number;
+  readonly _shutdownTimeout: number;
+  readonly _taskTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  readonly _terminations = new Map<WorkerInfo, Promise<number>>();
+  readonly _starting = new Map<WorkerInfo, {
     resolve: () => void;
     reject: (error: Error) => void;
   }>();
@@ -86,7 +87,8 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     public workerData: Record<string, unknown>,
     public maxLoad: number = -1,
     public factory: WorkerFactory = defaultWorkerFactory,
-    options: WorkerPoolOptions = {}
+    options: WorkerPoolOptions = {},
+    public readonly logger: Logger = createDefaultLogger()
   ) {
     if (!Number.isSafeInteger(coreSize) || coreSize < 1) {
       throw new RangeError('coreSize must be a positive integer');
@@ -169,7 +171,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
 
   workerOnError(info: WorkerInfo, err: Error): void {
     this.rejectWorkerTasks(info, err);
-    try { errorLogger.error('worker error', info.id, err); } catch { /* Consumer logger. */ }
+    try { this.logger.error('system.error', 'worker error', info.id, err); } catch { /* Consumer logger. */ }
   }
 
   workerOnExit(info: WorkerInfo, exitCode: number): void {
@@ -208,13 +210,13 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     this.scheduleNextTask();
   }
 
-  private clearTaskTimer(taskId: number): void {
+  clearTaskTimer(taskId: number): void {
     if (this._taskTimeout === undefined) return;
     clearTimeout(this._taskTimers.get(taskId));
     this._taskTimers.delete(taskId);
   }
 
-  private scheduleNextTask(): void {
+  scheduleNextTask(): void {
     if (this._nextTaskScheduled) return;
     this._nextTaskScheduled = true;
     setImmediate(() => {
@@ -224,7 +226,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     });
   }
 
-  private terminateWorker(info: WorkerInfo): Promise<number> {
+  terminateWorker(info: WorkerInfo): Promise<number> {
     let termination = this._terminations.get(info);
     if (!termination) {
       termination = info.worker.terminate().finally(() => {
@@ -249,12 +251,12 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       info.resolveClosed?.();
       return;
     }
-    errorLogger.warn('Invalid worker control message', info.id);
+    this.logger.warn('system.error', 'Invalid worker control message', info.id);
   }
 
   takeLog(info: WorkerInfo, message: LogWorkerMessage): void {
     if (message?.type !== WorkerMessageType.Log || !message.body) {
-      errorLogger.warn('Invalid formatted log', info.id);
+      this.logger.warn('system.error', 'Invalid formatted log', info.id);
       return;
     }
     const level = message.body.level;
@@ -263,7 +265,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       (message.body.content !== undefined && !Array.isArray(message.body.content))) {
       return;
     }
-    const log = getLogger();
+    const log = this.logger;
     const content = message.body.content;
     try {
       log[level](logType, info.id, ...(content ?? []));
@@ -276,18 +278,18 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     if (this._isDisposing) return;
     if (message?.type !== WorkerMessageType.Complete ||
       !Number.isSafeInteger(message.taskId) || message.taskId <= 0) {
-      errorLogger.warn('Invalid worker task message', info.id);
+      this.logger.warn('system.error', 'Invalid worker task message', info.id);
       return;
     }
     const pending = this.workingTasks.get(message.taskId) as
       PendingPromiseWithBody<R> | undefined;
     if (!pending) {
-      errorLogger.warn('Worker completed unknown task', info.id,
+      this.logger.warn('system.error', 'Worker completed unknown task', info.id,
         message.taskId);
       return;
     }
     if (pending.workerId !== info.id || this._unavailableWorkers.has(info)) {
-      errorLogger.warn('Worker completed task owned by another worker', info.id,
+      this.logger.warn('system.error', 'Worker completed task owned by another worker', info.id,
         message.taskId);
       return;
     }
@@ -434,7 +436,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     return this._disposePromise;
   }
 
-  private async disposeOnce(): Promise<number[]> {
+  async disposeOnce(): Promise<number[]> {
     this._isDisposing = true;
     for (const startup of this._starting.values()) {
       startup.reject(new Error('disposed'));
@@ -470,7 +472,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     return this.terminateWorkers();
   }
 
-  private rejectDisposedTasks(): void {
+  rejectDisposedTasks(): void {
     for (const taskId of this._taskTimers.keys()) this.clearTaskTimer(taskId);
     for (const task of this.pendingTasks) {
       task.reject(new Error('disposed'));
@@ -483,7 +485,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     for (const info of this.workers) info.load = 0;
   }
 
-  private async terminateWorkers(): Promise<number[]> {
+  async terminateWorkers(): Promise<number[]> {
     this.rejectDisposedTasks();
     return Promise.all(this.workers.map(info => this.terminateWorker(info)));
   }

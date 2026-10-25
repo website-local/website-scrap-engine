@@ -4,9 +4,31 @@ import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {defaultDownloadOptions} from '../../src/options.js';
 import {createResource, ResourceType} from '../../src/resource.js';
 import type {Resource} from '../../src/resource.js';
+import {processRedirectedUrl} from '../../src/life-cycle/adapters.js';
 
 const parent = () => createResource({type: ResourceType.Css, depth: 0,
   url: 'https://example.test/docs/style.css', refUrl: 'https://example.test/', localRoot: 'output'});
+
+test('a root redirect retains depth zero for save-path and admission hooks', async () => {
+  const depths: number[] = [];
+  const options = defaultDownloadOptions({...defaultLifeCycle(),
+    generateSavePath: [(_path, context) => context.depth === 0 ? 'root.css' : 'nested.css'],
+    processBeforeDownload: [resource => { depths.push(resource.depth); return resource; }]
+  });
+  const pipeline = new PipelineExecutorImpl(options, options.req, options);
+  const resource = {...parent(), body: '', redirectedUrl: 'https://example.test/final.css'};
+  await processRedirectedUrl(resource, () => {}, options, pipeline);
+  expect(depths).toEqual([0]);
+  expect(resource.redirectedSavePath).toBe('root.css');
+});
+
+test.each([undefined, null])('an omitted link depth (%s) advances from the parent', async depth => {
+  const options = defaultDownloadOptions(defaultLifeCycle());
+  const pipeline = new PipelineExecutorImpl(options, options.req, options);
+  const resource = {...parent(), depth: 2};
+  const result = await pipeline.createAndProcessResource('asset.png', ResourceType.Binary, depth, null, resource);
+  expect(result?.depth).toBe(3);
+});
 
 test('combined link processing keeps its Promise contract with synchronous hooks', async () => {
   const options = defaultDownloadOptions(defaultLifeCycle());

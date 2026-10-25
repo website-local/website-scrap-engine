@@ -8,6 +8,11 @@ import {ResourceType} from '../../src/resource.js';
 
 describe('detect-resource-type', function () {
 
+  test.each(['constructor', '__proto__'])('does not classify inherited key %s as a binary extension', extension => {
+    expect(detectResourceType('https://example.test/page.' + extension, ResourceType.Html))
+      .toBe(ResourceType.Html);
+  });
+
   test('detect simple site map', () => {
     expect(detectResourceType('/sitemaps/sitemap.xml', ResourceType.Html))
       .toBe(ResourceType.SiteMap);

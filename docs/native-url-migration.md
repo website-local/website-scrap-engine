@@ -186,12 +186,16 @@ The earlier 116/118 extension matrix describes that selected corpus only;
 neither it nor method-name coverage implies complete URIjs suite compatibility.
 
 Replace direct URIjs imports in hooks with the engine's `URI` import, including
-type imports. The separate 0.10 save-path hook migration still applies. The
+type imports. The [0.10 lifecycle migration](../MIGRATION-0.10.0.md) also applies,
+including save-path hooks, `pipeline.logger`, document ownership and explicit
+discovery submission. The
 [MDN migration patch](mdn-native-url-migration.patch) targets MDN-local
 `a4979c82eaec38c9cdb385a0e15e4512dd3a5fc0`; its isolated consumer type-checks with
 the expanded wrapper. The neighboring MDN checkout was not changed. Consumers
 must update the engine dependency, remove direct URIjs/type dependencies, and
 install `log4js` if using MDN's logger.
+The patch preserves its historical validation; adapt its remaining lifecycle
+calls to the current APIs before using it with a newer engine build.
 
 Current validation and merge requirements are maintained in the
 [merge-readiness audit](uri-merge-readiness.md). The

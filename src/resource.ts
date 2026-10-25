@@ -8,7 +8,7 @@ import {
   simpleHashString
 } from './util.js';
 import type {CheerioStatic} from './types.js';
-import {error as log} from './logger/logger.js';
+import type {Logger} from './logger/types.js';
 
 export enum ResourceType {
   /**
@@ -167,6 +167,8 @@ export interface RawResource {
      * after downloaded and parsed, content may differ from {@link .body}
      */
     doc?: CheerioStatic;
+    /** Pending status work must finish before this document is discarded. */
+    statusChanges?: Promise<void>[];
     /**
      * Response headers after download
      */
@@ -179,6 +181,13 @@ export interface RawResource {
 }
 
 export interface Resource extends RawResource {
+  /** Runtime owners remain in their thread and are omitted from worker messages. */
+  workerTaskId?: number;
+  publicationOwner?: string;
+  downloaded?: boolean;
+  publishedFiles?: number;
+  /** Discovery state belongs to this parent, even when handlers are shared. */
+  discoveredCount?: number;
   /**
    * Normalized {@link URI} instance
    * containing the same content of {@link RawResource.url}
@@ -219,10 +228,14 @@ export interface WireResource extends RawResource {
 }
 
 export function prepareResourceForClone(res: Resource): WireResource {
-  const {uri, refUri, replaceUri, host, ...raw} = res;
-  void uri; void refUri; void replaceUri; void host;
-  const {doc, ...meta} = res.meta;
-  void doc;
+  const {uri, refUri, replaceUri, host, workerTaskId,
+    publicationOwner, downloaded, publishedFiles, discoveredCount,
+    ...raw} = res;
+  void uri; void refUri; void replaceUri; void host; void workerTaskId;
+  void publicationOwner; void downloaded; void publishedFiles;
+  void discoveredCount;
+  const {doc, statusChanges, ...meta} = res.meta;
+  void doc; void statusChanges;
   // Fail explicitly for functions and other non-cloneable metadata.
   // Keep body ownership intact so the caller can transfer its ArrayBuffer.
   const wire = {...raw, meta: structuredClone(meta)};
@@ -242,7 +255,7 @@ function assertWireResource(value: unknown): asserts value is WireResource {
   }
   const raw = value as Record<string, unknown>;
   for (const field of ['uri', 'refUri', 'replaceUri', 'host']) {
-    if (Object.hasOwn(raw, field)) throw new TypeError(`Worker resource cannot contain ${field}`);
+    if (raw[field] !== undefined) throw new TypeError(`Worker resource cannot contain ${field}`);
   }
   for (const field of ['url', 'rawUrl', 'downloadLink', 'refUrl', 'savePath',
     'refSavePath', 'localRoot', 'replacePath']) {
@@ -268,7 +281,7 @@ function assertWireResource(value: unknown): asserts value is WireResource {
     throw new TypeError('Worker resource.encoding must be null or a Buffer encoding');
   }
   if (!raw.meta || Object.prototype.toString.call(raw.meta) !== '[object Object]' ||
-    Object.hasOwn(raw.meta, 'doc')) {
+    (raw.meta as RawResource['meta']).doc !== undefined) {
     throw new TypeError('Worker resource.meta must be an object without a DOM');
   }
   if (raw.body !== undefined && typeof raw.body !== 'string' &&
@@ -374,7 +387,8 @@ export function generateSavePath(
   uri: URI,
   isHtml?: boolean,
   keepSearch?: boolean,
-  localSrcRoot?: string
+  localSrcRoot?: string,
+  logger?: Logger
 ): string {
   if (!uri.hostname() && uri.is('relative') && uri.protocol() !== 'file') {
     throw new Error('generateSavePath: uri can not be relative: '
@@ -435,7 +449,7 @@ export function generateSavePath(
       if (search.length > 43) {
         const ordered = orderUrlSearch(search);
         const hashed = simpleHashString(ordered);
-        log.debug('search too long, replacing with hash', ordered, hashed);
+        logger?.debug('system.error', 'search too long, replacing with hash', ordered, hashed);
         // avoid too long search
         search = '_' + hashed;
       } else {
@@ -495,7 +509,8 @@ export function checkAbsoluteUri(
   skipReplacePathError: boolean | undefined,
   url: string,
   refUrl: string,
-  type: ResourceType
+  type: ResourceType,
+  logger?: Logger
 ): boolean {
   let replacePathHasError = false;
   const protocol = uri.protocol().toLowerCase();
@@ -504,22 +519,22 @@ export function checkAbsoluteUri(
     protocol !== 'file' &&
     protocol !== refUri.protocol().toLowerCase()) {
     if (skipReplacePathError) {
-      log.warn('protocol not supported, skipping',
+      logger?.warn('system.error', 'protocol not supported, skipping',
         protocol, url, refUrl, type);
       replacePathHasError = true;
     } else {
-      log.warn('protocol not supported, skipping',
+      logger?.warn('system.error', 'protocol not supported, skipping',
         protocol, url, refUrl, type);
       throw new Error(`protocol ${protocol} not supported`);
     }
   }
   if (protocol !== 'file' && !uri.host()) {
     if (skipReplacePathError) {
-      log.warn('empty host for non-file uri not supported, skipping',
+      logger?.warn('system.error', 'empty host for non-file uri not supported, skipping',
         protocol, url, refUrl, type);
       replacePathHasError = true;
     } else {
-      log.warn('empty host for non-file uri not supported, skipping',
+      logger?.warn('system.error', 'empty host for non-file uri not supported, skipping',
         protocol, url, refUrl, type);
       throw new Error('empty host for non-file uri not supported');
     }
@@ -533,7 +548,8 @@ export function resolveFileUrl(
   url: string,
   refUrl: string,
   localSrcRoot?: string,
-  skipReplacePathError?: boolean
+  skipReplacePathError?: boolean,
+  logger?: Logger
 ): string {
   if (isUrlHttp(url)) {
     return url;
@@ -572,10 +588,10 @@ export function resolveFileUrl(
   }
   if (error) {
     if (skipReplacePathError) {
-      log.warn(error, url, refUrl, localSrcRoot);
+      logger?.warn('system.error', error, url, refUrl, localSrcRoot);
       return '';
     } else {
-      log.warn(error, url, refUrl, localSrcRoot);
+      logger?.warn('system.error', error, url, refUrl, localSrcRoot);
       throw new Error(error);
     }
   }
@@ -599,8 +615,8 @@ export function resolveFileUrl(
  * @param replacePathHasError {@link CreateResourceArgument.replacePathHasError}
  * @return the resource
  */
-export function createResource(arg: CreateResourceArgument): Resource {
-  return createResourceWithUris(arg);
+export function createResource(arg: CreateResourceArgument, logger?: Logger): Resource {
+  return createResourceWithUris(arg, undefined, undefined, logger);
 }
 
 /** @internal Reuse URI parsing performed by the built-in pipeline. */
@@ -619,7 +635,7 @@ export function createResourceWithUris({
   savePath,
   skipReplacePathError,
   replacePathHasError = false
-}: CreateResourceArgument, resolvedUri?: URI, resolvedRefUri?: URI): Resource {
+}: CreateResourceArgument, resolvedUri?: URI, resolvedRefUri?: URI, logger?: Logger): Resource {
   rawUrl ??= url;
   const refUri: URI = resolvedRefUri ?? URI(refUrl);
   refUrl = refUri.toString();
@@ -628,7 +644,7 @@ export function createResourceWithUris({
       refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
       // file url should never have search
       keepSearch = false;
-      url = resolveFileUrl(url, refUrl, localSrcRoot, skipReplacePathError);
+      url = resolveFileUrl(url, refUrl, localSrcRoot, skipReplacePathError, logger);
       if (!url) {
         replacePathHasError = true;
         url = rawUrl;
@@ -651,16 +667,16 @@ export function createResourceWithUris({
       url = uri.toString();
     }
     if (!replacePathHasError &&
-      checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type)) {
+      checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type, logger)) {
       replacePathHasError = true;
     }
     savePath = replacePathHasError ? rawUrl : generateSavePath(
-      uri, type === ResourceType.Html, keepSearch, localSrcRoot);
+      uri, type === ResourceType.Html, keepSearch, localSrcRoot, logger);
   }
 
   if (!refSavePath) {
     refSavePath = generateSavePath(refUri, refType === ResourceType.Html,
-      false, localSrcRoot);
+      false, localSrcRoot, logger);
   }
 
   // URI serialization already normalizes the URL. Dropping its fragment does

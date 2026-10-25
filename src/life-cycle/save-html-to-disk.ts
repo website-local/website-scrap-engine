@@ -1,3 +1,4 @@
+import {disposeHtmlResource} from '../cheerio.js';
 import type {DownloadResource} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {ResourceBody, ResourceEncoding} from '../resource.js';
@@ -39,51 +40,53 @@ export async function saveHtmlToDisk(
   if (res.type !== ResourceType.Html) {
     return res;
   }
-  const localRoot: string = res.localRoot ?? options.localRoot;
-  // https://github.com/website-local/website-scrap-engine/issues/174
-  let mtime: number | void = void 0;
-  if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
-    mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
-  }
-  if (res.redirectedUrl && res.redirectedUrl !== res.url) {
-    if (res.redirectedSavePath) {
-      if (res.redirectedSavePath !== res.savePath) {
-        const replaceUri = replacementUri(res.redirectedSavePath, res.savePath);
-        const relativePath: string = replaceUri.toString();
-        await writeFile(safeJoin(localRoot, decodeURI(res.savePath)),
-          redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot);
-        const body: ResourceBody = getResourceBodyFromHtml(res, options);
-        await writeFile(safeJoin(localRoot, decodeURI(res.redirectedSavePath)),
-          body, res.encoding, mtime, undefined, localRoot);
-      } else {
-        const body: ResourceBody = getResourceBodyFromHtml(res, options);
-        const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-        await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot);
-      }
-      return;
+  try {
+    const localRoot: string = res.localRoot ?? options.localRoot;
+    // https://github.com/website-local/website-scrap-engine/issues/174
+    let mtime: number | void = void 0;
+    if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
+      mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
     }
-    const redirectResource = await pipeline.createResource(ResourceType.Html,
-      res.depth, res.redirectedUrl, res.url, localRoot,
-      undefined, res.refSavePath);
-    if (redirectResource?.replacePath) {
-      const relativePath: string = redirectResource.replacePath;
-      const savePath = decodeURI(res.savePath);
-      await writeFile(safeJoin(localRoot, savePath),
-        redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot);
-      const redirectedResource = await pipeline.createResource(ResourceType.Html,
-        res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
-        res.encoding, undefined, ResourceType.Html);
-      if (!redirectedResource) {
+    if (res.redirectedUrl && res.redirectedUrl !== res.url) {
+      if (res.redirectedSavePath) {
+        if (res.redirectedSavePath !== res.savePath) {
+          const replaceUri = replacementUri(res.redirectedSavePath, res.savePath);
+          const relativePath: string = replaceUri.toString();
+          await writeFile(safeJoin(localRoot, decodeURI(res.savePath)),
+            redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot, res, pipeline);
+          const body: ResourceBody = getResourceBodyFromHtml(res, options);
+          await writeFile(safeJoin(localRoot, decodeURI(res.redirectedSavePath)),
+            body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+        } else {
+          const body: ResourceBody = getResourceBodyFromHtml(res, options);
+          const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
+          await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+        }
         return;
       }
-      const redirectedSavePath = decodeURI(redirectedResource.savePath);
-      const body: ResourceBody = getResourceBodyFromHtml(res, options);
-      await writeFile(safeJoin(localRoot, redirectedSavePath), body, res.encoding, mtime, undefined, localRoot);
-      return;
+      const redirectResource = await pipeline.createResource(ResourceType.Html,
+        res.depth, res.redirectedUrl, res.url, localRoot,
+        undefined, res.refSavePath);
+      if (redirectResource?.replacePath) {
+        const relativePath: string = redirectResource.replacePath;
+        const savePath = decodeURI(res.savePath);
+        await writeFile(safeJoin(localRoot, savePath),
+          redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot, res, pipeline);
+        const redirectedResource = await pipeline.createResource(ResourceType.Html,
+          res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
+          res.encoding, undefined, ResourceType.Html);
+        if (!redirectedResource) {
+          return;
+        }
+        const redirectedSavePath = decodeURI(redirectedResource.savePath);
+        const body: ResourceBody = getResourceBodyFromHtml(res, options);
+        await writeFile(safeJoin(localRoot, redirectedSavePath), body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+        return;
+      }
     }
-  }
-  const body: ResourceBody = getResourceBodyFromHtml(res, options);
-  const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-  await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot);
-  return;
+    const body: ResourceBody = getResourceBodyFromHtml(res, options);
+    const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
+    await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+    return;
+  } finally { await disposeHtmlResource(res); }
 }

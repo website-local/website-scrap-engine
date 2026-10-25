@@ -1,5 +1,67 @@
 # Performance for 0.10
 
+## HTML link-array experiment: 2026-10-25
+
+The quality pass compared `links = [attrValue]` with one reusable array per
+`processHtmlDoc` invocation. Both variants produced identical output and
+per-parent discoveries during concurrent processing, reentrant hooks, and
+recursive `iframe[srcdoc]` processing. No shared array was used across calls.
+
+Each workload/runtime used 30 paired blocks with alternating execution order.
+The ratio is current elapsed time divided by reusable-array elapsed time;
+values above 1 favor reuse. Intervals are 95% paired-log-ratio intervals.
+
+| Runtime | Workload | Ratio | 95% interval |
+| --- | --- | ---: | --- |
+| Node 22.22.2 | Ordinary links | 0.981 | 0.922–1.043 |
+| Node 22.22.2 | Mixed links | 1.027 | 0.974–1.084 |
+| Node 24.18.0 | Ordinary links | 1.012 | 0.959–1.068 |
+| Node 24.18.0 | Mixed links | 0.978 | 0.941–1.016 |
+
+Every interval includes 1. Substantial outside host activity also limits
+sensitivity to a small allocation effect. Keep `links = [attrValue]`: this
+experiment establishes no reliable throughput improvement from reuse. It does
+not measure a speedup from the ownership refactor or removal of aggregate
+body-byte accounting.
+
+## Object layout audit: 2026-10-25
+
+The audit used actual resources, downloaders, pipelines, options, statistics,
+publication records and worker instances on Node 22.22.2 and 24.18.0. V8 property
+mode checks, heap snapshots and retained-object batches were measured separately
+from the link-array timings. TypeScript interface fields allocate no storage
+until properties are assigned to a runtime object.
+
+The earlier quality-pass iteration added eleven Resource runtime fields; six
+were removed. The five remaining fields are `workerTaskId`, `publicationOwner`,
+`downloaded`, `publishedFiles`, and `discoveredCount`. They hold distinct state.
+Resource retains no downloader, pipeline, child array or replacement state object.
+Three redundant initialization fields were also removed from each downloader.
+Their final 23/28 own properties remain fast, with warmed shallow sizes of
+208/248 bytes for single/multi downloaders on both runtimes.
+
+Main-thread Resources remain fast from creation through ordinary processing
+and cleanup: 18 properties at creation and 28 after processing. Clearing `doc`
+and pending status work preserves fast metadata properties. Retrying by deleting
+old error metadata enters dictionary mode; worker URI normalization also enters
+dictionary mode. Both transitions occur in the original baseline as well. No
+extra object copy or Map replacement was added to change those layouts.
+
+Six batches per runtime retained 1,800 real Resources with distinct URLs and
+shared source text. After two full GCs per observation, final median retained
+heap per Resource fell from about 7.33/7.34 kB while parsed to 1.28/1.26 kB after
+document cleanup on Node 22/24; no documents remained attached. The older
+Cheerio path retained its document in this controlled workload. Separate idle
+downloader graphs were slightly larger overall after the full refactor despite
+the three-field removal. Field counts alone do not establish a memory or
+throughput improvement. These intentionally retained-object measurements do not
+estimate crawl RSS, Wasm memory, or full-archive behavior.
+
+## Earlier 0.10 measurements
+
+The following results preserve measurements and decisions for their dated
+revisions. They do not qualify the later explicit-ownership quality pass.
+
 The first focused comparison of final `f057597` against 0.9.1 confirms less
 elapsed time for **multi-thread buffered HTTP (-28.94%)** and **multi-thread
 local files (-32.42%)**. Multi-thread markup shows no clear difference; five

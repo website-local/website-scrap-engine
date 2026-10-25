@@ -4,11 +4,13 @@ import {request as httpsRequest} from 'node:https';
 import {addAbortListener} from 'node:events';
 import {setTimeout as delay} from 'node:timers/promises';
 import got from 'got';
+import type {BeforeRetryHook} from 'got';
 import type {Readable} from 'node:stream';
 import {createBrotliDecompress, createGunzip, createInflate} from 'node:zlib';
 import type {RequestOptions} from './types.js';
 import {checkResourceSize} from '../resource-limits.js';
-import {currentCrawlContext} from '../crawl-context.js';
+import type {Resource} from '../resource.js';
+import type {Logger} from '../logger/types.js';
 import {beforeRetryHook} from './retry-hook.js';
 
 /** Native mode exposes HTTP metadata, not Got's request implementation. */
@@ -35,7 +37,7 @@ const supportedOptions = new Set(['headers', 'method', 'retry', 'timeout', 'sign
   'hooks', 'ignoreInvalidCookies']);
 
 /** Decide before sending anything; unsupported configurations keep Got semantics. */
-export function canUseNativeHttp(options: RequestOptions): boolean {
+export function canUseNativeHttp(options: RequestOptions, retryLogger?: BeforeRetryHook): boolean {
   if (Object.entries(options).some(([key, value]) => value !== undefined && !supportedOptions.has(key))) return false;
   if (options.method && options.method !== 'GET' && options.method !== 'HEAD') return false;
   const retries = options.retry?.limit ?? 2;
@@ -51,7 +53,7 @@ export function canUseNativeHttp(options: RequestOptions): boolean {
   // Custom hooks require Got request/error objects. Its built-in retry logger
   // is inert for native errors, which have no Got options object.
   if (options.hooks && Object.entries(options.hooks).some(([key, hooks]) => hooks?.length &&
-    (key !== 'beforeRetry' || retries && hooks.some(hook => hook !== beforeRetryHook)))) {
+    (key !== 'beforeRetry' || retries && hooks.some(hook => hook !== beforeRetryHook && hook !== retryLogger)))) {
     return false;
   }
   return options.responseType === undefined || options.responseType === 'buffer';
@@ -198,17 +200,14 @@ async function nativeHttpAttempt<T>(
   }
 }
 
-export function nativeBufferedRequest(url: string, options: RequestOptions, limit?: number):
-  Promise<NativeHttpResponse & {body: Buffer}> {
+export function nativeBufferedRequest(url: string, options: RequestOptions, limit?: number, resource?: Resource, logger?: Logger):
+  Promise<(NativeHttpResponse & {body: Buffer}) | undefined> {
   return withNativeHttp(url, options, async (response, body) => {
     const chunks: Buffer[] = [];
-    const account = currentCrawlContext()?.bufferAccount;
     let size = 0;
     for await (const chunk of body) {
       size += chunk.length;
-      checkResourceSize(size, limit);
-      const accounting = account?.observeBody(size);
-      if (accounting) await accounting;
+      if (!checkResourceSize(size, limit, resource, logger)) return;
       chunks.push(chunk);
     }
     return {...response, body: Buffer.concat(chunks, size)};

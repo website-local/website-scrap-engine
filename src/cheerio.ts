@@ -1,5 +1,4 @@
 import {createRequire} from 'node:module';
-import {AsyncLocalStorage} from 'node:async_hooks';
 import {isAbsolute} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import type {load as cheerioLoad} from 'cheerio';
@@ -17,10 +16,6 @@ export interface HtmlParserOptions {
   };
 }
 
-type OwnedDocument = CheerioStatic & {
-  dispose(): void;
-};
-
 // The experimental backend implements the engine's Cheerio-shaped operations.
 // This boundary does not promise arbitrary Cheerio plugins or raw domhandler APIs.
 interface GroveModule {
@@ -35,17 +30,7 @@ interface GroveParser {
   load?: typeof cheerioLoad;
 }
 
-interface DocumentResource { meta: {doc?: CheerioStatic} }
-interface DocumentScope {
-  parser: GroveParser;
-  documents: Set<OwnedDocument>;
-  resources: Set<DocumentResource>;
-  notifications: Set<Promise<void>>;
-  closed: boolean;
-}
-
-const scopes = new AsyncLocalStorage<DocumentScope | undefined>();
-const groveParsers = new Map<string, GroveParser>();
+export const groveParsers: Record<string, GroveParser> = {};
 
 export function validateHtmlParserOptions(options: HtmlParserOptions): void {
   if (options.htmlParser !== undefined && options.htmlParser !== 'cheerio' && options.htmlParser !== 'grovedom') {
@@ -72,7 +57,7 @@ function groveParser(options: HtmlParserOptions): GroveParser {
   const specifier = config?.module ?? 'grovedom';
   const module = isAbsolute(specifier) ? pathToFileURL(specifier).href : specifier;
   const poolSize = config?.poolSize ?? 8, poolMaxBytes = config?.poolMaxBytes ?? 16 * 1024 * 1024;
-  let parser = groveParsers.get(module);
+  let parser = groveParsers['$' + module];
   if (!parser) {
     let resolved = module;
     try { resolved = import.meta.resolve(module); }
@@ -83,12 +68,12 @@ function groveParser(options: HtmlParserOptions): GroveParser {
       const required = require.resolve(resolved.startsWith('file:') ? fileURLToPath(resolved) : resolved);
       resolved = isAbsolute(required) ? pathToFileURL(required).href : required;
     } catch { /* Defer resolution errors until markup needs the parser. */ }
-    parser = groveParsers.get(resolved);
+    parser = groveParsers['$' + resolved];
     if (!parser) {
       parser = {module: resolved, poolSize, poolMaxBytes};
-      groveParsers.set(resolved, parser);
+      groveParsers['$' + resolved] = parser;
     }
-    groveParsers.set(module, parser);
+    groveParsers['$' + module] = parser;
   }
   if (parser.poolSize !== poolSize || parser.poolMaxBytes !== poolMaxBytes) {
     throw new Error('GroveDOM pool options must agree for the same module in one process/worker');
@@ -107,132 +92,48 @@ function initializeGrove(parser: GroveParser): void {
   parser.load = module.load;
 }
 
-/** Own GroveDOM documents through all transformations AND final serialization/saving. */
-export function withHtmlParser<T>(options: HtmlParserOptions, callback: () => T | Promise<T>): Promise<T> {
-  validateHtmlParserOptions(options);
-  const current = scopes.getStore();
-  if (current?.closed) return Promise.reject(new Error('HTML document scope has finished'));
-  if (options.htmlParser !== 'grovedom') {
-    return current ? scopes.run(undefined, async () => callback()) : invoke(callback);
+/** Wait for this resource's status work, then release its document. */
+export function disposeHtmlResource(resource: {meta: {doc?: CheerioStatic; statusChanges?: Promise<void>[]}}): void | Promise<void> {
+  const pending = resource.meta.statusChanges;
+  if (pending?.length) {
+    return (async () => {
+      // Listeners may enqueue more status changes while earlier ones await.
+      for (let index = 0; index < pending.length; index++) await pending[index];
+      resource.meta.statusChanges = undefined;
+      return disposeHtmlResource(resource);
+    })();
   }
-  const parser = groveParser(options);
-  if (current?.parser === parser) return invoke(callback);
-  const scope: DocumentScope = {parser, documents: new Set(), resources: new Set(),
-    notifications: new Set(), closed: false};
-  return scopes.run(scope, async () => {
-    let failed = false;
-    let failure: unknown;
-    let result!: T;
-    const errors: unknown[] = [];
-    try { result = await callback(); }
-    catch (error) { failed = true; failure = error; }
-    finally {
-      // Error/admission notifications have synchronous callers. Their entire
-      // listener chains, including further notifications, still own documents.
-      while (scope.notifications.size) await Promise.allSettled(scope.notifications);
-      scope.closed = true;
-      for (const resource of scope.resources) {
-        try {
-          if (resource.meta.doc && scope.documents.has(resource.meta.doc as OwnedDocument)) {
-            delete resource.meta.doc;
-          }
-        } catch (error) { errors.push(error); }
-      }
-      for (const document of scope.documents) {
-        try { document.dispose(); } catch (error) { errors.push(error); }
-      }
-      scope.resources.clear();
-      scope.documents.clear();
-    }
-    if (failed) throw failure;
-    if (errors.length) throw new AggregateError(errors, 'HTML document disposal failed');
-    return result;
-  });
+  const document = resource.meta.doc as (CheerioStatic & {dispose?: () => void}) | undefined;
+  if (!document) return;
+  resource.meta.doc = undefined;
+  document.dispose?.();
 }
 
-function invoke<T>(callback: () => T | Promise<T>): Promise<T> {
-  try { return Promise.resolve(callback()); }
-  catch (error) { return Promise.reject(error); }
-}
-
-/** A queued resource must not inherit its submitting parent's document lifetime. */
-export function withResourceHtmlParser<T>(options: HtmlParserOptions, callback: () => Promise<T>): Promise<T> {
-  return scopes.getStore() ? scopes.run(undefined, () => withHtmlParser(options, callback)) :
-    withHtmlParser(options, callback);
-}
-
-/** Notifications can precede processing or outlive their submitting parent. */
-export function withHtmlStatusChange(options: HtmlParserOptions, callback: () => Promise<void>): Promise<void> {
-  const scope = scopes.getStore();
-  // Setup failures must also honor the notification's Promise API.
-  return invoke(() => scope?.closed || (!scope && options.htmlParser === 'grovedom') ?
-    withResourceHtmlParser(options, callback) : callback());
-}
-
-/** Register resources so a retry cannot reuse a document disposed by its previous attempt. */
-export function trackHtmlResource(resource: DocumentResource): void {
-  const scope = scopes.getStore();
-  if (scope?.closed) throw new Error('HTML document scope has finished');
-  scope?.resources.add(resource);
-}
-
-/** Keep engine-tracked status callbacks inside their resource's ownership. */
-export function trackHtmlStatusChange(pending: Promise<void>): Promise<void> {
-  const scope = scopes.getStore();
-  if (scope && !scope.closed) {
-    scope.notifications.add(pending);
-    const settled = () => { scope.notifications.delete(pending); };
-    void pending.then(settled, settled);
-  }
-  return pending;
-}
-
-export function assertHtmlParserScope(options: HtmlParserOptions): void {
-  if (options.htmlParser !== 'grovedom') return;
-  const scope = scopes.getStore();
-  if (!scope || scope.closed || scope.parser !== groveParser(options)) {
-    throw new Error('GroveDOM operations require withHtmlParser() through serialization and saving');
-  }
-}
-
-// Binary-only workers do not need an HTML parser. Keep the synchronous parser
-// API while deferring its dependency graph until the first document is parsed.
 const require = createRequire(import.meta.url);
 let parser: typeof cheerioLoad | undefined;
 let loading: Promise<void> | undefined;
 
-/** Prepare the parser once before markup lifecycle hooks. */
+/** Optional eager preparation; ordinary parsing loads only when needed. */
 export function prepareHtmlParser(options?: HtmlParserOptions): void | Promise<void> {
-  if (options) assertHtmlParserScope(options);
-  const scope = scopes.getStore();
-  if (scope) {
-    if (scope.closed) throw new Error('HTML document scope has finished');
-    const parser = scope.parser;
-    // loadHtml() is synchronous. Use the same loader here so concurrent first
-    // loads cannot require an ESM graph whose async import is still pending.
-    initializeGrove(parser);
+  if (options?.htmlParser === 'grovedom') {
+    initializeGrove(groveParser(options));
     return;
   }
   if (parser) return;
   return loading ??= import('cheerio').then(module => { parser = module.load; });
 }
 
-export const load: typeof cheerioLoad = (...args) => {
-  const scope = scopes.getStore();
-  if (scope) {
-    if (scope.closed) throw new Error('HTML document scope has finished');
-    const parser = scope.parser;
-    initializeGrove(parser);
-    const document = parser.load!(...args) as OwnedDocument;
-    if (typeof document.dispose !== 'function') throw new TypeError('Expected a disposable GroveDOM document');
-    scope.documents.add(document);
-    // Generated documents from hooks must join the same owning resource scope.
-    document.load = (...args) => {
-      if (scope.closed) throw new Error('HTML document scope has finished');
-      return scopes.run(scope, () => load(...args));
-    };
-    return document;
+export function load(
+  content: Parameters<typeof cheerioLoad>[0],
+  options?: Parameters<typeof cheerioLoad>[1],
+  isDocument?: boolean,
+  parserOptions?: HtmlParserOptions
+): CheerioStatic {
+  if (parserOptions?.htmlParser === 'grovedom') {
+    const backend = groveParser(parserOptions);
+    initializeGrove(backend);
+    return backend.load!(content, options, isDocument);
   }
   parser ??= (require('cheerio') as {load: typeof cheerioLoad}).load;
-  return parser(...args);
-};
+  return parser(content, options, isDocument);
+}

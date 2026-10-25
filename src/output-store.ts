@@ -1,4 +1,5 @@
-import {recordResourcePublication, currentCrawlContext} from './crawl-context.js';
+import type {Resource} from './resource.js';
+import type {AbstractDownloader} from './downloader/main.js';
 import {promises as fs, constants, lstat as lstatCallback} from 'node:fs';
 import {promisify} from 'node:util';
 import {basename, dirname, isAbsolute, join, relative, resolve, sep} from 'node:path';
@@ -53,8 +54,8 @@ async function resolveRoot(root: string): Promise<string> {
 
 /** Prepare each directory once per crawl; publication still checks the live parent. */
 export class OutputDirectories {
-  private readonly roots = new Map<string, string | Promise<string>>();
-  private readonly parents = new Map<string, Promise<void> | null>();
+  readonly roots = new Map<string, string | Promise<string>>();
+  readonly parents = new Map<string, Promise<void> | null>();
 
   root(root: string): string | Promise<string> {
     let pending = this.roots.get(root);
@@ -84,9 +85,9 @@ export class OutputDirectories {
   }
 }
 
-/** Share a private directory only while publications in the same parent overlap. */
+/** Share a directory only while publications in the same parent overlap. */
 export class StagingDirectories {
-  private readonly active = new Map<string, {directory: Promise<string>; references: number; next: number}>();
+  readonly active = new Map<string, {directory: Promise<string>; references: number; next: number}>();
 
   async acquire(parent: string): Promise<{path: string; cleanup(published: boolean): Promise<void>}> {
     let entry = this.active.get(parent);
@@ -137,16 +138,15 @@ export interface FilePublication {
 export interface PublicationStore {
   /** Set writerRejectsSymlinks only when the writer opens with no-follow flags. */
   create(destination: string, signal?: AbortSignal, localRoot?: string,
-    writerRejectsSymlinks?: boolean): Promise<FilePublication>;
+    writerRejectsSymlinks?: boolean, resource?: Resource): Promise<FilePublication>;
 }
 
 export async function createFilePublication(
   destination: string, signal?: AbortSignal, localRoot?: string,
-  writerRejectsSymlinks = false
+  writerRejectsSymlinks = false, resource?: Resource, downloader?: AbstractDownloader
 ): Promise<FilePublication> {
   signal?.throwIfAborted();
-  const context = currentCrawlContext();
-  const directories = context?.outputDirectories;
+  const directories = downloader?.outputDirectories;
   let canonicalRoot: string | undefined;
   if (localRoot !== undefined) {
     const resolvedRoot = resolve(localRoot);
@@ -169,12 +169,11 @@ export async function createFilePublication(
   const parent = dirname(destination);
   if (canonicalRoot === undefined) await fs.mkdir(parent, {recursive: true});
   signal?.throwIfAborted();
-  const reservationPath = context?.publicationReservations ? canonicalRoot === undefined ?
+  let reservationPath = downloader ? canonicalRoot === undefined ?
     join(await fs.realpath(parent), basename(destination)) : destination : undefined;
-  const release = context?.publicationOwner === undefined ? undefined :
-    context.publicationReservations?.claim(process.platform === 'win32' ?
-      reservationPath!.toLowerCase() : reservationPath!, context.publicationOwner);
-  if (context?.directWrites) {
+  if (reservationPath && process.platform === 'win32') reservationPath = reservationPath.toLowerCase();
+  if (reservationPath) downloader!.claimOutput(reservationPath, resource!.publicationOwner ?? resource!.url);
+  if (downloader && downloader.options.atomicWrites !== true) {
     try {
       if (!writerRejectsSymlinks) {
         // A direct writer must not follow an existing destination symlink.
@@ -184,24 +183,31 @@ export async function createFilePublication(
         });
         if (stat?.isSymbolicLink()) throw new Error('Output destination must not be a symlink: ' + destination);
       }
-    } catch (error) { release?.(false); throw error; }
+    } catch (error) { if (reservationPath) downloader!.releaseOutput(reservationPath, false); throw error; }
     let published = false;
     let closed = false;
     return {stagingPath: destination, direct: true,
       async publish() {
         if (closed) throw new Error('Publication has been closed');
         signal?.throwIfAborted();
-        if (!published) { published = true; recordResourcePublication(); }
+        if (!published) { published = true; if (resource) resource.publishedFiles = (resource.publishedFiles ?? 0) + 1; }
       },
       async cleanup() {
-        if (!closed) { closed = true; release?.(published); }
+        if (!closed) { closed = true; if (reservationPath) downloader!.releaseOutput(reservationPath, published); }
       }};
   }
-  let staging: Awaited<ReturnType<StagingDirectories['acquire']>>;
+  let staging: Awaited<ReturnType<StagingDirectories['acquire']>> | undefined;
+  let stagingDirectory: string | undefined;
+  let stagingPath: string;
   try {
-    staging = await (context?.stagingDirectories ?? new StagingDirectories()).acquire(parent);
-  } catch (error) { release?.(false); throw error; }
-  const stagingPath = staging.path;
+    if (downloader) {
+      staging = await downloader.stagingDirectories.acquire(parent);
+      stagingPath = staging.path;
+    } else {
+      stagingDirectory = await fs.mkdtemp(join(parent, '.wse-stage-'));
+      stagingPath = join(stagingDirectory, 'file');
+    }
+  } catch (error) { if (reservationPath) downloader!.releaseOutput(reservationPath, false); throw error; }
   let publishing: Promise<void> | undefined;
   let cleaning: Promise<void> | undefined;
   let published = false;
@@ -215,7 +221,7 @@ export async function createFilePublication(
         signal?.throwIfAborted();
         await fs.rename(stagingPath, destination);
         published = true;
-        recordResourcePublication();
+        if (resource) resource.publishedFiles = (resource.publishedFiles ?? 0) + 1;
       })();
       return publishing;
     },
@@ -223,8 +229,12 @@ export async function createFilePublication(
       cleaning ??= (async () => {
         // A failed rename must not prevent removal of the staging allocation.
         await publishing?.catch(() => undefined);
-        await staging.cleanup(published);
-        release?.(published);
+        try {
+          if (staging) await staging.cleanup(published);
+          else await fs.rm(stagingDirectory!, {recursive: true, force: true});
+        } finally {
+          if (reservationPath) downloader!.releaseOutput(reservationPath, published);
+        }
       })();
       return cleaning;
     }
@@ -238,11 +248,10 @@ export async function publishFile(
   signal?: AbortSignal,
   localRoot?: string,
   beforePublish?: () => Promise<boolean>,
-  writerRejectsSymlinks = false
+  writerRejectsSymlinks = false, resource?: Resource, store?: PublicationStore
 ): Promise<boolean> {
-  const store = currentCrawlContext()?.publicationStore;
-  const publication = await (store ? store.create(destination, signal, localRoot, writerRejectsSymlinks) :
-    createFilePublication(destination, signal, localRoot, writerRejectsSymlinks));
+  const publication = await (store ? store.create(destination, signal, localRoot, writerRejectsSymlinks, resource) :
+    createFilePublication(destination, signal, localRoot, writerRejectsSymlinks, resource));
   try {
     signal?.throwIfAborted();
     if (publication.direct && beforePublish && !await beforePublish()) return false;

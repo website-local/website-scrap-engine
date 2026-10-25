@@ -26,18 +26,18 @@ const lc = lifeCycle.defaultLifeCycle();
 lc.saveToDisk = [async (res, opt, pipeline) => {
   if (${JSON.stringify(mode)} === 'published-crash') {
     await io.writeFile(path.join(res.localRoot, 'confirmed.bin'), 'confirmed', 'utf8',
-      undefined, undefined, res.localRoot);
+      undefined, undefined, res.localRoot, res, pipeline);
   }
   await publishFile(path.join(res.localRoot, 'asset.bin'), async staging => {
     await fs.writeFile(staging, 'partial');
     await fs.writeFile(${JSON.stringify(marker)}, 'ready');
     if (${JSON.stringify(mode)}.includes('crash')) process.exit(23);
     await new Promise(() => {});
-  }, pipeline.signal, res.localRoot);
+  }, pipeline.signal, res.localRoot, undefined, false, res, pipeline.publicationStore);
 }];
 export default options.defaultDownloadOptions({...lc, localRoot: ${JSON.stringify(output)},
   atomicWrites: true,
-  initialUrl: [], concurrency: 1, workerCount: 1, maxBufferedBytes: 64,
+  initialUrl: [], concurrency: 1, workerCount: 1,
   workerPool: {taskTimeout: ${mode === 'timeout' ? 1500 : 'undefined'}, shutdownTimeout: 50},
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})
 });
@@ -78,8 +78,9 @@ export default options.defaultDownloadOptions({...lc, localRoot: ${JSON.stringif
       }
       if (mode === 'cancel') await crawler.dispose();
       await crawler.onIdle();
-      assert.equal(crawler.bufferedBytes, 0, 'worker failure/cancellation releases byte reservations');
-      assert.ok(crawler.peakBufferedBytes <= 64);
+      assert.deepEqual(Object.values(crawler.outputReservations).map(({active, published}) => ({active, published})),
+        mode === 'published-crash' ? [{active: 0, published: true}] : [],
+        'failed output releases ownership and confirmed output retains its owner');
       assert.equal(await fs.readFile(path.join(output, 'asset.bin'), 'utf8'), 'cached');
       assert.deepEqual((await fs.readdir(output)).filter(name => name.startsWith('.wse-stage-')), []);
       assert.equal(crawler.downloadedCount, 0);

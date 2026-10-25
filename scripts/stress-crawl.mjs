@@ -36,14 +36,14 @@ lc.download.unshift(res => {
 });
 lc.processAfterDownload.unshift(async res => {
   const {id, nested} = res.meta.payload;
-  if (res.uri.toString() !== res.url || nested[0].round !== ${round}) throw new Error('Wire/context corruption');
+  if (res.uri.toString() !== res.url || nested[0].round !== ${round}) throw new Error('Resource metadata corruption');
   if (id % 37 === 0 && !res.meta.retry) throw new Error('intentional stress failure');
   await new Promise(resolve => setImmediate(resolve));
   return {...res, body: Buffer.alloc(80, id % 256)};
 });
 export default options.defaultDownloadOptions({...lc, initialUrl: [],
   localRoot: ${JSON.stringify(output)}, concurrency: 8, workerCount: 2,
-  maxResourceBytes: 128, maxBufferedBytes: 4096, maxQueuedResources: ${count + 20},
+  maxResourceBytes: 128, maxQueuedResources: ${count + 20},
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})
 });
 `);
@@ -65,7 +65,6 @@ export default options.defaultDownloadOptions({...lc, initialUrl: [],
     const failures = Math.ceil(count / 37);
     for (const {crawler, make} of records) {
       assert.equal(crawler.downloadedCount, count - failures);
-      assert.equal(crawler.bufferedBytes, 0);
       for (let id = 0; id < count; id += 37) assert.equal(crawler.addProcessedResource(make(id, true)), true);
     }
     await Promise.all(crawlers.map(crawler => crawler.onIdle()));
@@ -76,7 +75,6 @@ export default options.defaultDownloadOptions({...lc, initialUrl: [],
       for (let id = 0; id < count; id += 37) {
         assert.equal(crawler.outcomes.get('https://example.test/' + id + '.bin').attempt, 2);
       }
-      assert.ok(crawler.peakBufferedBytes > 0 && crawler.peakBufferedBytes <= 4096);
       const files = await fs.readdir(path.join(output, 'example.test'));
       assert.equal(files.length, count);
       assert.ok(files.every(file => file.endsWith('.bin')));
@@ -88,13 +86,11 @@ export default options.defaultDownloadOptions({...lc, initialUrl: [],
     }
     await Promise.all(crawlers.map(crawler => crawler.dispose()));
     for (const {crawler, workers} of records) {
-      assert.equal(crawler.bufferedBytes, 0);
       assert.equal([...crawler.outcomes.values()].filter(outcome => outcome.status === 'cancelled').length, 20);
       assert.ok(workers.every(worker => worker.threadId === -1));
     }
     return {round, milliseconds: performance.now() - started,
-      successfulResources: count * 2, retriedResources: failures * 2, cancelledResources: 40,
-      peakReservedBytes: records.map(({crawler}) => crawler.peakBufferedBytes)};
+      successfulResources: count * 2, retriedResources: failures * 2, cancelledResources: 40};
   } finally {
     await Promise.all(crawlers.map(crawler => crawler.dispose()));
     await fs.rm(path.join(root, String(round)), {recursive: true, force: true});

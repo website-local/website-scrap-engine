@@ -121,6 +121,31 @@ describe('localUrlMounts', () => {
     });
   });
 
+  test('logs and discards an oversized mounted body without falling through to download', async () => {
+    await writeFile('large.bin', 'oversized local body');
+    const fallback = jest.fn<DownloadResourceFunc>().mockImplementation(res => {
+      res.body = 'ok';
+      return res;
+    });
+    const pipeline = makePipeline([
+      localUrlMounts([{root: sourceRoot, urlPrefix: 'https://example.com/'}]),
+      fallback
+    ]);
+    pipeline.options.maxResourceBytes = 4;
+    const warn = jest.spyOn(pipeline.logger, 'warn').mockImplementation(() => {});
+    const res = makeResource('https://example.com/large.bin', ResourceType.Binary);
+
+    await expect(pipeline.download(res)).resolves.toBeUndefined();
+
+    expect(fallback).not.toHaveBeenCalled();
+    expect(res.shouldBeDiscardedFromDownload).toBe(true);
+    expect(res.body).toBeUndefined();
+    expect(res.meta.error).toBeUndefined();
+    expect(res.meta.resourceSize).toBeGreaterThan(4);
+    expect(warn).toHaveBeenCalledWith('system.skip',
+      'Resource exceeds maxResourceBytes', res.url, res.meta.resourceSize, 4);
+  });
+
   test('does not match a sibling prefix segment', async () => {
     await writeFile(path.join('a.js'), 'local');
     const fallback = jest.fn<DownloadResourceFunc>()

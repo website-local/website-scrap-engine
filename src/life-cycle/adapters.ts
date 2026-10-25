@@ -1,5 +1,5 @@
-import {load, assertHtmlParserScope, trackHtmlResource} from '../cheerio.js';
-import {fullSavePathHooks} from './save-path-hook-state.js';
+import type {Logger} from '../logger/types.js';
+import {load} from '../cheerio.js';
 import type {Resource, ResourceEncoding} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {
@@ -37,19 +37,19 @@ export type {
 } from './local-url-mount.js';
 
 export interface SkipProcessFunc {
-  (url: string, element: Cheerio | null, parent: Resource | null): boolean;
+  (url: string, element: Cheerio | null, parent: Resource | null, pipeline: PipelineExecutor): boolean;
 }
 
 export const skipProcess = (fn: SkipProcessFunc): LinkRedirectFunc =>
-  (url, element, parent) => fn(url, element, parent) ? undefined : url;
+  (url, element, parent, _options, pipeline) => fn(url, element, parent, pipeline) ? undefined : url;
 
 export interface DropResourceFunc {
-  (res: Resource): boolean;
+  (res: Resource, pipeline: PipelineExecutor): boolean;
 }
 
 export const dropResource = (fn: DropResourceFunc): ProcessResourceBeforeDownloadFunc =>
-  res => {
-    if (fn(res)) {
+  (res, _element, _parent, _options, pipeline) => {
+    if (fn(res, pipeline)) {
       res.shouldBeDiscardedFromDownload = true;
     }
     return res;
@@ -57,23 +57,23 @@ export const dropResource = (fn: DropResourceFunc): ProcessResourceBeforeDownloa
 
 
 export interface PreProcessResourceFunc {
-  (url: string, element: Cheerio | null, res: Resource, parent: Resource | null): void;
+  (url: string, element: Cheerio | null, res: Resource, parent: Resource | null, pipeline: PipelineExecutor): void;
 }
 
 export const preProcess = (fn: PreProcessResourceFunc): ProcessResourceBeforeDownloadFunc =>
-  (res, element, parent) => {
-    fn(res.url, element, res, parent);
+  (res, element, parent, _options, pipeline) => {
+    fn(res.url, element, res, parent, pipeline);
     return res;
   };
 
 export interface RequestRedirectFunc {
-  (url: string, res: Resource): string | void;
+  (url: string, res: Resource, pipeline: PipelineExecutor): string | void;
 }
 
 export const requestRedirect = (fn: RequestRedirectFunc): ProcessResourceBeforeDownloadFunc =>
-  res => {
+  (res, _element, _parent, _options, pipeline) => {
     if (res.downloadLink) {
-      const downloadLink: string | void = fn(res.downloadLink, res) || undefined;
+      const downloadLink: string | void = fn(res.downloadLink, res, pipeline) || undefined;
       if (!downloadLink) {
         return;
       }
@@ -83,9 +83,9 @@ export const requestRedirect = (fn: RequestRedirectFunc): ProcessResourceBeforeD
   };
 
 export const redirectFilter = (fn: RequestRedirectFunc): ProcessResourceAfterDownloadFunc =>
-  res => {
+  (res, _submit, _options, pipeline) => {
     if (res.redirectedUrl) {
-      res.redirectedUrl = fn(res.redirectedUrl, res) || undefined;
+      res.redirectedUrl = fn(res.redirectedUrl, res, pipeline) || undefined;
     }
     return res;
   };
@@ -112,46 +112,41 @@ export async function processRedirectedUrl(
 }
 
 export interface HtmlProcessFunc {
-  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): CheerioStatic;
+  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }, pipeline: PipelineExecutor): CheerioStatic;
 }
 
 export const parseHtml = (
-  res: DownloadResource & { type: ResourceType.Html | ResourceType.Svg },
+  res: DownloadResource,
   options: StaticDownloadOptions
 ): CheerioStatic => {
-  assertHtmlParserScope(options);
-  trackHtmlResource(res);
   const encoding: ResourceEncoding =
-    res.encoding || options.encoding[res.type] || 'utf8';
-  if (options.cheerioParse) {
-    return load(toString(res.body, encoding), options.cheerioParse);
-  }
-  return load(toString(res.body, encoding));
+    res.encoding || options.encoding[res.type as ResourceType] || 'utf8';
+  return res.meta.doc = load(toString(res.body, encoding), options.cheerioParse, undefined, options);
 };
 
 export const processHtml = (fn: HtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
-  (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions) => {
+  (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions,
+    pipeline: PipelineExecutor) => {
     if (res.type === ResourceType.Html) {
-      if (!res.meta.doc) {
-        res.meta.doc = parseHtml(res, options);
-      }
-      res.meta.doc = fn(res.meta.doc, res);
+      const previous = res.meta.doc ?? parseHtml(res, options);
+      res.meta.doc = fn(previous, res, pipeline);
+      if (previous !== res.meta.doc) (previous as CheerioStatic & {dispose?: () => void}).dispose?.();
     }
     return res;
   };
 
 
 export interface AsyncHtmlProcessFunc {
-  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): AsyncResult<CheerioStatic>;
+  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }, pipeline: PipelineExecutor): AsyncResult<CheerioStatic>;
 }
 
 export const processHtmlAsync = (fn: AsyncHtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
-  async (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions) => {
+  async (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions,
+    pipeline: PipelineExecutor) => {
     if (res.type === ResourceType.Html) {
-      if (!res.meta.doc) {
-        res.meta.doc = parseHtml(res, options);
-      }
-      res.meta.doc = await fn(res.meta.doc, res);
+      const previous = res.meta.doc ?? parseHtml(res, options);
+      res.meta.doc = await fn(previous, res, pipeline);
+      if (previous !== res.meta.doc) (previous as CheerioStatic & {dispose?: () => void}).dispose?.();
     }
     return res;
   };
@@ -176,14 +171,15 @@ export const alwaysOverwrite = (): ExistingResourceFunc =>
  */
 export function wrapLegacyGenerateSavePath(
   legacyFn: (uri: URI, isHtml?: boolean, keepSearch?: boolean,
-    localSrcRoot?: string) => string
+    localSrcRoot?: string, logger?: Logger) => string
 ): GenerateSavePathFunc {
   const hook: GenerateSavePathFunc = (_savePath, ctx) => legacyFn(
     ctx.uri,
     ctx.type === ResourceType.Html,
     !ctx.options.deduplicateStripSearch,
-    ctx.options.localSrcRoot
+    ctx.options.localSrcRoot,
+    ctx.pipeline.logger
   );
-  fullSavePathHooks.add(hook);
+  hook.fullSavePath = true;
   return hook;
 }

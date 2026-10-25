@@ -1,7 +1,6 @@
 import {createReadStream, createWriteStream, promises as fs} from 'node:fs';
 import {pipeline as pipe} from 'node:stream/promises';
 import {checkResourceSize, limitResourceStream} from '../resource-limits.js';
-import {currentCrawlContext, markResourceDownloaded} from '../crawl-context.js';
 import {safeJoin} from '../io.js';
 import {publishFile} from '../output-store.js';
 import type {Resource} from '../resource.js';
@@ -14,15 +13,15 @@ export async function copyResourceToDisk(
 ): Promise<boolean> {
   const root = res.localRoot ?? options.localRoot;
   const destination = safeJoin(root, decodeURI(res.savePath));
-  const signal = pipeline?.signal ?? currentCrawlContext()?.signal;
+  const signal = pipeline?.signal;
   if (options.maxResourceBytes !== undefined) {
-    checkResourceSize((await fs.stat(source)).size, options.maxResourceBytes);
+    if (!checkResourceSize((await fs.stat(source)).size, options.maxResourceBytes, res, pipeline?.logger)) return false;
   }
   return publishFile(destination, async staging => {
     if (options.maxResourceBytes === undefined) await fs.copyFile(source, staging);
-    else await pipe(createReadStream(source), limitResourceStream(options.maxResourceBytes),
+    else await pipe(createReadStream(source), limitResourceStream(options.maxResourceBytes, 0, res, pipeline?.logger),
       createWriteStream(staging), {signal});
-    markResourceDownloaded();
+    res.downloaded = true;
   }, signal, root,
-  pipeline ? () => pipeline.shouldSaveResource(res) : undefined);
+  pipeline ? () => pipeline.shouldSaveResource(res) : undefined, false, res, pipeline?.publicationStore);
 }

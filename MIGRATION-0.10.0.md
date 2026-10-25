@@ -1,8 +1,8 @@
 # Upgrading from 0.9.1 to 0.10.0
 
-Version 0.10.0 requires Node.js 22.13.0 or newer and changes the save-path and
-custom-worker APIs. The Node 24 publishing environment is separate from this
-runtime minimum.
+Version 0.10.0 requires Node.js 22.13.0 or newer and changes save-path hooks,
+logging, document ownership, discovery submission, and custom-worker APIs.
+The Node 24 publishing environment is separate from this runtime minimum.
 
 Pipeline `linkRedirect`, `detectResourceType`, and `processBeforeDownload` now
 return synchronous values when their hooks are synchronous, as permitted by
@@ -77,21 +77,61 @@ calls, calculate a path yourself and pass `savePath`.
 check it before accessing the resource. This applies to custom pipeline code
 that previously assumed creation always succeeded.
 
+## Lifecycle dependencies and document ownership
+
+Replace global logger access (`logger.setLogger` and category exports) with
+`pipeline.logger`. Use the executor passed to lifecycle hooks, or `ctx.pipeline`
+in save-path hooks, instead of retaining a pipeline or downloader on `Resource`.
+Logger methods take the category first, for example
+`pipeline.logger.info('custom.page', res.url)`. Custom `PipelineExecutor`
+implementations must provide `logger`.
+
+Configure the logger with `DownloadOptions.createLogger` in the options module.
+If the returned logger declares `workerSafe: true`, each worker calls the same
+factory locally and emits its own logs. Without this opt-in, worker logs are
+relayed to the parent logger. See the [logging example](README.md#logging).
+
+Parser selection is explicit:
+`loadHtml(content, parseOptions, isDocument, parserOptions)`. Pass the lifecycle
+options as the fourth argument to use its configured backend; omitting that
+argument selects Cheerio. `withHtmlParser` and parser scopes are removed.
+The parser and document are created only when a markup lifecycle needs them.
+
+`res.meta.doc` owns the resource's document. Built-in saving, discard, failure
+and cancellation paths dispose and clear it; `disposeHtmlResource(res)` does
+the same for direct pipeline callers and waits for pending status work. Await
+it in `finally` when managing a resource outside a downloader. Additional
+documents, including those created by `$.load()`, have independent lifetimes
+and must be disposed by their creator. Do not use documents, selections or
+nodes after disposal. See the [ownership examples](docs/grovedom.md#hooks-and-standalone-transformations).
+
+Custom hooks that replace `res.meta.doc` directly must dispose the previous
+document first. The built-in `processHtml` and `processHtmlAsync` adapters handle
+that replacement for their callbacks. Serialize generated child documents and
+dispose them before submission; child resources carry bodies and URL strings,
+not parent/child object references. Parsed documents never cross worker channels.
+
+Pass the current resource and executor to I/O helpers that need crawl ownership.
+For example, `io.writeFile(path, data, encoding, mtime, atime, localRoot, res,
+pipeline)` uses the executor's cancellation, logging and publication store.
+Omitting those arguments requests standalone publication behavior.
+
 ## Custom workers
 
-Tasks and results use `workerData.workerChannels.taskPort`; logs use
-`workerData.workerChannels.logPort`. `parentPort` carries control messages.
+Tasks and results use `workerData.workerChannels.taskPort`; relayed logs use
+`workerData.workerChannels.logPort`. Loggers that declare `workerSafe: true`
+are created from the options module's `createLogger` factory in each built-in
+worker and write locally. `parentPort` carries control messages.
 Worker envelopes no longer carry or check a protocol version: workers and the
 parent must use the same installed runtime. Task IDs, task ownership, message
 shapes and duplicate completions are still checked. The old version constant and
 optional type fields remain deprecated compatibility exports.
 
-Built-in workers discard repeated eligible bodyless discoveries from the same
-task before serializing them. All discoveries still count toward configured
-limits. Unused duplicate metadata no longer has to be cloneable; resources that
-actually cross the boundary retain validation. Byte-accounted and depth-ineligible
-discoveries retain their original submission behavior. A caught serialization
-failure does not prevent a corrected resource from being submitted at the same URL.
+All submissions count toward the parent's discovery limit before filtering.
+URL deduplication belongs to the downloader. Worker children that cross the
+boundary must have cloneable metadata, including repeated URLs. Each worker
+retains its result batch only until sending it; `Resource` does not retain a
+child array or references to child resources.
 
 The multi-thread downloader creates its pool on the first task that needs worker
 processing and retains that pool until disposal. Streaming-only crawls create no
@@ -188,38 +228,53 @@ Optional scheduling limits are positive integers:
 - `maxQueuedResources` caps waiting resources, excluding active tasks. This also
   applies while the downloader is paused, including initial URL admission.
 - `maxDiscoveredResources` caps child submissions per parent task, including
-  duplicates and queue-rejected submissions. Exceeding it throws
-  `ERR_DISCOVERY_LIMIT` from `submit`, with numeric `limit` and `actual` fields.
-  Earlier children remain eligible if the parent subsequently fails. Built-in
-  workers check this before collecting/cloning further children, and the parent
-  checks custom-worker batch length before decoding it. Omitted means unlimited.
+  duplicates and rejected submissions. The parent's `discoveredCount` increments
+  before filtering. Excess children are marked discarded and logged; processing
+  the parent continues. Earlier children remain eligible if the parent later
+  fails. Built-in workers check the limit before collecting/cloning children;
+  the parent rejects oversized custom-worker result batches as invalid worker
+  output. Omitted means unlimited.
 - `maxConcurrency` caps initial concurrency, assignments through
   `downloader.concurrency`, and automatic adjustment. An explicit `minConcurrency`
   above this ceiling is rejected.
 - `maxResourceBytes` limits downloaded resource bytes, including decompressed
   HTTP data, local reads/copies, and bodies supplied at admission or hook boundaries.
   String bodies are measured using their resource encoding. Exact-limit bodies
-  are accepted; oversized resources fail with `ERR_RESOURCE_SIZE_LIMIT`.
-- `maxBufferedBytes` caps aggregate body reservations within a downloader. It
-  includes supplied queued bodies, buffered HTTP/local reads, active task-body
-  high-water marks, generated output passed to `io.writeFile`, and child bodies
-  awaiting worker-result delivery/admission. Omitted means unlimited. A resource
-  admission that cannot reserve its supplied body returns `false`; growth during
-  processing fails that attempt with `ERR_BUFFER_BUDGET` and numeric `limit` and
-  `actual` fields. It never waits for queue capacity held by the parent task.
+  are accepted; oversized resources are logged and discarded. Transport and
+  stream handlers may use `ERR_RESOURCE_SIZE_LIMIT` internally to interrupt I/O
+  and finish cleanup; the built-in pipeline treats this as a size discard.
 
 Total and queue limits are unlimited when omitted. Admission rejects immediately
-with `false` and an error status whose `res.meta.error.code` is `ERR_CRAWL_LIMIT`
-and whose `limit` identifies the exceeded option. Queue-limit rejections can be
-resubmitted after capacity becomes available. Use downloader admission APIs rather
-than adding tasks directly to its exposed queue to retain these guarantees.
+with `false`, marks the resource discarded, and logs the filtering decision.
+Routine limit filtering does not set `res.meta.error`. Queue-limit rejections
+can be resubmitted after capacity becomes available. Use downloader admission
+APIs rather than adding tasks directly to its exposed queue to retain these
+guarantees.
 
-Retaining a processing hook's `submit` callback beyond its parent task is no
-longer supported: submissions after completion or cancellation throw. Await
-asynchronous discovery inside the hook. Child work is independent of the parent's
-eventual save/processing outcome; no rollback of earlier children is attempted.
-Worker crashes can still lose a batch not yet delivered to the parent. The
-discovery count does not bound metadata size or allocations made by custom hooks.
+Processing hooks receive a shared `submit(resources, parent, pipeline)` handler.
+Pass the current parent and the hook's executor for single resources and arrays:
+
+```ts
+import {lifeCycle, resource} from 'website-scrap-engine';
+
+const lc = lifeCycle.defaultLifeCycle();
+lc.processAfterDownload.push(async (res, submit, _options, pipeline) => {
+  const child = await pipeline.createAndProcessResource(
+    '/extra.html', resource.ResourceType.Html, undefined, null, res
+  );
+  if (child) submit(child, res, pipeline);
+  return res;
+});
+```
+
+The parent count is the only per-parent discovery tracking; there is no separate
+duplicate set, closed flag or child list. The handler is shared across concurrent
+resources, so passing the correct parent is required. Await asynchronous discovery
+inside the hook; submissions after parent completion or cancellation throw.
+The `submit` argument to lifecycle `init` remains a separate URL submission API.
+Child work is independent of the parent's eventual outcome; earlier submissions
+are not rolled back. Worker crashes can lose a batch not yet delivered to the
+parent. Discovery counts do not bound metadata or custom-hook allocations.
 
 The built-in opt-in concurrency adjustment now compares completion rates using
 elapsed time. A stalled saturated queue halves its concurrency; a rate drop over
@@ -230,39 +285,26 @@ explicit higher minimum). An empty or unsaturated queue does not trigger growth,
 and start/resume resets sampling so paused time does not look like a slowdown.
 This is a conservative heuristic, not a latency/throughput optimizer. Use fixed
 concurrency or a custom `adjustConcurrencyFunc` for workload-specific control.
-Custom-policy metadata is preserved. `adjustConcurrencyPeriod`, when supplied,
+All adjustment history is visible on `downloader.meta: DownloaderStats`:
+`firstPeriodCount`, `lastPeriodTotalCount`, `currentPeriodCount`,
+`lastPeriodCount`, `lastPeriodTime`, and `lastPeriodRate`. The built-in policy
+updates this retained object in place, so custom policies can read and override
+the same fields. `lastPeriodTime` uses `performance.now()` milliseconds and
+`lastPeriodRate` is completions per millisecond.
+`adjustConcurrencyPeriod`, when supplied,
 must be an integer from 1 to 2,147,483,647 ms; omit it to leave the built-in policy
 disabled. A supplied custom callback still uses a 60-second default period.
 
-The per-resource byte limit is optional. It is not a process-memory limit: parser
-objects, temporary copies, and generated HTML serialization can consume additional
-memory. Worker errors now preserve standard error name/message/stack and primitive
-`code`, `limit`, and `actual` fields in a plain transport record.
-
-`downloader.bufferedBytes` and `peakBufferedBytes` expose current and peak reserved
-bytes (zero when accounting is disabled). Each active task retains its largest
-observed body reservation until it settles; replacing a body with a smaller one
-does not immediately free capacity. Child credits transfer into accepted child
-tasks without double charging; duplicate/rejected children release their unused
-credits when the parent settles. Failures, retries, cancellation and worker exit
-release the appropriate reservations. Even a worker that never sends its first
-accounting request must exit before the parent releases its transferred body.
-
-Workers obtain byte credits through the parent publication channel. Supplied
-child bodies may be retained while their credit requests are pending, but are
-returned to the parent only after acknowledgement. Failed child credit requests
-fail the parent attempt while already acknowledged children remain eligible;
-worker-side byte-budget failures may therefore surface after a synchronous
-`submit` call returns. Custom workers that allocate/transform bodies must implement
-equivalent accounting to obtain the built-in worker guarantees.
-
-This is a logical body-reservation budget, not an exact live-memory ceiling.
-Streaming resources do not reserve their entire file size. Stream buffers, DOMs,
-metadata, codec/transport copies, simultaneous body representations, and temporary
-allocations inside custom hooks are outside it. A custom hook's new body is checked
-at the next pipeline boundary, after the hook has allocated it. Use it together
-with `maxResourceBytes`, discovery/queue limits and bounded concurrency, and allow
-additional memory headroom. Separate downloaders have independent budgets.
+Remove `maxBufferedBytes`, `downloader.bufferedBytes`, and `peakBufferedBytes`.
+Aggregate body reservations and worker byte credits have been removed. Body byte
+counts do not represent resource heap use after parsing or Wasm allocation.
+`maxResourceBytes` remains an input-byte limit. It does not cap process memory:
+parser objects, metadata, temporary copies and generated serialization consume
+additional memory. Combine it with bounded concurrency and admission/discovery
+limits. A hook's replacement body is checked at the next pipeline boundary,
+after the hook has allocated it. Worker failures preserve standard error
+name/message/stack and primitive `code`, `limit`, and `actual` fields in a plain
+transport record.
 
 Downloader output uses **direct writes by default**, including HTTP streams,
 local copies and worker saves. A failed or cancelled write may leave partial
@@ -294,6 +336,12 @@ disambiguate names or rewrite links automatically. Separate crawler instances
 and direct filesystem writes require their own coordination. Root symlink aliases
 share reservations, and Windows reservation keys are case-insensitive.
 
+Ownership records now live directly on `AbstractDownloader.outputReservations`,
+beside URL deduplication. Each resolved destination has visible `owner`, `active`,
+and `published` fields. The separate `PublicationReservations` abstraction and
+per-allocation release callbacks are removed. Built-in publication code updates
+the downloader's retained records directly.
+
 Custom `PipelineExecutor` implementations must provide
 `shouldSaveResource(res): Promise<boolean>`, which rechecks the existing-resource
 save policy. Built-in local copy handlers use it before publication; the default
@@ -306,7 +354,7 @@ output directory tree during a crawl. Set `strictOutputChecks: true` to resolve
 roots and check parent directories on every write. Atomic publication always
 rechecks the parent immediately before rename. Direct writes reject an existing
 destination-file symlink; atomic mode replaces that symlink without following it.
-Standalone publication helpers outside a downloader context retain atomic behavior.
+Standalone publication helpers without a downloader store retain atomic behavior.
 Portable path checks do not defend against hostile concurrent directory replacement.
 
 - Remove `waitForInitBeforeIdle` from options. It was deprecated and unused.
@@ -324,8 +372,8 @@ Automatic resource normalization happens when decoding worker-boundary data,
 not between lifecycle hooks or at queue admission. Hooks and custom factories
 must return a valid `Resource` and keep its URL/URI fields consistent. If a hook
 changes canonical strings or returns a structured clone, explicitly call
-`normalizeResource` before handing it to another hook or submitting it. Body-size
-and configured buffered-memory limits are still checked independently.
+`normalizeResource` before handing it to another hook or submitting it. Configured
+input-byte limits are checked independently.
 
 Got is upgraded from 13 to 16. HTTP/2 agents, DNS caching, and cross-origin
 credential handling follow Got 16's contracts. Option merging uses public plain
@@ -333,7 +381,7 @@ snapshots instead of `_internals`; a request URL remains a separate argument.
 Truncated responses retain strict content-length checks and use the configured
 retry limit. Explicit `retry.errorCodes` continues to override library defaults.
 
-`Resource.uri`, `refUri`, and `replaceUri` are required URI.js instances, and
+`Resource.uri`, `refUri`, and `replaceUri` are required engine `URI` instances, and
 `host` is a required string (possibly empty for a local URL). Use `createResource`
 or `normalizeResource` rather than constructing a partially initialized Resource.
 Queue submissions now require `Resource`, not `RawResource`. Worker snapshots
@@ -397,8 +445,12 @@ user promises cannot be forcibly interrupted; disposal waits for them. Built-in
 requests receive the crawl signal, and the pipeline checks cancellation before
 continuing into later stages. Failed initialization is safe to dispose.
 
-Logging and cancellation are scoped to each crawl's asynchronous context, so
-creating a second downloader no longer replaces the first downloader's logger.
+Logging and cancellation are passed explicitly through the lifecycle executor.
+Each downloader owns its logger and signal; a second downloader does not replace
+the first one's dependencies. No asynchronous ambient context is used.
+
+Lifecycle disposal hooks run sequentially in registration order. A rejected or
+throwing hook stops the remaining disposal passes; callers receive the failure.
 
 ## Resource outcomes and download counts
 

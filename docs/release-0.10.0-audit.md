@@ -1,5 +1,10 @@
 # 0.10.0 release audit
 
+This is the preserved **2026-10-04** audit. Its validation, byte-budget behavior
+and remaining-work statements apply to the revisions named below. For the
+current resource ownership, logging and limits APIs, use the
+[migration guide](../MIGRATION-0.10.0.md).
+
 **Implementation and functional validation are complete for `f057597`.** On
 2026-10-04 the user accepted the current performance results for now and requested
 no further runs. Statistical non-regression remains unproven; the uncertainty is

@@ -1,102 +1,125 @@
 import {WorkerPublicationClient} from './worker-publication.js';
-import {createDiscoverySubmit} from './discovery.js';
-import {withResourceHtmlParser} from '../cheerio.js';
-import {resourceBodyBytes} from '../resource-limits.js';
+import {disposeHtmlResource} from '../cheerio.js';
+import {checkResourceBody} from '../resource-limits.js';
 import {parentPort, workerData} from 'node:worker_threads';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import {mergeOverrideOptions} from '../options.js';
-import type {DownloadResource} from '../life-cycle/types.js';
-import type {WireResource} from '../resource.js';
+import type {DownloadResource, SubmitResourceFunc} from '../life-cycle/types.js';
+import type {Resource, WireResource} from '../resource.js';
 import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
 import {WorkerControlMessageType, WorkerMessageType} from './types.js';
-import {PipelineExecutorImpl} from './pipeline-executor-impl.js';
+import {completedStatusChange, PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {WorkerTaskMessage} from './worker-type.js';
 import {getWorkerChannels} from './worker-channel.js';
-import {withCrawlContext, createResourceProgress, currentCrawlContext} from '../crawl-context.js';
-import {setLogger} from '../logger/logger.js';
+import {createDefaultLogger} from '../logger/default-logger.js';
 import {createWorkerLogger} from '../logger/logger-worker.js';
 
-const {pathToOptions, overrideOptions}: {
+const {pathToOptions, overrideOptions, workerSafeLogger}: {
   pathToOptions: string,
+  workerSafeLogger?: boolean,
   overrideOptions?: Partial<StaticDownloadOptions>
 } = workerData;
 const {taskPort, logPort, publicationPort} = getWorkerChannels();
 const publications = publicationPort ? new WorkerPublicationClient(publicationPort) : undefined;
 const controller = new AbortController();
-const logger = createWorkerLogger();
-setLogger(logger);
-const context = {signal: controller.signal, logger};
 const active = new Set<Promise<void>>();
+const results: Record<number, DownloadWorkerMessage> = {};
+const emptyChildren: WireResource[] = [];
 let closing = false;
 
 const asyncOptions: Promise<DownloadOptions> = importDefaultFromPath(pathToOptions);
 
-const asyncPipeline = asyncOptions.then(options => withCrawlContext(context, () => {
+const asyncPipeline = asyncOptions.then(async options => {
   options = mergeOverrideOptions(options, overrideOptions);
 
+  const logger = workerSafeLogger ? (options.createLogger ?? createDefaultLogger)(options) : createWorkerLogger(logPort);
   const pipeline =
-    new PipelineExecutorImpl(options, options.req, options, controller.signal);
+    new PipelineExecutorImpl(options, options.req, options, controller.signal, logger, publications);
 
-  const init = pipeline.init(pipeline);
-  if (init && (init as Promise<void>).then) {
-    return init.then(() => pipeline);
-  }
+  await pipeline.init(pipeline);
   return pipeline;
-}));
+});
+
+// Retained once per worker. The explicit parent owns all task-specific data.
+function submitToWorker(
+  results: Record<number, DownloadWorkerMessage>,
+  resources: Parameters<SubmitResourceFunc>[0],
+  parent: Resource,
+  pipeline: Parameters<SubmitResourceFunc>[2]
+): void {
+  if (Array.isArray(resources)) {
+    for (const resource of resources) submitToWorker(results, resource, parent, pipeline);
+    return;
+  }
+  pipeline.signal?.throwIfAborted();
+  const count = parent.discoveredCount;
+  if (count === undefined) throw new Error('Resource discovery is closed for this parent');
+  parent.discoveredCount = count + 1;
+  const limit = pipeline.options.maxDiscoveredResources;
+  let notified: Promise<void> | void | undefined;
+  try {
+    if (limit !== undefined && count >= limit) {
+      resources.shouldBeDiscardedFromDownload = true;
+      pipeline.logger.warn('system.skip', 'Resource exceeds maxDiscoveredResources', resources.url, count + 1, limit);
+    } else if (checkResourceBody(resources, pipeline.options.maxResourceBytes, pipeline.logger)) {
+      const wire = prepareResourceForClone(resources);
+      const result = results[parent.workerTaskId!];
+      const collected = result.body === emptyChildren ? result.body = [] : result.body;
+      collected.push(wire);
+      return;
+    }
+    notified = pipeline.notifyStatusChange(resources, 'dispose');
+  } finally {
+    // The wire owns serialized data; its source document stays in this worker.
+    const disposing = notified && notified !== completedStatusChange ?
+      notified.finally(() => disposeHtmlResource(resources)) : disposeHtmlResource(resources);
+    if (disposing) {
+      active.add(disposing);
+      void disposing.then(() => active.delete(disposing), () => {
+        active.delete(disposing);
+        parentPort?.postMessage({type: WorkerControlMessageType.Failed, error: 'Submitted resource cleanup failed'});
+      });
+    }
+  }
+}
+
+const submit: SubmitResourceFunc = submitToWorker.bind(undefined, results);
 
 async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> {
-  if (!msg ||
-    !Number.isSafeInteger(msg.taskId) || msg.taskId <= 0) {
+  if (!msg || !Number.isSafeInteger(msg.taskId) || msg.taskId <= 0) {
     parentPort?.postMessage({type: WorkerControlMessageType.Failed, error: 'Invalid worker task envelope'});
     return;
   }
-  const collectedResource: WireResource[] = [];
-  const discoveredUrls = new Set<string>();
-  let error: Error | unknown | void;
+  let error: unknown;
   let redirectedUrl: string | undefined;
-  let discovery: ReturnType<typeof createDiscoverySubmit> | undefined;
+  let resource: DownloadResource | undefined;
+  let owned: Resource | undefined;
+  const message: DownloadWorkerMessage = {
+    taskId: msg.taskId, type: WorkerMessageType.Complete, body: emptyChildren,
+    progress: {publishedFiles: 0, skipped: false}
+  };
+  results[msg.taskId] = message;
   try {
     const pipeline = await asyncPipeline;
-    await withResourceHtmlParser(pipeline.options, async () => {
-      if (pipeline.options.maxBufferedBytes !== undefined) {
-        if (!publications) throw new Error('Buffered-byte accounting requires the parent publication channel');
-        currentCrawlContext()!.bufferAccount = publications.bufferForTask(msg.taskId);
-      }
-      controller.signal.throwIfAborted();
-      const res = msg.body;
-      const downloadResource: DownloadResource = decodeResourceFromClone(res) as DownloadResource;
-      discovery = createDiscoverySubmit(resource => {
-        // The parent admits only the first eligible resource for a URL. Avoid
-        // cloning/validating transport data for links that will never cross the
-        // boundary. Discovery/size limits still run before this filter. Retain
-        // the original stream when byte credits or depth affect admission.
-        const coalesce = pipeline.options.maxBufferedBytes === undefined && resource.body === undefined &&
-          resource.depth <= pipeline.options.maxDepth;
-        if (coalesce && discoveredUrls.has(resource.url)) return;
-        const wire = prepareResourceForClone(resource);
-        // A caught serialization failure must allow a corrected resubmission.
-        if (coalesce) discoveredUrls.add(wire.url);
-        const reserved = currentCrawlContext()?.bufferAccount?.reserveChild(resourceBodyBytes(wire.body, wire.encoding));
-        if (reserved) return reserved.then(() => { collectedResource.push(wire); });
-        collectedResource.push(wire);
-      }, controller.signal, pipeline.options.maxDiscoveredResources, pipeline.options.maxResourceBytes);
-      const processedResource: DownloadResource | void =
-        await pipeline.processAfterDownload(downloadResource, discovery.submit);
-      const flushing = discovery.flush();
-      if (flushing) await flushing;
-      if (!processedResource) {
-        await pipeline.notifyStatusChange(downloadResource, 'processAfterDownload');
-      } else if (await pipeline.saveToDisk(processedResource)) {
-        await pipeline.notifyStatusChange(downloadResource, 'saveToDisk');
-      }
-
-      if (processedResource && processedResource.redirectedUrl &&
-        processedResource.redirectedUrl !== processedResource.url) {
-        redirectedUrl = processedResource.redirectedUrl;
-      }
-    });
+    controller.signal.throwIfAborted();
+    resource = decodeResourceFromClone(msg.body) as DownloadResource;
+    owned = resource;
+    resource.workerTaskId = msg.taskId;
+    resource.discoveredCount = 0;
+    resource.publishedFiles = 0;
+    resource.shouldBeDiscardedFromDownload = false;
+    const processed = await pipeline.processAfterDownload(resource, submit);
+    if (processed) owned = processed;
+    if (!processed) {
+      await pipeline.notifyStatusChange(resource, 'processAfterDownload');
+    } else if (await pipeline.saveToDisk(processed)) {
+      await pipeline.notifyStatusChange(processed, 'saveToDisk');
+    }
+    if (processed?.redirectedUrl && processed.redirectedUrl !== processed.url) {
+      redirectedUrl = processed.redirectedUrl;
+    }
   } catch (e) {
     // handle if object could not be cloned here
     // https://github.com/website-local/website-scrap-engine/issues/340
@@ -125,38 +148,29 @@ async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> 
         error = String(e);
       }
     }
-  } finally {
-    discovery?.close();
-    try {
-      const flushing = discovery?.flush();
-      if (flushing) await flushing;
-    } catch (failure) {
-      if (!error) {
-        const details = failure as Error & {code?: string; limit?: number; actual?: number};
-        error = {name: details?.name, message: details?.message ?? String(failure),
-          code: details?.code, limit: details?.limit, actual: details?.actual};
-      }
-    }
-    const message: DownloadWorkerMessage = {
-      taskId: msg.taskId,
-      type: WorkerMessageType.Complete,
-      body: collectedResource,
-      error,
-      redirectedUrl,
-      progress: {
-        publishedFiles: currentCrawlContext()?.resourceProgress?.publishedFiles ?? 0,
-        skipped: currentCrawlContext()?.resourceProgress?.skipped ?? false
-      }
-    };
-    if (!closing) taskPort.postMessage(message);
-  }
 
+  } finally {
+    if (owned) owned.discoveredCount = undefined;
+    if (resource) {
+      resource.discoveredCount = undefined;
+    }
+    if (owned) {
+      const disposing = disposeHtmlResource(owned);
+      if (disposing) await disposing;
+    }
+    message.error = error;
+    message.redirectedUrl = redirectedUrl;
+    message.progress!.publishedFiles = owned?.publishedFiles ?? 0;
+    message.progress!.skipped = owned?.shouldBeDiscardedFromDownload ?? false;
+    delete results[msg.taskId];
+    if (!closing) taskPort.postMessage(message);
+    if (message.body !== emptyChildren) message.body.length = 0;
+  }
 }
 
 taskPort.addListener('message', (msg: WorkerTaskMessage<WireResource>) => {
   if (closing) return;
-  const task = withCrawlContext({...context, resourceProgress: createResourceProgress(),
-    publicationStore: publications?.forTask(msg.taskId)}, () => processTask(msg));
+  const task = processTask(msg);
   active.add(task);
   void task.then(() => active.delete(task), () => {
     active.delete(task);

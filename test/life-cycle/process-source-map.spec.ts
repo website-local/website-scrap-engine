@@ -71,6 +71,19 @@ const process = async (res: DownloadResource) => {
 };
 
 describe('process-source-map', function () {
+  test.each(sourceMapPrefix)('buffer rewrites preserve multibyte paths after %s', async prefix => {
+    const res = fakeRes('https://example.com/script.js');
+    const suffix = prefix[1] === '*' ? '*/\nnext();' : '\nnext();';
+    res.body = Buffer.from('before();\n' + prefix + 'old.map' + suffix);
+    const replacement = {...fakeRes('https://example.com/old.map'), replacePath: '地图.map'};
+    const localPipeline = {...pipeline, createAndProcessResource: async () => replacement};
+    const submitted: Resource[] = [];
+    await processSourceMap(res, value => { submitted.push(...Array.isArray(value) ? value : [value]); },
+      fakeOpt, localPipeline);
+    expect(res.body.toString()).toBe('before();\n' + prefix + '地图.map' + suffix);
+    expect(submitted).toEqual([replacement]);
+  });
+
   test('header', async () => {
     const res = fakeRes('https://example.com/aaa/noop.js');
     res.meta.headers = {

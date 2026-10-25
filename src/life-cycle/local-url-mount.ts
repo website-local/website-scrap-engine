@@ -774,7 +774,7 @@ async function applyLocalFile(
     await copyResourceToDisk(localFile.localPath, res, options, pipeline);
   } else {
     res.body = await readResourceFile(localFile.localPath, res.encoding, options.maxResourceBytes,
-      pipeline.signal);
+      pipeline.signal, res, pipeline.logger);
   }
   res.finishTimestamp = Date.now();
   res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp!;

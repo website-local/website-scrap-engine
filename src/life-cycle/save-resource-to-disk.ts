@@ -1,3 +1,4 @@
+import {disposeHtmlResource} from '../cheerio.js';
 import type {DownloadResource} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import {safeJoin, writeFile} from '../io.js';
@@ -7,43 +8,45 @@ export async function saveResourceToDisk(
   res: DownloadResource,
   options: StaticDownloadOptions,
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
-  const localRoot: string = res.localRoot ?? options.localRoot;
-  // https://github.com/website-local/website-scrap-engine/issues/174
-  let mtime: number | void = void 0;
-  if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
-    mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
-  }
-  if (res.redirectedUrl && res.redirectedUrl !== res.url) {
-    if (res.redirectedSavePath) {
-      if (res.redirectedSavePath !== res.savePath) {
-        const redirectedSavePath = decodeURI(res.redirectedSavePath);
-        await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
-          res.encoding, mtime, undefined, localRoot);
-      }
-      const savePath = decodeURI(res.savePath);
-      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot);
-      return;
+  try {
+    const localRoot: string = res.localRoot ?? options.localRoot;
+    // https://github.com/website-local/website-scrap-engine/issues/174
+    let mtime: number | void = void 0;
+    if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
+      mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
     }
-    const redirectResource = await pipeline.createResource(res.type,
-      res.depth, res.url, res.redirectedUrl, localRoot,
-      res.encoding, undefined, res.type);
-    // maybe we can try module:fs/promises.symlink first
-    if (redirectResource?.replacePath) {
-      const savePath = decodeURI(res.savePath);
-      await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot);
-      const redirectedResource = await pipeline.createResource(res.type,
-        res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
-        res.encoding, undefined, res.type);
-      if (!redirectedResource) {
+    if (res.redirectedUrl && res.redirectedUrl !== res.url) {
+      if (res.redirectedSavePath) {
+        if (res.redirectedSavePath !== res.savePath) {
+          const redirectedSavePath = decodeURI(res.redirectedSavePath);
+          await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
+            res.encoding, mtime, undefined, localRoot, res, pipeline);
+        }
+        const savePath = decodeURI(res.savePath);
+        await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot, res, pipeline);
         return;
       }
-      const redirectedSavePath = decodeURI(redirectedResource.savePath);
-      await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
-        res.encoding, mtime, undefined, localRoot);
-      return;
+      const redirectResource = await pipeline.createResource(res.type,
+        res.depth, res.url, res.redirectedUrl, localRoot,
+        res.encoding, undefined, res.type);
+      // maybe we can try module:fs/promises.symlink first
+      if (redirectResource?.replacePath) {
+        const savePath = decodeURI(res.savePath);
+        await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+        const redirectedResource = await pipeline.createResource(res.type,
+          res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
+          res.encoding, undefined, res.type);
+        if (!redirectedResource) {
+          return;
+        }
+        const redirectedSavePath = decodeURI(redirectedResource.savePath);
+        await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
+          res.encoding, mtime, undefined, localRoot, res, pipeline);
+        return;
+      }
     }
-  }
-  const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-  await writeFile(filePath, res.body, res.encoding, mtime, undefined, localRoot);
-  return;
+    const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
+    await writeFile(filePath, res.body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+    return;
+  } finally { await disposeHtmlResource(res); }
 }

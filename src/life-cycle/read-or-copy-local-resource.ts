@@ -5,7 +5,6 @@ import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {DownloadResource, RequestOptions} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
-import {error as errorLogger} from '../logger/logger.js';
 import {copyResourceToDisk} from './copy-resource-to-disk.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {readResourceFile} from '../resource-limits.js';
@@ -60,7 +59,7 @@ export async function readOrCopyLocalResource(
         'content-length': stats.size.toString()
       };
     } catch (e) {
-      errorLogger.warn('stat ' + fileSrcPath, e);
+      pipeline?.logger.warn('system.error', 'stat ' + fileSrcPath, e);
     }
   };
   if (res.type === ResourceType.StreamingBinary) {
@@ -71,7 +70,7 @@ export async function readOrCopyLocalResource(
     // headers are complete before hooks run, without serial filesystem latency.
     const metadata = readStats();
     try {
-      res.body = await readResourceFile(fileSrcPath, res.encoding, options.maxResourceBytes, pipeline?.signal);
+      res.body = await readResourceFile(fileSrcPath, res.encoding, options.maxResourceBytes, pipeline?.signal, res, pipeline?.logger);
     } finally {
       await metadata;
     }

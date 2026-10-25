@@ -25,5 +25,6 @@ exports.load = function load(...args) {
     record.disposals++;
     if (fail) throw new Error('Injected disposal failure');
   };
+  document.load = exports.load;
   return document;
 };

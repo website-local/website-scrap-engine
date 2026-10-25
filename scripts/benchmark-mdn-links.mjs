@@ -17,15 +17,15 @@ const doc = load(html);
 const elements = doc('a[href],img[src]');
 assert.ok(elements.length > 0, 'fixture must contain links');
 const variants = [];
+const logger = {trace() {}, debug() {}, info() {}, warn() {}, error() {},
+  isTraceEnabled() { return false; }};
 for (let index = 0; index < entries.length; index += 2) {
   const api = await import(pathToFileURL(path.resolve(entries[index])).href);
   const {default: base} = await import(pathToFileURL(path.resolve(entries[index + 1])).href);
   const options = {...base, meta: {...base.meta, locale: 'en-US'},
     localRoot: path.resolve('mdn-benchmark-output')};
-  api.logger.setLogger({trace() {}, debug() {}, info() {}, warn() {}, error() {},
-    isTraceEnabled() { return false; }});
   variants.push({name: index / 2, api, options,
-    pipeline: new api.downloader.PipelineExecutorImpl(options, options.req, options)});
+    pipeline: new api.downloader.PipelineExecutorImpl(options, options.req, options, undefined, logger)});
 }
 const results = [];
 let expected;

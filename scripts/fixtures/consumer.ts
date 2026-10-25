@@ -1,4 +1,4 @@
-import {resource, downloader, options, lifeCycle, URI, NativeUri, loadHtml, withHtmlParser}
+import {resource, downloader, options, lifeCycle, URI, NativeUri, loadHtml, disposeHtmlResource}
   from 'website-scrap-engine';
 import type {HtmlParserOptions} from 'website-scrap-engine';
 import type {Dispatcher} from 'undici';
@@ -27,19 +27,19 @@ const realUndici: 0 extends (1 & Dispatcher) ? false : true = true;
 const close: (crawler: downloader.MultiThreadDownloader) => Promise<void> = crawler => crawler.dispose();
 
 const configuration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
-  maxBufferedBytes: 4096, maxResourceBytes: 1024, maxDiscoveredResources: 16, maxConcurrency: 4});
+  maxResourceBytes: 1024, maxDiscoveredResources: 16, maxConcurrency: 4});
 const parserOptions: HtmlParserOptions = {
   htmlParser: 'grovedom', grovedom: {poolSize: 4, poolMaxBytes: 8 * 1024 * 1024}
 };
 const parserConfiguration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(), ...parserOptions});
-const parsedHtml: Promise<string> = withHtmlParser(parserOptions, () => {
-  const $ = loadHtml('<p>example</p>');
-  $('p').attr('class', 'saved');
-  return $.html();
-});
+const parsedHtml: Promise<string> = (async () => {
+  const $ = res.meta.doc = loadHtml('<p>example</p>', undefined, undefined, parserOptions);
+  try {
+    $('p').attr('class', 'saved');
+    return $.html();
+  } finally { await disposeHtmlResource(res); }
+})();
 declare const crawler: downloader.SingleThreadDownloader;
-const currentBytes: number = crawler.bufferedBytes;
-const peakBytes: number = crawler.peakBufferedBytes;
 const outcome: downloader.types.ResourceOutcome | undefined = crawler.outcomes.get(res.url);
 const progress: NonNullable<downloader.types.DownloadWorkerMessage['progress']> = {
   publishedFiles: 1, skipped: false
@@ -55,6 +55,6 @@ if (outcome) {
   outcome.publishedFiles = 1;
 }
 void host; void realUndici; void close; void configuration;
-void currentBytes; void peakBytes; void outcome; void progress;
+void outcome; void progress;
 void compatibleUri; void nativeUri; void query;
 void parserConfiguration; void parsedHtml;

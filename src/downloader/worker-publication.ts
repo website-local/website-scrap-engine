@@ -1,11 +1,10 @@
 import type {MessagePort, Worker} from 'node:worker_threads';
 import {createFilePublication, noFollowWriteFlags} from '../output-store.js';
-import type {FilePublication, PublicationStore} from '../output-store.js';
-import {withCrawlContext} from '../crawl-context.js';
-import type {CrawlContext} from '../crawl-context.js';
-import type {BufferAccount} from '../buffer-budget.js';
+import type {FilePublication} from '../output-store.js';
+import type {Resource} from '../resource.js';
+import type {AbstractDownloader} from './main.js';
 
-type Operation = 'create' | 'publish' | 'release' | 'buffer-body' | 'buffer-child';
+type Operation = 'create' | 'publish' | 'release';
 interface Request {
   requestId: number;
   taskId: number;
@@ -14,13 +13,12 @@ interface Request {
   localRoot?: string;
   writerRejectsSymlinks?: boolean;
   token?: number;
-  bytes?: number;
 }
 interface Reply {
   requestId: number;
   ok: boolean;
   value?: {token: number; stagingPath: string; direct?: boolean};
-  error?: {message: string; code?: string; limit?: number; actual?: number};
+  error?: {message: string; code?: string};
 }
 interface Connection {
   worker: Worker;
@@ -31,7 +29,7 @@ interface Connection {
   lastRequest: number;
 }
 interface Lease {
-  context: CrawlContext;
+  resource: Resource;
   controller: AbortController;
   signal?: AbortSignal;
   connection?: Connection;
@@ -42,12 +40,12 @@ interface Lease {
 
 /** Parent owns allocations and publication even when the writer's thread dies. */
 export class WorkerPublicationCoordinator {
-  private readonly leases = new Map<number, Lease>();
-  private readonly connections = new Map<Worker, Connection>();
-  private nextToken = 0;
+  readonly leases = new Map<number, Lease>();
+  readonly connections = new Map<Worker, Connection>();
+  nextToken = 0;
 
-  constructor(private readonly ownsTask: (workerId: number, taskId: number) => boolean,
-    private readonly channelFailed: (worker: Worker, error: Error) => void) {}
+  constructor(readonly downloader: AbstractDownloader, readonly ownsTask: (workerId: number, taskId: number) => boolean,
+    readonly channelFailed: (worker: Worker, error: Error) => void) {}
 
   attach(worker: Worker, port: MessagePort): void {
     const connection: Connection = {worker, id: worker.threadId, port, alive: true,
@@ -69,9 +67,9 @@ export class WorkerPublicationCoordinator {
     port.on('close', failed);
   }
 
-  register(taskId: number, context: CrawlContext): void {
+  register(taskId: number, resource: Resource): void {
     if (this.leases.has(taskId)) throw new Error('Duplicate publication task');
-    this.leases.set(taskId, {context, controller: new AbortController(),
+    this.leases.set(taskId, {resource, controller: new AbortController(),
       handles: new Map(), operations: new Set()});
   }
 
@@ -111,7 +109,7 @@ export class WorkerPublicationCoordinator {
     if (errors.length) throw new AggregateError(errors, 'Publication coordinator cleanup failed');
   }
 
-  private receive(connection: Connection, request: Request): void {
+  receive(connection: Connection, request: Request): void {
     if (!request || !Number.isSafeInteger(request.requestId) || request.requestId <= connection.lastRequest ||
       !Number.isSafeInteger(request.taskId) || request.taskId < 1) {
       this.channelFailed(connection.worker, new Error('Invalid worker publication envelope'));
@@ -120,14 +118,12 @@ export class WorkerPublicationCoordinator {
     connection.lastRequest = request.requestId;
     const lease = this.leases.get(request.taskId);
     const reply = (value?: Reply['value'], error?: unknown) => {
-      const details = error as {message?: unknown; code?: unknown; limit?: unknown; actual?: unknown} | undefined;
+      const details = error as {message?: unknown; code?: unknown} | undefined;
       try {
         connection.port.postMessage({requestId: request.requestId,
           ok: error === undefined, value, error: error === undefined ? undefined : {
             message: typeof details?.message === 'string' ? details.message : String(error),
-            code: typeof details?.code === 'string' ? details.code : undefined,
-            limit: typeof details?.limit === 'number' ? details.limit : undefined,
-            actual: typeof details?.actual === 'number' ? details.actual : undefined
+            code: typeof details?.code === 'string' ? details.code : undefined
           }} satisfies Reply);
       } catch (error) { this.channelFailed(connection.worker, error as Error); }
     };
@@ -142,21 +138,13 @@ export class WorkerPublicationCoordinator {
       return;
     }
     lease.connection = connection;
-    const operation = withCrawlContext(lease.context, () => this.execute(lease, request));
+    const operation = this.execute(lease, request);
     lease.operations.add(operation);
     void operation.then(value => reply(value), error => reply(undefined, error))
       .finally(() => lease.operations.delete(operation));
   }
 
-  private async execute(lease: Lease, request: Request): Promise<Reply['value']> {
-    if (request.operation === 'buffer-body' || request.operation === 'buffer-child') {
-      if (!Number.isSafeInteger(request.bytes) || request.bytes! < 0 || !lease.context.bufferAccount) {
-        throw new TypeError('Invalid buffered-byte reservation request');
-      }
-      if (request.operation === 'buffer-body') await lease.context.bufferAccount.observeBody(request.bytes!);
-      else await lease.context.bufferAccount.reserveChild(request.bytes!);
-      return;
-    }
+  async execute(lease: Lease, request: Request): Promise<Reply['value']> {
     if (request.operation === 'create') {
       if (typeof request.destination !== 'string' ||
         request.localRoot !== undefined && typeof request.localRoot !== 'string' ||
@@ -164,8 +152,8 @@ export class WorkerPublicationCoordinator {
         throw new TypeError('Invalid publication destination');
       }
       const handle = await createFilePublication(request.destination,
-        lease.signal ??= AbortSignal.any([lease.context.signal, lease.controller.signal]), request.localRoot,
-        request.writerRejectsSymlinks === true && noFollowWriteFlags !== undefined);
+        lease.signal ??= AbortSignal.any([this.downloader.signal, lease.controller.signal]), request.localRoot,
+        request.writerRejectsSymlinks === true && noFollowWriteFlags !== undefined, lease.resource, this.downloader);
       const token = ++this.nextToken;
       lease.handles.set(token, handle);
       if (lease.controller.signal.aborted) {
@@ -190,12 +178,12 @@ export class WorkerPublicationCoordinator {
 
 /** Worker-side proxy. Confirmation is counted by the parent, not a second time here. */
 export class WorkerPublicationClient {
-  private nextRequest = 0;
-  private closed = false;
-  private readonly pending = new Map<number, {
+  nextRequest = 0;
+  closed = false;
+  readonly pending = new Map<number, {
     resolve: (value: Reply['value']) => void; reject: (error: Error) => void;
   }>();
-  constructor(private readonly port: MessagePort) {
+  constructor(readonly port: MessagePort) {
     port.on('message', (reply: Reply) => {
       if (!reply || !Number.isSafeInteger(reply.requestId) || typeof reply.ok !== 'boolean') {
         this.close();
@@ -206,7 +194,7 @@ export class WorkerPublicationClient {
       this.pending.delete(reply.requestId);
       if (reply.ok) pending.resolve(reply.value);
       else pending.reject(Object.assign(new Error(reply.error?.message ?? 'Publication failed'),
-        {code: reply.error?.code, limit: reply.error?.limit, actual: reply.error?.actual}));
+        {code: reply.error?.code}));
     });
     port.on('messageerror', () => this.close());
     port.on('close', () => this.close());
@@ -218,7 +206,7 @@ export class WorkerPublicationClient {
     this.pending.clear();
     this.port.close();
   }
-  private request(taskId: number, operation: Operation, data: Partial<Request>): Promise<Reply['value']> {
+  request(taskId: number, operation: Operation, data: Partial<Request>): Promise<Reply['value']> {
     if (this.closed) return Promise.reject(new Error('Publication channel closed'));
     return new Promise((resolve, reject) => {
       const requestId = ++this.nextRequest;
@@ -227,51 +215,35 @@ export class WorkerPublicationClient {
       catch (error) { this.pending.delete(requestId); reject(error); }
     });
   }
-  forTask(taskId: number): PublicationStore {
-    return {create: async (destination, signal, localRoot, writerRejectsSymlinks = false) => {
-      signal?.throwIfAborted();
-      const value = await this.request(taskId, 'create', {destination, localRoot, writerRejectsSymlinks});
-      if (!value || !Number.isSafeInteger(value.token) || value.token < 1 || typeof value.stagingPath !== 'string' ||
+  async create(destination: string, signal?: AbortSignal, localRoot?: string,
+    writerRejectsSymlinks = false, resource?: Resource): Promise<FilePublication> {
+    const taskId = resource!.workerTaskId!;
+    signal?.throwIfAborted();
+    const value = await this.request(taskId, 'create', {destination, localRoot, writerRejectsSymlinks});
+    if (!value || !Number.isSafeInteger(value.token) || value.token < 1 || typeof value.stagingPath !== 'string' ||
         (value.direct !== undefined && typeof value.direct !== 'boolean')) {
-        throw new TypeError('Invalid publication allocation reply');
-      }
-      let publishing: Promise<void> | undefined;
-      let cleaning: Promise<void> | undefined;
-      let published = false;
-      return {stagingPath: value.stagingPath, direct: value.direct,
-        publish: () => {
-          if (cleaning) return Promise.reject(new Error('Publication has been closed'));
-          publishing ??= (async () => {
-            signal?.throwIfAborted();
-            await this.request(taskId, 'publish', {token: value.token});
-            published = true;
-          })();
-          return publishing;
-        },
-        cleanup: () => {
-          cleaning ??= (async () => {
-            await publishing?.catch(() => undefined);
-            if (!published) await this.request(taskId, 'release', {token: value.token});
-          })();
-          return cleaning;
-        }};
-    }};
+      throw new TypeError('Invalid publication allocation reply');
+    }
+    let publishing: Promise<void> | undefined;
+    let cleaning: Promise<void> | undefined;
+    let published = false;
+    return {stagingPath: value.stagingPath, direct: value.direct,
+      publish: () => {
+        if (cleaning) return Promise.reject(new Error('Publication has been closed'));
+        publishing ??= (async () => {
+          signal?.throwIfAborted();
+          await this.request(taskId, 'publish', {token: value.token});
+          published = true;
+        })();
+        return publishing;
+      },
+      cleanup: () => {
+        cleaning ??= (async () => {
+          await publishing?.catch(() => undefined);
+          if (!published) await this.request(taskId, 'release', {token: value.token});
+        })();
+        return cleaning;
+      }};
   }
 
-  bufferForTask(taskId: number): BufferAccount {
-    let highWater = -1;
-    return {
-      observeBody: bytes => {
-        if (!Number.isSafeInteger(bytes) || bytes < 0) throw new TypeError('Invalid buffered-byte reservation');
-        if (bytes <= highWater) return;
-        return this.request(taskId, 'buffer-body', {bytes}).then(() => {
-          highWater = Math.max(highWater, bytes);
-        });
-      },
-      reserveChild: bytes => {
-        if (bytes === 0) return;
-        return this.request(taskId, 'buffer-child', {bytes}).then(() => undefined);
-      }
-    };
-  }
 }

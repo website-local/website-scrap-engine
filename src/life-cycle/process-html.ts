@@ -7,7 +7,6 @@ import type {StaticDownloadOptions} from '../options.js';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import {processCssText} from './process-css.js';
-import {error, skip} from '../logger/logger.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {isPromiseLike} from '../util.js';
 import {parseHtml} from './adapters.js';
@@ -55,7 +54,7 @@ async function processHtmlDoc(
         try {
           replaceValue = parseSrcset(attrValue);
         } catch (e) {
-          error.info('skipping invalid srcset', attrValue, e);
+          pipeline.logger.info('system.error', 'skipping invalid srcset', attrValue, e);
           // should invalid srcset being removed?
           continue;
         }
@@ -73,16 +72,16 @@ async function processHtmlDoc(
         const redirected = pipeline.linkRedirect(originalLink, elem, res);
         const link = isPromiseLike(redirected) ? await redirected : redirected;
         if (!link) {
-          if (skip.isTraceEnabled()) {
-            skip.trace('skip linkRedirect', originalLink, refUrl);
+          if (pipeline.logger.isTraceEnabled()) {
+            pipeline.logger.trace('system.skip', 'skip linkRedirect', originalLink, refUrl);
           }
           continue;
         }
         const detected = pipeline.detectResourceType(link, type, elem, res);
         const linkType = isPromiseLike(detected) ? await detected : detected;
         if (!linkType) {
-          if (skip.isTraceEnabled()) {
-            skip.trace('skip detectResourceType',
+          if (pipeline.logger.isTraceEnabled()) {
+            pipeline.logger.trace('system.skip', 'skip detectResourceType',
               originalLink, link, refUrl);
           }
           continue;
@@ -93,8 +92,8 @@ async function processHtmlDoc(
           savePath, res.type);
         let resource = isPromiseLike(created) ? await created : created;
         if (!resource) {
-          if (skip.isTraceEnabled()) {
-            skip.trace('skip generateSavePath',
+          if (pipeline.logger.isTraceEnabled()) {
+            pipeline.logger.trace('system.skip', 'skip generateSavePath',
               originalLink, link, linkType, refUrl);
           }
           continue;
@@ -102,14 +101,14 @@ async function processHtmlDoc(
         const processed = pipeline.processBeforeDownload(resource, elem, res, options);
         resource = isPromiseLike(processed) ? await processed : processed;
         if (!resource) {
-          if (skip.isTraceEnabled()) {
-            skip.trace('skip processBeforeDownload',
+          if (pipeline.logger.isTraceEnabled()) {
+            pipeline.logger.trace('system.skip', 'skip processBeforeDownload',
               originalLink, link, linkType, refUrl);
           }
           continue;
         }
         if (!resource.shouldBeDiscardedFromDownload) {
-          submit(resource);
+          submit(resource, res, pipeline);
         }
         if (attr === 'srcset') {
           // 20241005: It's ok to do this
@@ -126,10 +125,8 @@ async function processHtmlDoc(
       }
       if (attr === 'srcset') {
         elem.attr(attr, stringifySrcset(replaceValue as SrcSetDefinition[]));
-      } else if (attr) {
-        elem.attr(attr, replaceValue as string);
       } else {
-        error.warn('skip attr replace', links, replaceValue, refUrl);
+        elem.attr(attr, replaceValue as string);
       }
     }
   }
@@ -141,15 +138,16 @@ async function processHtmlDoc(
     if (!attrValue) {
       continue;
     }
+    let iframeDoc: (CheerioStatic & {dispose?: () => void}) | undefined;
     try {
-      const iframeDoc = load(attrValue);
+      iframeDoc = load(attrValue, undefined, undefined, options);
       await processHtmlDoc(options, iframeDoc, res, pipeline, depth, resources, refUrl, savePath, submit);
       const html = options.cheerioSerialize ?
         iframeDoc.html(options.cheerioSerialize) : iframeDoc.html();
       elem.attr('srcdoc', html);
     } catch (e) {
-      error.info('can not parse iframe srcdoc', res.url, res.rawUrl, e);
-    }
+      pipeline.logger.info('system.error', 'can not parse iframe srcdoc', res.url, res.rawUrl, e);
+    } finally { iframeDoc?.dispose?.(); }
   }
 }
 
@@ -164,19 +162,14 @@ export async function processHtml(
   }
   const refUrl: string = res.redirectedUrl || res.url;
   const savePath = refUrl === res.url ? res.savePath : undefined;
-  // useless since processRedirectedUrl enabled by default
-  // refUrl = await pipeline.linkRedirect(refUrl, null, res) || refUrl;
 
   const depth: number = res.depth + 1;
-  let doc: CheerioStatic | void = res.meta.doc;
-  if (!doc) {
-    res.meta.doc = doc = parseHtml(res, options);
-  }
+  const doc = res.meta.doc ?? parseHtml(res, options);
   // resources from inline css
   const resources: Resource[] = [];
   await processHtmlDoc(options, doc, res, pipeline, depth, resources, refUrl, savePath, submit);
   if (resources.length) {
-    submit(resources);
+    submit(resources, res, pipeline);
   }
   return res;
 }

@@ -55,17 +55,20 @@ export const orderUrlSearch = (search: string): string => {
     const separator = part.indexOf('=');
     const searchKey = separator > 0 ? part.slice(0, separator) : part;
     const value = separator === -1 ? '' : part.slice(separator + 1);
-    if (searchMap[searchKey]) {
-      searchMap[searchKey].push(value);
+    // Keep URL keys such as __proto__ separate from inherited object properties.
+    const mapKey = '$' + searchKey;
+    const values = searchMap[mapKey];
+    if (values) {
+      values.push(value);
     } else {
       searchKeys.push(searchKey);
-      searchMap[searchKey] = [value];
+      searchMap[mapKey] = [value];
     }
   }
   searchKeys.sort();
   parts.length = 0;
   for (const key of searchKeys) {
-    for (const value of searchMap[key]) parts.push(key + '=' + value);
+    for (const value of searchMap['$' + key]) parts.push(key + '=' + value);
   }
   return '?' + parts.join('&');
 };

@@ -29,7 +29,7 @@ await execute(process.execPath, [path.join(project, 'node_modules/typescript/bin
 const scripts = process.argv.includes('--smoke-only') ? ['runtime-smoke', 'runtime-log4js-peer'] : [
   'runtime-smoke', 'runtime-lifecycle', 'runtime-outcomes', 'runtime-failure-retry',
   'runtime-parent-publication', 'runtime-output-conflicts', 'runtime-discovery',
-  'runtime-buffer-budget', 'runtime-adjustment', 'runtime-fast-retry',
+  'runtime-adjustment', 'runtime-fast-retry',
   'runtime-native-http', 'runtime-single-import', 'runtime-log4js-peer'
 ];
 if (process.platform === 'win32' && !process.argv.includes('--smoke-only')) scripts.push('runtime-windows-files');

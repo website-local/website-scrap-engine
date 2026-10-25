@@ -80,7 +80,7 @@ export async function processSourceMap(
   } else {
     // we can not process that
     if (resources.length) {
-      submit(resources);
+      submit(resources, res, pipeline);
     }
     return res;
   }
@@ -91,7 +91,7 @@ export async function processSourceMap(
     // we can not process that
     // TODO: UCS-2/UTF-16 encoding
     if (resources.length) {
-      submit(resources);
+      submit(resources, res, pipeline);
     }
     return res;
   }
@@ -139,11 +139,10 @@ export async function processSourceMap(
           shouldReplaceBody = true;
         } else {
           // buffer
-          if (replacePath.length <= url.length) {
+          if (Buffer.byteLength(replacePath) <= endIndex - startIndex) {
             // 0x20 -> ' '.charCodeAt(0)
-            const buffer = Buffer.alloc(endIndex - startIndex, 0x20);
-            buffer.write(replacePath);
-            buffer.copy(body, startIndex);
+            body.fill(0x20, startIndex, endIndex);
+            body.write(replacePath, startIndex, endIndex - startIndex);
           } else {
             const buffer = Buffer.from(replacePath);
             const newBody = Buffer.alloc(
@@ -164,7 +163,7 @@ export async function processSourceMap(
     }
   }
   if (resources.length) {
-    submit(resources);
+    submit(resources, res, pipeline);
   }
   if (shouldReplaceBody) {
     res.body = body;

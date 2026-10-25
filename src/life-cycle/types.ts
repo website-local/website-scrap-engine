@@ -105,6 +105,7 @@ export interface DetectResourceTypeFunc {
 }
 
 export interface GenerateSavePathContext {
+  readonly pipeline: PipelineExecutor;
   /**
    * Resolved absolute URI for the resource being created.
    */
@@ -156,6 +157,8 @@ export interface GenerateSavePathResult {
 }
 
 export interface GenerateSavePathFunc {
+  /** Complete generators can skip the built-in starting path. */
+  fullSavePath?: boolean;
   /**
    * Generate or transform a resource save path.
    *
@@ -216,10 +219,13 @@ export interface SubmitResourceFunc {
   /**
    * Submit resources synchronously while the parent task is active. Children
    * submitted before a later parent failure remain eligible for processing.
-   * Throws on cancellation, late submission, or a configured discovery limit.
+   * Counts every submission before filtering; over-limit children are discarded.
+   * Throws on cancellation or late submission.
    * @param res resource or array
+   * @param parent resource being processed; owns its discovery count
+   * @param pipeline explicit executor for shared worker submission
    */
-  (res: Resource | Resource[]): void;
+  (res: Resource | Resource[], parent: Resource, pipeline: PipelineExecutor): void;
 
 }
 

@@ -5,24 +5,20 @@ import type {RequestListener, Server} from 'node:http';
 import type {AddressInfo} from 'node:net';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
+import {gzipSync} from 'node:zlib';
 import type {BeforeRetryHook} from 'got';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
 import {calculateFastDelay, defaultDownloadOptions} from '../../src/options.js';
 import {ResourceType} from '../../src/resource.js';
-import {getLogger, setLogger} from '../../src/logger/logger.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {getRetry} from '../../src/life-cycle/download-resource.js';
 
 let root: string;
 let server: Server;
-const previousLogger = getLogger();
+const logger = {trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false};
 
 beforeEach(async () => {
   root = await fs.mkdtemp(path.join(tmpdir(), 'wse-download-'));
-  setLogger({
-    trace() {}, debug() {}, info() {}, warn() {}, error() {},
-    isTraceEnabled: () => false
-  });
 });
 
 afterEach(async () => {
@@ -33,7 +29,6 @@ afterEach(async () => {
     });
   }
   await fs.rm(root, {recursive: true, force: true});
-  setLogger(previousLogger);
 });
 
 async function listen(handler: RequestListener): Promise<string> {
@@ -164,7 +159,7 @@ describe.each([
       req: {retry: {limit: 0}, timeout: {request: 2000}},
       meta: {detectIncompleteHtml: '</html>'}
     });
-    const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
     const resource = await pipeline.createResource(type, 0, url, url);
     if (!resource) throw new Error('Resource was discarded');
 
@@ -194,11 +189,44 @@ test('retries incomplete HTML with Got 16 binary responses', async () => {
     req: {retry: {limit: 0}, timeout: {request: 2000}},
     meta: {detectIncompleteHtml: '</html>'}
   });
-  const pipeline = new PipelineExecutorImpl(options, options.req, options);
+  const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
   const resource = await pipeline.createResource(ResourceType.Html, 0, url, url);
   if (!resource) throw new Error('Resource was discarded');
   const downloaded = await pipeline.download(resource);
   expect(requests).toBe(2);
   expect(Buffer.isBuffer(downloaded?.body)).toBe(true);
   expect(downloaded?.body.toString()).toBe('<html>complete</html>');
+});
+
+describe.each(['got', 'native'] as const)('%s decoded input limits', httpTransport => {
+  test.each([ResourceType.Binary, ResourceType.StreamingBinary])(
+    '%s discards oversized content and preserves cached atomic output', async type => {
+      let requests = 0;
+      const url = await listen((_request, response) => {
+        ++requests;
+        response.setHeader('Content-Encoding', 'gzip');
+        response.end(gzipSync(Buffer.alloc(32 * 1024, 97)));
+      });
+      const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
+        httpTransport, maxResourceBytes: 1024, req: {retry: {limit: 0}, timeout: {request: 2000}}});
+      const limitLogger = {...logger, warn: jest.fn(), error: jest.fn()};
+      const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, limitLogger);
+      const resource = await pipeline.createResource(type, 0, url, url);
+      if (!resource) throw new Error('Resource was discarded before download');
+      const destination = path.join(root, resource.savePath);
+      await fs.mkdir(path.dirname(destination), {recursive: true});
+      await fs.writeFile(destination, 'cached');
+
+      await expect(pipeline.download(resource)).resolves.toBeUndefined();
+
+      expect(requests).toBe(1);
+      expect(resource.shouldBeDiscardedFromDownload).toBe(true);
+      expect(resource.meta.resourceSize).toBeGreaterThan(1024);
+      expect(resource.meta.resourceSizeLimit).toBe(1024);
+      expect(resource.meta.error).toBeUndefined();
+      expect(limitLogger.warn).toHaveBeenCalled();
+      expect(limitLogger.error).not.toHaveBeenCalled();
+      expect(await fs.readFile(destination, 'utf8')).toBe('cached');
+      expect(await fs.readdir(path.dirname(destination))).toEqual([path.basename(destination)]);
+    });
 });

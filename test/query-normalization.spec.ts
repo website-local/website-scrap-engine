@@ -2,6 +2,10 @@ import {expect, test} from '@jest/globals';
 import {orderUrlSearch, simpleHashString} from '../src/util.js';
 
 test.each([
+  ['?constructor=one&__proto__=two&constructor=three&toString=four',
+    '?__proto__=two&constructor=one&constructor=three&toString=four'],
+  ['?hasOwnProperty=one&valueOf=two&hasOwnProperty=three',
+    '?hasOwnProperty=one&hasOwnProperty=three&valueOf=two'],
   ['?z=last&a=one&a=two&b=x=y', '?a=one&a=two&b=x=y&z=last'],
   ['?b=two+words&a=%2B&a=%20', '?a=%2B&a=%20&b=two+words'],
   ['a&b=&a=', '?a=&a=&b='],

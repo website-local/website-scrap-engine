@@ -3,7 +3,7 @@ import {promisify} from 'node:util';
 import {Transform} from 'node:stream';
 import type {Resource, ResourceEncoding} from './resource.js';
 import type {ResourceBody} from './resource.js';
-import {currentCrawlContext} from './crawl-context.js';
+import type {Logger} from './logger/types.js';
 
 const readFile = promisify(readFileCallback);
 
@@ -15,14 +15,21 @@ export class ResourceSizeError extends Error {
   }
 }
 
-export function checkResourceSize(size: number, limit?: number): void {
-  if (limit !== undefined && size > limit) throw new ResourceSizeError(limit, size);
+export function checkResourceSize(size: number, limit?: number, resource?: Resource, logger?: Logger): boolean {
+  if (limit === undefined || size <= limit) return true;
+  if (resource) {
+    resource.shouldBeDiscardedFromDownload = true;
+    resource.meta.resourceSize = size;
+    resource.meta.resourceSizeLimit = limit;
+    logger?.warn('system.skip', 'Resource exceeds maxResourceBytes', resource.url, size, limit);
+  }
+  return false;
 }
 
-export function checkResourceBody(res: Resource, limit?: number): void {
-  if (limit === undefined || res.body === undefined) return;
-  checkResourceSize(typeof res.body === 'string' ?
-    Buffer.byteLength(res.body, res.encoding ?? 'utf8') : res.body.byteLength, limit);
+export function checkResourceBody(res: Resource, limit?: number, logger?: Logger): boolean {
+  if (limit === undefined || res.body === undefined) return true;
+  return checkResourceSize(typeof res.body === 'string' ?
+    Buffer.byteLength(res.body, res.encoding ?? 'utf8') : res.body.byteLength, limit, res, logger);
 }
 
 export function resourceBodyBytes(body: ResourceBody | undefined, encoding: ResourceEncoding): number {
@@ -30,44 +37,28 @@ export function resourceBodyBytes(body: ResourceBody | undefined, encoding: Reso
     body.byteLength;
 }
 
-export function accountBufferedBody(body: ResourceBody | undefined, encoding: ResourceEncoding): void | Promise<void> {
-  return currentCrawlContext()?.bufferAccount?.observeBody(resourceBodyBytes(body, encoding));
-}
-
-export function checkAndAccountResourceBody(res: Resource, limit?: number): void | Promise<void> {
-  const account = currentCrawlContext()?.bufferAccount;
-  if (limit === undefined && !account) return;
-  const bytes = resourceBodyBytes(res.body, res.encoding);
-  // Validate before reserving credits, and only reuse the size at this hook boundary.
-  if (res.body !== undefined) checkResourceSize(bytes, limit);
-  return account?.observeBody(bytes);
-}
-
-export function limitResourceStream(limit: number, offset = 0): Transform {
+export function limitResourceStream(limit: number, offset = 0, resource?: Resource, logger?: Logger): Transform {
   let size = offset;
   return new Transform({transform(chunk: Buffer, _encoding, callback) {
     size += chunk.byteLength;
-    if (size > limit) callback(new ResourceSizeError(limit, size));
+    if (!checkResourceSize(size, limit, resource, logger)) callback(new ResourceSizeError(limit, size));
     else callback(null, chunk);
   }});
 }
 
 export async function readResourceFile(
-  source: string, encoding: ResourceEncoding, limit?: number, signal?: AbortSignal
-): Promise<string | Buffer> {
-  const account = currentCrawlContext()?.bufferAccount;
-  if (limit === undefined && !account) {
+  source: string, encoding: ResourceEncoding, limit?: number, signal?: AbortSignal, resource?: Resource, logger?: Logger
+): Promise<string | Buffer | undefined> {
+  if (limit === undefined) {
     const options = {encoding, signal};
     return readFile(source, options);
   }
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of createReadStream(source, {signal,
-    highWaterMark: limit === undefined ? 65536 : Math.min(65536, limit + 1)})) {
+    highWaterMark: Math.min(65536, limit + 1)})) {
     size += chunk.length;
-    checkResourceSize(size, limit);
-    const accounting = account?.observeBody(size);
-    if (accounting) await accounting;
+    if (!checkResourceSize(size, limit, resource, logger)) return;
     chunks.push(chunk);
   }
   // Reuse an owned single chunk, but compact slices so small files do not retain

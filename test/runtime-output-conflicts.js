@@ -25,7 +25,7 @@ lc.saveToDisk = [async (res, opt, pipeline) => {
   await publishFile(path.join(res.localRoot, 'shared.bin'), async staging => {
     await fs.writeFile(staging, res.url);
     if (res.url.endsWith('/unpublished')) throw new Error('writer failed');
-  }, pipeline.signal, res.localRoot);
+  }, pipeline.signal, res.localRoot, undefined, false, res, pipeline.publicationStore);
   if (res.url.endsWith('/partial') && !res.meta.retry) throw new Error('later hook failed');
   return res;
 }];
