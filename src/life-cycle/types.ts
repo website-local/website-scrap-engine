@@ -25,6 +25,11 @@ export type ResourceStatus =
   | 'error'
   | 'dispose';
 
+/**
+ * Read-only status observer. Observers start in array order and their
+ * asynchronous work runs concurrently. Return all work that must finish
+ * before resource cleanup. Listener exceptions and rejections are swallowed.
+ */
 export interface StatusChangeFunc {
   (res: Resource | RawResource,
    status: ResourceStatus,

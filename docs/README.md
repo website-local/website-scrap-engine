@@ -12,6 +12,7 @@
 | Migrate URI hooks and understand compatibility limits | [Native URL migration](native-url-migration.md) |
 | Trace URI optimization decisions and historical measurements | [URI investigation history](uri-investigation-history.md) |
 | Understand measured performance and retained optimizations | [Performance](performance.md) |
+| Review the 2026-10-27 property-access profiles, fixes and measured simplifications | [Object layout review](object-layout-review.md) |
 | Understand dependency, parser and development-tool decisions | [Dependency audit](dependency-audit.md) |
 | Opt in to GroveDOM and configure per-worker pool limits | [GroveDOM adapter](grovedom.md) |
 
@@ -19,8 +20,11 @@ The README, migration guide and GroveDOM ownership examples describe the current
 APIs, including explicit lifecycle dependencies, resource-owned documents and
 input-byte limits. Dated audits and qualification tables identify the older
 commit or working tree they validated; they do not validate later changes.
-The [2026-10-25 qualification](grovedom.md#explicit-ownership-qualification-2026-10-25)
-and [layout/allocation measurements](performance.md) cover the quality pass.
+The [2026-10-27 review](object-layout-review.md) and
+[package qualification](grovedom.md#review-follow-up-qualification-2026-10-27)
+cover the follow-up to the committed quality pass. The dated
+[2026-10-25 qualification](grovedom.md#explicit-ownership-qualification-2026-10-25)
+and [layout/allocation measurements](performance.md) retain the earlier evidence.
 The GroveDOM guide labels the preserved MDN patches that still use parser scopes.
 
 Earlier experiments are summarized in the [historical index](archive/0.10.0-experiments.md);

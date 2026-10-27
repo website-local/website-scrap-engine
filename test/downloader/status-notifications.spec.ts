@@ -34,7 +34,7 @@ test('synchronous and empty status listeners retain the Promise API', async () =
   await expect(pipeline.notifyStatusChange(res, 'dispose')).resolves.toBeUndefined();
 });
 
-test('status listeners keep their order through synchronous throws and asynchronous rejections', async () => {
+test('status listeners start together and wait for all settlements despite failures', async () => {
   const options = defaultDownloadOptions(defaultLifeCycle());
   const events: string[] = [];
   let release!: () => void;
@@ -42,17 +42,22 @@ test('status listeners keep their order through synchronous throws and asynchron
   options.statusChange = [
     () => { events.push('sync'); throw new Error('synchronous failure'); },
     async () => { events.push('waiting'); await waiting; events.push('rejected'); throw new Error('async failure'); },
-    () => { events.push('after rejection'); },
+    () => { events.push('after async'); },
     async () => { await Promise.resolve(); events.push('last async'); },
     () => { events.push('last sync'); }
   ];
   const pipeline = new PipelineExecutorImpl(options, options.req, options);
   const res = resource();
   const pending = pipeline.notifyStatusChange(res, 'error');
-  expect(events).toEqual(['sync', 'waiting']);
+  let settled = false;
+  void pending.then(() => { settled = true; });
+  expect(events).toEqual(['sync', 'waiting', 'after async', 'last sync']);
+  await new Promise<void>(resolve => setImmediate(resolve));
+  expect(events).toEqual(['sync', 'waiting', 'after async', 'last sync', 'last async']);
+  expect(settled).toBe(false);
   release();
   await expect(pending).resolves.toBeUndefined();
-  expect(events).toEqual(['sync', 'waiting', 'rejected', 'after rejection', 'last async', 'last sync']);
+  expect(events).toEqual(['sync', 'waiting', 'after async', 'last sync', 'last async', 'rejected']);
   await disposeHtmlResource(res);
   expect(res.meta.statusChanges).toBeUndefined();
 });
@@ -94,11 +99,11 @@ test.each(['dispose', 'error'] as const)('disposal waits for %s listeners with a
     let closed = false;
     const closing = crawler.dispose().then(() => { closed = true; });
     await new Promise<void>(resolve => setImmediate(resolve));
-    expect(events).toEqual([status]);
+    expect(events).toEqual([status, 'following listener']);
     expect(closed).toBe(false);
     release();
     await closing;
-    expect(events).toEqual([status, 'settled', 'following listener']);
+    expect(events).toEqual([status, 'following listener', 'settled']);
     expect(loggers).toEqual([logger, logger]);
     expect(crawler.state).toBe('closed');
   } finally {
@@ -118,16 +123,11 @@ test.each(['dispose', 'error'] as const)('resource ownership waits for every asy
       events.push('start');
       await gate;
       events.push(current.meta.doc!.html());
-      throw new Error('the following listener must still run');
+      throw new Error('listener failure is swallowed');
     },
-    async (current, _status, options) => {
+    async current => {
       await Promise.resolve();
       events.push(current.meta.doc!.html());
-      // A listener replacing its document releases the old one directly;
-      // resource cleanup waits for this listener itself and runs afterwards.
-      (current.meta.doc as CheerioStatic & {dispose(): void}).dispose();
-      current.meta.doc = load('<p>status replacement</p>', undefined, undefined, options);
-      events.push(current.meta.doc.html());
     }
   ]});
   let pending: Promise<void> | undefined;
@@ -140,6 +140,7 @@ test.each(['dispose', 'error'] as const)('resource ownership waits for every asy
     pending = crawler.dispose().then(() => { closed = true; });
     await new Promise<void>(resolve => setImmediate(resolve));
     expect(closed).toBe(false);
+    expect(events).toEqual(['start', expect.stringContaining('retained error document')]);
     expect(document.html()).toContain('retained error document');
     const independent = resource();
     independent.meta.doc = load('<p>independent</p>', undefined, undefined, parserOptions);
@@ -149,7 +150,7 @@ test.each(['dispose', 'error'] as const)('resource ownership waits for every asy
     release();
     await pending;
     expect(events).toEqual(['start', expect.stringContaining('retained error document'),
-      expect.stringContaining('retained error document'), expect.stringContaining('status replacement')]);
+      expect.stringContaining('retained error document')]);
     expect(res.meta.doc).toBeUndefined();
     expect(res.meta.statusChanges).toBeUndefined();
     expect(state.documents.slice(before).every(doc => doc.closed && doc.disposals === 1)).toBe(true);
@@ -245,19 +246,19 @@ test('downloader cleanup waits for a second resource notified by a resumed liste
 });
 
 test.each(['error', 'dispose', 'cancelled child'] as const)(
-  '%s notifications can explicitly load the configured parser before processing', async kind => {
+  '%s notifications retain an existing document until read-only observers finish', async kind => {
     let document: CheerioStatic | undefined;
     const events: string[] = [];
     const res = resource();
     const crawler = crawlerWith({...parserOptions, maxDepth: kind === 'dispose' ? 0 : 1,
-      statusChange: [async (current, _status, options) => {
+      statusChange: [async current => {
         await Promise.resolve();
-        document = current.meta.doc = load('<p>outside resource processing</p>', undefined, undefined, options);
-        events.push(document.html());
+        events.push(current.meta.doc!.html());
       }]
     });
     try {
       await crawler.init;
+      document = res.meta.doc = load('<p>outside resource processing</p>', undefined, undefined, parserOptions);
       if (kind === 'cancelled child') expect(crawler.addProcessedResource(res)).toBe(true);
       else if (kind === 'dispose') expect(crawler.addProcessedResource(res)).toBe(false);
       else crawler.handleError(new Error('before processing'), 'admitting resource', res);
@@ -296,9 +297,7 @@ test('document disposal failure still waits for other notifications and complete
   const first = resource(), second = resource();
   second.url += '/second';
   const before = state.documents.length;
-  const crawler = crawlerWith({...parserOptions, statusChange: [async (current, _status, options) => {
-    current.meta.doc = load(current === first ? '<p data-dispose-error>first</p>' : '<p>second</p>',
-      undefined, undefined, options);
+  const crawler = crawlerWith({...parserOptions, statusChange: [async current => {
     await (current === first ? firstGate : secondGate);
     events.push(current === first ? 'first notification' : 'second notification');
   }], dispose: [() => { events.push('pipeline cleanup'); }]});
@@ -306,6 +305,8 @@ test('document disposal failure still waits for other notifications and complete
   let settled = false;
   try {
     await crawler.init;
+    first.meta.doc = load('<p data-dispose-error>first</p>', undefined, undefined, parserOptions);
+    second.meta.doc = load('<p>second</p>', undefined, undefined, parserOptions);
     crawler.handleError(new Error('first failure'), 'admitting resource', first);
     crawler.handleError(new Error('second failure'), 'admitting resource', second);
     pending = crawler.dispose().then(() => { settled = true; }, error => {

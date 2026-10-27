@@ -19,6 +19,8 @@ import {
   simpleHashString
 } from '../util.js';
 
+const parentPathPrefix = '..' + path.sep;
+
 export type LocalUrlMountCaseMode =
   | 'exact'
   | 'lowercase'
@@ -712,8 +714,7 @@ async function getCaseInsensitiveDirectoryEntries(
 
 function isPathInside(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
-  return relative === '' ||
-    (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
+  return relative !== '..' && !relative.startsWith(parentPathPrefix) && !path.isAbsolute(relative);
 }
 
 function isFileMissingError(e: unknown): boolean {

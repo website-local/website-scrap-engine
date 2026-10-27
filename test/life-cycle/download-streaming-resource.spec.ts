@@ -4,11 +4,14 @@ import {getEventListeners} from 'node:events';
 import {promises as fs} from 'node:fs';
 import {join} from 'node:path';
 import {SingleThreadDownloader} from '../../src/downloader/single.js';
+import {disposeHtmlResource} from '../../src/cheerio.js';
+import type {CheerioStatic} from '../../src/types.js';
 import {defaultDownloadOptions} from '../../src/options.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 // noinspection ES6PreferShortImport
 import {
   downloadStreamingResource,
+  downloadStreamingResourceWithHook,
   isBytesAccepted,
   isSameRangeStart,
   shouldWaitForRequestError,
@@ -18,6 +21,62 @@ import type {Resource} from '../../src/resource.js';
 import {createResource, ResourceType} from '../../src/resource.js';
 import type {RequestOptions} from '../../src/life-cycle/types.js';
 import type {StaticDownloadOptions} from '../../src/options.js';
+
+test.each(['stream', 'discard', 'failure', 'shared'] as const)(
+  'streaming before-download replacement keeps ownership on %s', async mode => {
+    const root = await fs.mkdtemp(join(process.cwd(), '.wse-stream-replacement-'));
+    const requests: string[] = [], disposed: string[] = [];
+    const server = createServer((request, response) => {
+      requests.push(request.url!);
+      response.setHeader('Connection', 'close');
+      response.end('streamed replacement');
+    });
+    let downloader: SingleThreadDownloader | undefined;
+    let replacement: Resource | undefined;
+    try {
+      await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Missing server address');
+      const origin = 'http://127.0.0.1:' + address.port;
+      const original = createResource({type: ResourceType.StreamingBinary, depth: 0,
+        url: origin + '/old', refUrl: origin, localRoot: root, savePath: 'old.bin'});
+      const next = replacement = createResource({type: ResourceType.StreamingBinary, depth: 0,
+        url: origin + '/new', refUrl: origin, localRoot: root, savePath: 'new.bin'});
+      original.meta.doc = {dispose() { disposed.push('original'); }} as unknown as CheerioStatic;
+      next.meta.doc = mode === 'shared' ? original.meta.doc :
+        {dispose() { disposed.push('replacement'); }} as unknown as CheerioStatic;
+      next.shouldBeDiscardedFromDownload = mode === 'discard';
+      const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
+        req: {retry: {limit: 0}, timeout: {request: 2000}},
+        download: [downloadStreamingResourceWithHook(() => next,
+          mode === 'failure' ? () => { throw new Error('after-download failure'); } : undefined)],
+        createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})});
+      downloader = new SingleThreadDownloader(new URL('../downloader/budget-options.js', import.meta.url).href, options);
+      await downloader.init;
+      expect(downloader.addProcessedResource(original)).toBe(true);
+      await downloader.start();
+      await downloader.onIdle();
+
+      expect(requests).toEqual(mode === 'discard' ? [] : ['/new']);
+      expect(disposed).toEqual(mode === 'shared' ? ['original'] : ['original', 'replacement']);
+      expect(original.meta.doc).toBeUndefined();
+      expect(next.meta.doc).toBeUndefined();
+      expect(next.publicationOwner).toBe(original.publicationOwner);
+      expect(original.publishedFiles).toBe(mode === 'discard' ? 0 : 1);
+      expect(downloader.outcomes.get(original.url)?.status)
+        .toBe(mode === 'discard' ? 'skipped' : mode === 'failure' ? 'failed' : 'saved');
+      await expect(fs.stat(join(root, 'old.bin'))).rejects.toMatchObject({code: 'ENOENT'});
+      if (mode !== 'discard') {
+        expect(await fs.readFile(join(root, 'new.bin'), 'utf8')).toBe('streamed replacement');
+      }
+    } finally {
+      await downloader?.dispose();
+      if (replacement) await disposeHtmlResource(replacement);
+      server.closeAllConnections();
+      await new Promise<void>(resolve => server.close(() => resolve()));
+      await fs.rm(root, {recursive: true, force: true});
+    }
+  });
 
 test.each(['got', 'native'] as const)('%s cancellation waits for save policy and preserves unopened output', async transport => {
   const root = await fs.mkdtemp(join(process.cwd(), '.wse-stream-cancel-policy-'));

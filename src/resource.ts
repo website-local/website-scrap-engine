@@ -1,6 +1,7 @@
 import URI from './uri.js';
 import type {IncomingHttpHeaders} from 'node:http';
 import * as path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {
   escapePath,
   isUrlHttp,
@@ -558,17 +559,31 @@ export function resolveFileUrl(
   if (!localSrcRoot) {
     error = 'can not use file url without localSrcRoot';
   }
+  if (localSrcRoot) {
+    const windows = process.platform === 'win32' || /^[a-z]:[\\/]/i.test(localSrcRoot);
+    const paths = windows ? path.win32 : path.posix;
+    const root = windows ? paths.resolve(localSrcRoot) : paths.resolve('/', localSrcRoot);
+    try {
+      // Explicit file URLs must stay inside the source root after URL decoding
+      // and dot-segment normalization, including the referring document.
+      for (let index = 0; index < 2; index++) {
+        const source = index === 0 ? url : refUrl;
+        if (!source.startsWith(FILE_PROTOCOL_PREFIX)) continue;
+        const relative = paths.relative(root, fileURLToPath(source, {windows}));
+        if (relative === '..' || relative.startsWith('..' + paths.sep) || paths.isAbsolute(relative)) {
+          error = (index === 0 ? 'file url' : 'file refUrl') +
+            ' not starting with localSrcRoot is forbidden';
+          break;
+        }
+      }
+    } catch (e) {
+      if (!skipReplacePathError) throw e;
+      error = 'invalid file url';
+    }
+  }
   // unix absolute path
   if (localSrcRoot && localSrcRoot[0] === '/') {
     localSrcRoot = localSrcRoot.slice(1);
-  }
-  if (!error && localSrcRoot && url.startsWith(FILE_PROTOCOL_PREFIX) &&
-    !url.slice(FILE_PROTOCOL_PREFIX.length).startsWith(localSrcRoot)) {
-    error = 'file url not starting with localSrcRoot is forbidden';
-  }
-  if (!error && localSrcRoot && refUrl.startsWith(FILE_PROTOCOL_PREFIX) &&
-    !refUrl.slice(FILE_PROTOCOL_PREFIX.length).startsWith(localSrcRoot)) {
-    error = 'file refUrl not starting with localSrcRoot is forbidden';
   }
   if (!error && localSrcRoot) {
     if (localSrcRoot.endsWith('/')) {
@@ -733,13 +748,17 @@ export function createResourceWithUris({
 }
 
 export function normalizeResource(res: RawResource): Resource {
-  const resource = res as RawResource & Partial<Resource>;
+  const resource = res as Resource;
   const uri = normalizedUri(resource.uri, resource.url, 'url');
   const refUri = normalizedUri(resource.refUri, resource.refUrl, 'refUrl');
   const replaceUri = normalizedUri(resource.replaceUri, resource.replacePath, 'replacePath');
-  const normalized = Object.assign(resource, {uri, refUri, replaceUri,
-    url: uri.toString(), refUrl: refUri.toString(),
-    replacePath: replaceUri.toString(), host: uri.hostname()});
+  resource.uri = uri;
+  resource.refUri = refUri;
+  resource.replaceUri = replaceUri;
+  resource.url = uri.toString();
+  resource.refUrl = refUri.toString();
+  resource.replacePath = replaceUri.toString();
+  resource.host = uri.hostname();
   if (!resource.waitTime && resource.downloadStartTimestamp) {
     resource.waitTime = resource.downloadStartTimestamp - resource.createTimestamp;
   }
@@ -755,7 +774,7 @@ export function normalizeResource(res: RawResource): Resource {
     resource.body = Buffer.from(
       resource.body.buffer, resource.body.byteOffset, resource.body.byteLength);
   }
-  return normalized;
+  return resource;
 }
 
 function normalizedUri(current: unknown, value: string, name: string): URI {

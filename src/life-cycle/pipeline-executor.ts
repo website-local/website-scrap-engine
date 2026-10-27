@@ -25,6 +25,8 @@ export interface PipelineExecutor {
   readonly signal?: AbortSignal;
   /** Recheck the existing-resource save policy immediately before publication. */
   shouldSaveResource(res: Resource): Promise<boolean>;
+  /** Transfer task state and dispose or transfer the previous document. */
+  replaceResource(previous: Resource, next: Resource): Promise<void>;
   /**
    * @see InitLifeCycleFunc
    */
@@ -117,8 +119,9 @@ export interface PipelineExecutor {
   /**
    * Notify status change listeners.
    *
-   * All listeners always run (void return does not short-circuit),
-   * and thrown errors are swallowed.
+   * Read-only listeners start in array order without waiting for earlier
+   * listeners. All listeners run, and exceptions/rejections are swallowed.
+   * The result settles after every listener's returned promise settles.
    */
   notifyStatusChange(
     res: Resource | RawResource,

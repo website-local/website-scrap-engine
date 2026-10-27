@@ -105,6 +105,16 @@ documents, including those created by `$.load()`, have independent lifetimes
 and must be disposed by their creator. Do not use documents, selections or
 nodes after disposal. See the [ownership examples](docs/grovedom.md#hooks-and-standalone-transformations).
 
+Custom `PipelineExecutor` implementations must also expose
+`replaceResource(previous: Resource, next: Resource): Promise<void>`. The built-in
+executor already implements it. It transfers task/publication/discovery state,
+waits for pending document status work, and disposes the previous document or
+transfers ownership when both resources share it. Streaming before-download
+hooks now use this method when they return a distinct resource without a body;
+the replacement URL and save path are used, its outcome is propagated to the
+original task, and its document is cleared on completion, discard or failure.
+Hooks returning a body continue through the ordinary download pipeline.
+
 Custom hooks that replace `res.meta.doc` directly must dispose the previous
 document first. The built-in `processHtml` and `processHtmlAsync` adapters handle
 that replacement for their callbacks. Serialize generated child documents and
@@ -115,6 +125,20 @@ Pass the current resource and executor to I/O helpers that need crawl ownership.
 For example, `io.writeFile(path, data, encoding, mtime, atime, localRoot, res,
 pipeline)` uses the executor's cancellation, logging and publication store.
 Omitting those arguments requests standalone publication behavior.
+
+## Status observers
+
+`statusChange` observers start in array order without waiting for earlier
+observers. Their asynchronous work runs concurrently. Every observer runs;
+synchronous exceptions and asynchronous rejections are swallowed. Notification
+completion waits for all returned promises, and resource cleanup and downloader
+shutdown continue to wait for outstanding notifications.
+
+Treat the resource and other arguments as read-only. Create or replace documents
+in processing hooks. Return or await asynchronous observer work so its lifetime
+is explicit. If observers depend on each other's completion, combine that work
+in one callback and await it in order, handling failures there as needed.
+Disposal lifecycle passes still run sequentially and stop on an error.
 
 ## Custom workers
 

@@ -1,5 +1,65 @@
 # Performance for 0.10
 
+## Prefix and promise measurements: 2026-10-27
+
+Local path containment now uses a module-cached `'..' + path.sep` prefix.
+Asynchronous status observers start together and join through
+`Promise.allSettled(...).then(...)`. Synchronous observers still use the shared
+completed promise without a pending array. Lifetime and shutdown tracking remain
+necessary; the [migration guide](../MIGRATION-0.10.0.md#status-observers) explains
+the observer ordering change.
+
+The finalizer microbenchmark used one fulfilled promise and a callback capturing
+the resource. Raw medians are nanoseconds per operation:
+
+| Runtime | `await` | `.then` | Qualified comparison triples |
+| --- | ---: | ---: | ---: |
+| Node 22.22.2 | 763.1 | 720.7 | 19 |
+| Node 24.18.0 | 628.5 | 569.2 | 15 |
+
+Four-promise cases showed roughly 1–3% lower raw median time with `.then`.
+All six resource-capturing comparisons had at least 12 qualified triples and
+95% ratio intervals below 1 against both the baseline and its identical control.
+Control placement differences limit the precision of the percentage estimates.
+These measure promise-barrier overhead with a synchronous finalizer. They do
+not compare whole dispatchers or establish a downloader throughput gain.
+
+Prefix-only raw medians for mostly-contained POSIX inputs, in nanoseconds:
+
+| Runtime | Concatenation | `charAt` check | Module-cached prefix | Qualified triples, `charAt` / cached |
+| --- | ---: | ---: | ---: | ---: |
+| Node 22.22.2 | 16.484 | 4.229 | 5.117 | 23 / 21 |
+| Node 24.18.0 | 19.003 | 6.056 | 5.345 | 1 / 1 |
+
+The Node 24 prefix timings lack the required 12 qualified triples and remain
+raw observations. The cached prefix was faster than `charAt` on Node 22's
+edge-heavy inputs; neither alternative wins universally. Full containment
+checks, including `path.relative`, showed much smaller and inconsistent gains.
+Separate heap sampling estimated 23.0–23.5 allocated bytes per concatenation
+call on both runtimes. Neither alternative had allocations sampled in its
+variant code; zero samples do not prove literally zero allocation.
+
+Each workload uses 24 fixed samples, three discarded warmups, rotating/reversed
+variant order and an identical control. Qualified triples require CPU/wall >=
+0.85 and fewer than one externally busy core for every compared variant.
+POSIX and Windows path algorithms were measured on Linux; native Windows remains
+unqualified. [Recorded plans, results and input hashes](evidence/listener-prefix-performance.json)
+preserve the measurements after temporary profile and build cleanup.
+
+## Property-access review: 2026-10-27
+
+The [object layout review](object-layout-review.md) extends the earlier profiles
+and records the current fixes, runtime layouts and rejected experiments. Direct
+assignments in worker resource normalization retain the original object and keep
+the measured 27-property HTTP worker resources fast on Node 22.22.2 and 24.18.0.
+The earlier `Object.assign` version enters dictionary mode. Retained worker-resource
+graphs use about 1.35 kB less JavaScript heap each in the controlled probe.
+
+Option/header spread copies also simplify construction. Paired crawl measurements
+establish no reliable overall speedup. Extra worker copying and hoisted wire-field
+arrays were rejected; the HTML link-array allocation remains unchanged. These
+results do not measure whole-crawl RSS, DOM/Wasm memory or MDN adoption performance.
+
 ## HTML link-array experiment: 2026-10-25
 
 The quality pass compared `links = [attrValue]` with one reusable array per
@@ -44,7 +104,9 @@ Main-thread Resources remain fast from creation through ordinary processing
 and cleanup: 18 properties at creation and 28 after processing. Clearing `doc`
 and pending status work preserves fast metadata properties. Retrying by deleting
 old error metadata enters dictionary mode; worker URI normalization also enters
-dictionary mode. Both transitions occur in the original baseline as well. No
+dictionary mode in that dated implementation. Both transitions occur in the
+original baseline as well. The 2026-10-27 direct-assignment result above updates
+the HTTP worker observation. No
 extra object copy or Map replacement was added to change those layouts.
 
 Six batches per runtime retained 1,800 real Resources with distinct URLs and

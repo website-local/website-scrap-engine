@@ -99,23 +99,21 @@ lc.saveToDisk.unshift(res => {
 lc.statusChange = [
   async (res, status, options) => {
     if (status !== 'error') return;
-    // A failed pipeline has already discarded its document. Status reporting
-    // can create a new one that remains owned until every listener finishes.
-    const doc = res.meta.doc ||= loadHtml('<p>error status</p>', undefined, undefined, options);
-    statusEvents.push({event: 'start', url: res.url});
-    await new Promise(resolve => setImmediate(resolve));
-    assert.ok(doc.html());
-    const generated = loadHtml('<p>error report</p>', undefined, undefined, options);
-    assert.equal(typeof generated.dispose, 'function');
-    try { assert.ok(generated.html()); }
-    finally { generated.dispose(); }
-    statusEvents.push({event: 'resumed', url: res.url});
-    throw new Error('the following status listener must still run');
+    // Status observers own temporary report documents independently.
+    const doc = loadHtml('<p>error report</p>', undefined, undefined, options);
+    try {
+      statusEvents.push({event: 'start', url: res.url});
+      await new Promise(resolve => setImmediate(resolve));
+      assert.ok(doc.html());
+      assert.ok(res.meta.errorCause);
+      statusEvents.push({event: 'resumed', url: res.url});
+      throw new Error('observer failure is swallowed');
+    } finally { doc.dispose(); }
   },
   async (res, status) => {
     if (status !== 'error') return;
     await new Promise(resolve => setImmediate(resolve));
-    assert.ok(res.meta.doc.html());
+    assert.ok(res.meta.errorCause);
     statusEvents.push({event: 'following', url: res.url});
   }
 ];

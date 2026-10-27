@@ -86,8 +86,9 @@ Built-in save and discard paths dispose and clear `res.meta.doc`, including
 failure and cancellation. `disposeHtmlResource(res)` provides this cleanup for
 direct pipeline callers; await it in `finally`. It waits for pending resource
 status work, including notifications started by earlier listeners, before
-releasing the document. A status hook that creates a document must select its
-parser explicitly and attach the document to that resource.
+releasing the document. Status observers are read-only and may run asynchronous
+work concurrently. Create or replace resource documents in processing hooks;
+return asynchronous observer work so cleanup can wait for it.
 
 Temporary documents have their own lifetime. Dispose each in `finally` after
 serialization. This also applies to documents returned by `$.load()`; disposing
@@ -128,8 +129,8 @@ Cheerio method, parser option, plugin or raw domhandler operation available.
 Cross-document node adoption is unsupported. Some positional selectors and
 HTML/XML options differ. Pass only options supported by the selected backend.
 
-Use published 0.1.2 for this integration. The explicit-ownership qualification
-below covers the completed quality pass. Earlier scoped-ownership results are
+Use published 0.1.2 for this integration. The dated qualifications below cover
+the quality pass and its review follow-up. Earlier scoped-ownership results are
 retained separately as historical evidence.
 
 Installed-consumer checks for those earlier revisions on
@@ -145,6 +146,27 @@ final serialized output, resource paths, submissions and logs. All 303 loaded
 documents were disposed. A further **32 saved-file/link checks** matched and
 resolved to the expected file bytes. These offline checks do not establish
 arbitrary hook compatibility or a whole-crawl performance improvement.
+
+## Review follow-up qualification (2026-10-27)
+
+The follow-up to `02aa109` passes fresh builds, lint, strict source/test types,
+and **53 suites / 1,138 tests** on Node 22.22.2 and 24.18.0. The final packed
+engine passes strict consumer declarations and all 15 runtime check groups on
+both runtimes, including both downloaders, the logging peer, all 16 GroveDOM
+ownership/pool cases, and module aliases with CommonJS-only exports.
+
+Both builds emit identical files. All 276 installed engine files match the
+validated build/source; all 37 reused GroveDOM files and its published 0.1.2
+tarball match the preserved package hashes. No dependency installation was
+needed. New regressions cover streaming-hook replacement ownership and local
+path boundaries. Custom executors must expose the existing
+`replaceResource` operation; see the [migration guide](../MIGRATION-0.10.0.md#lifecycle-dependencies-and-document-ownership).
+
+The [object layout review](object-layout-review.md) records the measured worker
+heap reduction and the absence of a reliable crawl speedup. The older 193-case
+and frozen MDN replays remain evidence for their dated engine revisions.
+Full-archive/browser validation and an admissible consumer performance
+measurement remain adoption requirements. Cheerio remains the default.
 
 ## Explicit ownership qualification (2026-10-25)
 

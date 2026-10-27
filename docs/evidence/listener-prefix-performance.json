@@ -1,0 +1,3474 @@
+{
+  "date": "2026-10-27",
+  "scope": "Historical expression/barrier measurements before adopting concurrent status observers. Timing results do not establish complete dispatcher or crawl throughput. Raw profiles and temporary validation copies are removed during the requested cleanup; this file retains plans, statistics, controls, input hashes and semantic-probe results.",
+  "inputs": [
+    {
+      "file": "evidence/plan.json",
+      "sha256": "0877e5e351c511c3a617ed1adda2addede3f3b4cc7ac01460ae976a402e12222"
+    },
+    {
+      "file": "evidence/bound-plan.json",
+      "sha256": "aba778b05cc946bca5895fceb757b91bd5c5f66416cac62cd9aa46674052dfdc"
+    },
+    {
+      "file": "evidence/await-plan.json",
+      "sha256": "dc2cd25b43ebd3dbd9cfc83e63dc22e5c9216a2299b5e31d81a1eb6bffd97f7c"
+    },
+    {
+      "file": "evidence/timing-summary.json",
+      "sha256": "5eb998ac3eaa0437365581884690d541a5741067e87fecf8ce95fc4ac3ff001f"
+    },
+    {
+      "file": "evidence/timing-bound-summary.json",
+      "sha256": "bf1265d4d8938f845f9f06791944120e8ced833fa4516ff07aa7c35d82a32fb6"
+    },
+    {
+      "file": "evidence/timing-await-summary.json",
+      "sha256": "d277afc1c8eeaa44364ce8727209910009348fafc830895588821270f23e7bea"
+    },
+    {
+      "file": "evidence/allocation-bound-node22-summary.json",
+      "sha256": "32a85ed725e2a0e1d665d4dd293b2304e12a54660f91973697ba867b17ee9ea6"
+    },
+    {
+      "file": "evidence/allocation-bound-node24-summary.json",
+      "sha256": "c34d34dd2eeb6f08a1021f2fd1ecd7816130229789376057859e9064f94e2003"
+    },
+    {
+      "file": "evidence/allocation-await-node22-summary.json",
+      "sha256": "78ca684edb31aeaab605e1980efa257910aab4730edec765c73e70a7fa4ecda4"
+    },
+    {
+      "file": "evidence/allocation-await-node24-summary.json",
+      "sha256": "01671db4c0c557e1415529649dcacf6fceb9822e13b4457fcd1e5c8cc964fa94"
+    },
+    {
+      "file": "evidence/listener-review-node22.json",
+      "sha256": "a746b7fa69443b5832dc276e4eeec8c75d164d59e9db1922eb898011335cd488"
+    },
+    {
+      "file": "evidence/listener-review-node24.json",
+      "sha256": "995d564751a46051662cb28e1118f080ee6f3ab076567a504cd6eb4566afb772"
+    },
+    {
+      "file": "evidence/parallel-listeners-node22.json",
+      "sha256": "35efc13eacb9f9a9db818ba4db1dca01b6a74c1e132cad92062bf6bef23403a3"
+    },
+    {
+      "file": "evidence/parallel-listeners-node24.json",
+      "sha256": "125f38ecac6a5e209bf9f6a798c29147a8fd038d12eac8c542155453c33822ac"
+    },
+    {
+      "file": "evidence/verify-await-node22.json",
+      "sha256": "e5e412aef6b04585eaae7800e0c28d7316358f48df63b6e333835b49973fdc2d"
+    },
+    {
+      "file": "evidence/verify-await-node24.json",
+      "sha256": "dd87780171453500f673152384ea983c09a2960b17756dfa317f6c2ecb69e6e0"
+    }
+  ],
+  "prefix": {
+    "plan": {
+      "samples": 24,
+      "discardedWarmups": 3,
+      "targetSampleMs": 120,
+      "variants": {
+        "concat": "relative.startsWith('..' + paths.sep)",
+        "control": "relative.startsWith('..' + paths.sep)",
+        "charAt": "(relative.startsWith('..') && relative.charAt(2) === paths.sep)",
+        "cached": "relative.startsWith(parentPrefix)"
+      },
+      "variantHashes": {
+        "concat": "9a95ec9da31e4a09837c54e195546ecef9c1f6978bf40088bf563f007be26335",
+        "control": "9a95ec9da31e4a09837c54e195546ecef9c1f6978bf40088bf563f007be26335",
+        "charAt": "5ca14dd0e8f400cb81cb34762b910e626be216f7e38590dad95351712bae1ad0",
+        "cached": "bd338476d9479f3e03bb57db565c7aedf5c6f86d0a5b01e741f6fd0c7564674e"
+      },
+      "workloads": [
+        "prefixOnly",
+        "completeContainment"
+      ],
+      "distributions": [
+        "mostly-contained",
+        "edge-heavy"
+      ],
+      "pathStyles": [
+        "posix",
+        "win32"
+      ],
+      "runtimes": [
+        "22.22.2",
+        "24.18.0"
+      ],
+      "method": "Independent warmed iteration calibration per variant/case to about 120 ms; compare paired nanoseconds per operation. Rotate and reverse variant order across fixed samples. Identical control module checks runtime placement/noise. No profile instrumentation in timing runs.",
+      "gates": {
+        "cpuToWallMinimum": 0.85,
+        "externalBusyCoresMaximum": 1,
+        "minimumQualifiedTriples": 12
+      },
+      "allocation": "Separate inspector heap-sampling runs retain samples from collected objects. These estimate allocated bytes; sampling cannot establish zero allocation. Profiles are excluded from speed measurements.",
+      "source": {
+        "src/life-cycle/local-url-mount.ts": "d572aa5bd6cb478908f64fa53aec6141b8a262eb126c08015f7c403c1da569bc",
+        "src/resource.ts": "644aaeb9b9e3531697d1b86af20bd2a1cf207c2bce2e48f5386859a604d3b435"
+      }
+    },
+    "moduleScopeFollowup": {
+      "basePlan": "plan.json",
+      "reason": "The first phase passed paths and the cached string as arguments. This fixed follow-up binds the path implementation and cached prefix at module scope to match local-url-mount.ts and test possible V8 constant folding.",
+      "samples": 24,
+      "discardedWarmups": 3,
+      "targetSampleMs": 120,
+      "fixtures": "Same two distributions and path styles as the first phase.",
+      "comparisons": "Same variants, calibration, controls and gates; preserve first-phase results separately.",
+      "variantHashes": {
+        "bound-posix-concat.mjs": "ec35cd0f3014399b3a7542615984b1806ab3782c40ae7c4de647ea70bd07c38d",
+        "bound-posix-control.mjs": "ec35cd0f3014399b3a7542615984b1806ab3782c40ae7c4de647ea70bd07c38d",
+        "bound-posix-charAt.mjs": "bc99117fee1199c432b49d3d5d7f429eb9fd2e973e98ce14a99a73eeb17d69dc",
+        "bound-posix-cached.mjs": "419139a559ce187d30037da8a1ecc954f7e9da154036352a58cab664746cfe33",
+        "bound-win32-concat.mjs": "6d1fd066a356502fd2a48b8684d33d763b5293178798f705f2728db14443eb51",
+        "bound-win32-control.mjs": "6d1fd066a356502fd2a48b8684d33d763b5293178798f705f2728db14443eb51",
+        "bound-win32-charAt.mjs": "1696a92848a5689b2f4f7553c44f2f89b9349e656b83efbcbdb9d40c1389660e",
+        "bound-win32-cached.mjs": "0478b71c4e7d33b80302a117fdfaf80aee5e8f7c334c1ffbe46cd7aa4db627b1"
+      }
+    },
+    "rows": [
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "posix/mostly-contained/prefixOnly",
+        "mediansNs": {
+          "concat": 16.484135521633416,
+          "control": 15.963360360515662,
+          "charAt": 4.229438943369458,
+          "cached": 5.116543038421551
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9712727181157685,
+              "ci95": [
+                0.9590820738936006,
+                0.9836183144641379
+              ]
+            },
+            "qualified": {
+              "n": 23,
+              "ratio": 0.9720634202443491,
+              "ci95": [
+                0.9594252267117391,
+                0.9848680925512509
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 23,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.2574096145675651,
+              "ci95": [
+                0.25450767160237026,
+                0.2603446460165775
+              ]
+            },
+            "qualified": {
+              "n": 23,
+              "ratio": 0.25752024398672635,
+              "ci95": [
+                0.2544970494836738,
+                0.2605793513029995
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 23,
+              "ratio": 0.2649212372604177,
+              "ci95": [
+                0.26231660971520315,
+                0.26755172700572954
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.31184572040789843,
+              "ci95": [
+                0.30607915973136224,
+                0.317720923639731
+              ]
+            },
+            "qualified": {
+              "n": 21,
+              "ratio": 0.3127839105769324,
+              "ci95": [
+                0.30659706071377535,
+                0.31909560544395255
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 21,
+              "ratio": 0.3205723538776138,
+              "ci95": [
+                0.3158248025412736,
+                0.3253912715015597
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "posix/mostly-contained/completeContainment",
+        "mediansNs": {
+          "concat": 1016.7237349633908,
+          "control": 1009.5750551876565,
+          "charAt": 1004.4166226215577,
+          "cached": 989.1072850318322
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9774477841476819,
+              "ci95": [
+                0.9448244810871896,
+                1.0111975185442377
+              ]
+            },
+            "qualified": {
+              "n": 18,
+              "ratio": 1.005185901846896,
+              "ci95": [
+                0.987968312359745,
+                1.0227035468965984
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 18,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9682000139014624,
+              "ci95": [
+                0.9353938958326418,
+                1.0021567075593907
+              ]
+            },
+            "qualified": {
+              "n": 14,
+              "ratio": 0.9878395096050293,
+              "ci95": [
+                0.9739256849186803,
+                1.0019521117960692
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 14,
+              "ratio": 0.9812771484093725,
+              "ci95": [
+                0.9657402454337038,
+                0.9970640102691375
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9600988844128363,
+              "ci95": [
+                0.9267622822356267,
+                0.994634638806341
+              ]
+            },
+            "qualified": {
+              "n": 16,
+              "ratio": 0.9834482523050309,
+              "ci95": [
+                0.9659606486806721,
+                1.0012524488267716
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 16,
+              "ratio": 0.9764267459057074,
+              "ci95": [
+                0.9583327730071648,
+                0.9948623452877373
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "posix/edge-heavy/prefixOnly",
+        "mediansNs": {
+          "concat": 17.7762403961148,
+          "control": 17.67463121358641,
+          "charAt": 9.381439890541404,
+          "cached": 8.090384787319062
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.988445144693983,
+              "ci95": [
+                0.9721969823597717,
+                1.0049648597937646
+              ]
+            },
+            "qualified": {
+              "n": 17,
+              "ratio": 0.9916816136971438,
+              "ci95": [
+                0.9734425843552562,
+                1.0102623809049112
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 17,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.5263143649016947,
+              "ci95": [
+                0.5179711965836858,
+                0.5347919199540272
+              ]
+            },
+            "qualified": {
+              "n": 14,
+              "ratio": 0.5249398523674162,
+              "ci95": [
+                0.5183898331452419,
+                0.5315726331506161
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 14,
+              "ratio": 0.5311330272494753,
+              "ci95": [
+                0.5236404663076617,
+                0.5387327962339802
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.45595130310273896,
+              "ci95": [
+                0.44878031644682964,
+                0.4632368737716602
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 0.45466370269274886,
+              "ci95": [
+                0.4499603129053274,
+                0.4594162565394394
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 0.45763979640439423,
+              "ci95": [
+                0.45073377997681635,
+                0.4646516248767238
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "posix/edge-heavy/completeContainment",
+        "mediansNs": {
+          "concat": 843.9239789312551,
+          "control": 839.4648650956213,
+          "charAt": 830.953848627778,
+          "cached": 815.2262086236732
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9895627254907626,
+              "ci95": [
+                0.9746926873123001,
+                1.004659622902199
+              ]
+            },
+            "qualified": {
+              "n": 17,
+              "ratio": 0.99934494575203,
+              "ci95": [
+                0.9869544771316878,
+                1.011890967354996
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 17,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9773532973481361,
+              "ci95": [
+                0.9595571698153385,
+                0.995479475205319
+              ]
+            },
+            "qualified": {
+              "n": 12,
+              "ratio": 0.9829442184573557,
+              "ci95": [
+                0.9642541340784223,
+                1.0019965717047816
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 12,
+              "ratio": 0.9807914429955114,
+              "ci95": [
+                0.9678649110379308,
+                0.9938906180839098
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.960997544903454,
+              "ci95": [
+                0.9437521404100423,
+                0.9785580787231019
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 0.9628595210679791,
+              "ci95": [
+                0.9504558336897004,
+                0.975425079682274
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 0.966990397602615,
+              "ci95": [
+                0.9485650286461316,
+                0.9857736695082162
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "win32/mostly-contained/prefixOnly",
+        "mediansNs": {
+          "concat": 16.13597215065043,
+          "control": 15.875812269250083,
+          "charAt": 4.244159123436142,
+          "cached": 5.11943640226482
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9811182962276074,
+              "ci95": [
+                0.9628667084371512,
+                0.9997158513819299
+              ]
+            },
+            "qualified": {
+              "n": 17,
+              "ratio": 0.9745238570517082,
+              "ci95": [
+                0.9586707395438383,
+                0.9906391306099837
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 17,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.2612885956025296,
+              "ci95": [
+                0.25589376977760725,
+                0.2667971566923102
+              ]
+            },
+            "qualified": {
+              "n": 17,
+              "ratio": 0.2625699185316862,
+              "ci95": [
+                0.25948126522810433,
+                0.2656953366445553
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 17,
+              "ratio": 0.2694340591374094,
+              "ci95": [
+                0.26602466153966003,
+                0.27288715190203644
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.31434783234891617,
+              "ci95": [
+                0.30772335244227966,
+                0.3211149200026904
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 0.31647953103121473,
+              "ci95": [
+                0.3125512657048961,
+                0.3204571683171674
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 0.3238830019918554,
+              "ci95": [
+                0.3202546982854973,
+                0.3275524123169643
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "win32/mostly-contained/completeContainment",
+        "mediansNs": {
+          "concat": 1115.5936424884771,
+          "control": 1135.014671800272,
+          "charAt": 1099.3783010563197,
+          "cached": 1130.7956964720247
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0046682461371614,
+              "ci95": [
+                0.9724065141924693,
+                1.0380003322319753
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 1.004779034762006,
+              "ci95": [
+                0.9899589391417857,
+                1.0198209933560411
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9664551925665391,
+              "ci95": [
+                0.9314696485230793,
+                1.0027547765188223
+              ]
+            },
+            "qualified": {
+              "n": 12,
+              "ratio": 0.9880411401116674,
+              "ci95": [
+                0.9710288983178286,
+                1.0053514331492472
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 12,
+              "ratio": 0.9879731297578991,
+              "ci95": [
+                0.9714103033156463,
+                1.004818357178214
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9841232679704068,
+              "ci95": [
+                0.9503116478056296,
+                1.019137888920039
+              ]
+            },
+            "qualified": {
+              "n": 13,
+              "ratio": 1.0167245026518563,
+              "ci95": [
+                1.0009158351164957,
+                1.032782855485896
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 13,
+              "ratio": 1.0110126079573873,
+              "ci95": [
+                0.9900423587093652,
+                1.0324270314871011
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "win32/edge-heavy/prefixOnly",
+        "mediansNs": {
+          "concat": 17.0014978012962,
+          "control": 16.835300576796712,
+          "charAt": 8.56243194686394,
+          "cached": 7.474981725699766
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.999284700702781,
+              "ci95": [
+                0.9573089060325303,
+                1.0431010374667027
+              ]
+            },
+            "qualified": {
+              "n": 10,
+              "ratio": 0.9959204470378267,
+              "ci95": [
+                0.9805242454049488,
+                1.0115583999846889
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 10,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.4997256277753635,
+              "ci95": [
+                0.48389066580743273,
+                0.5160787770906518
+              ]
+            },
+            "qualified": {
+              "n": 9,
+              "ratio": 0.5055582320397238,
+              "ci95": [
+                0.4963345753683517,
+                0.5149532969639428
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 9,
+              "ratio": 0.5082534114845593,
+              "ci95": [
+                0.495605624834867,
+                0.521223967891333
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.426395867735096,
+              "ci95": [
+                0.41456777462677485,
+                0.43856142987777486
+              ]
+            },
+            "qualified": {
+              "n": 10,
+              "ratio": 0.4363157844527648,
+              "ci95": [
+                0.42735275869622114,
+                0.4454667950276529
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 10,
+              "ratio": 0.43810304904423036,
+              "ci95": [
+                0.42882916988199016,
+                0.4475774855396844
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "case": "win32/edge-heavy/completeContainment",
+        "mediansNs": {
+          "concat": 893.7873768761463,
+          "control": 897.7674005681861,
+          "charAt": 887.6806729890599,
+          "cached": 881.0899018355386
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0066523032985168,
+              "ci95": [
+                0.9824015181348468,
+                1.0315017241220454
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 1.001297040180457,
+              "ci95": [
+                0.9836455333753212,
+                1.019265303054644
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9937560201600878,
+              "ci95": [
+                0.9622857203510307,
+                1.0262555150918895
+              ]
+            },
+            "qualified": {
+              "n": 14,
+              "ratio": 0.9841105370805845,
+              "ci95": [
+                0.9620970434418179,
+                1.0066277157742916
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 14,
+              "ratio": 0.9831452192520145,
+              "ci95": [
+                0.9602208143221649,
+                1.0066169236504332
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9736838980572529,
+              "ci95": [
+                0.9499096519690889,
+                0.9980531636568925
+              ]
+            },
+            "qualified": {
+              "n": 13,
+              "ratio": 0.9732026241154909,
+              "ci95": [
+                0.9484104395817723,
+                0.9986428955832009
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 13,
+              "ratio": 0.9705993980324924,
+              "ci95": [
+                0.9479038569733946,
+                0.993838335534358
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "posix/mostly-contained/prefixOnly",
+        "mediansNs": {
+          "concat": 19.003487271630032,
+          "control": 19.285313132804546,
+          "charAt": 6.05575219147847,
+          "cached": 5.345239070050372
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.055805530201217,
+              "ci95": [
+                0.9902553375413308,
+                1.1256948337902264
+              ]
+            },
+            "qualified": {
+              "n": 2,
+              "ratio": 0.9983689092838797,
+              "ci95": [
+                0.9840591909895074,
+                1.0128867126604697
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 2,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.3390445150477893,
+              "ci95": [
+                0.3186254459188186,
+                0.360772137493622
+              ]
+            },
+            "qualified": {
+              "n": 1,
+              "ratio": 0.3252316882993783,
+              "ci95": [
+                0.3252316882993783,
+                0.3252316882993783
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 1,
+              "ratio": 0.323372373879369,
+              "ci95": [
+                0.323372373879369,
+                0.323372373879369
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.2789803632103275,
+              "ci95": [
+                0.2651880618997937,
+                0.2934899953617663
+              ]
+            },
+            "qualified": {
+              "n": 1,
+              "ratio": 0.29224272945745855,
+              "ci95": [
+                0.29224272945745855,
+                0.29224272945745855
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 1,
+              "ratio": 0.29057200935061905,
+              "ci95": [
+                0.29057200935061905,
+                0.29057200935061905
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "posix/mostly-contained/completeContainment",
+        "mediansNs": {
+          "concat": 1012.6484709582378,
+          "control": 1008.108987894133,
+          "charAt": 1013.5635767227473,
+          "cached": 998.169833096586
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9927788182073007,
+              "ci95": [
+                0.9721550177168335,
+                1.0138401426923151
+              ]
+            },
+            "qualified": {
+              "n": 10,
+              "ratio": 1.0073713673504607,
+              "ci95": [
+                0.9884420987100001,
+                1.0266631430226738
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 10,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.999888567292187,
+              "ci95": [
+                0.9640602575425102,
+                1.0370483993917123
+              ]
+            },
+            "qualified": {
+              "n": 6,
+              "ratio": 1.013185401766637,
+              "ci95": [
+                0.9730758450607551,
+                1.0549482484470967
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 6,
+              "ratio": 1.0221446968071763,
+              "ci95": [
+                0.9896423724058019,
+                1.05571447862645
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9828306803034937,
+              "ci95": [
+                0.9634265912858317,
+                1.0026255813186766
+              ]
+            },
+            "qualified": {
+              "n": 5,
+              "ratio": 0.9867972760146612,
+              "ci95": [
+                0.961444733335815,
+                1.0128183453367938
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 5,
+              "ratio": 0.9843739036703307,
+              "ci95": [
+                0.9500725135872767,
+                1.0199137101319276
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "posix/edge-heavy/prefixOnly",
+        "mediansNs": {
+          "concat": 18.07857345582387,
+          "control": 18.467160172209788,
+          "charAt": 9.813354502630597,
+          "cached": 7.893144853778571
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0183942562470805,
+              "ci95": [
+                1.0036421078689262,
+                1.03336324076639
+              ]
+            },
+            "qualified": {
+              "n": 12,
+              "ratio": 1.008018034725865,
+              "ci95": [
+                0.9919517711536195,
+                1.0243445174263777
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 12,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.5450699226954179,
+              "ci95": [
+                0.5348966237455347,
+                0.5554367095211433
+              ]
+            },
+            "qualified": {
+              "n": 8,
+              "ratio": 0.5335257290560513,
+              "ci95": [
+                0.5241596487206205,
+                0.5430591695861555
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 8,
+              "ratio": 0.533469937883633,
+              "ci95": [
+                0.5269804429942927,
+                0.5400393475866606
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.4351526266908607,
+              "ci95": [
+                0.4304565655401949,
+                0.4398999194688176
+              ]
+            },
+            "qualified": {
+              "n": 8,
+              "ratio": 0.4363367399292117,
+              "ci95": [
+                0.4307691804482727,
+                0.44197625840810295
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 8,
+              "ratio": 0.43325864446341567,
+              "ci95": [
+                0.42758367265715674,
+                0.4390089355745529
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "posix/edge-heavy/completeContainment",
+        "mediansNs": {
+          "concat": 828.0335286458277,
+          "control": 843.317090850534,
+          "charAt": 811.0779822466748,
+          "cached": 796.0980317242709
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9984614721511,
+              "ci95": [
+                0.9751332196173437,
+                1.022347809831922
+              ]
+            },
+            "qualified": {
+              "n": 14,
+              "ratio": 1.016783510261109,
+              "ci95": [
+                0.9972444082861444,
+                1.0367054436691867
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 14,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9444107889367677,
+              "ci95": [
+                0.9149327847062497,
+                0.9748385380534014
+              ]
+            },
+            "qualified": {
+              "n": 10,
+              "ratio": 0.9768384518397178,
+              "ci95": [
+                0.9607597247417502,
+                0.99318626334915
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 10,
+              "ratio": 0.9711861212900272,
+              "ci95": [
+                0.9511261822158116,
+                0.9916691389874428
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9446387473245873,
+              "ci95": [
+                0.9194938057441254,
+                0.9704713151654274
+              ]
+            },
+            "qualified": {
+              "n": 14,
+              "ratio": 0.9747547440601416,
+              "ci95": [
+                0.9547402410072675,
+                0.9951888170811057
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 14,
+              "ratio": 0.9586649805225752,
+              "ci95": [
+                0.9402866912007924,
+                0.9774024810525521
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "win32/mostly-contained/prefixOnly",
+        "mediansNs": {
+          "concat": 16.366319763548645,
+          "control": 16.2812447087702,
+          "charAt": 5.510728945028733,
+          "cached": 4.817781690140524
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9839459726163792,
+              "ci95": [
+                0.9555274759418472,
+                1.0132096683810203
+              ]
+            },
+            "qualified": {
+              "n": 5,
+              "ratio": 0.994054456737297,
+              "ci95": [
+                0.9522390865222902,
+                1.0377060519203463
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 5,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.3360768884670236,
+              "ci95": [
+                0.32577923024658,
+                0.3467000486071101
+              ]
+            },
+            "qualified": {
+              "n": 2,
+              "ratio": 0.346668285589704,
+              "ci95": [
+                0.343935690651275,
+                0.3494225912005071
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 2,
+              "ratio": 0.34247610212570245,
+              "ci95": [
+                0.3262307988024972,
+                0.35953037223264384
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.2961975552217386,
+              "ci95": [
+                0.2864773767169801,
+                0.30624753942091915
+              ]
+            },
+            "qualified": {
+              "n": 2,
+              "ratio": 0.31228173016420513,
+              "ci95": [
+                0.2881351084641616,
+                0.3384519141529016
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 2,
+              "ratio": 0.3063904962853271,
+              "ci95": [
+                0.29512885833195174,
+                0.31808186005443506
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "win32/mostly-contained/completeContainment",
+        "mediansNs": {
+          "concat": 1520.051224439307,
+          "control": 1551.5061891233458,
+          "charAt": 1452.904360193264,
+          "cached": 1450.7315432198216
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0262379831337407,
+              "ci95": [
+                0.9856304697073759,
+                1.0685185070821543
+              ]
+            },
+            "qualified": null,
+            "qualifiedVersusControl": null
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9767065307127908,
+              "ci95": [
+                0.9296817986654934,
+                1.026109845870239
+              ]
+            },
+            "qualified": null,
+            "qualifiedVersusControl": null
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9645161089894521,
+              "ci95": [
+                0.9347021539894035,
+                0.995281032069494
+              ]
+            },
+            "qualified": null,
+            "qualifiedVersusControl": null
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "win32/edge-heavy/prefixOnly",
+        "mediansNs": {
+          "concat": 17.23584475540831,
+          "control": 17.295334543311682,
+          "charAt": 8.822063862721333,
+          "cached": 7.12010963694287
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0129014007204993,
+              "ci95": [
+                0.9931824466853728,
+                1.0330118610186867
+              ]
+            },
+            "qualified": {
+              "n": 13,
+              "ratio": 1.0183192966138057,
+              "ci95": [
+                1.001726895693314,
+                1.0351865306944033
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 13,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.5140080497667474,
+              "ci95": [
+                0.5009090297767392,
+                0.5274496156373422
+              ]
+            },
+            "qualified": {
+              "n": 8,
+              "ratio": 0.5225280268638132,
+              "ci95": [
+                0.5111842385532513,
+                0.5341235473748807
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 8,
+              "ratio": 0.5059581737671928,
+              "ci95": [
+                0.49914076908189764,
+                0.5128686924786745
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.413593108236588,
+              "ci95": [
+                0.4032305111107672,
+                0.4242220131348447
+              ]
+            },
+            "qualified": {
+              "n": 7,
+              "ratio": 0.4192501395439229,
+              "ci95": [
+                0.41490811118983967,
+                0.4236376073813981
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 7,
+              "ratio": 0.4083292447710247,
+              "ci95": [
+                0.4044603528460472,
+                0.4122351448344313
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "case": "win32/edge-heavy/completeContainment",
+        "mediansNs": {
+          "concat": 920.4908116143511,
+          "control": 929.426033266107,
+          "charAt": 910.0802150599179,
+          "cached": 903.0315896739385
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0062930176517608,
+              "ci95": [
+                0.9949823434284762,
+                1.0177322683791712
+              ]
+            },
+            "qualified": {
+              "n": 18,
+              "ratio": 1.0152120971958936,
+              "ci95": [
+                1.003449841803087,
+                1.0271122275936697
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 18,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "charAt": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9831235598958447,
+              "ci95": [
+                0.9714579012121869,
+                0.9949293045187426
+              ]
+            },
+            "qualified": {
+              "n": 13,
+              "ratio": 0.9840340885955012,
+              "ci95": [
+                0.9705383144187085,
+                0.997717527615531
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 13,
+              "ratio": 0.9732204899258502,
+              "ci95": [
+                0.9636961116140768,
+                0.9828389993450678
+              ]
+            }
+          },
+          "cached": {
+            "all": {
+              "n": 24,
+              "ratio": 0.97605377229116,
+              "ci95": [
+                0.9591406663266988,
+                0.9932651172558092
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 0.984687039675876,
+              "ci95": [
+                0.9617639693906731,
+                1.0081564676621615
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 0.9691700100376948,
+              "ci95": [
+                0.9527729425210554,
+                0.985849268421797
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "caveat": "Raw results include busy-host intervals. Qualified triples require baseline, identical control and candidate to pass the fixed gates; fewer than 12 are not enough for an adoption claim. Windows path algorithms were run on Linux, not native Windows."
+  },
+  "finalizer": {
+    "plan": {
+      "request": "Compare the only await of Promise.allSettled with .then and an async IIFE.",
+      "labels": [
+        "await",
+        "control",
+        "then",
+        "iife"
+      ],
+      "contexts": [
+        "shared-finalizer",
+        "captured-resource"
+      ],
+      "workloads": [
+        "one-fulfilled",
+        "four-fulfilled",
+        "four-pending"
+      ],
+      "samples": 24,
+      "discardedWarmups": 3,
+      "targetSampleMs": 100,
+      "gates": {
+        "cpuToWallMinimum": 0.85,
+        "externalBusyCoresMaximum": 1,
+        "minimumQualifiedTriples": 12
+      },
+      "methodology": "Sequentially await each invocation and verify exactly one finalization per barrier. Calibrate each variant independently to 100 ms, rotate/reverse order, and retain an identical await control. Shared-finalizer ignores the allSettled result argument; captured-resource gives .then a per-call closure, matching resource cleanup. Pre-fulfilled input arrays are reused to isolate barrier overhead; four-pending creates a fresh array and four promises completed by microtasks in every operation. No timers, network, actual DOM or async context hooks in timed loops. Global GC runs before each block outside timing. Allocation sampling is separate.",
+      "semanticChecks": "No cleanup before all inputs settle; rejected inputs do not prevent finalization; finalizer throws/rejections propagate; async finalizer completion is adopted; every form finalizes exactly once.",
+      "allocation": {
+        "contexts": [
+          "captured-resource"
+        ],
+        "workloads": [
+          "one-fulfilled",
+          "four-pending"
+        ],
+        "warmupOperations": 8192,
+        "operations": 65536,
+        "samplingInterval": 4096,
+        "collectedObjectsIncluded": true
+      },
+      "hashes": {
+        "await-await.mjs": "110ae1a85b2095548cbe71eb1c476e8f5961778833d42d988b79f4b19c37c598",
+        "await-control.mjs": "110ae1a85b2095548cbe71eb1c476e8f5961778833d42d988b79f4b19c37c598",
+        "await-then.mjs": "5bf3e7aea13957fb7703445118d941ca102c359973e2224121e0e2becb1c1a0c",
+        "await-iife.mjs": "55742c8060a344689436aad0c300e60e83ce0075e53a68f3d0ad64283ca731f4"
+      }
+    },
+    "rows": [
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "context": "shared-finalizer",
+        "workload": "one-fulfilled",
+        "mediansNs": {
+          "await": 826.844388306269,
+          "control": 824.3071414747457,
+          "then": 752.3980863552256,
+          "iife": 894.0132766033307
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9796918697140055,
+              "ci95": [
+                0.9498061847169357,
+                1.0105179088402814
+              ]
+            },
+            "qualified": {
+              "n": 9,
+              "ratio": 1.003012187840612,
+              "ci95": [
+                0.9796773778168391,
+                1.026902806716539
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 9,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9139732929530374,
+              "ci95": [
+                0.8872250478145495,
+                0.9415279497451988
+              ]
+            },
+            "qualified": {
+              "n": 6,
+              "ratio": 0.913054497123484,
+              "ci95": [
+                0.8968357659791781,
+                0.9295665341883493
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 6,
+              "ratio": 0.9152412024904701,
+              "ci95": [
+                0.8944217638696877,
+                0.9365452547935149
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0571244291654842,
+              "ci95": [
+                1.0208580949782746,
+                1.094679137321464
+              ]
+            },
+            "qualified": {
+              "n": 4,
+              "ratio": 1.0575921049112256,
+              "ci95": [
+                0.9865170537382558,
+                1.1337878611749974
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 4,
+              "ratio": 1.0614755332211177,
+              "ci95": [
+                0.9858980167326103,
+                1.1428467128488418
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "context": "shared-finalizer",
+        "workload": "four-fulfilled",
+        "mediansNs": {
+          "await": 1946.8805021817107,
+          "control": 1942.8532563201293,
+          "then": 1869.442348659712,
+          "iife": 1996.5149825446063
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9630386708325365,
+              "ci95": [
+                0.9236969793277117,
+                1.0040559861892302
+              ]
+            },
+            "qualified": {
+              "n": 12,
+              "ratio": 0.984277948913172,
+              "ci95": [
+                0.9612582097811175,
+                1.007848953443343
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 12,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.926532914409903,
+              "ci95": [
+                0.894957567520966,
+                0.9592222834238425
+              ]
+            },
+            "qualified": {
+              "n": 12,
+              "ratio": 0.9500718730448561,
+              "ci95": [
+                0.923859191841746,
+                0.97702828734271
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 12,
+              "ratio": 0.9652475442469418,
+              "ci95": [
+                0.950881770840519,
+                0.9798303535161748
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0077744246886655,
+              "ci95": [
+                0.9719492868024224,
+                1.0449200435115127
+              ]
+            },
+            "qualified": {
+              "n": 8,
+              "ratio": 1.002785254499005,
+              "ci95": [
+                0.9676911696340986,
+                1.0391520540802925
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 8,
+              "ratio": 1.0226201736298595,
+              "ci95": [
+                1.0075437918730459,
+                1.0379221508284897
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "context": "shared-finalizer",
+        "workload": "four-pending",
+        "mediansNs": {
+          "await": 2113.3132208677393,
+          "control": 2113.9937469836623,
+          "then": 2062.146355882074,
+          "iife": 2113.3073298662266
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0030352886903628,
+              "ci95": [
+                0.9919662657355052,
+                1.0142278272055851
+              ]
+            },
+            "qualified": {
+              "n": 21,
+              "ratio": 0.9990816841963457,
+              "ci95": [
+                0.9892093866111143,
+                1.009052507190788
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 21,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9832646151120998,
+              "ci95": [
+                0.9678950877542241,
+                0.9988782002962765
+              ]
+            },
+            "qualified": {
+              "n": 21,
+              "ratio": 0.9746083912306679,
+              "ci95": [
+                0.9656547889320856,
+                0.9836450118035239
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 21,
+              "ratio": 0.9755042121652306,
+              "ci95": [
+                0.9650122767140441,
+                0.986110219439303
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0052908244713128,
+              "ci95": [
+                0.996067137127633,
+                1.0145999241381614
+              ]
+            },
+            "qualified": {
+              "n": 20,
+              "ratio": 1.0024084415018522,
+              "ci95": [
+                0.9921720259682341,
+                1.0127504679580064
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 20,
+              "ratio": 1.003475668193541,
+              "ci95": [
+                0.9914466993963785,
+                1.0156505813873222
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "context": "captured-resource",
+        "workload": "one-fulfilled",
+        "mediansNs": {
+          "await": 763.0690049254907,
+          "control": 761.3442333386171,
+          "then": 720.7113179325277,
+          "iife": 786.9390065801131
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9926454238762505,
+              "ci95": [
+                0.9811850874344,
+                1.0042396181529198
+              ]
+            },
+            "qualified": {
+              "n": 20,
+              "ratio": 0.9921536659456359,
+              "ci95": [
+                0.9796375502224739,
+                1.0048296909666397
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 20,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9430167652930586,
+              "ci95": [
+                0.9315409594308808,
+                0.9546339434898106
+              ]
+            },
+            "qualified": {
+              "n": 19,
+              "ratio": 0.9463501238928835,
+              "ci95": [
+                0.9335850579878748,
+                0.9592897286962658
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 19,
+              "ratio": 0.9518541112032819,
+              "ci95": [
+                0.9433010420209413,
+                0.960484732502263
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.027756209610709,
+              "ci95": [
+                1.0134480239109773,
+                1.0422664028857558
+              ]
+            },
+            "qualified": {
+              "n": 19,
+              "ratio": 1.024204879614781,
+              "ci95": [
+                1.007434979074674,
+                1.0412539342144216
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 19,
+              "ratio": 1.0323755617995807,
+              "ci95": [
+                1.0196882938587692,
+                1.0452206885378026
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "context": "captured-resource",
+        "workload": "four-fulfilled",
+        "mediansNs": {
+          "await": 1896.9535254257376,
+          "control": 1901.6982723838669,
+          "then": 1864.2524666175327,
+          "iife": 1929.6237174688667
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.005978081432985,
+              "ci95": [
+                0.9855823252206205,
+                1.0267959098161155
+              ]
+            },
+            "qualified": {
+              "n": 21,
+              "ratio": 1.005027338675946,
+              "ci95": [
+                0.9966299162245068,
+                1.0134955162820118
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 21,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9825343220302694,
+              "ci95": [
+                0.9698362602188213,
+                0.995398639508144
+              ]
+            },
+            "qualified": {
+              "n": 20,
+              "ratio": 0.98722761211364,
+              "ci95": [
+                0.9780648774721843,
+                0.996476185341107
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 20,
+              "ratio": 0.9829499451904155,
+              "ci95": [
+                0.9729998173844427,
+                0.9930018253724793
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0207201003640598,
+              "ci95": [
+                1.0137017682747682,
+                1.027787023653305
+              ]
+            },
+            "qualified": {
+              "n": 20,
+              "ratio": 1.0185023690879895,
+              "ci95": [
+                1.0125986458267944,
+                1.0244405126483707
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 20,
+              "ratio": 1.0126102573195603,
+              "ci95": [
+                1.003437104304433,
+                1.0218672688404955
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "context": "captured-resource",
+        "workload": "four-pending",
+        "mediansNs": {
+          "await": 2085.1800583740837,
+          "control": 2092.2541867872224,
+          "then": 2066.9471632052473,
+          "iife": 2132.170574981129
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.003058364334944,
+              "ci95": [
+                0.9916923722671123,
+                1.014554624396459
+              ]
+            },
+            "qualified": {
+              "n": 22,
+              "ratio": 1.0006773867229992,
+              "ci95": [
+                0.9893987870717581,
+                1.0120845561802225
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 22,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9846174334625443,
+              "ci95": [
+                0.9749302982392815,
+                0.9944008223246603
+              ]
+            },
+            "qualified": {
+              "n": 19,
+              "ratio": 0.984073347246171,
+              "ci95": [
+                0.9719522413344158,
+                0.9963456140918443
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 19,
+              "ratio": 0.9822780559838696,
+              "ci95": [
+                0.9718564569552333,
+                0.9928114099178076
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0128360729728003,
+              "ci95": [
+                1.0012383131246723,
+                1.024568174497362
+              ]
+            },
+            "qualified": {
+              "n": 20,
+              "ratio": 1.0127414257842164,
+              "ci95": [
+                0.9989809591993826,
+                1.0266914359623376
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 20,
+              "ratio": 1.0113367342484083,
+              "ci95": [
+                0.9999014298426808,
+                1.0229028177319015
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "context": "shared-finalizer",
+        "workload": "one-fulfilled",
+        "mediansNs": {
+          "await": 646.7587688110357,
+          "control": 634.9258602937531,
+          "then": 567.4010818291292,
+          "iife": 656.0216518815814
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9765917993708616,
+              "ci95": [
+                0.9639340841025815,
+                0.9894157269958319
+              ]
+            },
+            "qualified": {
+              "n": 20,
+              "ratio": 0.9739999250616924,
+              "ci95": [
+                0.9599802575418441,
+                0.988224337497723
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 20,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.8877954541822428,
+              "ci95": [
+                0.8687883735128019,
+                0.9072183658257034
+              ]
+            },
+            "qualified": {
+              "n": 17,
+              "ratio": 0.8765271914253197,
+              "ci95": [
+                0.8537214601651795,
+                0.8999421393943957
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 17,
+              "ratio": 0.9005095643484939,
+              "ci95": [
+                0.8836335867673383,
+                0.9177078459067558
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0132020819102072,
+              "ci95": [
+                0.9975434230271365,
+                1.029106538211572
+              ]
+            },
+            "qualified": {
+              "n": 20,
+              "ratio": 1.012911127034293,
+              "ci95": [
+                0.9946038258594974,
+                1.0315554038647123
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 20,
+              "ratio": 1.0399499024295469,
+              "ci95": [
+                1.0246189372943724,
+                1.0555102586909453
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "context": "shared-finalizer",
+        "workload": "four-fulfilled",
+        "mediansNs": {
+          "await": 1364.5885754055416,
+          "control": 1323.2812520654138,
+          "then": 1275.5839339260283,
+          "iife": 1353.3126999947635
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9746309079524624,
+              "ci95": [
+                0.9603823347426887,
+                0.989090878051964
+              ]
+            },
+            "qualified": {
+              "n": 23,
+              "ratio": 0.9768270283442427,
+              "ci95": [
+                0.9625958624962937,
+                0.9912685899452616
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 23,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9382833151027079,
+              "ci95": [
+                0.9237128251254674,
+                0.9530836375261398
+              ]
+            },
+            "qualified": {
+              "n": 22,
+              "ratio": 0.9387898861544989,
+              "ci95": [
+                0.9244970081029628,
+                0.9533037344863124
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 22,
+              "ratio": 0.9608217070232625,
+              "ci95": [
+                0.9461379303703632,
+                0.9757333714818097
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 0.988795993445771,
+              "ci95": [
+                0.9748764553829163,
+                1.002914278271678
+              ]
+            },
+            "qualified": {
+              "n": 23,
+              "ratio": 0.9918287543356803,
+              "ci95": [
+                0.9786121547132012,
+                1.00522385011186
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 23,
+              "ratio": 1.0153576073922381,
+              "ci95": [
+                1.001090172024749,
+                1.0298283807982518
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "context": "shared-finalizer",
+        "workload": "four-pending",
+        "mediansNs": {
+          "await": 1555.5115531205452,
+          "control": 1522.617183084921,
+          "then": 1488.4097035040515,
+          "iife": 1583.4767966897552
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9734644861622618,
+              "ci95": [
+                0.9543714058351735,
+                0.9929395411735744
+              ]
+            },
+            "qualified": {
+              "n": 19,
+              "ratio": 0.9825026925368762,
+              "ci95": [
+                0.9742634375837912,
+                0.9908116261000405
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 19,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9472766030705602,
+              "ci95": [
+                0.9201195808496244,
+                0.9752351557352099
+              ]
+            },
+            "qualified": {
+              "n": 19,
+              "ratio": 0.9596555075296573,
+              "ci95": [
+                0.9474698734333744,
+                0.9719978639476647
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 19,
+              "ratio": 0.9767459314048025,
+              "ci95": [
+                0.9647290512790021,
+                0.9889124964683234
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0085440018189284,
+              "ci95": [
+                0.9811233793208429,
+                1.0367309810811378
+              ]
+            },
+            "qualified": {
+              "n": 17,
+              "ratio": 1.0115827836605829,
+              "ci95": [
+                0.9976334841506258,
+                1.0257271277033366
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 17,
+              "ratio": 1.031470062959223,
+              "ci95": [
+                1.0209829858195631,
+                1.0420648586294174
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "context": "captured-resource",
+        "workload": "one-fulfilled",
+        "mediansNs": {
+          "await": 628.4706750330474,
+          "control": 641.6989119187081,
+          "then": 569.230558614685,
+          "iife": 637.9409246864075
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.023707231122009,
+              "ci95": [
+                1.013892440446431,
+                1.0336170319901505
+              ]
+            },
+            "qualified": {
+              "n": 17,
+              "ratio": 1.0201900040987684,
+              "ci95": [
+                1.0087436913270338,
+                1.031766199294745
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 17,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.909173591248941,
+              "ci95": [
+                0.9004366924274054,
+                0.9179952638270991
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 0.9069123905742006,
+              "ci95": [
+                0.8964654341249138,
+                0.9174810905898301
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 0.8911780745829677,
+              "ci95": [
+                0.8797667434968075,
+                0.9027374204447722
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0215143362387054,
+              "ci95": [
+                1.0113550891353693,
+                1.0317756348398939
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 1.021719928538912,
+              "ci95": [
+                1.00832191187,
+                1.0352959705472986
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 0.9980054426575639,
+              "ci95": [
+                0.9825691381900559,
+                1.0136842537196231
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "context": "captured-resource",
+        "workload": "four-fulfilled",
+        "mediansNs": {
+          "await": 1310.470685608048,
+          "control": 1342.8580055557516,
+          "then": 1278.7766793541064,
+          "iife": 1346.804988117216
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0342900993839148,
+              "ci95": [
+                1.0163335917290606,
+                1.0525638613042807
+              ]
+            },
+            "qualified": {
+              "n": 19,
+              "ratio": 1.0274064374448988,
+              "ci95": [
+                1.0113922509390194,
+                1.043674189438557
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 19,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9780694473774063,
+              "ci95": [
+                0.9661199848768688,
+                0.9901667068972446
+              ]
+            },
+            "qualified": {
+              "n": 18,
+              "ratio": 0.9745229388903044,
+              "ci95": [
+                0.961573397689948,
+                0.9876468719963671
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 18,
+              "ratio": 0.9487416752147663,
+              "ci95": [
+                0.9297775393617802,
+                0.9680926116016708
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.033789302338712,
+              "ci95": [
+                1.010108505106319,
+                1.058025267807712
+              ]
+            },
+            "qualified": {
+              "n": 15,
+              "ratio": 1.0223463406671465,
+              "ci95": [
+                1.0096539155788251,
+                1.0351983230573683
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 15,
+              "ratio": 0.9926210824516328,
+              "ci95": [
+                0.9699293143941325,
+                1.0158437307804413
+              ]
+            }
+          }
+        }
+      },
+      {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "context": "captured-resource",
+        "workload": "four-pending",
+        "mediansNs": {
+          "await": 1531.264216275662,
+          "control": 1524.0076239682617,
+          "then": 1486.8180326231634,
+          "iife": 1548.8869384204213
+        },
+        "comparisons": {
+          "control": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9964259759977434,
+              "ci95": [
+                0.9830165631472255,
+                1.0100183077936145
+              ]
+            },
+            "qualified": {
+              "n": 22,
+              "ratio": 0.9928046737481777,
+              "ci95": [
+                0.9799164210772113,
+                1.0058624378727108
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 22,
+              "ratio": 1,
+              "ci95": [
+                1,
+                1
+              ]
+            }
+          },
+          "then": {
+            "all": {
+              "n": 24,
+              "ratio": 0.9745244304590035,
+              "ci95": [
+                0.9604433837835591,
+                0.9888119191578131
+              ]
+            },
+            "qualified": {
+              "n": 21,
+              "ratio": 0.9732804136626555,
+              "ci95": [
+                0.9574908478315387,
+                0.9893303583680976
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 21,
+              "ratio": 0.9818939600997153,
+              "ci95": [
+                0.9704329038260523,
+                0.9934903743258859
+              ]
+            }
+          },
+          "iife": {
+            "all": {
+              "n": 24,
+              "ratio": 1.0090717508608105,
+              "ci95": [
+                0.9933285105476597,
+                1.0250645054211875
+              ]
+            },
+            "qualified": {
+              "n": 21,
+              "ratio": 1.007819720695824,
+              "ci95": [
+                0.9899729388020395,
+                1.0259882362567423
+              ]
+            },
+            "qualifiedVersusControl": {
+              "n": 21,
+              "ratio": 1.0153196933226307,
+              "ci95": [
+                1.0018098155253048,
+                1.029011758193062
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "caveat": "Raw medians include all fixed samples. Qualified comparisons use baseline/control/candidate triples that pass the predeclared host gates, requiring at least 12. Approximate 95% intervals describe geometric mean ratios. These are callback/barrier microbenchmarks on this Linux x64 V8 host, excluding real I/O and end-to-end downloader work."
+  },
+  "allocations": [
+    {
+      "context": "module-bound paths and cached prefix",
+      "node": "v22.22.2",
+      "v8": "12.4.254.21-node.39",
+      "samplingInterval": 4096,
+      "collectedObjectsIncluded": true,
+      "operationsPerCase": 2097152,
+      "rows": [
+        {
+          "style": "posix",
+          "label": "concat",
+          "operations": 2097152,
+          "totalEstimatedBytes": 48515616,
+          "variantEstimatedBytes": 48515616,
+          "variantBytesPerOperation": 23.134048461914062,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-posix-concat.mjs",
+              "line": 4,
+              "bytes": 48515616
+            }
+          ],
+          "file": "allocation-bound-node22-posix-concat.json"
+        },
+        {
+          "style": "posix",
+          "label": "control",
+          "operations": 2097152,
+          "totalEstimatedBytes": 48643056,
+          "variantEstimatedBytes": 48638856,
+          "variantBytesPerOperation": 23.192813873291016,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-posix-control.mjs",
+              "line": 4,
+              "bytes": 48638856
+            }
+          ],
+          "file": "allocation-bound-node22-posix-control.json"
+        },
+        {
+          "style": "posix",
+          "label": "charAt",
+          "operations": 2097152,
+          "totalEstimatedBytes": 0,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node22-posix-charAt.json"
+        },
+        {
+          "style": "posix",
+          "label": "cached",
+          "operations": 2097152,
+          "totalEstimatedBytes": 0,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node22-posix-cached.json"
+        },
+        {
+          "style": "win32",
+          "label": "concat",
+          "operations": 2097152,
+          "totalEstimatedBytes": 48675840,
+          "variantEstimatedBytes": 48675840,
+          "variantBytesPerOperation": 23.21044921875,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-win32-concat.mjs",
+              "line": 4,
+              "bytes": 48675840
+            }
+          ],
+          "file": "allocation-bound-node22-win32-concat.json"
+        },
+        {
+          "style": "win32",
+          "label": "control",
+          "operations": 2097152,
+          "totalEstimatedBytes": 48786744,
+          "variantEstimatedBytes": 48786744,
+          "variantBytesPerOperation": 23.26333236694336,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-win32-control.mjs",
+              "line": 4,
+              "bytes": 48786744
+            }
+          ],
+          "file": "allocation-bound-node22-win32-control.json"
+        },
+        {
+          "style": "win32",
+          "label": "charAt",
+          "operations": 2097152,
+          "totalEstimatedBytes": 16440,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node22-win32-charAt.json"
+        },
+        {
+          "style": "win32",
+          "label": "cached",
+          "operations": 2097152,
+          "totalEstimatedBytes": 0,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node22-win32-cached.json"
+        }
+      ],
+      "scope": "Separate warmed allocation sampling of the prefix expression, including collected objects. No timing conclusions from profiled runs. Estimated bytes are sampling results; zero samples do not prove zero allocation."
+    },
+    {
+      "context": "module-bound paths and cached prefix",
+      "node": "v24.18.0",
+      "v8": "13.6.233.17-node.50",
+      "samplingInterval": 4096,
+      "collectedObjectsIncluded": true,
+      "operationsPerCase": 2097152,
+      "rows": [
+        {
+          "style": "posix",
+          "label": "concat",
+          "operations": 2097152,
+          "totalEstimatedBytes": 48823728,
+          "variantEstimatedBytes": 48823728,
+          "variantBytesPerOperation": 23.280967712402344,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-posix-concat.mjs",
+              "line": 4,
+              "bytes": 48823728
+            }
+          ],
+          "file": "allocation-bound-node24-posix-concat.json"
+        },
+        {
+          "style": "posix",
+          "label": "control",
+          "operations": 2097152,
+          "totalEstimatedBytes": 48515616,
+          "variantEstimatedBytes": 48515616,
+          "variantBytesPerOperation": 23.134048461914062,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-posix-control.mjs",
+              "line": 4,
+              "bytes": 48515616
+            }
+          ],
+          "file": "allocation-bound-node24-posix-control.json"
+        },
+        {
+          "style": "posix",
+          "label": "charAt",
+          "operations": 2097152,
+          "totalEstimatedBytes": 0,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node24-posix-charAt.json"
+        },
+        {
+          "style": "posix",
+          "label": "cached",
+          "operations": 2097152,
+          "totalEstimatedBytes": 0,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node24-posix-cached.json"
+        },
+        {
+          "style": "win32",
+          "label": "concat",
+          "operations": 2097152,
+          "totalEstimatedBytes": 49222200,
+          "variantEstimatedBytes": 49222200,
+          "variantBytesPerOperation": 23.47097396850586,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-win32-concat.mjs",
+              "line": 4,
+              "bytes": 49222200
+            }
+          ],
+          "file": "allocation-bound-node24-win32-concat.json"
+        },
+        {
+          "style": "win32",
+          "label": "control",
+          "operations": 2097152,
+          "totalEstimatedBytes": 48260704,
+          "variantEstimatedBytes": 48248592,
+          "variantBytesPerOperation": 23.00672149658203,
+          "sites": [
+            {
+              "function": "prefixLoop",
+              "url": "file:///mnt/e/temp/engine-listener-prefix-review-20261027-AirEC6/variants/bound-win32-control.mjs",
+              "line": 4,
+              "bytes": 48248592
+            }
+          ],
+          "file": "allocation-bound-node24-win32-control.json"
+        },
+        {
+          "style": "win32",
+          "label": "charAt",
+          "operations": 2097152,
+          "totalEstimatedBytes": 0,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node24-win32-charAt.json"
+        },
+        {
+          "style": "win32",
+          "label": "cached",
+          "operations": 2097152,
+          "totalEstimatedBytes": 0,
+          "variantEstimatedBytes": 0,
+          "variantBytesPerOperation": 0,
+          "sites": [],
+          "file": "allocation-bound-node24-win32-cached.json"
+        }
+      ],
+      "scope": "Separate warmed allocation sampling of the prefix expression, including collected objects. No timing conclusions from profiled runs. Estimated bytes are sampling results; zero samples do not prove zero allocation."
+    },
+    {
+      "node": "v22.22.2",
+      "v8": "12.4.254.21-node.39",
+      "plan": {
+        "contexts": [
+          "captured-resource"
+        ],
+        "workloads": [
+          "one-fulfilled",
+          "four-pending"
+        ],
+        "warmupOperations": 8192,
+        "operations": 65536,
+        "samplingInterval": 4096,
+        "collectedObjectsIncluded": true
+      },
+      "rows": [
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "await",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1329.6956787109375,
+          "variantEstimatedBytesPerOperation": 23.5242919921875,
+          "workloadEstimatedBytesPerOperation": 593.25830078125,
+          "filename": "allocation-await-node22-captured-resource-one-fulfilled-await.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "control",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1328.08056640625,
+          "variantEstimatedBytesPerOperation": 416.407958984375,
+          "workloadEstimatedBytesPerOperation": 200.823974609375,
+          "filename": "allocation-await-node22-captured-resource-one-fulfilled-control.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "then",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1099.8724365234375,
+          "variantEstimatedBytesPerOperation": 199.9888916015625,
+          "workloadEstimatedBytesPerOperation": 198.3917236328125,
+          "filename": "allocation-await-node22-captured-resource-one-fulfilled-then.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "iife",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1412.5531005859375,
+          "variantEstimatedBytesPerOperation": 503.7232666015625,
+          "workloadEstimatedBytesPerOperation": 206.011962890625,
+          "filename": "allocation-await-node22-captured-resource-one-fulfilled-iife.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "await",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2581.6572265625,
+          "variantEstimatedBytesPerOperation": 420.3897705078125,
+          "workloadEstimatedBytesPerOperation": 665.2340087890625,
+          "filename": "allocation-await-node22-captured-resource-four-pending-await.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "control",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2576.6591796875,
+          "variantEstimatedBytesPerOperation": 412.94921875,
+          "workloadEstimatedBytesPerOperation": 665.006103515625,
+          "filename": "allocation-await-node22-captured-resource-four-pending-control.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "then",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2363.3988037109375,
+          "variantEstimatedBytesPerOperation": 199.6048583984375,
+          "workloadEstimatedBytesPerOperation": 662.4248046875,
+          "filename": "allocation-await-node22-captured-resource-four-pending-then.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "iife",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2665.2401123046875,
+          "variantEstimatedBytesPerOperation": 506.288818359375,
+          "workloadEstimatedBytesPerOperation": 660.364501953125,
+          "filename": "allocation-await-node22-captured-resource-four-pending-iife.json"
+        }
+      ],
+      "scope": "Heap sampling including collected objects, run separately from timings. Total bytes include the common driver, input factories and inspector activity. Sample attribution differs across V8 continuations; use total bytes for cross-variant interpretation."
+    },
+    {
+      "node": "v24.18.0",
+      "v8": "13.6.233.17-node.50",
+      "plan": {
+        "contexts": [
+          "captured-resource"
+        ],
+        "workloads": [
+          "one-fulfilled",
+          "four-pending"
+        ],
+        "warmupOperations": 8192,
+        "operations": 65536,
+        "samplingInterval": 4096,
+        "collectedObjectsIncluded": true
+      },
+      "rows": [
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "await",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1295.725830078125,
+          "variantEstimatedBytesPerOperation": 273.8040771484375,
+          "workloadEstimatedBytesPerOperation": 327.0445556640625,
+          "filename": "allocation-await-node24-captured-resource-one-fulfilled-await.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "control",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1308.4720458984375,
+          "variantEstimatedBytesPerOperation": 405.110107421875,
+          "workloadEstimatedBytesPerOperation": 201.849365234375,
+          "filename": "allocation-await-node24-captured-resource-one-fulfilled-control.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "then",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1100.1888427734375,
+          "variantEstimatedBytesPerOperation": 191.2015380859375,
+          "workloadEstimatedBytesPerOperation": 198.32763671875,
+          "filename": "allocation-await-node24-captured-resource-one-fulfilled-then.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "one-fulfilled",
+          "label": "iife",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 1409.1468505859375,
+          "variantEstimatedBytesPerOperation": 505.593505859375,
+          "workloadEstimatedBytesPerOperation": 203.7689208984375,
+          "filename": "allocation-await-node24-captured-resource-one-fulfilled-iife.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "await",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2570.892578125,
+          "variantEstimatedBytesPerOperation": 409.6702880859375,
+          "workloadEstimatedBytesPerOperation": 641.882080078125,
+          "filename": "allocation-await-node24-captured-resource-four-pending-await.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "control",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2570.7427978515625,
+          "variantEstimatedBytesPerOperation": 416.3253173828125,
+          "workloadEstimatedBytesPerOperation": 658.1646728515625,
+          "filename": "allocation-await-node24-captured-resource-four-pending-control.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "then",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2376.8172607421875,
+          "variantEstimatedBytesPerOperation": 201.3729248046875,
+          "workloadEstimatedBytesPerOperation": 672.9365234375,
+          "filename": "allocation-await-node24-captured-resource-four-pending-then.json"
+        },
+        {
+          "context": "captured-resource",
+          "workload": "four-pending",
+          "label": "iife",
+          "operations": 65536,
+          "totalEstimatedBytesPerOperation": 2679.924072265625,
+          "variantEstimatedBytesPerOperation": 510.996826171875,
+          "workloadEstimatedBytesPerOperation": 666.0782470703125,
+          "filename": "allocation-await-node24-captured-resource-four-pending-iife.json"
+        }
+      ],
+      "scope": "Heap sampling including collected objects, run separately from timings. Total bytes include the common driver, input factories and inspector activity. Sample attribution differs across V8 continuations; use total bytes for cross-variant interpretation."
+    }
+  ],
+  "semantics": [
+    {
+      "file": "evidence/parallel-listeners-node22.json",
+      "data": {
+        "node": "v22.22.2",
+        "immediate": [
+          "sync",
+          "throw",
+          "first:start",
+          "second:start",
+          "last:sync"
+        ],
+        "completion": [
+          "sync",
+          "throw",
+          "first:start",
+          "second:start",
+          "last:sync",
+          "second:read:<p>alive</p>",
+          "first:read:<p>alive</p>"
+        ],
+        "allObserversInvoked": true,
+        "synchronousThrowsIsolated": true,
+        "asynchronousRejectionsIsolated": true,
+        "cleanupAfterAllSettled": true,
+        "synchronousFastPath": true,
+        "nestedCases": [
+          {
+            "joinNested": true,
+            "disposedBeforeNestedFinished": false,
+            "observed": "alive"
+          },
+          {
+            "joinNested": false,
+            "disposedBeforeNestedFinished": true,
+            "observed": "Document disposed"
+          }
+        ],
+        "scope": "Standalone parallel-observer prototype with readonly document reads. No repository implementation change. Awaited nested work participates in the barrier; detached nested work does not."
+      }
+    },
+    {
+      "file": "evidence/parallel-listeners-node24.json",
+      "data": {
+        "node": "v24.18.0",
+        "immediate": [
+          "sync",
+          "throw",
+          "first:start",
+          "second:start",
+          "last:sync"
+        ],
+        "completion": [
+          "sync",
+          "throw",
+          "first:start",
+          "second:start",
+          "last:sync",
+          "second:read:<p>alive</p>",
+          "first:read:<p>alive</p>"
+        ],
+        "allObserversInvoked": true,
+        "synchronousThrowsIsolated": true,
+        "asynchronousRejectionsIsolated": true,
+        "cleanupAfterAllSettled": true,
+        "synchronousFastPath": true,
+        "nestedCases": [
+          {
+            "joinNested": true,
+            "disposedBeforeNestedFinished": false,
+            "observed": "alive"
+          },
+          {
+            "joinNested": false,
+            "disposedBeforeNestedFinished": true,
+            "observed": "Document disposed"
+          }
+        ],
+        "scope": "Standalone parallel-observer prototype with readonly document reads. No repository implementation change. Awaited nested work participates in the barrier; detached nested work does not."
+      }
+    },
+    {
+      "file": "evidence/verify-await-node22.json",
+      "data": {
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "checks": [
+          {
+            "label": "await",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "await",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "control",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "control",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "then",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "then",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "iife",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "iife",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    },
+    {
+      "file": "evidence/verify-await-node24.json",
+      "data": {
+        "node": "v24.18.0",
+        "v8": "13.6.233.17-node.50",
+        "checks": [
+          {
+            "label": "await",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "await",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "control",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "control",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "then",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "then",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "iife",
+            "context": "shared-finalizer",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          },
+          {
+            "label": "iife",
+            "context": "captured-resource",
+            "checks": [
+              "wait-for-all",
+              "ignore-input-rejection",
+              "finalize-once",
+              "propagate-finalizer-throw",
+              "propagate-finalizer-rejection",
+              "adopt-async-finalizer",
+              "workload-checksums"
+            ],
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    }
+  ]
+}

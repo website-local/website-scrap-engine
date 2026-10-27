@@ -592,6 +592,40 @@ describe('resource', function () {
       .toThrow('file refUrl not starting with localSrcRoot is forbidden');
   });
 
+  test.each([
+    ['/archive', 'file:///archive-other/secret'],
+    ['/archive/', 'file:///archive/../secret'],
+    ['/archive/', 'file:///archive/%2e%2e/secret'],
+    ['C:/archive', 'file:///C:/archive-other/secret'],
+    ['C:/archive/', 'file:///C:/archive/%2e%2e/secret']
+  ])('rejects a file URL outside %s: %s', (root, url) => {
+    expect(() => resolveFileUrl(url, '', root))
+      .toThrow('file url not starting with localSrcRoot is forbidden');
+    expect(resolveFileUrl(url, '', root, true)).toBe('');
+  });
+
+  test.each([
+    ['/archive', 'file:///archive-other/index.html'],
+    ['/archive/', 'file:///archive/%2e%2e/index.html'],
+    ['C:/archive', 'file:///C:/archive-other/index.html']
+  ])('rejects an outside referring file URL for %s', (root, refUrl) => {
+    expect(() => resolveFileUrl('asset.png', refUrl, root))
+      .toThrow('file refUrl not starting with localSrcRoot is forbidden');
+  });
+
+  test.each([
+    ['/archive', 'file:///archive/..assets/page.html'],
+    ['/archive/', 'file:///archive/docs/../page.html'],
+    ['/archive space', 'file:///archive%20space/page.html'],
+    ['C:/archive', 'file:///C:/archive/..assets/page.html']
+  ])('accepts a contained file URL for %s', (root, url) => {
+    expect(resolveFileUrl(url, url, root)).toBe(url);
+  });
+
+  test('can skip a file URL with an encoded path separator', () => {
+    expect(resolveFileUrl('file:///archive/%2fsecret', '', '/archive', true)).toBe('');
+  });
+
   test('resolveFileUrl absolute url', () => {
     expect(resolveFileUrl(
       'file:///tmp/11', 'file:///tmp/22', '/tmp/'))

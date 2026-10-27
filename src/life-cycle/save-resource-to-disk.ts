@@ -11,7 +11,7 @@ export async function saveResourceToDisk(
   try {
     const localRoot: string = res.localRoot ?? options.localRoot;
     // https://github.com/website-local/website-scrap-engine/issues/174
-    let mtime: number | void = void 0;
+    let mtime: number | undefined;
     if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
       mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
     }

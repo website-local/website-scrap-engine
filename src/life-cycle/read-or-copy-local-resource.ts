@@ -37,7 +37,7 @@ export async function readOrCopyLocalResource(
     return;
   }
   // index.html handling
-  let stats: Stats | void = void 0;
+  let stats: Stats | undefined;
   if (res.type === ResourceType.Html) {
     stats = await promises.stat(fileSrcPath);
     if (stats.isDirectory()) {

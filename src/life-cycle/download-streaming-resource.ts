@@ -21,6 +21,7 @@ import {isUrlHttp} from '../util.js';
 import {canUseNativeHttp, withNativeHttp} from './native-http.js';
 import type {NativeHttpResponse} from './native-http.js';
 import {withHttpCacheSafety} from './http-cache-safety.js';
+import {disposeHtmlResource} from '../cheerio.js';
 
 export function isBytesAccepted(acceptRange?: string): boolean {
   if (!acceptRange) {
@@ -61,7 +62,7 @@ export async function streamingDownloadToFile(
   options?: StaticDownloadOptions
 ): Promise<Response | NativeHttpResponse | void> {
   const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
-  let response: Response | NativeHttpResponse | void = undefined;
+  let response: Response | NativeHttpResponse | void | undefined;
   let skipped = false;
   await publishFile(savePath, async (staging, direct) => {
     response = await streamToStagingFile(res, requestOptions, staging, options?.maxResourceBytes,
@@ -285,7 +286,7 @@ export async function optionallySetLastModifiedTime(
   res: Resource, options: StaticDownloadOptions, stagingPath?: string, logger?: Logger
 ): Promise<void> {
   // https://github.com/website-local/website-scrap-engine/issues/174
-  let mtime: number | void = void 0;
+  let mtime: number | undefined;
   if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
     mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
   }
@@ -405,42 +406,55 @@ export function downloadStreamingResourceWithHook(
     if (!isUrlHttp(res.downloadLink)) {
       return res;
     }
-    if (beforeDownload) {
-      const resource = await beforeDownload(res, requestOptions, options, pipeline);
-      if (!resource) {
-        return;
-      }
-      if (resource.body !== undefined) {
-        return resource as DownloadResource;
-      }
-      if (resource.shouldBeDiscardedFromDownload) {
-        return;
-      }
-    }
-    if (!res.downloadStartTimestamp) {
-      res.downloadStartTimestamp = Date.now();
-      res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
-    }
+    const original = res;
     try {
-      const response = await streamingDownloadToFile(
-        res as (Resource & { downloadStartTimestamp: number }), requestOptions, pipeline, options);
-      if (response?.statusCode === 304) {
-        return;
+      if (beforeDownload) {
+        const resource = await beforeDownload(res, requestOptions, options, pipeline);
+        if (!resource) {
+          return;
+        }
+        if (resource.body !== undefined) {
+          return resource as DownloadResource;
+        }
+        if (resource !== res) {
+          await pipeline.replaceResource(res, resource);
+          res = resource;
+        }
+        if (res.shouldBeDiscardedFromDownload) {
+          return;
+        }
       }
-    } catch (e) {
-      if (!downloadError) {
+      if (!res.downloadStartTimestamp) {
+        res.downloadStartTimestamp = Date.now();
+        res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
+      }
+      try {
+        const response = await streamingDownloadToFile(
+          res as (Resource & { downloadStartTimestamp: number }), requestOptions, pipeline, options);
+        if (response?.statusCode === 304) {
+          return;
+        }
+      } catch (e) {
+        if (!downloadError) {
+          throw e;
+        }
+        await downloadError(e, res, requestOptions, options, pipeline);
+        // The error hook observes a failure; it supplies no replacement response.
         throw e;
       }
-      await downloadError(e, res, requestOptions, options, pipeline);
-      // The error hook observes a failure; it supplies no replacement response.
-      throw e;
+      res.finishTimestamp = Date.now();
+      res.downloadTime =
+        res.finishTimestamp - res.downloadStartTimestamp;
+      if (afterDownload) {
+        await afterDownload(res, requestOptions, options, pipeline);
+      }
+    } finally {
+      if (res !== original) {
+        original.downloaded = res.downloaded;
+        original.publishedFiles = res.publishedFiles;
+        original.shouldBeDiscardedFromDownload = res.shouldBeDiscardedFromDownload;
+        await disposeHtmlResource(res);
+      }
     }
-    res.finishTimestamp = Date.now();
-    res.downloadTime =
-      res.finishTimestamp - res.downloadStartTimestamp;
-    if (afterDownload) {
-      await afterDownload(res, requestOptions, options, pipeline);
-    }
-    return;
   };
 }

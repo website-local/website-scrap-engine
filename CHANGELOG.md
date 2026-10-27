@@ -20,10 +20,14 @@ Breaking changes
 * Change `WorkerPool.workingTasks` to a Map and split task/log handlers. Remove `waitForInitBeforeIdle` and the retry argument from `io.mkdirRetry`. See the migration guide for custom pool interfaces.
 * Reject discovery submissions after their parent task completes. The opt-in concurrency controller now backs off on stalls and grows gradually within bounds; adjustment periods must fit Node's positive-integer timer range.
 * Pass the parent resource and pipeline to discovery submissions. Use `PipelineExecutor.logger` in lifecycle hooks and pass resource/publication dependencies to custom I/O helpers. Resource owns `meta.doc`; parser selection is explicit and documents are disposed when saved or discarded.
+* Require custom `PipelineExecutor` implementations to expose `replaceResource(previous, next): Promise<void>` for task-state and document ownership transfer. The built-in executor already provides it.
+* Run asynchronous status observers concurrently. Observers remain read-only and start in array order, but no longer wait for previous observers to finish. Await every returned promise before resource cleanup and downloader shutdown.
 
 Performance
 ------------
 
+* Normalize worker resources with direct assignments and copy option/header objects with spread. Preserve resource identity and avoid the measured dictionary-property transition without an extra resource copy; see the [object layout review](docs/object-layout-review.md) for retained-heap measurements and timing limits.
+* Cache the parent-directory prefix used in local path containment checks. Join asynchronous status observers with `Promise.allSettled(...).then(...)`, retaining the allocation-free synchronous notification path; see the [measurements](docs/performance.md#prefix-and-promise-measurements-2026-10-27).
 * Add opt-in native HTTP(S) for GET/HEAD with bounded retries, request deadlines, redirects, decompression and resource limits. Native defaults to two retries, supports retry backoff and Retry-After, and restarts interrupted streams without retaining partial bytes. Custom retry callbacks and unsupported request options fall back to Got before I/O; Got remains the default.
 * Cache unchanged normalized request snapshots without retaining merge history, and avoid promise turns for prepared output directories.
 * Reuse URI parsing during resource creation and deduplication; reuse a parsed reference URL across links without sharing mutable URI instances with hooks.
@@ -31,7 +35,7 @@ Performance
 * Reduce temporary allocations in combined link creation, SVG processing and synchronous hook execution; remove unused CSS URL regex captures while preserving replacement offsets.
 * Reuse the path-segment array during save-path escaping, and avoid reparsing unchanged inline styles while preserving existing CSS-hook and rewriting behavior.
 * Reuse the existing relative-path helper when writing redirects with a supplied target save path, retaining the URI compatibility wrapper fallback for unusual paths.
-* Reuse completed synchronous status notifications and reduce pending-notification bookkeeping while preserving listener order, call receivers and disposal waiting.
+* Reuse completed synchronous status notifications and reduce pending-notification bookkeeping while preserving standalone call receivers and disposal waiting.
 * Reduce query-ordering temporaries and encode long-query filename hashes directly as URL-safe base64, preserving existing output.
 * Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
 * Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
@@ -57,6 +61,10 @@ Crawl control and reliability
 
 Fixes and performance
 ------------
+
+* Honor distinct resources returned by streaming before-download hooks, including their URL, output path and discard state. Transfer publication ownership and clear replacement documents after success, discard or failure.
+* Allow local filenames beginning with two dots, such as `..assets/page.html`, while retaining parent-traversal rejection. Check explicit file URLs and their referrers against the decoded, normalized source root, including adjacent-prefix directories and encoded dot segments.
+* Accept the filesystem root as an output root in `io.safeJoin`.
 
 * Replace polynomial-time segment trimming, CSS URL/comment parsing, refresh-target parsing and URI scheme discovery with bounded scans. Preserve legacy extraction and callback behavior; use indexed multiset matching for large query arrays.
 

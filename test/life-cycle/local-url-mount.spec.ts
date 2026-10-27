@@ -121,6 +121,38 @@ describe('localUrlMounts', () => {
     });
   });
 
+  test.each(['..assets/page.html', '..page.html', '%2e%2eassets/page.html'])(
+    'reads a contained filename starting with two dots: %s', async pathname => {
+      await writeFile(decodeURIComponent(pathname), 'contained file');
+      const pipeline = makePipeline([
+        localUrlMounts([{root: sourceRoot, urlPrefix: 'https://example.com/'}])
+      ]);
+
+      const downloaded = await pipeline.download(
+        makeResource('https://example.com/' + pathname));
+
+      expect(downloaded?.body).toBe('contained file');
+      expect(downloaded?.meta.localUrlMount).toMatchObject({
+        localPath: path.join(sourceRoot, decodeURIComponent(pathname))
+      });
+    });
+
+  test('rejects an index candidate outside the mounted directory', async () => {
+    await fs.writeFile(path.join(tmpRoot, 'secret.html'), 'outside file');
+    const pipeline = makePipeline([
+      localUrlMounts([{
+        root: sourceRoot,
+        urlPrefix: 'https://example.com/',
+        index: {names: ['../secret.html']}
+      }])
+    ]);
+
+    const res = makeResource('https://example.com/');
+    await pipeline.download(res);
+
+    expect(res.body).toBeUndefined();
+  });
+
   test('logs and discards an oversized mounted body without falling through to download', async () => {
     await writeFile('large.bin', 'oversized local body');
     const fallback = jest.fn<DownloadResourceFunc>().mockImplementation(res => {

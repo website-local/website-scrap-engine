@@ -24,9 +24,10 @@ export const safeJoin = (root: string, relativePath: string): string => {
   const filePath = join(root, relativePath);
   const resolvedRoot = resolve(root);
   const resolvedPath = resolve(filePath);
+  const rootPrefix = resolvedRoot.endsWith(sep) ? resolvedRoot : resolvedRoot + sep;
   // Compare resolved paths so custom save paths cannot traverse outside root.
   if (resolvedPath !== resolvedRoot &&
-    !resolvedPath.startsWith(resolvedRoot + sep)) {
+    !resolvedPath.startsWith(rootPrefix)) {
     throw new Error('Resolved path escapes root: ' + relativePath);
   }
   return filePath;
@@ -44,7 +45,7 @@ export const writeFile = async (
 ): Promise<void> => {
   pipeline?.signal?.throwIfAborted();
   let fileData: Uint8Array | string;
-  let options: ObjectEncodingOptions | void = void 0;
+  let options: ObjectEncodingOptions | undefined;
   if (typeof data === 'string') {
     fileData = data;
     options = {encoding};

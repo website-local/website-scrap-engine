@@ -461,12 +461,12 @@ export function mergeOverrideOptions(
   if (!overrideOptions) {
     return validateDownloadOptions(defaultDownloadOptions(opt));
   }
-  const merged: DownloadOptions = Object.assign({}, opt, overrideOptions);
+  const merged: DownloadOptions = {...opt, ...overrideOptions};
   if (opt.grovedom && overrideOptions.grovedom) {
     merged.grovedom = {...opt.grovedom, ...overrideOptions.grovedom};
   }
   if (opt.meta && overrideOptions.meta) {
-    merged.meta = Object.assign({}, opt.meta, overrideOptions.meta);
+    merged.meta = {...opt.meta, ...overrideOptions.meta};
   }
   if (opt.req && overrideOptions.req) {
     const options = got.defaults.options;

@@ -74,12 +74,9 @@ export async function requestForResource(
   } catch {
     downloadLink = res.downloadLink;
   }
-  const reqOptions: OptionsInit = Object.assign({}, requestOptions);
-  reqOptions.responseType = 'buffer';
+  const reqOptions: OptionsInit = {...requestOptions, responseType: 'buffer'};
   if (res.refUrl && res.refUrl !== downloadLink) {
-    const headers = Object.assign({}, reqOptions.headers);
-    headers.referer = res.refUrl;
-    reqOptions.headers = headers;
+    reqOptions.headers = {...reqOptions.headers, referer: res.refUrl};
   }
   logger?.info('io.http.request', res.url, downloadLink, res.refUrl,
     res.encoding, res.type);
