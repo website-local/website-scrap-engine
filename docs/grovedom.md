@@ -149,9 +149,10 @@ arbitrary hook compatibility or a whole-crawl performance improvement.
 
 ## Review follow-up qualification (2026-10-27)
 
-The follow-up to `02aa109` passes fresh builds, lint, strict source/test types,
-and **53 suites / 1,138 tests** on Node 22.22.2 and 24.18.0. The final packed
-engine passes strict consumer declarations and all 15 runtime check groups on
+Commit `3a84caa`, following the ownership refactor in `02aa109`, passed builds,
+lint, strict source/test types, and **53 suites / 1,138 tests** on Node 22.22.2
+and 24.18.0. The final packed engine passed strict consumer declarations and
+all 15 runtime check groups on
 both runtimes, including both downloaders, the logging peer, all 16 GroveDOM
 ownership/pool cases, and module aliases with CommonJS-only exports.
 
@@ -161,6 +162,8 @@ tarball match the preserved package hashes. No dependency installation was
 needed. New regressions cover streaming-hook replacement ownership and local
 path boundaries. Custom executors must expose the existing
 `replaceResource` operation; see the [migration guide](../MIGRATION-0.10.0.md#lifecycle-dependencies-and-document-ownership).
+The final commit also joins concurrent asynchronous status observers before
+resource cleanup and shutdown; observers remain read-only.
 
 The [object layout review](object-layout-review.md) records the measured worker
 heap reduction and the absence of a reliable crawl speedup. The older 193-case
@@ -238,6 +241,12 @@ including 39 saved files; all 326 GroveDOM documents were disposed per runtime.
 
 ## MDN ownership migration
 
+**Continue consumer migration and qualification in `mdn-local`.** As checked on
+2026-10-28, its original checkout still uses engine 0.9.1 in both the lockfile
+and installation. Its download and release workflows still use
+Node 20. Engine adapter qualification is complete for the revision above;
+adopting that engine and validating MDN's own transforms are the next work.
+
 The [engine API patch](mdn-native-url-migration.patch) and
 [document ownership patch](mdn-grovedom-migration.patch) preserve the migration
 tested in isolated MDN copies on 2026-10-24. That evidence left the original
@@ -254,8 +263,27 @@ explicitly when opting into GroveDOM. Apply the other API changes in the
 [0.10 migration guide](../MIGRATION-0.10.0.md), including `pipeline.logger`, and
 run consumers on Node >=22.13.0.
 
-Any adopted MDN revision still needs its own validation, including
-full-archive/browser checks and an admissible consumer performance measurement.
+Use this order in the consumer repository:
+
+1. Migrate the engine APIs, package runtime requirement and CI to Node >=22.13.0,
+   then build and test a Cheerio baseline against the selected engine commit.
+2. Add explicit GroveDOM ownership to hooks and standalone transforms. Compare
+   both parsers on the same engine/options and frozen original responses:
+   saved bytes, paths, submissions, status events and complete document cleanup,
+   including both downloader modes.
+3. Measure the complete required DOM workload with fixed inputs and controls,
+   including bindings, callbacks, serialization and disposal. The adoption
+   target remains at least **3× current Cheerio**, while also beating its
+   fastest compatible configuration. Profile that consumer before choosing
+   further optimizations; input-byte and idle-pool limits are not heap limits.
+4. Validate full locale archives and offline browser behavior from the actual
+   adopted MDN revision, including live examples, BCD tables, redirects, search
+   targets and local assets. Record sustained memory separately.
+
+Keep Cheerio as default while these gates remain open. Earlier replay results
+qualify their recorded revisions. GroveDOM library development remains paused;
+reopen library or engine work when the consumer identifies a reproducible defect
+or a measured optimization opportunity. Closed library campaigns stay closed.
 
 ## Validate an installed consumer
 
