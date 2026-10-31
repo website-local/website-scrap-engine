@@ -43,7 +43,7 @@ export async function getRetry(
     });
   }
   try {
-    const response = await request;
+    const response = await request as Response<unknown>;
     // Got 16 returns Uint8Array for responseType: 'buffer'. Preserve our Buffer
     // contract and Buffer-based HTML checks without copying the response bytes.
     const body: unknown = response.body;
