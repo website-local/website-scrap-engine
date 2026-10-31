@@ -5,19 +5,16 @@ import {defaultDownloadOptions} from '../../src/options.js';
 import type {DownloadOptions} from '../../src/options.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {createResource, ResourceType} from '../../src/resource.js';
-import {disposeHtmlResource, load, prepareHtmlParser} from '../../src/cheerio.js';
+import {disposeHtmlResource, load} from '../../src/cheerio.js';
 import type {CheerioStatic} from '../../src/types.js';
-import {state} from '../grovedom-fixture.js';
+import {load as fixtureLoad, state} from '../grovedom-fixture.js';
 
 const resource = () => createResource({type: ResourceType.Binary, depth: 1,
   url: 'https://example.test/child', refUrl: 'https://example.test/', localRoot: 'output'});
 const crawlerWith = (options: Partial<DownloadOptions>) =>
   new SingleThreadDownloader(new URL('./budget-options.js', import.meta.url).href, options);
 
-const parserOptions = {htmlParser: 'grovedom' as const, grovedom: {
-  module: new URL('../grovedom-fixture.cjs', import.meta.url).href,
-  poolSize: 0, poolMaxBytes: 0
-}};
+const parserOptions = {loadHtml: fixtureLoad};
 
 test('synchronous and empty status listeners retain the Promise API', async () => {
   const options = defaultDownloadOptions(defaultLifeCycle());
@@ -271,11 +268,10 @@ test.each(['error', 'dispose', 'cancelled child'] as const)(
   });
 
 test('parser setup failures in listeners do not escape synchronous error reporting', async () => {
-  await prepareHtmlParser(parserOptions);
   const events: string[] = [];
-  const crawler = crawlerWith({...parserOptions,
-    grovedom: {...parserOptions.grovedom, poolSize: 1}, statusChange: [
-      (_res, _status, options) => { load('<p>conflicting parser</p>', undefined, undefined, options); },
+  const crawler = crawlerWith({
+    loadHtml: () => { throw new Error('Parser setup failed'); }, statusChange: [
+      (_res, _status, options) => { load('<p>report</p>', undefined, undefined, options); },
       () => { events.push('following listener'); }
     ]});
   const res = resource(), failure = new Error('original failure');

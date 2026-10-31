@@ -14,13 +14,17 @@
 | Understand measured performance and retained optimizations | [Performance](performance.md) |
 | Review the 2026-10-27 property-access profiles, fixes and measured simplifications | [Object layout review](object-layout-review.md) |
 | Understand dependency, parser and development-tool decisions | [Dependency audit](dependency-audit.md) |
-| Opt in to GroveDOM and configure per-worker pool limits | [GroveDOM adapter](grovedom.md) |
+| Supply a GroveDOM loader and configure its pool in the application | [GroveDOM loader](grovedom.md) |
 | Continue MDN's engine migration and GroveDOM qualification | [MDN continuation](grovedom.md#mdn-ownership-migration) |
 
 The README, migration guide and GroveDOM ownership examples describe the current
 APIs, including explicit lifecycle dependencies, resource-owned documents and
 input-byte limits. Dated audits and qualification tables identify the older
 commit or working tree they validated; they do not validate later changes.
+The [2026-10-31 loader qualification](grovedom.md#downstream-loader-qualification-2026-10-31)
+covers the application-owned parser setup. Its [paired measurements](performance.md#downstream-parser-setup-2026-10-31)
+retain an unresolved warmed GroveDOM canvas slowdown; correctness validation
+does not provide unconditional performance clearance.
 The [2026-10-27 review](object-layout-review.md) and
 [package qualification](grovedom.md#review-follow-up-qualification-2026-10-27)
 cover the follow-up committed as `3a84caa`. The dated

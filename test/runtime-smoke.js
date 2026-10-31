@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {promises as fs} from 'node:fs';
 import {createServer} from 'node:http';
+import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -33,6 +34,15 @@ const deadline = setTimeout(() => {
 deadline.unref();
 
 try {
+  const loaderPath = path.join(root, 'html-loader.mjs');
+  if (htmlParser === 'grovedom') {
+    const parserUrl = pathToFileURL(createRequire(entryUrl).resolve('grovedom')).href;
+    await fs.writeFile(loaderPath, `
+import {init, load} from ${JSON.stringify(parserUrl)};
+init({heap: 'pool', poolSize: 8, poolMaxBytes: 16 * 1024 * 1024});
+export {load};
+`);
+  }
   await io.mkdirRetry(path.join(root, 'custom-workers'));
   const workerPath = path.join(root, 'custom-workers', 'channels.mjs');
   await fs.writeFile(workerPath, `
@@ -73,6 +83,7 @@ parentPort.postMessage({type: 'ready'});
 import {isMainThread} from 'node:worker_threads';
 import path from 'node:path';
 import {lifeCycle, options, resource} from ${JSON.stringify(entryUrl)};
+${htmlParser === 'grovedom' ? `import {load} from ${JSON.stringify(pathToFileURL(loaderPath).href)};` : ''}
 const lc = lifeCycle.defaultLifeCycle();
 lc.generateSavePath.push(savePath => path.join('hooks', savePath));
 lc.processAfterDownload.push(res => {
@@ -90,7 +101,7 @@ export default options.defaultDownloadOptions({
   initialUrl: [${JSON.stringify(url)}],
   concurrency: 1,
   workerCount: 1,
-  htmlParser: ${JSON.stringify(htmlParser)},
+  ${htmlParser === 'grovedom' ? 'loadHtml: load,' : ''}
   req: {retry: {limit: 0}, timeout: {request: 2000}},
   createLogger: () => ({
     trace() {}, debug() {}, info() {}, warn() {}, error() {},

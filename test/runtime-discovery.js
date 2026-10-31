@@ -27,10 +27,7 @@ const lc = lifeCycle.defaultLifeCycle();
 let previousSubmit;
 lc.processBeforeDownload.unshift(res => {
   if (${documentMode} && res.url.endsWith('/child-1')) {
-    res.meta.doc = loadHtml(res.body, undefined, undefined, {htmlParser: 'grovedom', grovedom: {
-      module: ${JSON.stringify(new URL('./grovedom-fixture.cjs', import.meta.url).href)},
-      poolSize: 0, poolMaxBytes: 0
-    }});
+    res.meta.doc = loadHtml(res.body, undefined, undefined, {loadHtml: fixture.load});
   }
   return res;
 });

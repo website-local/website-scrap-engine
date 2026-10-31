@@ -34,12 +34,15 @@ const scripts = process.argv.includes('--smoke-only') ? ['runtime-smoke', 'runti
 ];
 if (process.platform === 'win32' && !process.argv.includes('--smoke-only')) scripts.push('runtime-windows-files');
 const checks = scripts.map(script => ({script, parser: 'cheerio', extra: []}));
+if (!process.argv.includes('--smoke-only')) {
+  checks.push({script: 'runtime-html-parser', parser: 'custom',
+    extra: [path.join(project, 'test/grovedom-fixture.js')]});
+}
 if (process.argv.includes('--grovedom')) {
   const parserEntry = createRequire(entry).resolve('grovedom');
   checks.push(
     {script: 'runtime-smoke', parser: 'grovedom', extra: ['grovedom']},
-    {script: 'runtime-html-parser', parser: 'grovedom', extra: [parserEntry]},
-    {script: 'runtime-html-parser-aliases', parser: 'grovedom', extra: [parserEntry]}
+    {script: 'runtime-html-parser', parser: 'grovedom', extra: [parserEntry]}
   );
 }
 const results = [];

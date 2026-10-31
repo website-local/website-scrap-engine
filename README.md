@@ -36,8 +36,8 @@ for save-path hooks, custom-worker channels, and other breaking changes.
 See the [0.10 documentation index](docs/README.md) for release validation,
 performance measurements, and dependency decisions.
 
-For the experimental GroveDOM 0.1.2 backend and its downstream pool controls, see
-the [GroveDOM adapter guide](docs/grovedom.md). Cheerio remains the default.
+For supplying an initialized GroveDOM 0.1.2 loader from your application, see
+the [GroveDOM loader guide](docs/grovedom.md). Cheerio remains the default.
 
 ## Usage
 
@@ -95,6 +95,11 @@ new SingleThreadDownloader(pathToFileURL(path.resolve('my-options.js')).href, {
   concurrency: 8,
 });
 ```
+
+To supply a statically imported HTML parser, set `loadHtml` in the options module,
+for example `loadHtml: load` with `import {load} from 'cheerio'`. Each worker
+imports the function locally. See the [loader contract](docs/grovedom.md#downstream-html-loaders)
+for parser selection and document ownership.
 
 ### Crawl limits and outcomes
 
@@ -295,6 +300,14 @@ The scraper discovers linked resources from HTML using configurable source defin
 - Other: `embed[src]`, `object[data]`, `input[src]`, `[background]`, `link[rel*="icon"]`, `link[rel*="preload"]`
 
 Override via `options.sources` with an array of `{selector, attr, type}` definitions.
+
+Definitions may also provide `tag`, the final tag of a lowercase tag/attribute
+selector, optionally preceded by tag-only ancestors. For example,
+`video source[src]` can use `tag: 'source'`. The built-in definitions compute
+this property once at initialization; document processing reads it directly.
+Custom definitions without `tag` use ordinary selector queries. When changing
+a copied definition's selector, update `tag` to match or omit it; omit it for
+contextual, positional, escaped-name and other complex selectors.
 
 ### Key Abstractions
 

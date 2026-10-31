@@ -20,6 +20,7 @@ Breaking changes
 * Change `WorkerPool.workingTasks` to a Map and split task/log handlers. Remove `waitForInitBeforeIdle` and the retry argument from `io.mkdirRetry`. See the migration guide for custom pool interfaces.
 * Reject discovery submissions after their parent task completes. The opt-in concurrency controller now backs off on stalls and grows gradually within bounds; adjustment periods must fit Node's positive-integer timer range.
 * Pass the parent resource and pipeline to discovery submissions. Use `PipelineExecutor.logger` in lifecycle hooks and pass resource/publication dependencies to custom I/O helpers. Resource owns `meta.doc`; parser selection is explicit and documents are disposed when saved or discarded.
+* Replace `htmlParser` and `grovedom` configuration with a synchronous `loadHtml` supplied by the application's options module. Applications own parser imports, initialization and pool settings; workers import the loader locally. Cheerio remains the default, and document disposal is unchanged.
 * Require custom `PipelineExecutor` implementations to expose `replaceResource(previous, next): Promise<void>` for task-state and document ownership transfer. The built-in executor already provides it.
 * Run asynchronous status observers concurrently. Observers remain read-only and start in array order, but no longer wait for previous observers to finish. Await every returned promise before resource cleanup and downloader shutdown.
 
@@ -32,6 +33,7 @@ Performance
 * Cache unchanged normalized request snapshots without retaining merge history, and avoid promise turns for prepared output directories.
 * Reuse URI parsing during resource creation and deduplication; reuse a parsed reference URL across links without sharing mutable URI instances with hooks.
 * Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.
+* Reuse tag selections across consecutive empty HTML source rules. Built-in `SourceDefinition.tag` hints are computed once; matching rules invalidate reuse and custom selectors keep their own queries in source order.
 * Reduce temporary allocations in combined link creation, SVG processing and synchronous hook execution; remove unused CSS URL regex captures while preserving replacement offsets.
 * Reuse the path-segment array during save-path escaping, and avoid reparsing unchanged inline styles while preserving existing CSS-hook and rewriting behavior.
 * Reuse the existing relative-path helper when writing redirects with a supplied target save path, retaining the URI compatibility wrapper fallback for unusual paths.
@@ -57,7 +59,7 @@ Crawl control and reliability
 * Default downloader output to direct writes; failures/cancellation may leave partial files. Set atomicWrites for staged publication and preservation of cached files on failure. Save-policy skips and 304 responses preserve cached output in both modes.
 * Let the parent own worker output reservations and publication. Clean atomic staging after worker failure; direct partial output remains. Preserve confirmed publication counts after later failure.
 * Keep output ownership in `AbstractDownloader.outputReservations` and concurrency history in `DownloaderStats`. Remove ambient contexts and redundant initialization fields without adding separate Resource state objects.
-* Add opt-in GroveDOM 0.1.2 support with explicit document ownership and per-worker idle-pool limits; Cheerio remains the default. Dispose replaced, discarded and serialized child documents after their asynchronous status work.
+* Support application-supplied GroveDOM 0.1.2 loaders with explicit document ownership and application-configured pools. Dispose replaced, discarded and serialized child documents after their asynchronous status work.
 
 Fixes and performance
 ------------

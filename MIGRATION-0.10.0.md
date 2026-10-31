@@ -95,7 +95,22 @@ Parser selection is explicit:
 `loadHtml(content, parseOptions, isDocument, parserOptions)`. Pass the lifecycle
 options as the fourth argument to use its configured backend; omitting that
 argument selects Cheerio. `withHtmlParser` and parser scopes are removed.
-The parser and document are created only when a markup lifecycle needs them.
+By default, Cheerio loading and document creation wait until a markup
+lifecycle needs them. `DownloadOptions.loadHtml` can supply a synchronous,
+statically imported loader instead. Define it in the options module, which each
+worker imports locally; functions cannot be sent in constructor overrides.
+Lifecycle hook options and `PipelineExecutor.options` expose the supplied
+loader; `StaticDownloadOptions` remains the cloneable constructor contract.
+Markup helpers explicitly typed with `StaticDownloadOptions` should accept
+`StaticDownloadOptions & HtmlParserOptions` when forwarding options to `loadHtml`.
+The application owns any initialization required by its supplied loader.
+`htmlParser` and `grovedom` options are removed, including `grovedom.module`,
+pool limits and constructor overrides. Import GroveDOM in the application,
+initialize its pool once per process/worker, and provide its synchronous loader
+through `loadHtml`. Use a shared loader module when several options modules need
+the same initialized parser. Omit `loadHtml` to use the default Cheerio loader.
+Document ownership is unchanged. See the
+[loader contract](docs/grovedom.md#downstream-html-loaders).
 
 `res.meta.doc` owns the resource's document. Built-in saving, discard, failure
 and cancellation paths dispose and clear it; `disposeHtmlResource(res)` does
@@ -125,6 +140,17 @@ Pass the current resource and executor to I/O helpers that need crawl ownership.
 For example, `io.writeFile(path, data, encoding, mtime, atime, localRoot, res,
 pipeline)` uses the executor's cancellation, logging and publication store.
 Omitting those arguments requests standalone publication behavior.
+
+## HTML source definitions
+
+Built-in source definitions now carry an optional `tag` property, computed once
+at initialization for simple tag/attribute selectors. `processHtml` reads this
+property instead of classifying the selector for every document. Custom
+definitions can omit it and keep ordinary selector queries.
+
+When copying a built-in definition and changing its selector, update `tag` to
+the new final tag or omit it. More complex selectors must omit it. See
+[HTML source definitions](README.md#html-source-definitions) for the contract.
 
 ## Status observers
 

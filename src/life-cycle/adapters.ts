@@ -14,6 +14,7 @@ import type {
 } from './types.js';
 import {toString} from '../util.js';
 import type {StaticDownloadOptions} from '../options.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio, CheerioStatic} from '../types.js';
 import type URI from '../uri.js';
@@ -117,7 +118,7 @@ export interface HtmlProcessFunc {
 
 export const parseHtml = (
   res: DownloadResource,
-  options: StaticDownloadOptions
+  options: StaticDownloadOptions & HtmlParserOptions
 ): CheerioStatic => {
   const encoding: ResourceEncoding =
     res.encoding || options.encoding[res.type as ResourceType] || 'utf8';
@@ -125,7 +126,7 @@ export const parseHtml = (
 };
 
 export const processHtml = (fn: HtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
-  (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions,
+  (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions & HtmlParserOptions,
     pipeline: PipelineExecutor) => {
     if (res.type === ResourceType.Html) {
       const previous = res.meta.doc ?? parseHtml(res, options);
@@ -141,7 +142,7 @@ export interface AsyncHtmlProcessFunc {
 }
 
 export const processHtmlAsync = (fn: AsyncHtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
-  async (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions,
+  async (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions & HtmlParserOptions,
     pipeline: PipelineExecutor) => {
     if (res.type === ResourceType.Html) {
       const previous = res.meta.doc ?? parseHtml(res, options);

@@ -12,6 +12,7 @@ import {promises as fs} from 'node:fs';
 import type {Stats} from 'node:fs';
 import URI from '../uri.js';
 import type {StaticDownloadOptions} from '../options.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import type {
   CreateResourceArgument,
   RawResource,
@@ -64,7 +65,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   refUri?: URI;
   constructor(public lifeCycle: ProcessingLifeCycle,
               public requestOptions: RequestOptions,
-              public options: StaticDownloadOptions,
+              public options: StaticDownloadOptions & HtmlParserOptions,
               public readonly signal?: AbortSignal,
               public readonly logger: Logger = createDefaultLogger(),
               public readonly publicationStore?: PublicationStore) {
@@ -333,7 +334,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
     res: Resource,
     element: Cheerio | null,
     parent: Resource | null,
-    options: StaticDownloadOptions = this.options,
+    options: StaticDownloadOptions & HtmlParserOptions = this.options,
     startIndex = 0
   ): AsyncResult<Resource | void> {
     try {
@@ -371,7 +372,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   async download(
     res: Resource,
     requestOptions: RequestOptions = this.requestOptions,
-    options: StaticDownloadOptions = this.options
+    options: StaticDownloadOptions & HtmlParserOptions = this.options
   ): Promise<DownloadResource | void> {
     let current = res;
     try {
@@ -451,7 +452,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
   async processAfterDownload(
     res: DownloadResource,
     submit: SubmitResourceFunc,
-    options: StaticDownloadOptions = this.options
+    options: StaticDownloadOptions & HtmlParserOptions = this.options
   ): Promise<DownloadResource | void> {
     let current = res;
     try {
@@ -498,7 +499,7 @@ export class PipelineExecutorImpl implements PipelineExecutor {
 
   async saveToDisk(
     res: DownloadResource,
-    options: StaticDownloadOptions = this.options
+    options: StaticDownloadOptions & HtmlParserOptions = this.options
   ): Promise<DownloadResource | void> {
     let current = res;
     try {

@@ -3,6 +3,7 @@ import type {PublicationStore} from '../output-store.js';
 import type {BeforeRetryHook} from 'got';
 import type {RawResource, Resource, ResourceEncoding, ResourceType} from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import type {
   AsyncResult,
   DownloadResource,
@@ -17,7 +18,7 @@ import type {WorkerInfo} from '../downloader/worker-pool.js';
 
 export interface PipelineExecutor {
   readonly logger: Logger;
-  readonly options: StaticDownloadOptions;
+  readonly options: StaticDownloadOptions & HtmlParserOptions;
   readonly publicationStore?: PublicationStore;
   /** Retained Got callback, also recognized by native transport selection. */
   readonly retryLogger?: BeforeRetryHook;
@@ -80,13 +81,13 @@ export interface PipelineExecutor {
     res: Resource,
     element: Cheerio | null,
     parent: Resource | null,
-    options?: StaticDownloadOptions
+    options?: StaticDownloadOptions & HtmlParserOptions
   ): AsyncResult<Resource | void>;
 
   download(
     res: Resource,
     requestOptions?: RequestOptions,
-    options?: StaticDownloadOptions
+    options?: StaticDownloadOptions & HtmlParserOptions
   ): AsyncResult<DownloadResource | void>;
 
   /**
@@ -98,12 +99,12 @@ export interface PipelineExecutor {
   processAfterDownload(
     res: DownloadResource,
     submit: SubmitResourceFunc,
-    options?: StaticDownloadOptions
+    options?: StaticDownloadOptions & HtmlParserOptions
   ): AsyncResult<DownloadResource | void>;
 
   saveToDisk(
     res: DownloadResource,
-    options?: StaticDownloadOptions
+    options?: StaticDownloadOptions & HtmlParserOptions
   ): AsyncResult<DownloadResource | void>;
 
   /**

@@ -1,5 +1,246 @@
 # Performance for 0.10
 
+## RAM-disk repetition after restart: 2026-10-31
+
+The user reported a computer restart and requested another complete paired
+comparison. This repeats the before/after 0.10 parser-setup cleanup using
+GroveDOM 0.1.2, Node 24.18.0, the same two frozen canvas pages, eight replay
+requests and concurrency 1. Twelve storage blocks alternate E/R and R/E;
+each placement uses a fresh process, eight warmups per build and four balanced
+ABBA/BAAB rounds. All 768 primary pipelines are exact. There is no host gating,
+normalization, sample removal, replacement or extension of the fixed panel.
+
+The RAM comparison is effectively neutral: the paired 95% slowdown upper
+bounds are **0.10% for the pipeline** and **0.25% for processing**. The earlier
+14.2% processing slowdown does not reproduce on RAM. Duration columns below
+are arithmetic means; ratios are geometric means of twelve block ratios,
+with two-sided Student-t 95% intervals on log ratios.
+
+| Placement / measurement | Before | After | Paired ratio | 95% interval |
+| --- | ---: | ---: | ---: | --- |
+| RAM / complete pipeline | 134.82 ms | 134.34 ms | 0.9964 | 0.9918–1.0010 |
+| RAM / processing | 120.68 ms | 120.37 ms | 0.9974 | 0.9924–1.0025 |
+| RAM / main-thread CPU | 120.93 ms | 119.63 ms | 0.9893 | 0.9558–1.0240 |
+| Disk / complete pipeline | 152.14 ms | 149.86 ms | 0.9977 | 0.8469–1.1754 |
+| Disk / processing | 134.13 ms | 123.44 ms | 0.9456 | 0.8206–1.0895 |
+| Disk / processing main-thread CPU | 106.93 ms | 112.47 ms | 1.0530 | 1.0204–1.0866 |
+
+The disk CPU increase is **5.3% (95%: 2.0–8.7%)** and remains unresolved.
+Disk elapsed intervals also remain too wide to exclude a 5% slowdown. CPU
+clocks are quantized, often in 15.625 ms steps; this limits phase precision
+without removing the unfavorable result. Unconditional performance clearance
+remains open. No added source path or logical work count justifies a further
+runtime fix.
+
+For the after build, RAM reduces startup from 26.23 to 13.79 ms, paired 36.0%
+(95%: 8.3–55.3%) less. Complete pipeline time is 9.5% (1.0–17.3%) less, while
+processing is 2.5% (0.6–4.3%) less. Processing remains about 90% of pipeline
+elapsed time. This is a bounded latency workload, separate from archive
+throughput and from the earlier Cheerio 0.9.1/0.10 comparison.
+
+Separate diagnostics retain 80 exact pipelines, 16 CPU profiles and four
+native filesystem/V8 traces. RAM processing is 130.78 / 130.41 ms; the engine
+HTML hook is 61.54 / 62.07 ms and MDN preprocessing is 24.02 / 24.06 ms.
+The removed registry has only 0.255 ms of sampled processing ancestry before
+cleanup. Large shared costs remain URL handling, DOM work, HTML processing
+and logging. Both option/request objects remain fast, with 28 / 26 option
+fields and 13 processing deoptimizations in each cell.
+
+Disk diagnostic processing is 131.72 / 139.78 ms. Its sampled increase is
+spread across idle, URL handling, DOM, stream/file work and logging; it does
+not identify a causal source defect. Both builds retain seven HTML hook calls,
+32 startup copies, eight synchronous log opens, 30 processing lstats and five
+realpaths. Async write batching varies while logical output remains exact.
+
+The harness's file-backed stdout capture uses synchronous writes through
+log4js, SyncWriteStream and fs.writeSync: 387 calls cost 4.73 / 4.96 ms on RAM.
+Other appenders are asynchronous. RAM after-build processing has 112.59 ms
+covered by pending native filesystem operations and 7.08 ms of sampled idle
+overlapping filesystem work. Pending duration is not time lost to I/O.
+Concurrency 1 and awaited output/startup barriers still affect completion.
+Inclusive hook/async spans overlap; elapsed-weighted CPU samples are not
+exact per-function CPU charges.
+
+All 852 successful pipelines, including four preflights, are exact, with zero
+pipeline failures and zero filesystem retries. Every RAM child's reports,
+events, logs, profiles, traces and retained output were copied and hash-checked
+on disk before any next child started. The final receipt verifies 4,571 copied
+files, including all eight RAM profiles and two RAM traces. The original
+pre-restart panel remains separate, including its missing raw RAM artifacts.
+Source/runtime and the previously qualified package are unchanged; no new
+build/unit-test run is claimed. Cheerio remains default and broader adoption
+qualifications remain open.
+
+## RAM-disk first run before restart: 2026-10-31
+
+A separate user-requested storage comparison moves the unchanged before/after
+0.10 builds, Node 24.18.0, dependencies, recording, assets, logs and output onto
+`/mnt/r`. Matched copies on `/mnt/e` provide a contemporaneous control. Both
+volumes are exposed through WSL `drvfs`. This uses published GroveDOM 0.1.2,
+two frozen canvas pages, eight recorded requests and concurrency 1. It is a
+bounded offline pipeline comparison, separate from archive throughput.
+
+Twelve independent storage blocks alternate E/R and R/E. Each placement uses
+a fresh child, eight warmups per build and four balanced ABBA/BAAB rounds.
+Imports, explicit pre-run GC and verification remain outside the pipeline
+timer. All 768 primary pipelines match original output, events and requests.
+Arithmetic means and paired geometric after/before ratios are shown below;
+intervals are two-sided Student-t 95% intervals on the twelve block log ratios.
+
+| Placement / measurement | Before | After | Paired ratio | 95% interval |
+| --- | ---: | ---: | ---: | --- |
+| RAM / complete pipeline | 218.5 ms | 210.2 ms | 0.966 | 0.899–1.039 |
+| RAM / processing | 196.6 ms | 188.3 ms | 0.963 | 0.891–1.042 |
+| RAM / main-thread CPU | 184.4 ms | 183.9 ms | 0.997 | 0.961–1.035 |
+| Disk / complete pipeline | 246.3 ms | 226.8 ms | 0.915 | 0.817–1.024 |
+| Disk / processing | 196.9 ms | 193.2 ms | 0.981 | 0.925–1.041 |
+| Disk / main-thread CPU | 182.9 ms | 184.6 ms | 1.006 | 0.956–1.058 |
+
+The pipeline and processing intervals meet the declared 5% slowdown margin
+on both placements. The earlier 14.2% processing increase does not reproduce
+here. These results support bounded review preparation; they do not establish
+zero effect or explain the cause of every earlier observation. Disk CPU still
+has a 5.8% upper bound, and the earlier panel remains intact and unattributed.
+These measurements did not establish unconditional performance clearance.
+
+RAM reliably reduces startup elapsed time: 49.1 to 21.7 ms for the before build
+and 33.2 to 21.6 ms for the after build. The paired after-build startup change
+is -30.5% (95%: -45.7% to -11.0%). Its whole-pipeline storage interval still
+spans parity. Processing is about 90% of the after build's RAM elapsed time;
+faster storage does not establish a processing improvement.
+
+Two separate diagnostic storage blocks recorded 80 exact pipelines and 16
+measured CPU profiles plus native filesystem/V8 traces. On RAM the engine HTML
+hook is 95.70 / 95.78 ms and MDN preprocessing is 33.49 / 32.06 ms. There are
+387 native synchronous writes during processing, taking 7.43 / 7.42 ms; sampled
+stacks include log4js stdout through Node's synchronous file-backed stdout.
+The other file appenders are asynchronous. With concurrency 1, awaited file
+operations and the startup copy/index barrier can still extend elapsed time.
+
+RAM diagnostic processing is 205.6 / 208.0 ms; disk diagnostic processing is
+202.3 / 222.0 ms. These smaller instrumented observations are retained
+separately and do not replace the primary estimates. Both option objects stay
+fast, with 28 / 26 properties. RAM deoptimization counts are 13 / 12 and native
+major-GC spans are 5.69 / 5.45 ms. No added work or repeatable source hotspot
+justifies another runtime fix. Hook and asynchronous I/O spans overlap;
+inclusive timings must not be added, and CPU samples are elapsed-weighted
+estimates rather than exact function CPU costs.
+
+All 852 successful pipelines, including four preflights, are exact, with no
+filesystem retry. Two initial relocation preflights failed before pipeline
+timing because the isolated dependency copy omitted MDN's directly imported
+`cacheable-lookup`; copying the unchanged installed package completed the
+runtime closure. Both failure details remain. No observations were dropped,
+normalized, replaced or gated on host activity in the analysis.
+
+The final preservation copy failed because the RAM task directory was no
+longer present. The completed 852-pipeline audit, all primary per-pipeline
+elapsed/main-thread timings and the derived diagnostic analyses survive on
+disk. Disk raw reports, logs, eight CPU profiles and two native traces remain;
+RAM's 426 report/event pairs, eight profiles, two traces and raw logs are
+unavailable. The user reported a computer restart. The local handoff
+records this preservation gap; it prevents rechecking those raw RAM artifacts.
+No timing sample was replaced or rerun. No production code or dependency was
+changed by this experiment. Cheerio remains default; sustained memory and
+GroveDOM adoption stay open.
+
+## Downstream parser setup: 2026-10-31
+
+The application-owned parser setup removes the engine's GroveDOM module registry,
+initialization and pool options. The application imports and initializes its
+parser and supplies `loadHtml`; Cheerio remains the default. Only the emitted
+`cheerio.js` and `options.js` differ from the preceding 0.10 working tree.
+The source-tag optimization is present in both builds.
+
+These comparisons use existing Node 24.18.0, published GroveDOM 0.1.2 and two
+frozen offline MDN workloads. MDN's emitted code, supplied Cheerio, asset
+copying and GroveDOM pool settings are identical. Eight independent blocks
+per case use balanced ABBA/BAAB order. Warmed children run eight warmups per
+build before four measured rounds; fresh-process blocks use four processes
+and include entry imports and parser initialization, with natural GC only.
+
+Milliseconds below are arithmetic means. Ratios are geometric means of the
+eight independent after/before block ratios, with 95% Student-t intervals on
+log ratios. Values above 1 mean slower. Complete pipeline timing includes
+initialization, processing, logging, output I/O and disposal.
+
+| Measurement | Parser / workload | Before | After | Paired ratio | 95% interval |
+| --- | --- | ---: | ---: | ---: | --- |
+| Warmed pipeline | GroveDOM / canvas | 250.5 ms | 280.8 ms | 1.126 | 0.995–1.276 |
+| Warmed pipeline | GroveDOM / Array | 484.6 ms | 432.5 ms | 0.915 | 0.783–1.068 |
+| Warmed pipeline | Cheerio / canvas | 469.0 ms | 437.8 ms | 0.950 | 0.836–1.080 |
+| Warmed pipeline | Cheerio / Array | 1381.1 ms | 1402.0 ms | 1.014 | 0.968–1.062 |
+| Fresh imports + pipeline | GroveDOM / canvas | 837.8 ms | 831.7 ms | 0.993 | 0.968–1.018 |
+| Fresh imports + pipeline | GroveDOM / Array | 979.7 ms | 990.9 ms | 1.009 | 0.923–1.102 |
+| Fresh imports + pipeline | Cheerio / canvas | 1059.3 ms | 996.3 ms | 0.942 | 0.880–1.009 |
+| Fresh imports + pipeline | Cheerio / Array | 1716.1 ms | 1723.8 ms | 1.003 | 0.976–1.031 |
+
+The warmed GroveDOM canvas processing phase shows a **14.2% slowdown**
+(95% interval: 1.7–28.2% slower). Its total-pipeline Student-t interval spans
+parity, while the block-bootstrap interval is 1.019–1.237. This original finding
+remains unattributed. None of this panel's warmed total-pipeline intervals
+excludes a 5% slowdown. Main-thread CPU point estimates change by less than 2%
+in all four warmed comparisons. The later storage follow-up above supplies
+separate bounded evidence without replacing these observations.
+
+A separate four-block diagnostic uses 16 measured CPU profiles, filesystem
+and lifecycle spans, native filesystem/V8 traces, and actual option layouts.
+Processing is 163.2 / 162.5 ms and the engine HTML hook is 75.5 / 75.7 ms.
+The diagnostic's elapsed difference is in initialization: 18.4 / 44.6 ms.
+Native traces record the same 32 asset copies and eight synchronous log opens
+per pipeline. Log opens take 1.5 / 8.9 ms; the CPU profiles show 4.8 / 22.5 ms
+of startup idle time with pending filesystem work. Async operations overlap
+and their inclusive durations cannot be added. Both options objects retain
+fast V8 properties, with 28 / 26 own properties; deoptimization counts match.
+These diagnostics locate I/O costs but do not explain away or replace the
+earlier uninstrumented processing slowdown. No source fix is inferred from it.
+
+Fresh GroveDOM imports take about 15 ms longer after application initialization
+moves into the import interval. The import-inclusive result supplies the fair
+startup comparison; a shorter pipeline alone is not a total-startup gain.
+
+The original warmed panel preserves 793 successful pipelines and one harness
+scratch-directory `mkdir` EINVAL failure before pipeline timing. A separate
+canvas control removes that unnecessary replay setup and completes 256 exact
+pipelines; it does not replace or pool the failed block. All 128 fresh-process
+and 80 diagnostic pipelines also match original output, events and requests.
+There is no host gating, sample removal, normalization or replacement. Raw
+blocks, bootstrap intervals, both halves, identical-build drift and failed
+output remain in the local performance handoff. Correctness qualification is
+documented in the [loader guide](grovedom.md#downstream-loader-qualification-2026-10-31).
+
+## Paired MDN 0.9.1 / 0.10 comparison: 2026-10-31
+
+This earlier completed comparison uses Cheerio, identical final MDN asset
+copying on both engine versions, the supplied loader and the native URI and
+selector changes. It precedes the downstream-parser cleanup above. Its eight
+balanced blocks per workload preserve 512 exact pipelines:
+
+| Workload | 0.9.1 mean | 0.10 mean | Paired elapsed change | 95% interval |
+| --- | ---: | ---: | ---: | --- |
+| canvas | 534.8 ms | 462.2 ms | -14.0% | -20.2% to -7.2% |
+| Array | 1678.1 ms | 1208.7 ms | -27.9% | -31.1% to -24.7% |
+
+Main-thread CPU falls 15.1% / 28.4%. Deeper profiles show less engine selector
+traversal and removal of URIjs self samples; parsing, MDN cleanup, skip logging
+and publication checks remain substantial costs. The separate MDN startup fix
+replaces recursive copying of 30 owned icons with enumeration and parallel
+file copies inside the timer. Its incremental canvas comparison estimates
+11.3% less pipeline time; the Array result spans parity. These percentages
+are not combined with the engine-version comparison.
+
+The historical 421 / 422 ms canvas result remains evidence of parity for its
+older lazy-loader configuration. The initial later canvas comparison also
+remains inconclusive. None of these panels is replaced or pooled with another.
+The standalone static `SourceDefinition.tag` trial established no reliable
+additional speedup; the hint now avoids per-document selector classification
+without a separate performance claim.
+
+These are bounded recorded workloads, not archive-throughput or sustained-
+memory qualifications. Actual MDN still declares and installs engine 0.9.1.
+Cheerio remains default, and GroveDOM's separate adoption requirements remain
+open.
+
 ## Prefix and promise measurements: 2026-10-27
 
 Local path containment now uses a module-cached `'..' + path.sep` prefix.

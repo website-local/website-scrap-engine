@@ -2,8 +2,9 @@
 
 This preserves the accepted **2026-10-04** baseline and its dependency decisions.
 The subsequent native URL integration replaces URIjs; see the
-[migration guide](native-url-migration.md). The optional
-[GroveDOM adapter](grovedom.md) was also added later; Cheerio remains the default.
+[migration guide](native-url-migration.md). The
+[application-supplied GroveDOM loader](grovedom.md) is optional; Cheerio remains
+the default and GroveDOM is installed by the consuming application.
 Statements and measurements below describe the audited baseline.
 
 Keep the current runtime dependencies and TypeScript/Jest toolchain for 0.10.

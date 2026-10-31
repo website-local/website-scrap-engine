@@ -8,6 +8,7 @@ import type {
   ResourceType
 } from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio} from '../types.js';
 import type {DownloaderWithMeta} from '../downloader/types.js';
@@ -33,7 +34,7 @@ export type ResourceStatus =
 export interface StatusChangeFunc {
   (res: Resource | RawResource,
    status: ResourceStatus,
-   options: StaticDownloadOptions,
+   options: StaticDownloadOptions & HtmlParserOptions,
    pipeline: PipelineExecutor): void | Promise<void>;
 }
 
@@ -87,7 +88,7 @@ export interface LinkRedirectFunc {
    * or void to skip processing and replacing to relative path
    */
   (url: string, element: Cheerio | null, parent: Resource | null,
-   options: StaticDownloadOptions,
+   options: StaticDownloadOptions & HtmlParserOptions,
    pipeline: PipelineExecutor): AsyncResult<string | void>;
 }
 
@@ -105,7 +106,7 @@ export interface DetectResourceTypeFunc {
    */
   (url: string, type: ResourceType, element: Cheerio | null,
    parent: Resource | null,
-   options: StaticDownloadOptions,
+   options: StaticDownloadOptions & HtmlParserOptions,
    pipeline: PipelineExecutor): AsyncResult<ResourceType | void>;
 }
 
@@ -145,9 +146,9 @@ export interface GenerateSavePathContext {
    */
   readonly replacePathHasError: boolean;
   /**
-   * Static download options.
+   * Download and parser options.
    */
-  readonly options: StaticDownloadOptions;
+  readonly options: StaticDownloadOptions & HtmlParserOptions;
 }
 
 export interface GenerateSavePathResult {
@@ -188,7 +189,7 @@ export interface ProcessResourceBeforeDownloadFunc {
    */
   (res: Resource, element: Cheerio | null,
    parent: Resource | null,
-   options: StaticDownloadOptions,
+   options: StaticDownloadOptions & HtmlParserOptions,
    pipeline: PipelineExecutor): AsyncResult<Resource | void>;
 }
 
@@ -216,7 +217,7 @@ export interface DownloadResourceFunc {
    * @return processed resource, or void to discard resource
    * @throws Error on download failures
    */
-  (res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions,
+  (res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions & HtmlParserOptions,
    pipeline: PipelineExecutor): AsyncResult<DownloadResource | Resource | void>;
 }
 
@@ -248,7 +249,7 @@ export interface ProcessResourceAfterDownloadFunc {
    * @param pipeline
    */
   (res: DownloadResource, submit: SubmitResourceFunc,
-   options: StaticDownloadOptions,
+   options: StaticDownloadOptions & HtmlParserOptions,
    pipeline: PipelineExecutor): AsyncResult<DownloadResource | void>;
 }
 
@@ -261,7 +262,7 @@ export interface SaveToDiskFunc {
    * @param pipeline
    * @return void for saved to disk, Resource for not saved.
    */
-  (res: DownloadResource, options: StaticDownloadOptions,
+  (res: DownloadResource, options: StaticDownloadOptions & HtmlParserOptions,
    pipeline: PipelineExecutor): AsyncResult<DownloadResource | void>;
 }
 
@@ -337,7 +338,7 @@ export interface ExistingResourceContext {
   stage: ExistingResourceStage;
   localPath: string;
   stat: Stats;
-  options: StaticDownloadOptions;
+  options: StaticDownloadOptions & HtmlParserOptions;
 }
 
 export interface ExistingResourceFunc {

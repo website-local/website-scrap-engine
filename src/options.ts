@@ -14,7 +14,6 @@ import type {DownloaderWithMeta} from './downloader/types.js';
 import type {SourceDefinition} from './sources.js';
 import type {CheerioOptionsInterface} from './types.js';
 import type {HtmlParserOptions} from './cheerio.js';
-import {validateHtmlParserOptions} from './cheerio.js';
 
 /**
  * Extra options for custom life cycle
@@ -28,7 +27,7 @@ export interface StaticDownloadMeta
 /**
  * Options which should not be changed at runtime, and safe for cloning
  */
-export interface StaticDownloadOptions extends HtmlParserOptions {
+export interface StaticDownloadOptions {
   /** Opt-in native GET/HEAD transport; unsupported request options fall back to Got. Default: got. */
   httpTransport?: 'got' | 'native';
   /**
@@ -160,7 +159,7 @@ export interface StaticDownloadOptions extends HtmlParserOptions {
   preferRemoteLastModifiedTime?: boolean;
 }
 
-export interface DownloadOptions extends StaticDownloadOptions, ProcessingLifeCycle {
+export interface DownloadOptions extends StaticDownloadOptions, HtmlParserOptions, ProcessingLifeCycle {
   /** Last normalized request settings, retained for reuse during option merging. */
   normalizedRequestOptions?: RequestOptions;
   /**
@@ -344,8 +343,9 @@ function snapshotOptions(options: Options, explicit: RequestOptions): RequestOpt
 export function defaultDownloadOptions(
   options: ProcessingLifeCycle & Partial<DownloadOptions>): DownloadOptions {
   const merged: DownloadOptions = {...defaultOptions, ...options};
-  validateHtmlParserOptions(merged);
-  if (merged.grovedom) merged.grovedom = {...merged.grovedom};
+  if (merged.loadHtml !== undefined && typeof merged.loadHtml !== 'function') {
+    throw new TypeError('loadHtml must be a function');
+  }
   if (merged.httpTransport !== undefined && merged.httpTransport !== 'got' && merged.httpTransport !== 'native') {
     throw new TypeError('Unknown httpTransport: ' + merged.httpTransport);
   }
@@ -462,9 +462,6 @@ export function mergeOverrideOptions(
     return validateDownloadOptions(defaultDownloadOptions(opt));
   }
   const merged: DownloadOptions = {...opt, ...overrideOptions};
-  if (opt.grovedom && overrideOptions.grovedom) {
-    merged.grovedom = {...opt.grovedom, ...overrideOptions.grovedom};
-  }
   if (opt.meta && overrideOptions.meta) {
     merged.meta = {...opt.meta, ...overrideOptions.meta};
   }

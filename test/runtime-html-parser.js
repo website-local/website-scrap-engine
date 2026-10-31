@@ -28,6 +28,7 @@ export function load(...args) {
   doc.dispose = () => { try { return dispose(); } finally { record({event: 'dispose', id}); } };
   return doc;
 }
+init({heap: 'pool', poolSize: 2, poolMaxBytes: ${poolMaxBytes}});
 `);
 
 try {
@@ -42,12 +43,13 @@ try {
       const optionsPath = path.join(caseRoot, 'options.mjs');
       const output = path.join(caseRoot, 'output');
       await fs.mkdir(caseRoot);
-      const module = phase === 'binary' ? pathToFileURL(path.join(root, 'missing-parser.mjs')).href :
-        pathToFileURL(wrapper).href;
       await fs.writeFile(optionsPath, `
 import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {lifeCycle, options, resource, loadHtml} from ${JSON.stringify(entry)};
+${phase === 'binary' ?
+  'const customLoad = () => { throw new Error("Binary resource invoked the HTML loader"); };' :
+  `import {load as customLoad} from ${JSON.stringify(pathToFileURL(wrapper).href)};`}
 const phase = ${JSON.stringify(phase)};
 const lc = lifeCycle.defaultLifeCycle();
 let failedDocument;
@@ -120,13 +122,12 @@ lc.statusChange = [
 export default options.defaultDownloadOptions({
   ...lc, localRoot: ${JSON.stringify(output)},
   initialUrl: phase === 'retry' ? [] : ['https://example.test/index.html'],
-  concurrency: 2, workerCount: 1, maxDepth: 1, htmlParser: 'grovedom',
-  grovedom: {module: ${JSON.stringify(module)}, poolSize: 4, poolMaxBytes: ${poolMaxBytes}},
+  concurrency: 2, workerCount: 1, maxDepth: 1, loadHtml: customLoad,
   createLogger: () => ({trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false})
 });
 `);
       const {statusEvents} = await import(pathToFileURL(optionsPath).href);
-      const crawler = new Downloader(pathToFileURL(optionsPath).href, {grovedom: {poolSize: 2}});
+      const crawler = new Downloader(pathToFileURL(optionsPath).href);
       const errors = [];
       const handleError = crawler.handleError.bind(crawler);
       crawler.handleError = (...args) => { errors.push(args); handleError(...args); };
@@ -187,7 +188,7 @@ export default options.defaultDownloadOptions({
         }
       }
       assert.ok([...active.values()].every(count => count === 0), mode + '/' + phase + ' leaked a document');
-      console.log(mode + '/' + phase + ': document ownership and pool controls passed');
+      console.log(mode + '/' + phase + ': supplied loader and document ownership passed');
     }
   }
 } finally { await fs.rm(root, {recursive: true, force: true}); }

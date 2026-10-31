@@ -1,6 +1,7 @@
 import {parseHtml} from './adapters.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
@@ -9,7 +10,7 @@ import type {CheerioStatic} from '../types.js';
 export async function processSiteMap(
   res: DownloadResource,
   submit: SubmitResourceFunc,
-  options: StaticDownloadOptions,
+  options: StaticDownloadOptions & HtmlParserOptions,
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   if (res.type !== ResourceType.SiteMap) {
     return res;

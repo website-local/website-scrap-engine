@@ -316,14 +316,8 @@ test('the direct single-thread entry does not import worker modules', async () =
   ], {cwd: projectRoot, timeout: 15000});
 }, 20000);
 
-test('HTML parser scopes cover both downloaders, errors, cancellation and pool overrides', async () => {
+test('supplied HTML loaders cover both downloaders, errors and cancellation', async () => {
   await promisify(execFile)(process.execPath, [
     path.join(projectRoot, 'test/runtime-html-parser.js'), path.join(buildRoot, 'index.js')
   ], {cwd: projectRoot, timeout: 40000});
 }, 45000);
-
-test('HTML parser module aliases share initialization and nested ownership', async () => {
-  await promisify(execFile)(process.execPath, [
-    path.join(projectRoot, 'test/runtime-html-parser-aliases.js'), path.join(buildRoot, 'index.js')
-  ], {cwd: projectRoot, timeout: 15000});
-}, 20000);

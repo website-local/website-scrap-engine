@@ -1,60 +1,86 @@
-# Experimental GroveDOM backend
+# Downstream GroveDOM loader
 
-Cheerio remains the default. The optional GroveDOM adapter targets the published
-**0.1.2 pooled-Wasm package**. Install it in the consuming application:
+Cheerio remains the default. Applications can supply an initialized,
+Cheerio-compatible loader through `loadHtml`. This guide uses the published
+**GroveDOM 0.1.2 pooled-Wasm package**, installed in the consuming application:
 
 ```sh
 npm install grovedom@0.1.2
 ```
 
-Select the backend in the downloader options:
+Import and initialize GroveDOM in the application's options module:
 
 ```js
+import {init, load} from 'grovedom';
+import {lifeCycle, options} from 'website-scrap-engine';
+
+init({heap: 'pool', poolSize: 4, poolMaxBytes: 8 * 1024 * 1024});
+
+export default options.defaultDownloadOptions({
+  ...lifeCycle.defaultLifeCycle(),
+  localRoot: './offline',
+  loadHtml: load,
+});
+```
+
+Each worker imports the options module locally. Module resolution, initialization
+timing and pool configuration belong to the application. If several options
+modules use the same parser, put its initialization and loader export in one
+shared module. Initialize the parser before the first load; an asynchronous
+initializer can be awaited during options-module evaluation, but `loadHtml`
+itself must remain synchronous.
+
+The `htmlParser` and `grovedom` options are removed. They no longer select a
+parser or configure a pool. Supply `loadHtml` instead; the engine has no
+GroveDOM module registry. Import failures and loader errors propagate to the
+caller.
+
+## Downstream HTML loaders
+
+An application can statically import a synchronous, Cheerio-compatible loader
+and provide it in its options module:
+
+```js
+import {load} from 'cheerio';
 import {lifeCycle, options} from 'website-scrap-engine';
 
 export default options.defaultDownloadOptions({
   ...lifeCycle.defaultLifeCycle(),
   localRoot: './offline',
-  htmlParser: 'grovedom',
-  grovedom: {
-    // Optional: resolve from this application for isolated dependency layouts.
-    // module: import.meta.resolve('grovedom'),
-    poolSize: 4,
-    poolMaxBytes: 8 * 1024 * 1024,
-  },
+  loadHtml: load,
 });
 ```
 
-Without `module`, the engine resolves `grovedom` from its own package location.
-For dependency layouts that isolate undeclared packages, pass
-`module: import.meta.resolve('grovedom')` from the application's options module.
-Absolute paths and file URLs to packaged Wasm entries are also supported.
-Specifiers resolving to the same loaded entry share initialization and pool
-settings, including file URLs with query strings or fragments and packages
-exposing only a CommonJS entry. Conflicting pool settings are rejected across
-aliases. Documents keep independent lifetimes.
-The module must expose GroveDOM's Wasm `init()` and `load()` APIs. Native addon
-initialization is not supported by this adapter. There is no silent fallback
-when the selected package is missing or a parser option is unsupported.
+`loadHtml(content, parseOptions, isDocument)` receives the same three arguments
+as Cheerio's `load`. It is called synchronously without a bound `this`. Omit or
+clear it in the options module to use the default Cheerio loader. The engine
+reads the function for each parse, so independent downloaders can supply
+different loaders.
+`prepareHtmlParser()` does no work for a supplied function; the application owns
+any required parser initialization.
+
+Define or import the function in the options module, which each worker imports
+locally. Functions are not supported in the cloneable constructor overrides.
+The returned document belongs to `res.meta.doc` and follows the same disposal
+rules below, including an optional synchronous `dispose()` method. The loader
+owns the behavior of any nested `document.load()` calls. Binary resources do not
+call it. Static imports run when the application imports its options module;
+without a supplied loader, the engine retains its existing lazy parser loading.
 
 ## Downstream pool controls
 
-`grovedom.poolSize` defaults to **8 idle Wasm instances** and
-`grovedom.poolMaxBytes` to **16 MiB of retained idle Wasm memory**, per process
-or worker. Both accept nonnegative safe integers. Setting either to zero
-disables retention. These limits do not cap active document memory, total RSS,
-or memory across all workers. Worker counts multiply the possible idle budget.
+Pass `poolSize` and `poolMaxBytes` directly to GroveDOM's `init()` as shown
+above. These control retained idle Wasm instances and bytes per process/worker;
+they do not cap active document memory, total RSS or memory across all workers.
+Worker counts multiply the possible idle budget. GroveDOM 0.1.2 does not expose
+live pool resizing or explicit draining.
 
-The options are cloneable and can be supplied through downloader overrides.
-Partial `grovedom` overrides merge with the options module, preserving its
-module path and other pool limit. Configuration is fixed per module in each
-process/worker; conflicting pool settings are rejected. Changing initialized
-settings requires a new process or fresh workers. The 0.1.2 public API does not
-expose live resizing or explicit pool draining.
-
-Initialization is lazy and happens once per module in each process/worker.
-Do not initialize the same module separately from a hook. Binary-only work does
-not load or initialize the parser.
+Configure the pool in the application, consistently for each imported module.
+Engine constructor overrides no longer merge or validate these settings.
+The example initializes when the options module is imported, including for
+binary-only work. Applications that need lazy initialization can implement it
+inside their supplied synchronous loader; binary resources never call that
+loader. Document creation and disposal remain tied to each resource.
 
 ## Hooks and standalone transformations
 
@@ -96,12 +122,9 @@ one document does not dispose another:
 
 ```js
 import {loadHtml} from 'website-scrap-engine';
+import options from './my-options.js';
 
-const parserOptions = {
-  htmlParser: 'grovedom',
-  grovedom: {module: import.meta.resolve('grovedom')},
-};
-const $ = loadHtml('<p>example</p>', undefined, undefined, parserOptions);
+const $ = loadHtml('<p>example</p>', undefined, undefined, options);
 let html;
 try {
   $('p').attr('class', 'saved');
@@ -129,9 +152,22 @@ Cheerio method, parser option, plugin or raw domhandler operation available.
 Cross-document node adoption is unsupported. Some positional selectors and
 HTML/XML options differ. Pass only options supported by the selected backend.
 
-Use published 0.1.2 for this integration. The dated qualifications below cover
-the quality pass and its review follow-up. Earlier scoped-ownership results are
-retained separately as historical evidence.
+The TypeScript loader contract retains Cheerio's types. GroveDOM's declared
+API is smaller; assert the exercised compatibility boundary in the application:
+
+```ts
+import {load} from 'grovedom';
+import type {HtmlParserOptions} from 'website-scrap-engine';
+
+// Initialize GroveDOM as above before supplying this function.
+const loadHtml = load as unknown as NonNullable<HtmlParserOptions['loadHtml']>;
+```
+
+This assertion does not add unsupported Cheerio operations to GroveDOM.
+
+Use published 0.1.2 for this integration. The current downstream-loader checks
+and the older adapter qualifications below identify their respective revisions.
+Earlier scoped-ownership results remain historical evidence.
 
 Installed-consumer checks for those earlier revisions on
 Node 22.22.2 and 24.18.0 passed strict declarations, both downloader modes,
@@ -146,6 +182,36 @@ final serialized output, resource paths, submissions and logs. All 303 loaded
 documents were disposed. A further **32 saved-file/link checks** matched and
 resolved to the expected file bytes. These offline checks do not establish
 arbitrary hook compatibility or a whole-crawl performance improvement.
+
+## Downstream-loader qualification (2026-10-31)
+
+The application-owned loader implementation passes build, lint, strict source/test
+types and **54 suites / 1,159 tests** on existing Node 24.18.0. Six tests for
+the removed engine pool/alias configuration were retired. Custom-loader
+ownership, cancellation, retries, asynchronous status work and worker cleanup
+remain covered. All 163 source, test and consumer-script files match the
+validated isolated copy, excluding the unrelated local shared-context draft.
+
+The packed engine passes strict consumer declarations and **15 runtime check
+groups**, including both downloaders, the optional logging peer, custom loaders
+and published GroveDOM 0.1.2. Each custom/GroveDOM ownership group covers sixteen
+mode/failure cases. The existing consumer's dummy Undici package requires a
+local type-path mapping to its existing `undici-types` declarations, retaining
+`skipLibCheck: false`; this is not a fresh locked installation. No dependency
+or third-party file was changed.
+
+Both isolated MDN consumers build; the final one passes **390 tests**. A markup
+helper now explicitly accepts `StaticDownloadOptions & HtmlParserOptions`,
+with identical emitted MDN JavaScript. The actual MDN checkout remains on
+engine 0.9.1 and receives no source or dependency changes from this cleanup.
+
+Eight preflight and 1,257 further successful recorded pipelines preserve
+original bytes, paths, status events and requests. A harness scratch-directory
+creation failure is retained separately. The [paired measurements and deeper
+profiles](performance.md#downstream-parser-setup-2026-10-31) retain an unresolved
+warmed GroveDOM canvas slowdown, so passing correctness checks does not provide
+unconditional performance clearance. Node 22, native Windows, sustained memory
+and complete-archive/browser validation were not newly qualified.
 
 ## Review follow-up qualification (2026-10-27)
 
@@ -251,8 +317,8 @@ The [engine API patch](mdn-native-url-migration.patch) and
 [document ownership patch](mdn-grovedom-migration.patch) preserve the migration
 tested in isolated MDN copies on 2026-10-24. That evidence left the original
 MDN checkout and engine 0.9.1 installation unchanged. The ownership patch uses
-the removed `withHtmlParser` API and requires adaptation before use with the
-current engine; it is retained as historical evidence.
+the removed `withHtmlParser` and parser-selection APIs and requires adaptation
+before use with the current engine; it is retained as historical evidence.
 
 For current MDN hooks, pass parser options to each `loadHtml` call and store the
 page document in `res.meta.doc`. Generated playground runners must be serialized
@@ -294,10 +360,10 @@ consumer, run this command from the engine repository:
 node scripts/check-consumer.mjs /path/to/consumer --grovedom
 ```
 
-This checks the installed declarations, default package resolution in both
+This checks the installed declarations, application-supplied loaders in both
 downloaders, and lifecycle cleanup with the installed GroveDOM package. It covers
 success, discarded resources, download/processing/save failures, retries,
-cancellation, binary-only work and downstream pool overrides. Add `with-peer`
+cancellation, binary-only work and application-owned initialization. Add `with-peer`
 when the consumer also has the optional `log4js` peer installed. Add
 `--smoke-only` for the shorter declarations/parser check. No GroveDOM
 development dependency is required by the engine's default test suite.

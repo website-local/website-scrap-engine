@@ -267,3 +267,118 @@ describe('inline style processing', () => {
     expect(res.meta.doc!('style').html()).toBe('/* keep */ .asset { background: url(assets/icon.png); }');
   });
 });
+
+describe('source selection between hooks', () => {
+  test('observes different-tag insertions and changed source rows after a skipped link', async () => {
+    const res = resHtml('https://example.com/index.html', '<img src="/first"><input src="/removed">');
+    const options = {...testPipeline.options, sources: [
+      {selector: 'embed[src]', attr: 'src', type: ResourceType.Binary},
+      {selector: 'img[src]', attr: 'src', type: ResourceType.Binary},
+      {selector: 'input[src]', attr: 'src', type: ResourceType.Binary}
+    ]};
+    const observed: string[] = [];
+    const lifeCycle = testLifeCycle();
+    lifeCycle.linkRedirect = [async url => {
+      observed.push(url);
+      if (url === '/first') {
+        await Promise.resolve();
+        res.meta.doc!('input').remove();
+        res.meta.doc!('body').append('<video src="/inserted"></video>');
+        options.sources[2].selector = 'video[src]';
+        return;
+      }
+      return url;
+    }];
+    const pipeline = new PipelineExecutorImpl(lifeCycle, {}, options);
+    await processHtml(res, () => {}, options, pipeline);
+    expect(observed).toEqual(['/first', '/inserted']);
+  });
+
+  test.each([false, true])('refreshes matches after an asynchronous hook with tag hints=%s', async hinted => {
+    const res = resHtml('https://example.com/index.html', '');
+    res.meta.doc = load('<img data-first="/first"><img id="removed" data-next="/removed">');
+    const options = {...testPipeline.options, sources: [
+      {selector: 'img[data-missing]', attr: 'data-missing', type: ResourceType.Binary, tag: hinted ? 'img' : undefined},
+      {selector: 'img[data-first]', attr: 'data-first', type: ResourceType.Binary, tag: hinted ? 'img' : undefined},
+      {selector: 'img[data-next]', attr: 'data-next', type: ResourceType.Binary, tag: hinted ? 'img' : undefined}
+    ]};
+    const lifeCycle = testLifeCycle();
+    const observed: string[] = [];
+    lifeCycle.processBeforeDownload = [async resource => {
+      observed.push(resource.url);
+      if (resource.url.endsWith('/first')) {
+        await Promise.resolve();
+        res.meta.doc!('#removed').remove();
+        res.meta.doc!('body').append('<img data-next="/inserted">');
+      }
+      return resource;
+    }];
+    const pipeline = new PipelineExecutorImpl(lifeCycle, {}, options);
+    await processHtml(res, () => {}, options, pipeline);
+    expect(observed).toEqual(['https://example.com/first', 'https://example.com/inserted']);
+  });
+
+  test.each([false, true])('keeps selections local to concurrent documents with tag hints=%s', async hinted => {
+    const options = {...testPipeline.options, sources: [
+      {selector: 'img[data-missing]', attr: 'data-missing', type: ResourceType.Binary, tag: hinted ? 'img' : undefined},
+      {selector: 'img[src]', attr: 'src', type: ResourceType.Binary, tag: hinted ? 'img' : undefined},
+      {selector: 'img[data-next]', attr: 'data-next', type: ResourceType.Binary, tag: hinted ? 'img' : undefined}
+    ]};
+    const lifeCycle = testLifeCycle();
+    const observed: string[] = [];
+    lifeCycle.processBeforeDownload = [async (resource, _element, parent) => {
+      observed.push(resource.url);
+      await Promise.resolve();
+      if (resource.url.endsWith('/first')) {
+        parent!.meta.doc!('body').append('<img data-next="' + parent!.url + '/next">');
+      }
+      return resource;
+    }];
+    const pipeline = new PipelineExecutorImpl(lifeCycle, {}, options);
+    const first = resHtml('https://example.com/a', '<img src="/a/first">');
+    const second = resHtml('https://example.com/b', '<img src="/b/first">');
+    await Promise.all([first, second].map(res => processHtml(res, () => {}, options, pipeline)));
+    expect(observed.sort()).toEqual([
+      'https://example.com/a/first', 'https://example.com/a/next',
+      'https://example.com/b/first', 'https://example.com/b/next'
+    ]);
+  });
+
+  test.each([
+    'img[src]', 'img[data-value="a]b"][src]', 'img[src][data-value="x:y"]',
+    'img[src][data-value="UPPER" i]', 'img[src]:first', 'body > img[src]',
+    'img[camelCase][src]', '[src]', 'img[src],input[src]', 'video source[src]'
+  ])('preserves ordinary query semantics for %s', async selector => {
+    const res = resHtml('https://example.com/index.html', '');
+    const doc = res.meta.doc = load('<img src="/a" data-value="a]b"><img src="/b" data-value="x:y">' +
+      '<img src="/c" data-value="upper"><img src="/d" camelCase="yes"><input src="/e">' +
+      '<video><source src="/f"/></video><source src="/g"/>',
+    {xml: {lowerCaseTags: false, lowerCaseAttributeNames: false}}, false);
+    const expected = doc(selector).toArray();
+    const observed: unknown[] = [];
+    const lifeCycle = testLifeCycle();
+    lifeCycle.processBeforeDownload = [resource => resource];
+    lifeCycle.linkRedirect = [(url, element) => { observed.push(element![0]); return url; }];
+    const options = {...testPipeline.options, sources: [
+      {selector, attr: 'src', type: ResourceType.Binary}
+    ]};
+    const pipeline = new PipelineExecutorImpl(lifeCycle, {}, options);
+    await processHtml(res, () => {}, options, pipeline);
+    expect(observed).toEqual(expected);
+  });
+
+  test.each(['img[', 'input[src="unterminated]'])(
+    'reports a later invalid selector %s after preceding hooks have run', async selector => {
+      const res = resHtml('https://example.com/index.html', '<img src="/first">');
+      const options = {...testPipeline.options, sources: [
+        {selector: 'img[src]', attr: 'src', type: ResourceType.Binary},
+        {selector, attr: 'src', type: ResourceType.Binary}
+      ]};
+      const observed: string[] = [];
+      const lifeCycle = testLifeCycle();
+      lifeCycle.linkRedirect = [url => { observed.push(url); return url; }];
+      const pipeline = new PipelineExecutorImpl(lifeCycle, {}, options);
+      await expect(processHtml(res, () => {}, options, pipeline)).rejects.toThrow();
+      expect(observed).toEqual(['/first']);
+    });
+});

@@ -1,6 +1,7 @@
 import type {SrcSetDefinition} from 'srcset';
 import {parseSrcset, stringifySrcset} from 'srcset';
 import {load} from '../cheerio.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import {sources as defaultSources} from '../sources.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
@@ -16,7 +17,7 @@ type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 type WriteableSrcSet = Writeable<SrcSetDefinition>;
 
 async function processHtmlDoc(
-  options: StaticDownloadOptions,
+  options: StaticDownloadOptions & HtmlParserOptions,
   doc: CheerioStatic,
   res: DownloadResource,
   pipeline: PipelineExecutor,
@@ -27,8 +28,31 @@ async function processHtmlDoc(
   submit: SubmitResourceFunc
 ) {
   const sources: typeof defaultSources = options.sources || defaultSources;
-  for (const {selector, attr, type} of sources) {
-    const elements: Cheerio = doc(selector);
+  let tagElements: Cheerio | undefined;
+  for (let sourceIndex = 0; sourceIndex < sources.length; sourceIndex++) {
+    const {selector, attr, type, tag} = sources[sourceIndex];
+    // Built-in tag hints are prepared once. Custom selectors without a hint
+    // keep ordinary queries, including when a hook changes a later selector.
+    let elements: Cheerio;
+    if (tag) {
+      if (!tagElements) {
+        // Query tag names together; evaluate each full selector in source order.
+        const tags: string[] = [];
+        for (let next = sourceIndex; next < sources.length; next++) {
+          const tag = sources[next].tag;
+          if (!tag) break;
+          if (!tags.includes(tag)) tags.push(tag);
+        }
+        tagElements = doc(tags.join(','));
+      }
+      elements = tagElements.filter(selector);
+    } else {
+      tagElements = undefined;
+      elements = doc(selector);
+    }
+    // Empty rows run no hooks or writes. A matching row can mutate any later
+    // match, so do not retain its tag selection across processing or awaits.
+    if (elements.length) tagElements = undefined;
     for (let index = 0; index < elements.length; index++) {
       const elem = elements.eq(index);
       const attrValue: string | void = attr && elem.attr(attr);
@@ -154,7 +178,7 @@ async function processHtmlDoc(
 export async function processHtml(
   res: DownloadResource,
   submit: SubmitResourceFunc,
-  options: StaticDownloadOptions,
+  options: StaticDownloadOptions & HtmlParserOptions,
   pipeline: PipelineExecutor
 ): Promise<DownloadResource | void> {
   if (res.type !== ResourceType.Html) {

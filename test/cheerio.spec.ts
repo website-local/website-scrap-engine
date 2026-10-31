@@ -3,18 +3,15 @@ import {mkdtemp, readFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {disposeHtmlResource, load, prepareHtmlParser} from '../src/cheerio.js';
-import {defaultDownloadOptions, mergeOverrideOptions} from '../src/options.js';
+import {defaultDownloadOptions} from '../src/options.js';
 import {defaultLifeCycle} from '../src/life-cycle/default-life-cycle.js';
 import {PipelineExecutorImpl} from '../src/downloader/pipeline-executor-impl.js';
 import {SingleThreadDownloader} from '../src/downloader/single.js';
 import {createResource, ResourceType} from '../src/resource.js';
 import type {Resource} from '../src/resource.js';
-import {state} from './grovedom-fixture.js';
+import {load as fixtureLoad, state} from './grovedom-fixture.js';
 
-const options = {localRoot: 'offline', htmlParser: 'grovedom' as const, grovedom: {
-  module: new URL('./grovedom-fixture.cjs', import.meta.url).href,
-  poolSize: 0, poolMaxBytes: 0
-}};
+const options = {localRoot: 'offline', loadHtml: fixtureLoad};
 
 const resource = (body = '<p>resource</p>') => Object.assign(createResource({
   type: ResourceType.Html, depth: 0, url: 'https://example.org/',
@@ -22,13 +19,13 @@ const resource = (body = '<p>resource</p>') => Object.assign(createResource({
 }), {body});
 
 describe('explicit HTML parser ownership', () => {
-  test('initializes once with pool limits and keeps nested documents independently owned', async () => {
+  test('keeps supplied loader documents and nested documents independently owned', async () => {
     await Promise.all([prepareHtmlParser(options), prepareHtmlParser(options)]);
     const first = resource('<p>first</p>'), child = resource('<p>child</p>');
     const firstDocument = first.meta.doc = load(first.body, undefined, undefined, options);
     const childDocument = child.meta.doc = firstDocument.load(child.body);
     expect(firstDocument.html() + childDocument.html()).toContain('child');
-    expect(state.initializations).toEqual([{heap: 'pool', poolSize: 0, poolMaxBytes: 0}]);
+    expect(state.initializations).toEqual([]);
     await disposeHtmlResource(first);
     expect(first.meta.doc).toBeUndefined();
     expect(() => firstDocument.html()).toThrow('Disposed');
@@ -254,29 +251,10 @@ describe('explicit HTML parser ownership', () => {
     }
   });
 
-  test('rejects conflicting pool initialization within one process', () => {
-    expect(() => load('<p>conflict</p>', undefined, undefined,
-      {...options, grovedom: {...options.grovedom, poolSize: 1}})).toThrow('pool options must agree');
-  });
-
-  test.each(['../test/grovedom-fixture.cjs', options.grovedom.module + '?alias=1',
-    options.grovedom.module + '#alias'])(
-    'module alias %s shares initialization and pool limits', async module => {
-      const alias = {...options, grovedom: {...options.grovedom, module}};
-      await prepareHtmlParser(alias);
-      const res = resource('<p>aliased document</p>');
-      const document = res.meta.doc = load(res.body, undefined, undefined, alias);
-      expect(document.html()).toContain('aliased document');
-      expect(state.initializations).toHaveLength(1);
-      expect(() => load('', undefined, undefined,
-        {...alias, grovedom: {...alias.grovedom, poolSize: 1}})).toThrow('pool options must agree');
-      await disposeHtmlResource(res);
-      expect(() => document.html()).toThrow('Disposed');
-    });
-
-  test('binary lifecycles do not load a configured missing parser', async () => {
+  test('binary lifecycles do not invoke the supplied HTML loader', async () => {
+    const customLoad = jest.fn(() => { throw new Error('Unexpected HTML parsing'); });
     const config = defaultDownloadOptions({...defaultLifeCycle(), ...options,
-      grovedom: {module: 'wse-missing-grovedom-test-package'}, download: [res => res]});
+      loadHtml: customLoad, download: [res => res]});
     const pipeline = new PipelineExecutorImpl(config, config.req, config);
     const res = Object.assign(createResource({type: ResourceType.Binary, depth: 0,
       url: 'https://example.org/binary', refUrl: 'https://example.org/', localRoot: 'offline'}),
@@ -286,6 +264,7 @@ describe('explicit HTML parser ownership', () => {
     expect(await pipeline.processAfterDownload(res, () => {})).toBe(res);
     expect(res.meta.doc).toBeUndefined();
     expect(state.documents).toHaveLength(before);
+    expect(customLoad).not.toHaveBeenCalled();
   });
 
   test.each(['size', 'cancellation'] as const)('clears replacement download documents after %s', async failure => {
@@ -323,22 +302,4 @@ describe('explicit HTML parser ownership', () => {
       expect(res.meta.doc).toBeUndefined();
       expect(() => document.html()).toThrow('Disposed');
     });
-});
-
-test('pool options are validated, copied and merged through cloneable downstream overrides', () => {
-  const config = defaultDownloadOptions({...defaultLifeCycle(), ...options});
-  const override = {grovedom: {poolMaxBytes: 1024 * 1024}};
-  const merged = mergeOverrideOptions(config, override);
-  expect(merged.grovedom).toEqual({...options.grovedom, poolMaxBytes: 1024 * 1024});
-  expect(config.grovedom).toEqual(options.grovedom);
-  expect(config.grovedom).not.toBe(options.grovedom);
-  expect(structuredClone(override)).toEqual(override);
-  for (const value of [-1, 0.5, NaN, Infinity]) {
-    for (const key of ['poolSize', 'poolMaxBytes']) {
-      expect(() => defaultDownloadOptions({...defaultLifeCycle(), grovedom: {[key]: value}}))
-        .toThrow('nonnegative safe integer');
-    }
-  }
-  expect(() => defaultDownloadOptions({...defaultLifeCycle(), htmlParser: 'unknown' as 'grovedom'}))
-    .toThrow('Unknown htmlParser');
 });

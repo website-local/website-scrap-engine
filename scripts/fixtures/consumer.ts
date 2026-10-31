@@ -1,7 +1,8 @@
 import {resource, downloader, options, lifeCycle, URI, NativeUri, loadHtml, disposeHtmlResource}
   from 'website-scrap-engine';
-import type {HtmlParserOptions} from 'website-scrap-engine';
+import type {HtmlParserOptions, SourceDefinition} from 'website-scrap-engine';
 import type {Dispatcher} from 'undici';
+import {load as cheerioLoad} from 'cheerio';
 
 const res = resource.createResource({type: resource.ResourceType.Binary,
   depth: 0, url: 'https://example.test/file', refUrl: 'https://example.test/', localRoot: 'output'});
@@ -28,10 +29,32 @@ const close: (crawler: downloader.MultiThreadDownloader) => Promise<void> = craw
 
 const configuration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   maxResourceBytes: 1024, maxDiscoveredResources: 16, maxConcurrency: 4});
-const parserOptions: HtmlParserOptions = {
-  htmlParser: 'grovedom', grovedom: {poolSize: 4, poolMaxBytes: 8 * 1024 * 1024}
-};
+const parserOptions: HtmlParserOptions = {loadHtml: cheerioLoad};
+// @ts-expect-error Parser selection belongs to the downstream loader.
+parserOptions.htmlParser = 'grovedom';
+// @ts-expect-error Parser initialization and pool settings belong to the application.
+parserOptions.grovedom = {poolSize: 4};
 const parserConfiguration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(), ...parserOptions});
+const customParserOptions: HtmlParserOptions = {loadHtml: cheerioLoad};
+const customParserConfiguration = options.defaultDownloadOptions({
+  ...lifeCycle.defaultLifeCycle(), ...customParserOptions
+});
+customParserConfiguration.loadHtml = cheerioLoad;
+customParserConfiguration.processAfterDownload.push((res, _submit, currentOptions, pipeline) => {
+  const hookLoader: HtmlParserOptions['loadHtml'] = currentOptions.loadHtml;
+  const pipelineLoader: HtmlParserOptions['loadHtml'] = pipeline.options.loadHtml;
+  void hookLoader; void pipelineLoader;
+  return res;
+});
+const staticOverrides: Partial<options.StaticDownloadOptions> = {};
+const sourceDefinition: SourceDefinition = {
+  selector: 'img[src]', attr: 'src', type: resource.ResourceType.Binary, tag: 'img'
+};
+staticOverrides.sources = [sourceDefinition];
+// @ts-expect-error Functions must be imported by each worker's options module.
+staticOverrides.loadHtml = cheerioLoad;
+// @ts-expect-error Parsing is synchronous.
+customParserConfiguration.loadHtml = async () => cheerioLoad('');
 const parsedHtml: Promise<string> = (async () => {
   const $ = res.meta.doc = loadHtml('<p>example</p>', undefined, undefined, parserOptions);
   try {

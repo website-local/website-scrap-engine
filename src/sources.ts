@@ -4,7 +4,11 @@ export interface SourceDefinition {
   selector: string;
   attr?: string;
   type: ResourceType;
+  /** Final tag of a simple tag/attribute selector. Update or omit when changing selector. */
+  tag?: string;
 }
+
+const tagAttributeSelector = /^(?:[a-z][a-z\d-]* )*[a-z][a-z\d-]*(?:\[[a-z][a-z\d-]*(?:[~|^$*]?=[^\]]*)?\])+$/;
 
 // https://github.com/website-scraper/node-website-scraper
 // /blob/66f5113475843ae86f12ea9e5d2ebcfade9f056e/lib/config/defaults.js
@@ -54,6 +58,10 @@ export const sources: SourceDefinition[] = [
   if (!obj.type) {
     obj.type = ResourceType.Binary;
   }
+  // Classify the built-in definitions once, before processing any documents.
+  if (obj.selector && tagAttributeSelector.test(obj.selector)) {
+    const attrStart = obj.selector.indexOf('[');
+    obj.tag = obj.selector.slice(obj.selector.lastIndexOf(' ', attrStart) + 1, attrStart);
+  }
   return obj as SourceDefinition;
 });
-

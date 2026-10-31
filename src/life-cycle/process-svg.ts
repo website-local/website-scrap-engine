@@ -1,6 +1,7 @@
 import type {SourceDefinition} from '../sources.js';
 import type {DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import {ResourceType} from '../resource.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {parseHtml} from './adapters.js';
@@ -16,7 +17,7 @@ const svgSelectors: SourceDefinition[] = [
 export async function processSvg(
   res: DownloadResource,
   submit: SubmitResourceFunc,
-  options: StaticDownloadOptions,
+  options: StaticDownloadOptions & HtmlParserOptions,
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   if (res.type !== ResourceType.Svg) {
     return res;
