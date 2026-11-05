@@ -213,6 +213,85 @@ test.each([false, true])('worker logger writes locally when workerSafe=%s', asyn
   } finally { await crawler.dispose(); }
 }, 15000);
 
+test.each(['got', 'native'] as const)(
+  'default worker logger preserves nested %s downloads and response logs', async httpTransport => {
+    const caseRoot = await fs.mkdtemp(path.join(root, 'nested-download-'));
+    const requests: string[] = [];
+    const payload = JSON.stringify({support: 'supported \u2713'});
+    const server = createServer((request, response) => {
+      requests.push(request.url!);
+      response.setHeader('Connection', 'close');
+      if (request.url === '/redirect') {
+        response.writeHead(302, {location: '/compatibility.json'});
+        response.end();
+      } else {
+        response.setHeader('Content-Type', 'application/json');
+        response.end(payload);
+      }
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const origin = 'http://127.0.0.1:' + (server.address() as AddressInfo).port;
+    const optionsPath = path.join(caseRoot, 'options.mjs');
+    const entry = pathToFileURL(path.join(buildRoot, 'index.js')).href;
+    await fs.writeFile(optionsPath, [
+      'import assert from "node:assert/strict";',
+      'import {isMainThread} from "node:worker_threads";',
+      'import {lifeCycle, options, resource} from ' + JSON.stringify(entry) + ';',
+      'const lc = lifeCycle.defaultLifeCycle();',
+      'lc.processAfterDownload.push(async (res, _submit, _options, pipeline) => {',
+      '  assert.equal(isMainThread, false);',
+      '  const nested = await pipeline.createResource(resource.ResourceType.Binary,',
+      '    1, ' + JSON.stringify(origin + '/redirect') + ', res.url, res.localRoot);',
+      '  assert.ok(nested);',
+      '  const downloaded = await pipeline.download(nested);',
+      '  assert.ok(downloaded);',
+      '  assert.deepEqual(downloaded.body, Buffer.from(' + JSON.stringify(payload) + '));',
+      '  assert.equal(downloaded.redirectedUrl, ' + JSON.stringify(origin + '/compatibility.json') + ');',
+      '  assert.equal(downloaded.meta.headers["content-type"], "application/json");',
+      '  if (_options.httpTransport === "native") assert.equal(downloaded.meta.httpTransport, "native");',
+      '  res.meta.doc("#compatibility").text(JSON.parse(downloaded.body.toString()).support);',
+      '  return res;',
+      '});',
+      'export default options.defaultDownloadOptions({',
+      '  ...lc, localRoot: ' + JSON.stringify(caseRoot) + ', initialUrl: [],',
+      '  concurrency: 1, workerCount: 1, httpTransport: ' + JSON.stringify(httpTransport) + ',',
+      '  req: {retry: {limit: 0}, timeout: {request: 2000}}',
+      '});'
+    ].join('\n'));
+    const crawler = new Downloader(pathToFileURL(optionsPath).href);
+    try {
+      await crawler.init;
+      expect(crawler.logger.workerSafe).not.toBe(true);
+      const relayed = jest.spyOn(crawler.pool, 'takeLog');
+      const handleError = jest.spyOn(crawler, 'handleError');
+      const url = origin + '/index.html';
+      const resource = await crawler.pipeline.createResource(ResourceType.Html, 0, url, url);
+      if (!resource) throw new Error('Resource was discarded');
+      resource.body = '<html><body><div id="compatibility"></div></body></html>';
+      crawler.addProcessedResource(resource);
+      await crawler.start();
+      await crawler.onIdle();
+      await crawler.dispose();
+
+      expect(handleError).not.toHaveBeenCalled();
+      expect(requests).toEqual(['/redirect', '/compatibility.json']);
+      expect(crawler.outcomes.get(url)?.status).toBe('saved');
+      expect(await fs.readFile(path.join(caseRoot, '127.0.0.1/index.html'), 'utf8'))
+        .toContain('<div id="compatibility">supported \u2713</div>');
+      const responses = relayed.mock.calls.filter(([, message]) => message.body?.logType === 'io.http.response');
+      expect(responses).toHaveLength(1);
+      expect(responses[0][1].body?.content?.slice(0, 2)).toEqual([200, origin + '/redirect']);
+    } finally {
+      try { await crawler.dispose(); }
+      finally {
+        await new Promise<void>((resolve, reject) => {
+          server.close(error => error ? reject(error) : resolve());
+          server.closeAllConnections();
+        });
+      }
+    }
+  }, 15000);
+
 test('native HTTPS uses Node certificate verification with the configured CA', async () => {
   await promisify(execFile)(process.execPath, [path.join(projectRoot, 'test/runtime-native-http.js'),
     path.join(buildRoot, 'index.js')], {cwd: projectRoot, timeout: 15000,

@@ -108,7 +108,7 @@ export async function requestForResource(
   }
   res.meta.headers = response.headers;
 
-  logger?.info('io.http.response', response.statusCode, response.requestUrl, res.url,
+  logger?.info('io.http.response', response.statusCode, String(response.requestUrl), res.url,
     downloadLink, res.refUrl, res.encoding, res.type);
   res.finishTimestamp = Date.now();
   res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp;
