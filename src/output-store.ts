@@ -138,12 +138,48 @@ export interface FilePublication {
 export interface PublicationStore {
   /** Set writerRejectsSymlinks only when the writer opens with no-follow flags. */
   create(destination: string, signal?: AbortSignal, localRoot?: string,
-    writerRejectsSymlinks?: boolean, resource?: Resource): Promise<FilePublication>;
+    writerRejectsSymlinks?: boolean, resource?: Resource, publicationUrl?: string): Promise<FilePublication>;
+}
+
+export const outputConflict = (destination: string, owner: string): Error =>
+  Object.assign(new Error('Output destination is already owned by ' + owner + ': ' + destination),
+    {code: 'ERR_OUTPUT_CONFLICT', destination, owner});
+
+/** Compare only competing canonical publications, without retaining their bodies. */
+async function sameFileBytes(staging: string, destination: string, signal?: AbortSignal): Promise<boolean> {
+  if ((await fs.lstat(destination)).isSymbolicLink()) {
+    throw new Error('Output destination must not be a symlink: ' + destination);
+  }
+  const left = await fs.open(staging, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const right = await fs.open(destination, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    try {
+      const [a, b] = await Promise.all([left.stat(), right.stat()]);
+      if (!a.isFile() || !b.isFile() || a.size !== b.size) return false;
+      const first = Buffer.allocUnsafe(65536), second = Buffer.allocUnsafe(65536);
+      const fill = async (file: typeof left, buffer: Buffer, position: number, length: number) => {
+        let offset = 0;
+        while (offset < length) {
+          const {bytesRead} = await file.read(buffer, offset, length - offset, position + offset);
+          if (!bytesRead) break;
+          offset += bytesRead;
+        }
+        return offset;
+      };
+      for (let position = 0; position < a.size; position += first.length) {
+        signal?.throwIfAborted();
+        const length = Math.min(first.length, a.size - position);
+        const sizes = await Promise.all([fill(left, first, position, length), fill(right, second, position, length)]);
+        if (sizes.some(size => size !== length) || !first.subarray(0, length).equals(second.subarray(0, length))) return false;
+      }
+      return true;
+    } finally { await right.close(); }
+  } finally { await left.close(); }
 }
 
 export async function createFilePublication(
   destination: string, signal?: AbortSignal, localRoot?: string,
-  writerRejectsSymlinks = false, resource?: Resource, downloader?: AbstractDownloader
+  writerRejectsSymlinks = false, resource?: Resource, downloader?: AbstractDownloader, publicationUrl?: string
 ): Promise<FilePublication> {
   signal?.throwIfAborted();
   const directories = downloader?.outputDirectories;
@@ -172,8 +208,15 @@ export async function createFilePublication(
   let reservationPath = downloader ? canonicalRoot === undefined ?
     join(await fs.realpath(parent), basename(destination)) : destination : undefined;
   if (reservationPath && process.platform === 'win32') reservationPath = reservationPath.toLowerCase();
-  if (reservationPath) downloader!.claimOutput(reservationPath, resource!.publicationOwner ?? resource!.url);
-  if (downloader && downloader.options.atomicWrites !== true) {
+  let comparing = false;
+  if (reservationPath) {
+    const owner = resource!.publicationOwner ?? resource!.url;
+    const identity = publicationUrl === undefined ? undefined : publicationUrl === resource!.url ?
+      owner : downloader!.canonicalUrl(publicationUrl);
+    const claim = downloader!.claimOutput(reservationPath, owner, identity, signal);
+    comparing = typeof claim === 'boolean' ? claim : await claim;
+  }
+  if (downloader && downloader.options.atomicWrites !== true && !comparing) {
     try {
       if (!writerRejectsSymlinks) {
         // A direct writer must not follow an existing destination symlink.
@@ -211,6 +254,7 @@ export async function createFilePublication(
   let publishing: Promise<void> | undefined;
   let cleaning: Promise<void> | undefined;
   let published = false;
+  let moved = false;
   return {
     stagingPath,
     publish() {
@@ -219,7 +263,15 @@ export async function createFilePublication(
         signal?.throwIfAborted();
         if (canonicalRoot !== undefined) await checkDirectories(canonicalRoot, parent, false);
         signal?.throwIfAborted();
-        await fs.rename(stagingPath, destination);
+        if (comparing) {
+          if (!await sameFileBytes(stagingPath, destination, signal)) {
+            throw outputConflict(destination, downloader!.outputReservations[reservationPath!].owner);
+          }
+          signal?.throwIfAborted();
+        } else {
+          await fs.rename(stagingPath, destination);
+          moved = true;
+        }
         published = true;
         if (resource) resource.publishedFiles = (resource.publishedFiles ?? 0) + 1;
       })();
@@ -230,10 +282,10 @@ export async function createFilePublication(
         // A failed rename must not prevent removal of the staging allocation.
         await publishing?.catch(() => undefined);
         try {
-          if (staging) await staging.cleanup(published);
+          if (staging) await staging.cleanup(moved);
           else await fs.rm(stagingDirectory!, {recursive: true, force: true});
         } finally {
-          if (reservationPath) downloader!.releaseOutput(reservationPath, published);
+          if (reservationPath) downloader!.releaseOutput(reservationPath, published, comparing);
         }
       })();
       return cleaning;
@@ -248,9 +300,9 @@ export async function publishFile(
   signal?: AbortSignal,
   localRoot?: string,
   beforePublish?: () => Promise<boolean>,
-  writerRejectsSymlinks = false, resource?: Resource, store?: PublicationStore
+  writerRejectsSymlinks = false, resource?: Resource, store?: PublicationStore, publicationUrl?: string
 ): Promise<boolean> {
-  const publication = await (store ? store.create(destination, signal, localRoot, writerRejectsSymlinks, resource) :
+  const publication = await (store ? store.create(destination, signal, localRoot, writerRejectsSymlinks, resource, publicationUrl) :
     createFilePublication(destination, signal, localRoot, writerRejectsSymlinks, resource));
   try {
     signal?.throwIfAborted();

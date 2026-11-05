@@ -10,6 +10,8 @@ export async function saveResourceToDisk(
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
   try {
     const localRoot: string = res.localRoot ?? options.localRoot;
+    // Every buffered copy contains the final resource, including its original URL alias.
+    const publicationUrl = res.redirectedUrl || res.url;
     // https://github.com/website-local/website-scrap-engine/issues/174
     let mtime: number | undefined;
     if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
@@ -20,10 +22,10 @@ export async function saveResourceToDisk(
         if (res.redirectedSavePath !== res.savePath) {
           const redirectedSavePath = decodeURI(res.redirectedSavePath);
           await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
-            res.encoding, mtime, undefined, localRoot, res, pipeline);
+            res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
         }
         const savePath = decodeURI(res.savePath);
-        await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+        await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
         return;
       }
       const redirectResource = await pipeline.createResource(res.type,
@@ -32,7 +34,7 @@ export async function saveResourceToDisk(
       // maybe we can try module:fs/promises.symlink first
       if (redirectResource?.replacePath) {
         const savePath = decodeURI(res.savePath);
-        await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+        await writeFile(safeJoin(localRoot, savePath), res.body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
         const redirectedResource = await pipeline.createResource(res.type,
           res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
           res.encoding, undefined, res.type);
@@ -41,12 +43,12 @@ export async function saveResourceToDisk(
         }
         const redirectedSavePath = decodeURI(redirectedResource.savePath);
         await writeFile(safeJoin(localRoot, redirectedSavePath), res.body,
-          res.encoding, mtime, undefined, localRoot, res, pipeline);
+          res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
         return;
       }
     }
     const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-    await writeFile(filePath, res.body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+    await writeFile(filePath, res.body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
     return;
   } finally { await disposeHtmlResource(res); }
 }

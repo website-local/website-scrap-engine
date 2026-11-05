@@ -1,6 +1,6 @@
 import {disposeHtmlResource} from '../cheerio.js';
 import type {Logger} from '../logger/types.js';
-import {createFilePublication, OutputDirectories, StagingDirectories} from '../output-store.js';
+import {createFilePublication, outputConflict, OutputDirectories, StagingDirectories} from '../output-store.js';
 import type {FilePublication} from '../output-store.js';
 import {checkResourceSize, resourceBodyBytes} from '../resource-limits.js';
 import {adjust, resetAdjustment} from './adjust-concurrency.js';
@@ -37,7 +37,8 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   logger: Logger = createDefaultLogger();
   outputDirectories?: OutputDirectories;
   readonly stagingDirectories = new StagingDirectories();
-  readonly outputReservations: Record<string, {owner: string; active: number; published: boolean}> = {};
+  readonly outputReservations: Record<string, {owner: string; active: number; published: boolean;
+    identity?: string; shared?: boolean; comparing?: boolean; waiters?: Set<() => void>}> = {};
   /** One handler per downloader; no closure or pending array per parent. */
   readonly submit: SubmitResourceFunc = (resources, parent) => {
     if (Array.isArray(resources)) {
@@ -307,25 +308,48 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     void pending.then(settled, settled);
   }
 
-  claimOutput(destination: string, owner: string): void {
+  claimOutput(destination: string, owner: string, identity?: string, signal?: AbortSignal): boolean | Promise<boolean> {
+    signal?.throwIfAborted();
     let reservation = this.outputReservations[destination];
-    if (reservation && reservation.owner !== owner) {
-      throw Object.assign(new Error('Output destination is already owned by ' + reservation.owner + ': ' + destination),
-        {code: 'ERR_OUTPUT_CONFLICT', destination, owner: reservation.owner});
+    const sharing = reservation && (reservation.owner !== owner || reservation.shared);
+    if (reservation && (sharing && (!identity || identity !== reservation.identity) ||
+      identity && reservation.identity && identity !== reservation.identity)) {
+      throw outputConflict(destination, reservation.owner);
     }
-    if (!reservation) this.outputReservations[destination] = reservation = {owner, active: 0, published: false};
+    if (reservation && (reservation.comparing || sharing && reservation.active > 0)) {
+      // A contender must not inspect an earlier direct writer's partial bytes.
+      const waiting = reservation;
+      return new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          waiting.waiters!.delete(done);
+          signal?.removeEventListener('abort', aborted);
+        };
+        const done = () => { cleanup(); resolve(); };
+        const aborted = () => { cleanup(); reject(signal!.reason); };
+        (waiting.waiters ??= new Set()).add(done);
+        signal?.addEventListener('abort', aborted, {once: true});
+        if (signal?.aborted) aborted();
+      }).then(() => this.claimOutput(destination, owner, identity, signal));
+    }
+    if (!reservation) this.outputReservations[destination] = reservation = {owner, active: 0, published: false, identity};
     ++reservation.active;
+    return reservation.comparing = !!sharing && reservation.published;
   }
 
   create(destination: string, signal?: AbortSignal, localRoot?: string,
-    writerRejectsSymlinks = false, resource?: Resource): Promise<FilePublication> {
-    return createFilePublication(destination, signal, localRoot, writerRejectsSymlinks, resource, this);
+    writerRejectsSymlinks = false, resource?: Resource, publicationUrl?: string): Promise<FilePublication> {
+    return createFilePublication(destination, signal, localRoot, writerRejectsSymlinks, resource, this, publicationUrl);
   }
 
-  releaseOutput(destination: string, published: boolean): void {
+  releaseOutput(destination: string, published: boolean, shared = false): void {
     const reservation = this.outputReservations[destination];
     reservation.published ||= published;
-    if (--reservation.active === 0 && !reservation.published) delete this.outputReservations[destination];
+    reservation.shared ||= shared && published;
+    if (--reservation.active === 0) {
+      reservation.comparing = false;
+      if (!reservation.published) delete this.outputReservations[destination];
+      for (const done of reservation.waiters ?? []) done();
+    }
   }
 
   get downloadedCount(): number {

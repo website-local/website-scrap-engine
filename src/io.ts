@@ -41,7 +41,8 @@ export const writeFile = async (
   atime?: number | void,
   localRoot?: string,
   resource?: Resource,
-  pipeline?: PipelineExecutor
+  pipeline?: PipelineExecutor,
+  publicationUrl?: string
 ): Promise<void> => {
   pipeline?.signal?.throwIfAborted();
   let fileData: Uint8Array | string;
@@ -74,5 +75,5 @@ export const writeFile = async (
         pipeline?.logger.warn('system.error', 'skipping utimes ' + filePath, e);
       }
     }
-  }, pipeline?.signal, localRoot, undefined, noFollowWriteFlags !== undefined, resource, pipeline?.publicationStore);
+  }, pipeline?.signal, localRoot, undefined, noFollowWriteFlags !== undefined, resource, pipeline?.publicationStore, publicationUrl);
 };
