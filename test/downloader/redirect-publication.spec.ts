@@ -26,3 +26,13 @@ test.each([
   ], {cwd: projectRoot, timeout: 20000});
   expect(JSON.parse(result.stdout)).toMatchObject({topology, atomic: writes === 'atomic', checks: expect.any(Array)});
 }, 25000);
+
+test.each([
+  ['single', 'direct'], ['single', 'atomic'], ['worker', 'direct'], ['worker', 'atomic']
+])('HTML redirects preserve canonical pages and exclusive stubs in %s/%s', async (topology, writes) => {
+  const result = await promisify(execFile)(process.execPath, [
+    path.join(projectRoot, 'test/runtime-html-redirect-publication.js'), path.join(buildRoot, 'index.js'), topology, writes
+  ], {cwd: projectRoot, timeout: 20000});
+  expect(JSON.parse(result.stdout)).toMatchObject({topology, atomic: writes === 'atomic',
+    checks: expect.any(Array), documents: 16});
+}, 25000);

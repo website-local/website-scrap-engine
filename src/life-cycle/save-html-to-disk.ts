@@ -42,6 +42,8 @@ export async function saveHtmlToDisk(
   }
   try {
     const localRoot: string = res.localRoot ?? options.localRoot;
+    // Final HTML can share canonical bytes; redirect stubs keep their original owner.
+    const publicationUrl = res.redirectedUrl || res.url;
     // https://github.com/website-local/website-scrap-engine/issues/174
     let mtime: number | undefined;
     if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
@@ -56,11 +58,11 @@ export async function saveHtmlToDisk(
             redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot, res, pipeline);
           const body: ResourceBody = getResourceBodyFromHtml(res, options);
           await writeFile(safeJoin(localRoot, decodeURI(res.redirectedSavePath)),
-            body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+            body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
         } else {
           const body: ResourceBody = getResourceBodyFromHtml(res, options);
           const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-          await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+          await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
         }
         return;
       }
@@ -80,13 +82,14 @@ export async function saveHtmlToDisk(
         }
         const redirectedSavePath = decodeURI(redirectedResource.savePath);
         const body: ResourceBody = getResourceBodyFromHtml(res, options);
-        await writeFile(safeJoin(localRoot, redirectedSavePath), body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+        await writeFile(safeJoin(localRoot, redirectedSavePath), body,
+          res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
         return;
       }
     }
     const body: ResourceBody = getResourceBodyFromHtml(res, options);
     const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-    await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline);
+    await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
     return;
   } finally { await disposeHtmlResource(res); }
 }
