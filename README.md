@@ -346,7 +346,11 @@ Use multi-thread processing when post-download work (HTML/CSS parsing, link disc
 - Run stages 1-5 on discovered children to prepare them
 - Send prepared child resources back to the main thread as `WireResource[]`, then release the result batch
 
-Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses a 2-pass water-fill algorithm to balance tasks across workers by load.
+Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses
+a 2-pass water-fill algorithm to balance tasks across workers by load. When loads
+are equal, workers with fewer completed tasks take priority. This shares repeated
+small batches across idle workers; a busy worker can still complete fewer tasks
+when its work takes longer.
 
 Custom worker implementations should use `workerData.workerChannels.taskPort`
 for task/result messages and `workerData.workerChannels.logPort` for relayed

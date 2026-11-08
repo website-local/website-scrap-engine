@@ -17,6 +17,7 @@ import {logLevels} from '../logger/logger-worker.js';
 export interface WorkerInfo {
   readonly id: number;
   load: number;
+  completedTasks: number;
   worker: Worker;
   taskPort: MessagePort;
   logPort: MessagePort;
@@ -27,6 +28,7 @@ export interface WorkerInfo {
 export class WorkerInfoImpl implements WorkerInfo {
   readonly id: number;
   load = 0;
+  completedTasks = 0;
 
   constructor(public worker: Worker,
     public taskPort: MessagePort,
@@ -294,6 +296,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
       return;
     }
     --info.load;
+    ++info.completedTasks;
     this.scheduleNextTask();
     this.workingTasks.delete(message.taskId);
     this.clearTaskTimer(message.taskId);
@@ -332,7 +335,7 @@ export class WorkerPool<T = unknown, R extends WorkerMessage = WorkerMessage> {
     }
     const sorted = this.workers
       .filter(worker => !this._unavailableWorkers.has(worker))
-      .sort((a, b) => a.load - b.load);
+      .sort((a, b) => a.load - b.load || a.completedTasks - b.completedTasks);
     const n = sorted.length;
     if (!n) {
       return;

@@ -12,6 +12,63 @@ import {WorkerPool} from '../../src/downloader/worker-pool.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 describe('worker-pool', function () {
+  test.each([-1, 1])('reuses idle workers across separate submissions with maxLoad %s', async maxLoad => {
+    const pool = new WorkerPool(4, join(__dirname, 'task-deadline-worker.js'), {}, maxLoad);
+    const counts = new Map(pool.workers.map(info => [info.worker, 0]));
+    try {
+      await pool.ready;
+      for (let i = 0; i < 8; i++) {
+        const result = await pool.submitTask(i, undefined, undefined,
+          worker => { counts.set(worker, counts.get(worker)! + 1); });
+        expect(result.body).toBe(i);
+      }
+      expect([...counts.values()]).toEqual([2, 2, 2, 2]);
+      expect(pool.pendingTasks).toHaveLength(0);
+      expect(pool.workingTasks.size).toBe(0);
+      expect(pool.workers.map(info => info.load)).toEqual([0, 0, 0, 0]);
+    } finally { await pool.dispose(); }
+  });
+
+  test('shares the remainder of repeated uneven batches across idle workers', async () => {
+    const pool = new WorkerPool(4, join(__dirname, 'task-deadline-worker.js'), {});
+    const counts = new Map(pool.workers.map(info => [info.worker, 0]));
+    try {
+      await pool.ready;
+      for (let wave = 0; wave < 4; wave++) {
+        const inputs = Array.from({length: 5}, (_, index) => wave * 5 + index);
+        const results = await Promise.all(inputs.map(value => pool.submitTask(value, undefined, undefined,
+          worker => { counts.set(worker, counts.get(worker)! + 1); })));
+        expect(results.map(result => result.body)).toEqual(inputs);
+      }
+      expect([...counts.values()]).toEqual([5, 5, 5, 5]);
+    } finally { await pool.dispose(); }
+  });
+
+  test('keeps using idle workers while another worker has unfinished work', async () => {
+    const pool = new WorkerPool(4, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 1);
+    try {
+      await pool.ready;
+      const first = pool.submitTask('unfinished');
+      pool.nextTask();
+      const busy = pool.workers[0];
+      const counts = new Map(pool.workers.map(info => [info.worker, 0]));
+      for (let i = 0; i < 6; i++) {
+        let taskId = 0;
+        const task = pool.submitTask(i, undefined, id => { taskId = id; }, worker => {
+          const owner = pool.workers.find(info => info.worker === worker)!;
+          expect(owner).not.toBe(busy);
+          counts.set(worker, counts.get(worker)! + 1);
+          pool.complete(owner, {type: 1, taskId, body: i});
+        });
+        expect((await task).body).toBe(i);
+        expect(busy.load).toBe(1);
+      }
+      pool.complete(busy, {type: 1, taskId: 1, body: 'unfinished'});
+      expect((await first).body).toBe('unfinished');
+      expect([...counts.values()]).toEqual([0, 2, 2, 2]);
+    } finally { await pool.dispose(); }
+  });
+
   test('batches burst dispatch while yielding and respecting worker capacity', async () => {
     const pool = new WorkerPool(2, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 2);
     try {
