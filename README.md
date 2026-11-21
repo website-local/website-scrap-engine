@@ -11,13 +11,19 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 - `srcset`, Open Graph meta tags, inline styles, and SVG `xlink:href` support
 - Automatic URL-to-relative-path rewriting so saved sites work offline
 - Streaming download support for large binary resources
-- Bounded scheduling with optional runtime concurrency adjustment
-- Per-resource outcomes, explicit retries, and cancellation with awaited cleanup
-- Staged file publication and crawl-local output conflict detection
+- PQueue-based concurrency with runtime adjustment
 - URL deduplication with configurable search-param stripping
-- Configurable retry with backoff, jitter, and `Retry-After` header support
+- Configurable retry with exponential backoff, jitter, and `Retry-After` header support
 - Local `file://` source support for re-processing previously saved sites
 - Pluggable logging with dedicated categories (`skip`, `retry`, `error`, `notFound`, etc.)
+- Native URL resolution with the exported `URI` compatibility API
+- Application-selected GroveDOM through a synchronous `loadHtml` callback
+- Optional native HTTP(S) transport with bounded retries and Got fallback
+
+0.10 is unreleased. It retains 0.9.1's crawl and worker architecture with native
+URL and the applicable performance improvements. See the [project rules](docs/0.10-design.md#development-rules-and-validation-tools):
+default performance regressions are forbidden; costly features must have zero
+overhead when disabled.
 
 ## Installation
 
@@ -25,19 +31,23 @@ Configurable website scraper library in TypeScript. Consumers provide a `Downloa
 npm install website-scrap-engine
 ```
 
-Requires Node.js >= 22.13.0. Development tooling supports Node.js 22.13+, 24+, or 26+.
+Requires Node.js 22.13.0 or newer. `npm test` runs lint, strict source/test types,
+and Jest. Use `npm run check:tests` for the type check alone.
 
-For development, `npm test` runs lint, a complete source/test TypeScript check,
-and Jest. Run `npm run check:tests` to check test types independently.
+See the [migration guide](docs/MIGRATION-0.10.0.md), [documentation index](docs/README.md),
+and [GroveDOM guide](docs/grovedom.md). Cheerio remains the default parser.
 
-Upgrading from 0.9.1? See [the 0.10.0 migration guide](MIGRATION-0.10.0.md)
-for save-path hooks, custom-worker channels, and other breaking changes.
+An optional [Got error-formatter preload](docs/0.10-design.md#optional-got-formatter-preload)
+reduces unused native memory while preserving validation errors. For a built
+0.10 package, enable it before the application starts:
 
-See the [0.10 documentation index](docs/README.md) for release validation,
-performance measurements, and dependency decisions.
+```bash
+node --import website-scrap-engine/lib/got-error-formatters.js app.mjs
+```
 
-For supplying an initialized GroveDOM 0.1.2 loader from your application, see
-the [GroveDOM loader guide](docs/grovedom.md). Cheerio remains the default.
+It is disabled by default because startup timing remains unqualified. It needs
+to run before Got's type checker is loaded; normal Node workers inherit the
+preload. No dependency patch or permanent global replacement is needed.
 
 ## Usage
 
@@ -80,9 +90,13 @@ const {SingleThreadDownloader} = downloader;
 const d = new SingleThreadDownloader(
   pathToFileURL(path.resolve('my-options.js')).href
 );
-await d.start();
-await d.onIdle();
-await d.dispose();
+try {
+  await d.init;
+  d.start();
+  await d.onIdle();
+} finally {
+  await d.dispose();
+}
 ```
 
 For CPU-intensive workloads, use `MultiThreadDownloader` instead (see [Multi-Thread Processing](#multi-thread-processing)).
@@ -95,23 +109,6 @@ new SingleThreadDownloader(pathToFileURL(path.resolve('my-options.js')).href, {
   concurrency: 8,
 });
 ```
-
-To supply a statically imported HTML parser, set `loadHtml` in the options module,
-for example `loadHtml: load` with `import {load} from 'cheerio'`. Each worker
-imports the function locally. See the [loader contract](docs/grovedom.md#downstream-html-loaders)
-for parser selection and document ownership.
-
-### Crawl limits and outcomes
-
-For large crawls, configure `maxResources`, `maxQueuedResources`,
-`maxDiscoveredResources`, `maxResourceBytes`, and concurrency together.
-`maxDiscoveredResources` counts every child submission, including duplicates and
-rejected admissions. Routine limit breaches are logged and discard the affected
-resource. `outcomes` records each accepted URL's last attempt.
-`maxResourceBytes` limits input bytes, including decompressed HTTP data; it does
-not measure heap or Wasm memory. Allow room for parsed documents, metadata and
-temporary allocations. See the
-[migration guide's scheduling and output details](MIGRATION-0.10.0.md).
 
 ### Adapter Helpers
 
@@ -127,7 +124,6 @@ The library provides adapter functions in `lifeCycle.adapter` for common customi
 | `redirectFilter(fn)` | processAfterDownload | Rewrite or discard redirect URLs |
 | `processHtml(fn)` | processAfterDownload | Transform the parsed HTML (cheerio `$`) |
 | `processHtmlAsync(fn)` | processAfterDownload | Async version of `processHtml` |
-| `wrapLegacyGenerateSavePath(fn)` | generateSavePath | Adapt an old full save-path generator to the hook array |
 
 ```ts
 import {lifeCycle} from 'website-scrap-engine';
@@ -157,7 +153,7 @@ const lc = lifeCycle.defaultLifeCycle();
 
 lc.download.unshift(lifeCycle.adapter.localUrlMounts([
   {
-    root: './example-overlay',
+    root: '/mnt/e/example-overlay',
     urlPrefix: 'https://example.com/assets/',
     priority: 10,
     notFound: 'fallback',
@@ -173,32 +169,37 @@ that aliasing is undefined behavior and is not checked.
 
 ### Custom Save Paths
 
-Use `lifeCycle.generateSavePath` to transform where resources are written before
-the `Resource` object is created. The first hook receives the built-in save path;
-each later hook receives the previous hook's output. Return `undefined` to
-discard the resource before download.
+Assign the optional `lifeCycle.generateSavePath` callback to customize the full
+save path. It receives the resolved URI, HTML flag, query-preservation flag, and
+local source root. The callback also generates the parent path when the caller
+does not supply `refSavePath`.
 
 ```ts
+import {resource} from 'website-scrap-engine';
+
 const lc = lifeCycle.defaultLifeCycle();
 
-lc.generateSavePath.push((savePath, ctx) => {
-  if (ctx.uri.hostname() === 'cdn.example.com') {
-    return savePath.replace('cdn.example.com', 'assets');
-  }
-  return savePath;
-});
+lc.generateSavePath = (uri, isHtml, keepSearch, localSrcRoot) => {
+  const savePath = resource.generateSavePath(
+    uri, isHtml, keepSearch, localSrcRoot);
+  return uri.hostname() === 'cdn.example.com' ?
+    savePath.replace('cdn.example.com', 'assets') : savePath;
+};
 ```
+
+Direct callers can pass the same callback as `createResource({generateSavePathFn,
+...})`. Use `dropResource()` or a `processBeforeDownload` hook to discard a resource.
 
 Save paths must resolve inside `localRoot` when resources are written. The
 built-in HTTP(S) mapping sanitizes literal and encoded `.` / `..` path segments;
-custom `generateSavePath` hooks should return relative paths that stay within
-the configured output directory.
+custom callbacks should return relative paths within the configured output
+directory.
 
 ## Architecture
 
 ### Pipeline Life Cycle
 
-Resources are processed through a sequential pipeline of hook arrays. Each stage is an array of functions executed in order. Returning `void`/`undefined` from any function discards the resource from that stage onward.
+Most pipeline stages are arrays of hooks executed in order. `createResource` is a single callback that returns a `Resource`. Returning `void`/`undefined` from a resource-processing hook stops processing that resource for the stage.
 
 ```
 init (once per downloader/worker startup)
@@ -213,22 +214,19 @@ URL
 2. detectResourceType -> determine type (Html, Css, Binary, Svg, SiteMap, etc.)
  |
  v
-3. generateSavePath --> compute/transform the local save path
+3. createResource ----> build a Resource using the optional save-path callback
  |
  v
-4. createResource ----> build a Resource with relative replacement paths
+4. processBeforeDownload -> filter/modify resources; link replacement in parent happens after this
  |
  v
-5. processBeforeDownload -> filter/modify resources; link replacement in parent happens after this
+5. download ----------> fetch resource via HTTP (loop ends early once body is set)
  |
  v
-6. download ----------> fetch resource via HTTP (loop ends early once body is set)
+6. processAfterDownload -> parse content, discover child resources via submit() callback
  |
  v
-7. processAfterDownload -> parse content, discover children via submit(child, res, pipeline)
- |
- v
-8. saveToDisk --------> write to local filesystem
+7. saveToDisk --------> write to local filesystem
  |
  v
 dispose (once per downloader shutdown / worker exit)
@@ -236,37 +234,12 @@ dispose (once per downloader shutdown / worker exit)
 
 Consumers extend the pipeline by prepending or appending functions to any stage array via `defaultLifeCycle()`. See [Usage](#usage) for examples.
 
-Lifecycle hooks receive the executor explicitly. Use `pipeline.logger` for
-logging and `pipeline.signal` for cancellation. A processing hook receives
-`(res, submit, options, pipeline)`; its shared submission handler requires both
-the parent resource and executor:
-
-```ts
-import {lifeCycle, resource} from 'website-scrap-engine';
-
-const lc = lifeCycle.defaultLifeCycle();
-lc.processAfterDownload.push(async (res, submit, _options, pipeline) => {
-  const child = await pipeline.createAndProcessResource(
-    '/extra.html', resource.ResourceType.Html, undefined, null, res
-  );
-  if (child) submit(child, res, pipeline);
-  pipeline.logger.debug('custom.discovery', 'Processed', res.url);
-  return res;
-});
-```
-
-Await asynchronous discovery before the hook returns. Resources retain their own
-data and reference parent URLs as strings; they do not retain executors,
-downloaders, or child-resource arrays. Disposal hooks run in order and stop if a
-hook fails.
-
 ### Default Pipeline Handlers
 
 | Stage | Default handlers |
 |---|---|
 | linkRedirect | `skipLinks` - filters out non-HTTP URI schemes (mailto, javascript, data, etc.) |
 | detectResourceType | `detectResourceType` - infers type from element/context |
-| generateSavePath | none by default - an empty array uses the built-in URL-to-path mapping |
 | createResource | `createResource` - builds Resource with resolved URL, save path, and replace path |
 | download | `downloadResource`, `downloadStreamingResource`, `readOrCopyLocalResource` |
 | processAfterDownload | `processRedirectedUrl`, `processHtml`, `processHtmlMetaRefresh`, `processSvg`, `processCss`, `processSiteMap` |
@@ -279,11 +252,11 @@ Defined in `ResourceType` enum:
 | Type | Encoding | Description |
 |---|---|---|
 | `Binary` | null | Not parsed, saved as-is |
-| `Html` | utf8 | Parsed with the configured HTML backend, links discovered and rewritten |
+| `Html` | utf8 | Parsed with cheerio, links discovered and rewritten |
 | `Css` | utf8 | CSS `url()` references extracted and rewritten |
 | `CssInline` | utf8 | Inline `<style>` blocks and `style` attributes |
 | `SiteMap` | utf8 | URLs discovered but not rewritten |
-| `Svg` | utf8 | Parsed with the configured backend (same as HTML) |
+| `Svg` | utf8 | Parsed with cheerio (same as HTML) |
 | `StreamingBinary` | null | Streamed directly to disk, for large files |
 
 ### HTML Source Definitions
@@ -301,33 +274,13 @@ The scraper discovers linked resources from HTML using configurable source defin
 
 Override via `options.sources` with an array of `{selector, attr, type}` definitions.
 
-Definitions may also provide `tag`, the final tag of a lowercase tag/attribute
-selector, optionally preceded by tag-only ancestors. For example,
-`video source[src]` can use `tag: 'source'`. The built-in definitions compute
-this property once at initialization; document processing reads it directly.
-Custom definitions without `tag` use ordinary selector queries. When changing
-a copied definition's selector, update `tag` to match or omit it; omit it for
-contextual, positional, escaped-name and other complex selectors.
-
 ### Key Abstractions
 
-- **`Resource`** (`src/resource.ts`) - Carries URL, save path, replacement path, body, and metadata. A parsed document is created lazily, owned by `res.meta.doc`, and disposed and cleared when saved or discarded. `WireResource` is the document-free transport shape.
-- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution and exposes the crawl's logger and cancellation signal. `createAndProcessResource()` runs stages 1-5 in one call.
-- **`AbstractDownloader`** (`src/downloader/main.ts`) - Owns PQueue concurrency, URL deduplication, output conflict records in `outputReservations`, and the download loop. Concurrency sampling history is visible in its `meta: DownloaderStats` object.
+- **`Resource`** (`src/resource.ts`) - Carries normalized native URI objects, paths, body and metadata. `WireResource` omits URI instances, parsed documents and status promises; `postMessage` clones its metadata at dispatch.
+- **`PipelineExecutor`** (interface in `src/life-cycle/pipeline-executor.ts`, impl in `src/downloader/pipeline-executor-impl.ts`) - Orchestrates life cycle execution. `createAndProcessResource()` runs stages 1-4 in one call.
+- **`AbstractDownloader`** (`src/downloader/main.ts`) - Base class with PQueue-based concurrency, URL deduplication, and the download loop.
 - **`SingleThreadDownloader`** (`src/downloader/single.ts`) - Runs all pipeline stages in the main thread.
 - **`MultiThreadDownloader`** (`src/downloader/multi.ts`) - Downloads in main thread, sends to worker pool for post-processing.
-
-For single-thread-only applications, import the direct entry to keep worker
-modules out of the module graph:
-
-```ts
-import {SingleThreadDownloader} from 'website-scrap-engine/lib/downloader/single.js';
-```
-
-The combined `downloader/index.js` and package entry export both implementations,
-so importing those entries also loads the worker support modules. Neither entry
-creates a worker unless a `MultiThreadDownloader` or `WorkerPool` is constructed.
-A multi-thread downloader initializes its pool once and keeps it until disposal.
 
 ## Multi-Thread Processing
 
@@ -335,166 +288,61 @@ Use multi-thread processing when post-download work (HTML/CSS parsing, link disc
 
 **Main thread:**
 - Runs the download queue with PQueue concurrency control
-- Executes stages 1-6 (linkRedirect through download)
+- Executes stages 1-5 (linkRedirect through download)
 - Transfers downloaded resources to worker threads
 - Receives discovered child resources back and enqueues non-duplicates
 
 **Worker threads:**
 - Receive downloaded resources from the main thread
-- Execute stages 7-8 (processAfterDownload + saveToDisk)
+- Execute stages 6-7 (processAfterDownload + saveToDisk)
 - Parse HTML/CSS/SVG, discover child resources
-- Run stages 1-5 on discovered children to prepare them
-- Send prepared child resources back to the main thread as `WireResource[]`, then release the result batch
+- Run stages 1-4 on discovered children to prepare them
+- Send prepared child resources back to the main thread as `WireResource[]`
 
-Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses
-a 2-pass water-fill algorithm to balance tasks across workers by load. When loads
-are equal, workers with fewer completed tasks take priority. This shares repeated
-small batches across idle workers; a busy worker can still complete fewer tasks
-when its work takes longer.
+Worker count defaults to `Math.min(concurrency, workerCount)`. The worker pool uses a 2-pass water-fill algorithm to balance tasks across workers by load.
 
-Custom worker implementations should use `workerData.workerChannels.taskPort`
-for task/result messages and `workerData.workerChannels.logPort` for relayed
-logs. Configured loggers that declare `workerSafe: true` are created in each
-built-in worker and write locally. The default `parentPort` is reserved for
-lightweight worker control messages.
+Pools start on the first processing task and remain available until disposal.
+Streaming-only crawls do not start processing workers. Completion counts break
+equal-load ties, so repeated small batches use all workers. Dispatch is batched.
+Workers write files directly. Failures may leave partial files; applications
+control output collisions and publication policies.
 
-On close, custom workers should close both transferred ports and send a
-`{type: 'closed'}` control message on `parentPort` so the pool can drain queued
-logs before disposal completes.
-
-## Performance defaults
-
-For an opt-in native HTTP(S) transport, set this in your configuration module:
-
-```ts
-export default options.defaultDownloadOptions({
-  ...lifeCycle.defaultLifeCycle(),
-  localRoot: './output',
-  httpTransport: 'native',
-  req: {retry: {limit: 2}, timeout: {request: 200000}}
-});
-```
-
-Native mode supports GET/HEAD, redirects, gzip/deflate/Brotli decoding,
-cancellation, bounded retries and resource limits. Interrupted native streams
-restart the original request; retries default to two and honor backoff and
-`Retry-After`. Unsupported request options (including custom retry callbacks,
-Got hooks, custom agents and phase timeouts) automatically select Got before any
-request is sent. `resource.meta.httpTransport` reports the selected backend when
-native mode is requested. Got remains the default. See the
-[migration guide](MIGRATION-0.10.0.md#native-http-transport) for compatibility details.
-
-HTTP response caching is opt-in through Got's `req.cache`. Requests containing
-`Cache-Control: max-stale` bypass that cache until
-[GHSA-ch52-4w7c-c8xp](https://github.com/advisories/GHSA-ch52-4w7c-c8xp)
-has an upstream fix. This applies to buffered and streaming downloads, including
-redirects and retries; other cache requests retain their configured behavior.
-
-Downloaders write directly to output files by default. Failed or cancelled writes
-may leave partial files or overwrite a cached copy. Use `atomicWrites: true` to
-stage files and rename on success instead.
-
-Output roots and directories are prepared once per crawl. Keep the output tree
-stable during the crawl; `strictOutputChecks: true` restores checks before every
-write. Atomic writes also recheck the parent before rename.
-
-The multi-thread pool starts once on the first task needing a worker and stays
-alive until disposal. Streaming-only crawls do not start workers. Set
-`waitForWorkers: true` to wait for worker initialization as part of `init`, or
-await `downloader.pool.ready` explicitly.
-
-Resource normalization happens automatically only when receiving worker data.
-Hooks and queue callers must maintain `Resource` fields; call `normalizeResource`
-explicitly after changing URL strings or making structured clones when needed.
-Workers and the parent use the same runtime, so message versions are no longer
-sent or checked. Task ownership, payload checks and configured resource limits remain.
-
-## Resource outcomes
-
-`downloader.outcomes` exposes the latest attempt for each canonical admission URL.
-Each snapshot contains `status`, `attempt`, `url`, `downloaded`, and `publishedFiles`.
-Snapshots are replaced at queue transitions and completion; they do not retain
-resource bodies or parsed documents. Explicit retries increment `attempt` at the
-same key. Rejected admissions do not create attempts.
-
-| Status | Meaning |
-| --- | --- |
-| `queued` / `running` | Accepted work has not yet settled |
-| `saved` | Successful work with at least one confirmed file publication |
-| `processed` | A body completed the pipeline without a confirmed publication or save-policy skip |
-| `skipped` | No body was acquired, or the existing-resource save policy declined publication |
-| `failed` | Downloading, processing, saving, or worker validation failed |
-| `cancelled` | The crawl was cancelled before the attempt settled |
-
-`downloaded` records body acquisition, including supplied bodies and bodies whose
-later processing failed. `publishedFiles` counts confirmed publication operations;
-a failed attempt can have a nonzero count if an earlier output was already saved.
-`downloadedCount` counts successfully completed body acquisitions, including HTTP
-streams and local copies, and excludes failed/cancelled attempts. Save-policy
-skips after acquisition still count; pre-download skips and HTTP 304 do not.
-
-Custom hooks that write directly through their own filesystem code cannot report
-confirmed publications automatically. Built-in writers and `io.writeFile` do so.
-Custom workers can return `progress: {publishedFiles, skipped}`; without it their
-successful buffered work is reported as `processed`.
+Custom workers receive tasks on `parentPort` and send completion and log messages
+on the same port. Completion messages use `WorkerMessageType.Complete`; log
+messages use `WorkerMessageType.Log`. `WorkerPool.onMessage()` dispatches them,
+and `workingTasks` remains a record indexed by task ID. Custom worker factories
+continue to receive `workerData` without requiring transferred message ports.
 
 ## Logging
 
-Lifecycle hooks log through `pipeline.logger`, using a category as the first
-argument. Each downloader owns its logger. The default logger writes to
-`console`; a log4js adapter is available
-for file-based logging. Install its optional peer explicitly with `npm install log4js`
-when using `website-scrap-engine/lib/logger/log4js-adapter.js`. The default logger
-does not install or load log4js.
+The library exposes dedicated logger categories through a pluggable logger
+interface. The default logger writes to `console`; a log4js adapter is available
+for file-based logging.
 
-| Category | Purpose |
+| Logger | Purpose |
 |---|---|
-| `system.skip` | Resources filtered/discarded at any pipeline stage |
-| `system.skipExternal` | External resources skipped by scope |
-| `io.http.retry` | HTTP retry attempts with backoff details |
-| `system.error` | Download and processing errors |
-| `io.http.notFound` | 404 responses |
-| `io.http.request` / `io.http.response` | HTTP request/response logging |
-| `system.complete` | Successfully processed resources |
-| `io.disk.mkdir` | Directory creation |
-| `system.adjustConcurrency` | Runtime concurrency changes |
-| `custom.*` | Application-defined events |
+| `skip` | Resources filtered/discarded at any pipeline stage |
+| `skipExternal` | External resources skipped by scope |
+| `retry` | HTTP retry attempts with backoff details |
+| `error` | Download and processing errors |
+| `notFound` | 404 responses |
+| `request` / `response` | HTTP request/response logging |
+| `complete` | Successfully processed resources |
+| `mkdir` | Directory creation |
+| `adjustConcurrency` | Runtime concurrency changes |
 
 Configure logging via `options.createLogger` and `options.logSubDir`.
-The factory belongs in the options module so workers can load it independently.
-To let a logger write directly from each worker, return a logger with
-`workerSafe: true`. For example, a factory using the built-in console logger can
-opt in as follows:
-
-```ts
-import {createDefaultLogger, lifeCycle, options} from 'website-scrap-engine';
-
-export default options.defaultDownloadOptions({
-  ...lifeCycle.defaultLifeCycle(),
-  localRoot: './output',
-  createLogger: () => {
-    const logger = createDefaultLogger();
-    logger.workerSafe = true;
-    return logger;
-  },
-});
-```
-
-Opt in only when independent logger instances can write concurrently to their
-configured destinations. Loggers without this flag retain worker-to-parent
-relay through the logging port.
+Install `log4js` explicitly when using its optional file-logging adapter. Logger
+factories declaring `workerSafe: true` run locally in each worker; other worker
+logs are forwarded to the parent. The logger remains shared within each thread.
 
 ## Key Dependencies
 
 - **cheerio** - HTML/SVG parsing and manipulation
 - **got** - HTTP client with retry logic
 - **p-queue** - Download concurrency control
+- **Node URL** - URL resolution through the exported `URI` compatibility wrapper
 - **srcset** - `srcset` attribute parsing
-
-URL handling uses Node's native `URL` through the exported `URI` compatibility
-wrapper. Hooks migrating from URIjs should follow the
-[native URL migration guide](docs/native-url-migration.md); this is a breaking
-change with intentional parsing and normalization differences.
 
 ## License
 

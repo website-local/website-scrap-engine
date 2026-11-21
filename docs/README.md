@@ -1,40 +1,14 @@
-# 0.10 documentation
+# Documentation
 
-0.10.0 is unreleased. Start with the document matching your task:
+- [0.10 design and development decisions](0.10-design.md): architecture,
+  dependency choices, performance findings, closed experiments and validation tools.
+- [Migrating to 0.10](MIGRATION-0.10.0.md): API changes and ownership contracts.
+- [Native URL compatibility](native-url-migration.md): supported APIs,
+  intentional differences and optimization constraints.
+- [Application-selected GroveDOM](grovedom.md): setup, worker initialization,
+  document lifetime and consumer checks.
 
-| Task | Document |
-| --- | --- |
-| Install, configure or use the scraper | [Project README](../README.md) |
-| Upgrade from 0.9.1 | [Migration guide](../MIGRATION-0.10.0.md) |
-| Review user-visible changes | [Changelog](../CHANGELOG.md) |
-| Review the 2026-10-04 release candidate's validation | [Release audit](release-0.10.0-audit.md) |
-| Review the URIjs replacement and its remaining merge requirements | [URI merge-readiness audit](uri-merge-readiness.md) |
-| Migrate URI hooks and understand compatibility limits | [Native URL migration](native-url-migration.md) |
-| Trace URI optimization decisions and historical measurements | [URI investigation history](uri-investigation-history.md) |
-| Understand measured performance and retained optimizations | [Performance](performance.md) |
-| Review the 2026-10-27 property-access profiles, fixes and measured simplifications | [Object layout review](object-layout-review.md) |
-| Understand dependency, parser and development-tool decisions | [Dependency audit](dependency-audit.md) |
-| Supply a GroveDOM loader and configure its pool in the application | [GroveDOM loader](grovedom.md) |
-| Continue MDN's engine migration and GroveDOM qualification | [MDN continuation](grovedom.md#mdn-ownership-migration) |
-
-The README, migration guide and GroveDOM ownership examples describe the current
-APIs, including explicit lifecycle dependencies, resource-owned documents and
-input-byte limits. Dated audits and qualification tables identify the older
-commit or working tree they validated; they do not validate later changes.
-The [2026-10-31 loader qualification](grovedom.md#downstream-loader-qualification-2026-10-31)
-covers the application-owned parser setup. Its [paired measurements](performance.md#downstream-parser-setup-2026-10-31)
-retain an unresolved warmed GroveDOM canvas slowdown; correctness validation
-does not provide unconditional performance clearance.
-The [2026-10-27 review](object-layout-review.md) and
-[package qualification](grovedom.md#review-follow-up-qualification-2026-10-27)
-cover the follow-up committed as `3a84caa`. The dated
-[2026-10-25 qualification](grovedom.md#explicit-ownership-qualification-2026-10-25)
-and [layout/allocation measurements](performance.md) retain the earlier evidence.
-The GroveDOM guide labels the preserved MDN patches that still use parser scopes.
-Future MDN migration, replay, performance and archive/browser qualification
-belong in `mdn-local`; the guide records its unchanged 0.9.1 baseline and next steps.
-
-Earlier experiments are summarized in the [historical index](archive/0.10.0-experiments.md);
-full narratives remain in Git. Their raw JSON remains in [evidence/](evidence/)
-with harnesses and fingerprints. Historical measurements are not pooled or
-presented as validation of a newer artifact.
+0.10 is unreleased. The design guide is the current engineering summary;
+historical experiment transcripts and application-specific migration artifacts
+are not maintained in this repository. See the [README](../README.md) for usage
+and [changelog](../CHANGELOG.md) for release changes.

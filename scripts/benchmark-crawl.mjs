@@ -7,8 +7,9 @@ import path from 'node:path';
 import {performance, monitorEventLoopDelay} from 'node:perf_hooks';
 import {pathToFileURL} from 'node:url';
 
-// Entries are compared in alternating order; each gets a discarded warm-up.
-// Run with TMPDIR inside the repository or its configured external artifact root.
+// Entries are compared in alternating order; retain the separate warm-up rows.
+// Run with TMPDIR inside the configured external artifact root.
+// Diagnostic timing excludes imports and includes the in-process fixture server.
 const entries = process.argv.slice(2);
 if (!entries.length) entries.push(new URL('../lib/index.js', import.meta.url).pathname);
 const samples = Number(process.env.WSE_BENCH_SAMPLES ?? 5);
@@ -56,6 +57,7 @@ await fs.writeFile(source, bytes.subarray(0, 65536));
 const deadline = setTimeout(() => { throw new Error('Crawl benchmark timed out'); }, 600000);
 deadline.unref();
 const results = [];
+const warmups = [];
 const expectedHashes = new Map();
 const workloads = process.env.WSE_BENCH_WORKLOADS?.split(',') ?? ['buffered', 'streamed', 'local', 'markup'];
 const modes = process.env.WSE_BENCH_MODES?.split(',') ?? ['SingleThreadDownloader', 'MultiThreadDownloader'];
@@ -142,7 +144,6 @@ export default options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
       assert.ok(admitted.every(resource => resource.meta.httpTransport === 'native'),
         'native benchmark must exercise the native transport');
     }
-    if (crawler.outcomes) assert.ok([...crawler.outcomes.values()].every(item => item.status === 'saved'));
   } catch (error) {
     profiler?.disconnect();
     throw error;
@@ -186,6 +187,7 @@ try {
         for (const variant of order) {
           const result = await run(variant, workload, mode, sample);
           if (sample >= 0) results.push(result);
+          else warmups.push(result);
         }
       }
     }
@@ -193,7 +195,8 @@ try {
   console.log(JSON.stringify({node: process.version, platform: process.platform, arch: process.arch,
     entries: variants.map(variant => variant.entry), samples, concurrency: 8, workerCount: 2,
     documents, binaryCount, binaryBytes: 65536, streamingBytes: bytes.length,
-    warmupsPerCase: 1, gcExposed: !!global.gc, parentCpuProfiles: !!profileDirectory, results}, null, 2));
+    warmupsPerCase: 1, gcExposed: !!global.gc, parentCpuProfiles: !!profileDirectory,
+    warmups, results}, null, 2));
 } finally {
   clearTimeout(deadline);
   await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });

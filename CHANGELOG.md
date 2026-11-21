@@ -1,102 +1,56 @@
 0.10.0 (unreleased)
 ============
 
-**BREAKING CHANGE** — Requires Node.js 22.13.0 or newer. Read
-[MIGRATION-0.10.0.md](MIGRATION-0.10.0.md) before upgrading from 0.9.1.
+0.10 keeps the 0.9.1 crawl and worker architecture, with native URL,
+application-selected GroveDOM and the applicable performance optimizations.
+Default regressions are forbidden by the [project rules](docs/0.10-design.md#development-rules-and-validation-tools).
+See [migration](docs/MIGRATION-0.10.0.md) and the [design and qualification](docs/0.10-design.md).
+The latest comparisons show no demonstrated aggregate default slowdown; six
+engine speed checks remain inconclusive, and full release coverage remains open.
 
-Breaking changes
+Changes
 ------------
 
-* Drop Node 18 and 20; upgrade Got 13 to 16 and p-queue 8 to 9.
-* Replace URIjs with the exported `URI` native URL compatibility wrapper. Hooks must migrate URI imports and types; absolute parsing follows WHATWG URL rules. See the [native URL migration guide](docs/native-url-migration.md) for supported APIs and compatibility limits.
-* Downloaders wait for an explicit, awaitable `start()`. `dispose()` cancels and awaits cleanup by default; use its explicit drain mode to finish accepted work.
-* Require normalized `Resource.uri`, `refUri`, and `replaceUri`. Worker tasks/results use validated `WireResource` snapshots, preserve cloneable nested metadata, and exclude URI/DOM instances.
-* Custom workers use task/log channels and control messages on `parentPort`, announce readiness, and handle shutdown. Worker factories must forward all supplied transferred ports, including the publication channel.
-* Replace the full save-path callback with composable `GenerateSavePathFunc[]` hooks. Manually constructed lifecycles need `generateSavePath: []`; the legacy-generator adapter supports migration. Remove `GenerateSavePathFn` and `CreateResourceArgument.generateSavePathFn`; pipeline resource creation can return `void` when a hook discards a resource.
-* Count successful streamed/local-copy acquisitions in `downloadedCount`, while excluding failed/cancelled attempts. Streaming error hooks propagate failure and do not run success hooks afterward.
-* Successful empty HTTP responses finish without extra retries; supplied empty-string bodies are treated as content. Implement an explicit empty-response retry policy when required.
-* Distinct canonical URLs targeting the same output within a crawl fail with `ERR_OUTPUT_CONFLICT`. Confirmed output retains ownership across later failure and same-URL retry.
-* Make log4js an optional peer: file-logging adapter users must install it explicitly; default consumers omit its dependency tree.
-* Change `WorkerPool.workingTasks` to a Map and split task/log handlers. Remove `waitForInitBeforeIdle` and the retry argument from `io.mkdirRetry`. See the migration guide for custom pool interfaces.
-* Reject discovery submissions after their parent task completes. The opt-in concurrency controller now backs off on stalls and grows gradually within bounds; adjustment periods must fit Node's positive-integer timer range.
-* Pass the parent resource and pipeline to discovery submissions. Use `PipelineExecutor.logger` in lifecycle hooks and pass resource/publication dependencies to custom I/O helpers. Resource owns `meta.doc`; parser selection is explicit and documents are disposed when saved or discarded.
-* Replace `htmlParser` and `grovedom` configuration with a synchronous `loadHtml` supplied by the application's options module. Applications own parser imports, initialization and pool settings; workers import the loader locally. Cheerio remains the default, and document disposal is unchanged.
-* Require custom `PipelineExecutor` implementations to expose `replaceResource(previous, next): Promise<void>` for task-state and document ownership transfer. The built-in executor already provides it.
-* Run asynchronous status observers concurrently. Observers remain read-only and start in array order, but no longer wait for previous observers to finish. Await every returned promise before resource cleanup and downloader shutdown.
-
-Performance
-------------
-
-* Normalize worker resources with direct assignments and copy option/header objects with spread. Preserve resource identity and avoid the measured dictionary-property transition without an extra resource copy; see the [object layout review](docs/object-layout-review.md) for retained-heap measurements and timing limits.
-* Cache the parent-directory prefix used in local path containment checks. Join asynchronous status observers with `Promise.allSettled(...).then(...)`, retaining the allocation-free synchronous notification path; see the [measurements](docs/performance.md#prefix-and-promise-measurements-2026-10-27).
-* Add opt-in native HTTP(S) for GET/HEAD with bounded retries, request deadlines, redirects, decompression and resource limits. Native defaults to two retries, supports retry backoff and Retry-After, and restarts interrupted streams without retaining partial bytes. Custom retry callbacks and unsupported request options fall back to Got before I/O; Got remains the default.
-* Cache unchanged normalized request snapshots without retaining merge history, and avoid promise turns for prepared output directories.
-* Reuse URI parsing during resource creation and deduplication; reuse a parsed reference URL across links without sharing mutable URI instances with hooks.
-* Avoid extra promise turns for synchronous link/type/before-download hooks and duplicate request-option normalization. Keep unchanged implicit Got defaults out of request snapshots.
-* Reuse tag selections across consecutive empty HTML source rules. Built-in `SourceDefinition.tag` hints are computed once; matching rules invalidate reuse and custom selectors keep their own queries in source order.
-* Reduce temporary allocations in combined link creation, SVG processing and synchronous hook execution; remove unused CSS URL regex captures while preserving replacement offsets.
-* Reuse the path-segment array during save-path escaping, and avoid reparsing unchanged inline styles while preserving existing CSS-hook and rewriting behavior.
-* Reuse the existing relative-path helper when writing redirects with a supplied target save path, retaining the URI compatibility wrapper fallback for unusual paths.
-* Reuse completed synchronous status notifications and reduce pending-notification bookkeeping while preserving standalone call receivers and disposal waiting.
-* Reduce query-ordering temporaries and encode long-query filename hashes directly as URL-safe base64, preserving existing output.
-* Share private staging directories across overlapping publications, keeping individual file ownership and cleanup before idle.
-* Check existing output parents with one canonical path resolution, retaining symlink rejection and publication-time checks. Remove successful empty staging directories without recursive cleanup probes.
-* Reuse normalized publication destinations and reservation paths instead of resolving and reconstructing the same paths repeatedly.
-* Keep worker logging imports out of the direct single-thread entry and defer the HTML parser until markup processing. Pools remain one-shot and live until downloader disposal.
-* Share discovery submission handlers across resources. Count every submission before filtering, and retain serialized child payloads only until worker transfer.
-* Avoid URI hostname classification for already-absolute URLs, reduce redundant URI copies, overlap local metadata/body reads, and use callback file I/O behind promise interfaces.
-* Use kernel no-follow opens for supported direct writes instead of a separate destination probe, forwarding this guarantee through worker publication requests. Generic writers and Windows retain explicit destination checks. Increase the streaming write buffer to 256 KiB.
-* Add a combined synthetic/MDN regression runner and an isolated HTTP transport probe. Remaining regressions are reported per workload, without an aggregate performance pass.
-
-Crawl control and reliability
-------------
-
-* Expose readonly per-attempt resource outcomes for acquisition, confirmed publication, skipping, failure and cancellation. Failed URL reservations release after settlement for explicit retries; successful redirect aliases survive concurrent target failures.
-* Add optional `maxResources`, `maxQueuedResources`, `maxConcurrency`, `maxDiscoveredResources` and `maxResourceBytes`. Routine limit breaches are logged discards. Discovery limits count duplicates and rejected submissions; resource-byte limits describe input bytes, not heap use.
-* Remove aggregate body-byte reservations, worker byte credits, `maxBufferedBytes` and current/peak buffered-byte statistics. Previously submitted children remain eligible after a later parent processing failure.
-* Bound worker initialization and optional task deadlines; validate message ownership, payloads and duplicate completions. Retire failed workers while healthy workers continue undispatched tasks without replaying failed work.
-* Pass logging and cancellation explicitly through each crawl's pipeline. Loggers declaring `workerSafe: true` are created locally in workers and write directly; other loggers retain main-thread relay. Worker disposal supports cooperative cancellation followed by forced termination after the configured grace period.
-* Default downloader output to direct writes; failures/cancellation may leave partial files. Set atomicWrites for staged publication and preservation of cached files on failure. Save-policy skips and 304 responses preserve cached output in both modes.
-* Let the parent own worker output reservations and publication. Clean atomic staging after worker failure; direct partial output remains. Preserve confirmed publication counts after later failure.
-* Keep output ownership in `AbstractDownloader.outputReservations` and concurrency history in `DownloaderStats`. Remove ambient contexts and redundant initialization fields without adding separate Resource state objects.
-* Support application-supplied GroveDOM 0.1.2 loaders with explicit document ownership and application-configured pools. Dispose replaced, discarded and serialized child documents after their asynchronous status work.
-
-Fixes and performance
-------------
-
-* Honor distinct resources returned by streaming before-download hooks, including their URL, output path and discard state. Transfer publication ownership and clear replacement documents after success, discard or failure.
-* Allow local filenames beginning with two dots, such as `..assets/page.html`, while retaining parent-traversal rejection. Check explicit file URLs and their referrers against the decoded, normalized source root, including adjacent-prefix directories and encoded dot segments.
-* Accept the filesystem root as an output root in `io.safeJoin`.
-
-* Replace polynomial-time segment trimming, CSS URL/comment parsing, refresh-target parsing and URI scheme discovery with bounded scans. Preserve legacy extraction and callback behavior; use indexed multiset matching for large query arrays.
-
-* Preserve empty query delimiters and Windows drive spelling when generating relative URI references. Add deterministic fuzz coverage for URL round trips, segment mutations and links to written files.
-
-* Keep local links and redirect pages consistent with written filenames containing reserved URL escapes such as `%23` and `%2F`. Preserve saved filenames and deduplication keys; escape the local URL rather than sanitizing it as a filename.
-
-* Bypass Got's response cache for requests containing Cache-Control: max-stale, including hook changes, redirects and retries in buffered and streaming downloads. This mitigates GHSA-ch52-4w7c-c8xp; http-cache-semantics has no patched release yet, so the dependency advisory remains open.
-
-* Cache output-directory preparation per crawl by default; strictOutputChecks restores per-write preparation. Initialize worker pools once on demand and retain them until disposal; waitForWorkers restores eager readiness. Omit worker protocol-version fields and checks.
-
-* Calculate relative replacement paths directly for ordinary local filenames, with the URI compatibility wrapper fallback for encoded and unusual paths. Reuse matching parsed response URLs and skip unused default path generation before the built-in legacy full-path adapter.
-* Use Got's public option snapshots instead of private history-bearing internals. Preserve hook/agent configuration without mutation and wrap Got 16 binary responses as Buffer views without copying bytes.
-* Retain content-length validation, bounded transport retries and range-resume behavior; await previous streams before retrying and remove legacy manual retry timers.
-* Normalize resources only when decoding worker-boundary data. Hooks, factories and queue callers maintain Resource invariants; body-size limits remain independent.
-* Avoid redundant output-directory creation while retaining containment checks. Reuse a single owned chunk in bounded local reads, but compact slices to avoid retaining oversized backing buffers.
-* Track processed CSS URLs with a Set instead of retaining unused resource values, and remove the worker fallback for runtimes without structuredClone.
-* Fix CSS replacement offsets when a URL matches the surrounding url()/@import syntax or a quoted value contains whitespace.
-* Coalesce pending worker dispatch callbacks while retaining asynchronous dispatch and worker capacity limits; skip task-timer cleanup when deadlines are disabled.
-* Complete successful worker publications in the parent for both output modes, avoiding a separate release request for atomic writes while preserving ownership and failed-worker cleanup.
-* Skip empty cleanup for completed worker tasks and look up publication connections by worker. Failed tasks still await worker exit before releasing allocations.
-* Reuse the synchronous-hook promise check, consolidate retry defaults and logging, and resolve the default worker path directly from the module URL without changing custom worker-factory arguments.
-* Keep eligible Got retries at a minimum delay of 1 ms so rounded jitter and Retry-After: 0 cannot accidentally stop retries; exhausted limits and ineligible requests still stop.
-
-Tooling and validation
-------------
-
-* Retain TypeScript 6.0.3 and Jest after compiler/runner audits; update compatible lint dependencies and Node typings. `npm test` now checks the complete source/test TypeScript suite before Jest.
-* Remove the declaration-copy postinstall. Keep the development Undici shim through TypeScript configuration; consumers retain Cheerio's declared dependency graph.
-* Add deterministic worker/transport/outcome/budget regressions, repeated-crawl stress checks, strict packed-consumer fixtures and reproducible alternating crawl/queue benchmarks. CI covers Node 22.13, latest 22, 24 and 26.
+* Require Node.js 22.13.0 or newer; replace URIjs with the exported native-URL
+  compatibility API. Preserve encoded output filenames and local replacement links.
+* Keep the full save-path callback, three-argument pipeline constructor, shared
+  parentPort worker messages and task-ID record. Remove the earlier unpublished
+  0.10 publication coordinator, reservations, outcome histories and body/admission budgets.
+* Use direct filesystem writes. Start workers only when processing needs them;
+  batch dispatch and break equal-load ties with accepted completion counts.
+* Support a synchronous application-owned loadHtml function for GroveDOM, with
+  parser initialization per application/worker, nested-load forwarding, document
+  ownership and disposal after asynchronous status observers finish. Cheerio stays default.
+* Preserve URI reuse, synchronous hook paths, duplicate-child filtering, CSS/HTML
+  allocation improvements, callback writes, zero-copy binary normalization and
+  compact public Got option snapshots without retained merge history.
+* Preserve retry limits, Retry-After, cancellation, truncated-stream range recovery,
+  HTTP 304 handling and the unsafe max-stale cache bypass. Successful empty HTTP
+  responses do not trigger extra retries. Native HTTP is opt-in and selected during
+  initialization; ordinary Got lifecycle hooks do no native-transport dispatch work.
+* Preserve escaped request paths and signed query values. Remove redundant URL
+  decoding/re-encoding that changed `%2F` to `%252F` and `%41` to `A` before requests.
+* Release saved bodies and eligible backing stores after successful writes and
+  pending cleanup. Snapshot submitted child byte bodies during processing.
+* Correct mixed-case file URL aliases and encoded source-root containment.
+* Offer an explicit Got error-formatter preload that defers unused native
+  allocation without changing error messages or doing default-path work.
+* Keep the optional concurrency controller's backoff policy. Fix local index-file
+  metadata, response-URL logging and filesystem-root containment.
+* Await disposal and release replaced documents. Remove the retry-count argument
+  from mkdirRetry; one recursive mkdir propagates filesystem errors.
+* Release failed admissions before error observers so they can resubmit immediately.
+  Count completed streaming/local acquisitions and successful processing only
+  after cleanup; preserve successful redirect aliases and failed-task discoveries.
+* Honor streaming/local save policies before opening output, adopt replacement
+  resources and propagate acquisition/cleanup errors.
+* Remove uncached per-request hook scanning and speculative lifecycle scanning.
+  Later cache/hook changes require explicit handler reselection. Reuse unchanged
+  configurations, defer ordinary Got validation to request execution, and avoid
+  redundant idle disposal work. Keep adaptive history in enabled downloader stats.
+* Keep log4js as an optional peer and remove the declaration-copy postinstall.
+  TypeScript checks include the complete test suite; packed-consumer checks cover
+  declarations and the retained runtime API.
 
 0.9.1
 ============

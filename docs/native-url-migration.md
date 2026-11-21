@@ -130,14 +130,13 @@ Crawler query ordering, short-query escaping and long-query hashing remain
 separate policies. `normalize()` now includes component/query normalization;
 `equals()` compares normalized URLs and tolerates query ordering differences.
 
-The MDN artifact/log probe additionally hardened explicit path normalization and
+Regression cases also cover explicit path normalization and
 path-component setters. Normalization recodes parentheses and other non-path
 characters; filename, directory and suffix setters recode their replacement,
 while segment setters recode the resulting path. Untouched components retain
 their spelling. `readable()` removes credentials and decodes components
 separately, preserving encoded path separators and query ampersands. Repeated
-leading fragment hashes survive normalization. See the
-[corpus probe and performance report](uri-investigation-history.md).
+leading fragment hashes survive normalization.
 
 ## Best-effort limits
 
@@ -186,23 +185,40 @@ The earlier 116/118 extension matrix describes that selected corpus only;
 neither it nor method-name coverage implies complete URIjs suite compatibility.
 
 Replace direct URIjs imports in hooks with the engine's `URI` import, including
-type imports. The [0.10 lifecycle migration](../MIGRATION-0.10.0.md) also applies,
-including save-path hooks, `pipeline.logger`, document ownership and explicit
-discovery submission. The
-[MDN migration patch](mdn-native-url-migration.patch) targets MDN-local
-`a4979c82eaec38c9cdb385a0e15e4512dd3a5fc0`; its isolated consumer type-checks with
-the expanded wrapper. The neighboring MDN checkout was not changed. Consumers
-must update the engine dependency, remove direct URIjs/type dependencies, and
-install `log4js` if using MDN's logger.
-The patch preserves its historical validation; adapt its remaining lifecycle
-calls to the current APIs before using it with a newer engine build.
+type imports. Follow the [0.10 migration guide](MIGRATION-0.10.0.md) for the
+retained save-path callback, worker boundary and document ownership contracts.
+Check final filenames and resolve emitted links to actual saved bytes; comparing
+serialized URL spelling alone misses broken output links.
 
-Current validation and merge requirements are maintained in the
-[merge-readiness audit](uri-merge-readiness.md). The
-[offline MDN output audit](mdn-output-compatibility.md) compares actual disk-name
-and link-destination contracts without downloading pages; it separates harmless
-URI spelling changes from output differences and existing writer defects. The
-[compact investigation history](uri-investigation-history.md) records retained
-optimizations, rejected experiments, corpus methodology and historical results.
-Earlier test counts and timings belong to their original snapshots; they are not
-current validation or a whole-engine speedup claim.
+## Development decisions and remaining limits
+
+Keep scalar field copies, lazy serialization, reusable serialized bases and
+guarded ASCII fast paths. Name-only query lookups decode keys without parsing
+values; indexed segment reads scan from the requested end without allocating
+every segment. Encoded, numeric, internationalized and unusual inputs retain
+native validation. Do not introduce parsed-query caches or additional retained
+URL objects without evidence; previous cache prototypes added invalidation
+complexity without an established benefit.
+
+Query optimizations must preserve first-match consumption, duplicate policy and
+the distinction between null and the string 'null'. Boundary scans avoid
+polynomial slash/scheme matching; callbacks must remain reentrant and see the
+updated source and offsets. Many `withinString` replacements can still incur
+quadratic source copying; caller-provided regexes retain their own complexity.
+
+The October 6 complexity work preserved 124,500 selected differential outcomes.
+Its historical `withinString` observer estimates were about 22–23% slower,
+with failed identical-code controls; replacement was +5.6% in the primary
+comparison while the duplicate-baseline comparison included parity. This
+public helper is outside the default crawl, and its performance remains an
+open target. Those results are neither a universal regression estimate nor a
+non-regression pass. Indexed-read and other component gains with failed controls
+also remain provisional. Whole-engine qualification is summarized in the
+[0.10 design guide](0.10-design.md#performance-qualification).
+
+Keep `uri-compat`, `uri-public`, `uri-upstream`, `uri-fuzz`, `uri-mdn`,
+`uri-complexity`, resource/path and actual-writer tests. The small corpus-derived
+URI fixtures are self-contained engine regression inputs, with no application
+checkout or archive dependency. Native Windows behavior and cross-version IDNA
+must be checked on the target runtime; old platform results do not qualify a
+new implementation.
