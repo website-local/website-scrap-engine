@@ -16,12 +16,12 @@ import {ResourceType} from '../../src/resource.js';
 mockModules();
 
 describe('save-html-to-disk', function () {
-  test('skip non html', async () => {
+  test('skip non html synchronously', () => {
     jest.spyOn(fs.promises, 'writeFile').mockClear();
     expect(jest.isMockFunction(fs.promises.writeFile)).toBe(true);
     const downloadResource = res('http://example.com', 'body');
     downloadResource.type = ResourceType.Binary;
-    const saved = await saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
+    const saved = saveHtmlToDisk(downloadResource, fakeOpt, fakePipeline);
     expect(saved).toBe(downloadResource);
     expect(fs.promises.writeFile).not.toHaveBeenCalled();
   });

@@ -1,5 +1,6 @@
+import path from 'node:path';
 import type {WriteStream} from 'node:fs';
-import {constants, createWriteStream, promises as fs} from 'node:fs';
+import {createWriteStream, promises as fs} from 'node:fs';
 import {finished as streamFinished, pipeline} from 'node:stream/promises';
 import type {Response} from 'got';
 import got, {HTTPError, RequestError} from 'got';
@@ -11,17 +12,14 @@ import type {
   DownloadResourceFunc,
   RequestOptions
 } from './types.js';
-import {safeJoin} from '../io.js';
-import {noFollowWriteFlags, publishFile} from '../output-store.js';
-import {limitResourceStream} from '../resource-limits.js';
-import type {Logger} from '../logger/types.js';
+import {mkdirRetry, safeJoin} from '../io.js';
+import {error as errorLogger} from '../logger/logger.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {isUrlHttp} from '../util.js';
-import {canUseNativeHttp, withNativeHttp} from './native-http.js';
 import type {NativeHttpResponse} from './native-http.js';
-import {withHttpCacheSafety} from './http-cache-safety.js';
-import {disposeHtmlResource} from '../cheerio.js';
+import type * as OptionalStreamingModule from './download-streaming-optional.js';
+import {withHttpCacheSafety} from './retry-hook.js';
 
 export function isBytesAccepted(acceptRange?: string): boolean {
   if (!acceptRange) {
@@ -29,7 +27,7 @@ export function isBytesAccepted(acceptRange?: string): boolean {
   }
   const ranges = acceptRange.split(',');
   for (let i = 0; i < ranges.length; i++) {
-    if (ranges[i] === 'bytes') {
+    if (ranges[i].trim().toLowerCase() === 'bytes') {
       return true;
     }
   }
@@ -55,80 +53,55 @@ export function shouldWaitForRequestError(error: unknown): boolean {
     (error as {name?: string} | undefined)?.name === 'TimeoutError';
 }
 
-export async function streamingDownloadToFile(
+/** Direct-call convenience API; initialized lifecycle hooks use a fixed transport. */
+export function streamingDownloadToFile(
   res: Resource & { downloadStartTimestamp: number },
   requestOptions: RequestOptions,
-  executor?: PipelineExecutor,
-  options?: StaticDownloadOptions
+  downloadOptions?: StaticDownloadOptions
 ): Promise<Response | NativeHttpResponse | void> {
-  const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
-  let response: Response | NativeHttpResponse | void | undefined;
-  let skipped = false;
-  await publishFile(savePath, async (staging, direct) => {
-    response = await streamToStagingFile(res, requestOptions, staging, options?.maxResourceBytes,
-      direct && executor ? async () => {
-        skipped = !await executor.shouldSaveResource(res);
-        return !skipped;
-      } : undefined, !!direct && noFollowWriteFlags !== undefined, options?.httpTransport === 'native', executor);
-    if (response && response.statusCode !== 304) {
-      res.downloaded = true;
-      res.redirectedUrl = response.url;
-    }
-    if (!skipped && response?.statusCode !== 304 && options) {
-      await optionallySetLastModifiedTime(res, options, staging, executor?.logger);
-    }
-    if (skipped || response?.statusCode === 304) return false;
-  }, requestOptions.signal, res.localRoot, async () => {
-    // Direct streams check the response-aware save policy before opening output.
-    if (!response) return true;
-    if (response?.statusCode === 304) return false;
-    return executor ? executor.shouldSaveResource(res) : true;
-  }, noFollowWriteFlags !== undefined, res, executor?.publicationStore);
-  return response;
+  return (downloadOptions?.httpTransport === 'native' ? nativeStreamingDownloadToFile : gotStreamingDownloadToFile)(
+    res, requestOptions);
 }
 
-async function streamToStagingFile(
-  res: Resource & {downloadStartTimestamp: number},
-  requestOptions: RequestOptions,
-  savePath: string,
-  maxResourceBytes?: number,
-  beforeWrite?: () => Promise<boolean>,
-  rejectSymlinks = false,
-  preferNative = false,
-  executor?: PipelineExecutor
-): Promise<Response | NativeHttpResponse> {
-  if (preferNative && canUseNativeHttp(requestOptions, executor?.retryLogger)) {
-    res.meta.httpTransport = 'native';
-    return withNativeHttp(res.downloadLink, requestOptions, async (response, body) => {
-      res.meta.headers = response.headers;
-      const allowed = response.statusCode !== 304 && (!beforeWrite || await beforeWrite());
-      // The response can be cancelled or fail while a save-policy hook awaits.
-      // Recheck before opening an output that may still contain cached data.
-      if (body.destroyed) throw body.errored ?? new Error('Response closed before output was opened');
-      if (!allowed) {
-        // Finish acquisition without opening or replacing cached output.
-        body.resume();
-        await streamFinished(body, {cleanup: true});
-        return response;
-      }
-      const output = createWriteStream(savePath, {highWaterMark: 256 * 1024,
-        flags: rejectSymlinks ? noFollowWriteFlags : 'w'} as Parameters<typeof createWriteStream>[1]);
-      if (maxResourceBytes === undefined) await pipeline(body, output);
-      else await pipeline(body, limitResourceStream(maxResourceBytes, 0, res, executor?.logger), output);
-      return response;
-    });
-  }
-  if (preferNative) res.meta.httpTransport = 'got';
-  const options = withHttpCacheSafety(Object.assign({}, requestOptions, {
-    isStream: true, headers: {...requestOptions.headers}
-  }) as RequestOptions & {
-    isStream?: true
-  }, executor?.retryLogger);
-  let fileWriteStream: WriteStream | void;
-  let activeRequest: ReturnType<typeof got.stream> | undefined;
+type OptionalStreaming = typeof OptionalStreamingModule;
+let optionalStreaming: Promise<OptionalStreaming> | undefined;
 
+function loadOptionalStreaming(): Promise<OptionalStreaming> {
+  return optionalStreaming ??= import('./download-streaming-optional.js');
+}
+
+async function nativeStreamingDownloadToFile(
+  res: Resource & { downloadStartTimestamp: number }, requestOptions: RequestOptions
+): Promise<Response | NativeHttpResponse | void> {
+  return (await loadOptionalStreaming()).nativeStreamingDownloadToFile(res, requestOptions);
+}
+
+function gotStreamingDownloadToFile(
+  res: Resource & {downloadStartTimestamp: number},
+  requestOptions: RequestOptions
+): Promise<Response | void> {
+  return gotStreamingDownloadToFileDirect(res, withHttpCacheSafety(requestOptions));
+}
+
+async function gotStreamingDownloadToFileDirect(
+  res: Resource & { downloadStartTimestamp: number },
+  requestOptions: RequestOptions
+): Promise<Response | void> {
+  // Got's retry event hands stream recreation to us. On upgrades, verify retry
+  // count propagation, response/error ordering and partial-file range recovery
+  // in download-streaming-resource.spec.ts, including abort and write failures.
+  const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
+  await mkdirRetry(path.dirname(savePath));
+  const options = {...requestOptions,
+    isStream: true, headers: {...requestOptions.headers}
+  } as RequestOptions & {
+    isStream?: true
+  };
+  let fileWriteStream: WriteStream | void = undefined;
+  let activeRequest: ReturnType<typeof got.stream> | undefined;
   let handling: Promise<void> | undefined;
   let finished = false;
+
   try {
     return await new Promise<Response>((resolve, reject) => {
       let rangeIsSupported: void | boolean;
@@ -154,52 +127,46 @@ async function streamToStagingFile(
             response.retryCount = retryCount;
             if (response.statusCode === 304) {
               // Drain the response without opening or modifying the cached file.
-              request.once('end', () => resolve(response));
               request.resume();
+              await streamFinished(request, {cleanup: true});
+              resolve(response);
               return;
             }
             res.meta.headers = response.headers;
             if (rangeIsSupported === undefined) {
-              if (isBytesAccepted(response.headers['accept-ranges'])) {
+              if (isBytesAccepted(response.headers['accept-ranges']) &&
+                  (!response.headers['content-encoding'] || options.decompress === false)) {
                 rangeIsSupported = true;
               }
             }
             if (rangeIsSupported && rangeStart &&
               (response.statusCode !== 206 ||
                 !isSameRangeStart(rangeStart, response.headers['content-range']))) {
-              executor?.logger.warn('system.error', 'Unexpected response for range',
+              errorLogger.warn('Unexpected response for range',
                 rangeStart, response.headers['content-range'], response.statusCode);
+              // A full 200 can replace the partial file. A misaligned 206 cannot.
+              if (response.statusCode === 206) throw Object.assign(new Error('Unexpected response range'),
+                {code: 'ERR_INVALID_RESPONSE_RANGE'});
               rangeIsSupported = false;
               rangeStart = undefined;
             }
 
-            if (response.request.isAborted) {
-              // Cancellation is reported through the request error event.
+            if (request.destroyed) {
+              // Canceled while downloading
+              //- will throw a `CancelError` or `TimeoutError` error
               return;
-            }
-            if (beforeWrite) {
-              const allowed = await beforeWrite();
-              if (request.destroyed) return;
-              if (!allowed) {
-                request.once('end', () => resolve(response));
-                request.resume();
-                return;
-              }
             }
             // Download body
             if (!fileWriteStream) {
-              const flags = rejectSymlinks ? noFollowWriteFlags! : undefined;
-              // Numeric open flags are supported at runtime but missing from Node 22 typings.
-              fileWriteStream = createWriteStream(savePath, (rangeIsSupported && rangeStart ?
-                {flags: flags === undefined ? 'a' : (flags & ~constants.O_TRUNC) | constants.O_APPEND,
-                  start: rangeStart, highWaterMark: 256 * 1024} :
-                {flags: flags ?? 'w', highWaterMark: 256 * 1024}) as Parameters<typeof createWriteStream>[1]);
+              fileWriteStream = createWriteStream(savePath,
+                rangeIsSupported && rangeStart ?
+                  {flags: 'a', start: rangeStart, highWaterMark: 256 * 1024} :
+                  {flags: 'w', highWaterMark: 256 * 1024});
             }
 
-            const pumping = maxResourceBytes === undefined ? pipeline(request, fileWriteStream) :
-              pipeline(request, limitResourceStream(maxResourceBytes, rangeStart || 0, res, executor?.logger), fileWriteStream);
             try {
-              await pumping;
+              // Download body directly to file
+              await pipeline(request, fileWriteStream);
             } catch (e) {
               // Request errors also arrive on request.once('error'); write errors do not.
               // Got closes the previous stream when retrying.
@@ -241,13 +208,11 @@ async function streamToStagingFile(
           // https://developer.mozilla.org/docs/Web/HTTP/Headers/Range
           // https://developer.mozilla.org/docs/Web/HTTP/Status/416
           if (error instanceof HTTPError && error.response.statusCode === 416) {
-            executor?.logger.warn('system.error', 'Unexpected response for range',
+            errorLogger.warn('Unexpected response for range',
               rangeStart, error.response.headers['content-range'],
               error.response.statusCode);
             rangeIsSupported = false;
           }
-          destroyStream();
-
           const {options} = request;
 
           if (error instanceof HTTPError && !options.throwHttpErrors) {
@@ -255,7 +220,6 @@ async function streamToStagingFile(
             resolve(response);
             return;
           }
-
           reject(error);
         };
 
@@ -263,8 +227,9 @@ async function streamToStagingFile(
 
         request.once('retry', (newRetryCount: number) => {
           isRetry = true;
-          destroyStream();
+          // Let pending writes settle before measuring the offset and reopening.
           void Promise.resolve(handling).then(() => {
+            destroyStream();
             try { makeRequest(newRetryCount); } catch (error) { reject(error); }
           }, reject);
         });
@@ -275,67 +240,114 @@ async function streamToStagingFile(
     });
   } finally {
     finished = true;
-    // Got streams disable autoDestroy. Release their abort listener after EOF,
-    // rather than retaining completed requests until the downloader is disposed.
     try { await handling; }
-    finally { activeRequest?.destroy(); }
-  }
-}
-
-export async function optionallySetLastModifiedTime(
-  res: Resource, options: StaticDownloadOptions, stagingPath?: string, logger?: Logger
-): Promise<void> {
-  // https://github.com/website-local/website-scrap-engine/issues/174
-  let mtime: number | undefined;
-  if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
-    mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
-  }
-
-  // void and NaN check
-  if (mtime) {
-    const savePath = stagingPath ?? safeJoin(res.localRoot, decodeURI(res.savePath));
-    try {
-      await fs.utimes(savePath, mtime, mtime);
-    } catch (e) {
-      logger?.warn('system.error', 'skipping utimes ' + savePath, e);
+    finally {
+      // Got's stream disables autoDestroy; explicitly release its abort listener.
+      activeRequest?.destroy();
+      (fileWriteStream as WriteStream | undefined)?.destroy();
     }
   }
 }
 
-export async function downloadStreamingResource(
+export async function optionallySetLastModifiedTime(
+  res: Resource, options: StaticDownloadOptions
+): Promise<void> {
+  // https://github.com/website-local/website-scrap-engine/issues/174
+  let mtime: number | void = void 0;
+  if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
+    mtime = Date.parse(res.meta.headers?.['last-modified']) / 1000;
+  }
+
+  if (typeof mtime === 'number' && Number.isFinite(mtime)) {
+    const savePath = safeJoin(res.localRoot, decodeURI(res.savePath));
+    try {
+      await fs.utimes(savePath, mtime, mtime);
+    } catch (e) {
+      errorLogger.warn('skipping utimes ' + savePath, e);
+    }
+  }
+}
+
+/** @internal Shared by the enabled-only streaming implementation. */
+export function createStreamingDownloader(request: (
+  res: Resource & { downloadStartTimestamp: number }, requestOptions: RequestOptions
+) => Promise<Response | NativeHttpResponse | void>) {
+  return async (
+    res: Resource,
+    requestOptions: RequestOptions,
+    options: StaticDownloadOptions
+  ): Promise<Resource | DownloadResource | true | void> => {
+    if (res.body !== undefined) {
+      return res as DownloadResource;
+    }
+    if (res.type !== ResourceType.StreamingBinary) {
+      return res;
+    }
+    // Only http(s) links are downloadable via got.stream(). A non-http link
+    // (e.g. file://) must fall through unchanged so the next download handler
+    // (readOrCopyLocalResource) can pick it up. Mirrors the same guard in
+    // downloadStreamingResourceWithHook.
+    if (!isUrlHttp(res.downloadLink)) {
+      return res;
+    }
+    if (!res.downloadStartTimestamp) {
+      res.downloadStartTimestamp = Date.now();
+      res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
+    }
+    const response = await request(
+      res as (Resource & { downloadStartTimestamp: number }), requestOptions);
+    if (response?.statusCode === 304) {
+      return;
+    }
+    if (response) res.redirectedUrl = response.url;
+
+    if (options.preferRemoteLastModifiedTime) await optionallySetLastModifiedTime(res, options);
+    /// Not needed before
+    // res.finishTimestamp = Date.now();
+    // res.downloadTime =
+    //   res.finishTimestamp - res.downloadStartTimestamp;
+    return true;
+  };
+}
+
+export const downloadStreamingResourceDirect = createStreamingDownloader(gotStreamingDownloadToFileDirect);
+let guardedDownloader: typeof downloadStreamingResourceDirect | undefined;
+export function downloadStreamingResource(
+  res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions
+): Promise<Resource | DownloadResource | true | void> {
+  guardedDownloader ??= createStreamingDownloader(gotStreamingDownloadToFile);
+  return guardedDownloader(res, requestOptions, options);
+}
+export async function downloadNativeStreamingResource(
+  res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions
+): Promise<Resource | DownloadResource | true | void> {
+  return (await loadOptionalStreaming()).downloadNativeStreamingResource(res, requestOptions, options);
+}
+
+/** Selected during configuration only when an existing-resource policy is set. */
+export function downloadStreamingResourceWithSavePolicy(
   res: Resource,
   requestOptions: RequestOptions,
   options: StaticDownloadOptions,
-  executor?: PipelineExecutor
-): Promise<Resource | DownloadResource | void> {
-  if (res.body !== undefined) {
-    return res as DownloadResource;
-  }
-  if (res.type !== ResourceType.StreamingBinary) {
-    return res;
-  }
-  // Only http(s) links are downloadable via got.stream(). A non-http link
-  // (e.g. file://) must fall through unchanged so the next download handler
-  // (readOrCopyLocalResource) can pick it up. Mirrors the same guard in
-  // downloadStreamingResourceWithHook.
-  if (!isUrlHttp(res.downloadLink)) {
-    return res;
-  }
-  if (!res.downloadStartTimestamp) {
-    res.downloadStartTimestamp = Date.now();
-    res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
-  }
-  const response = await streamingDownloadToFile(
-    res as (Resource & { downloadStartTimestamp: number }), requestOptions, executor, options);
-  if (response?.statusCode === 304) {
-    return;
-  }
+  pipeline: PipelineExecutor
+): Promise<Resource | DownloadResource | true | void> {
+  return downloadWithSavePolicy(res, requestOptions, options, pipeline, false);
+}
 
-  /// Not needed before
-  // res.finishTimestamp = Date.now();
-  // res.downloadTime =
-  //   res.finishTimestamp - res.downloadStartTimestamp;
-  return;
+export function downloadNativeStreamingResourceWithSavePolicy(
+  res: Resource,
+  requestOptions: RequestOptions,
+  options: StaticDownloadOptions,
+  pipeline: PipelineExecutor
+): Promise<Resource | DownloadResource | true | void> {
+  return downloadWithSavePolicy(res, requestOptions, options, pipeline, true);
+}
+
+async function downloadWithSavePolicy(
+  res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions,
+  pipeline: PipelineExecutor, native: boolean
+): Promise<Resource | DownloadResource | true | void> {
+  return (await loadOptionalStreaming()).downloadWithSavePolicy(res, requestOptions, options, pipeline, native);
 }
 
 export interface StreamingBeforeDownloadHook {
@@ -388,73 +400,13 @@ export function downloadStreamingResourceWithHook(
   afterDownload?: StreamingAfterDownloadHook,
   downloadError?: StreamingDownloadErrorHook
 ): DownloadResourceFunc {
-  if (!beforeDownload && !afterDownload && !downloadError) {
-    return downloadStreamingResource;
-  }
-  return async (
-    res: Resource,
-    requestOptions: RequestOptions,
-    options: StaticDownloadOptions,
-    pipeline: PipelineExecutor
-  ) => {
-    if (res.body !== undefined) {
-      return res as DownloadResource;
-    }
-    if (res.type !== ResourceType.StreamingBinary) {
-      return res;
-    }
-    if (!isUrlHttp(res.downloadLink)) {
-      return res;
-    }
-    const original = res;
-    try {
-      if (beforeDownload) {
-        const resource = await beforeDownload(res, requestOptions, options, pipeline);
-        if (!resource) {
-          return;
-        }
-        if (resource.body !== undefined) {
-          return resource as DownloadResource;
-        }
-        if (resource !== res) {
-          await pipeline.replaceResource(res, resource);
-          res = resource;
-        }
-        if (res.shouldBeDiscardedFromDownload) {
-          return;
-        }
-      }
-      if (!res.downloadStartTimestamp) {
-        res.downloadStartTimestamp = Date.now();
-        res.waitTime = res.downloadStartTimestamp - res.createTimestamp;
-      }
-      try {
-        const response = await streamingDownloadToFile(
-          res as (Resource & { downloadStartTimestamp: number }), requestOptions, pipeline, options);
-        if (response?.statusCode === 304) {
-          return;
-        }
-      } catch (e) {
-        if (!downloadError) {
-          throw e;
-        }
-        await downloadError(e, res, requestOptions, options, pipeline);
-        // The error hook observes a failure; it supplies no replacement response.
-        throw e;
-      }
-      res.finishTimestamp = Date.now();
-      res.downloadTime =
-        res.finishTimestamp - res.downloadStartTimestamp;
-      if (afterDownload) {
-        await afterDownload(res, requestOptions, options, pipeline);
-      }
-    } finally {
-      if (res !== original) {
-        original.downloaded = res.downloaded;
-        original.publishedFiles = res.publishedFiles;
-        original.shouldBeDiscardedFromDownload = res.shouldBeDiscardedFromDownload;
-        await disposeHtmlResource(res);
-      }
-    }
+  if (!beforeDownload && !afterDownload && !downloadError) return downloadStreamingResource;
+  let download: DownloadResourceFunc | undefined;
+  return async (res, requestOptions, options, pipeline) => {
+    if (res.body !== undefined) return res as DownloadResource;
+    if (res.type !== ResourceType.StreamingBinary || !isUrlHttp(res.downloadLink)) return res;
+    download ??= (await loadOptionalStreaming()).downloadStreamingResourceWithHook(
+      beforeDownload, afterDownload, downloadError);
+    return download(res, requestOptions, options, pipeline);
   };
 }

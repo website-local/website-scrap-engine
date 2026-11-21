@@ -125,6 +125,7 @@ test.each(seeds)('generated output links open written files (seed %i)', async se
       const document = load('<a id="probe">target</a>');
       document('#probe').attr('href', child.replacePath);
       parent.body = document.html();
+      const childBody = child.body;
       await saveHtmlToDisk(parent, options, pipeline);
       await (type === ResourceType.Html ? saveHtmlToDisk : saveResourceToDisk)(child, options, pipeline);
       const parentFile = join(root, decodeURI(parent.savePath));
@@ -133,7 +134,8 @@ test.each(seeds)('generated output links open written files (seed %i)', async se
       const context = JSON.stringify({seed, sample, parent: parent.savePath, child: child.savePath, emitted});
       assert.equal(fileURLToPath(target), join(root, decodeURI(child.savePath)), context);
       assert.equal(target.hash, '#section', context);
-      assert.equal(await fs.readFile(target, 'utf8'), child.body, context);
+      assert.equal(await fs.readFile(target, 'utf8'), childBody, context);
+      assert.equal(child.body, undefined, context);
     }
   } finally { await fs.rm(root, {recursive: true, force: true}); }
 });

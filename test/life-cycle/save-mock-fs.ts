@@ -1,7 +1,5 @@
 import {expect, jest} from '@jest/globals';
 import fs, {promises} from 'node:fs';
-import {relative, resolve} from 'node:path';
-import type {Stats} from 'node:fs';
 import type {
   CreateResourceArgument,
   Resource,
@@ -85,8 +83,8 @@ export function mockFs(): {
   jest.spyOn(fs, 'writeFile').mockImplementation((path: fs.PathOrFileDescriptor,
     data: string | NodeJS.ArrayBufferView, options: fs.WriteFileOptions | fs.NoParamCallback,
     callback?: fs.NoParamCallback) => {
-    if (typeof path === 'number') throw new TypeError('Mock requires a file path');
     const done = typeof options === 'function' ? options : callback!;
+    if (typeof path === 'number') throw new Error('Mock does not accept a file descriptor');
     void promises.writeFile(path, data, typeof options === 'function' ? undefined : options)
       .then(() => done(null), done);
   });
@@ -103,23 +101,6 @@ export function mockFs(): {
         'mock fs writeFile with type not supported yet');
     });
   const fakeFsStats: Record<string, number> = {};
-  jest.spyOn(promises, 'mkdtemp').mockImplementation(async prefix => `${prefix}mock`);
-  jest.spyOn(promises, 'realpath').mockImplementation(async path => resolve(path.toString()));
-  jest.spyOn(promises, 'lstat').mockImplementation(async () => ({
-    isSymbolicLink: () => false, isDirectory: () => true
-  }) as Stats);
-  jest.spyOn(promises, 'rename').mockImplementation(async (from, to) => {
-    const target = relative(process.cwd(), to.toString());
-    fakeFs[target] = fakeFs[from.toString()];
-    delete fakeFs[from.toString()];
-    for (const suffix of ['::atime', '::mtime']) {
-      if (from + suffix in fakeFsStats) {
-        fakeFsStats[target + suffix] = fakeFsStats[from + suffix];
-        delete fakeFsStats[from + suffix];
-      }
-    }
-  });
-  jest.spyOn(promises, 'rm').mockImplementation(async () => undefined);
   jest.spyOn(promises, 'utimes').mockClear()
     .mockImplementation((path, atime, mtime) => {
       fakeFsStats[path + '::atime'] = atime as number;
@@ -140,11 +121,6 @@ export function mockModules(): void {
       realpath: jest.fn(),
       promises: {
         mkdir: jest.fn(),
-        mkdtemp: jest.fn(),
-        rename: jest.fn(),
-        rm: jest.fn(),
-        realpath: jest.fn(),
-        lstat: jest.fn(),
         writeFile: jest.fn(),
         utimes: jest.fn(),
       },

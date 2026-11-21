@@ -13,8 +13,6 @@ export interface LogWorkerMessage<T = unknown> extends WorkerMessage<WorkerLog<T
 }
 
 export interface WorkerTaskMessage<T> {
-  /** @deprecated Ignored; workers use the same installed runtime. */
-  readonly version?: number;
   readonly taskId: number;
   body: T;
 }

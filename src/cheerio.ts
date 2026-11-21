@@ -43,6 +43,9 @@ export function load(
 ): CheerioStatic {
   const customLoad = parserOptions?.loadHtml;
   if (customLoad) return customLoad(content, options, isDocument);
+  // Cheerio/Node upgrades must preserve synchronous first use and the optional
+  // prepareHtmlParser import path. Check html-loader.spec.ts and packed parser
+  // cases for shared loader identity and nested options; do not preload by default.
   parser ??= (require('cheerio') as {load: typeof cheerioLoad}).load;
   return parser(content, options, isDocument);
 }

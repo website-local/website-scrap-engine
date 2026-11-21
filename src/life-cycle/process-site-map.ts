@@ -1,5 +1,5 @@
 import {parseHtml} from './adapters.js';
-import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {AsyncResult, DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {HtmlParserOptions} from '../cheerio.js';
 import type {Resource} from '../resource.js';
@@ -7,14 +7,22 @@ import {ResourceType} from '../resource.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {CheerioStatic} from '../types.js';
 
-export async function processSiteMap(
+export function processSiteMap(
+  res: DownloadResource,
+  submit: SubmitResourceFunc,
+  options: StaticDownloadOptions & HtmlParserOptions,
+  pipeline: PipelineExecutor): AsyncResult<DownloadResource | void> {
+  if (res.type !== ResourceType.SiteMap) {
+    return res;
+  }
+  return processSiteMapResource(res, submit, options, pipeline);
+}
+
+async function processSiteMapResource(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions & HtmlParserOptions,
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
-  if (res.type !== ResourceType.SiteMap) {
-    return res;
-  }
   const $: CheerioStatic = res.meta.doc ?? parseHtml(res, options);
   const urlSet: Set<string> = new Set();
   const depth: number = res.depth + 1;
@@ -39,6 +47,6 @@ export async function processSiteMap(
       resources.push(r);
     }
   }
-  submit(resources, res, pipeline);
+  submit(resources);
   return res;
 }

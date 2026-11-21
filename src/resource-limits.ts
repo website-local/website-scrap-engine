@@ -1,11 +1,8 @@
-import {createReadStream, readFile as readFileCallback} from 'node:fs';
-import {promisify} from 'node:util';
+import {createReadStream} from 'node:fs';
+import {readFile} from 'node:fs/promises';
 import {Transform} from 'node:stream';
-import type {Resource, ResourceEncoding} from './resource.js';
-import type {ResourceBody} from './resource.js';
+import type {Resource, ResourceBody, ResourceEncoding} from './resource.js';
 import type {Logger} from './logger/types.js';
-
-const readFile = promisify(readFileCallback);
 
 export class ResourceSizeError extends Error {
   readonly code = 'ERR_RESOURCE_SIZE_LIMIT';
@@ -15,8 +12,11 @@ export class ResourceSizeError extends Error {
   }
 }
 
-export function checkResourceSize(size: number, limit?: number, resource?: Resource, logger?: Logger): boolean {
-  if (limit === undefined || size <= limit) return true;
+function validateBytes(value: number): void {
+  if (!Number.isSafeInteger(value) || value < 0) throw new RangeError('Expected a nonnegative byte count');
+}
+
+function discard(size: number, limit: number, resource?: Resource, logger?: Logger): false {
   if (resource) {
     resource.shouldBeDiscardedFromDownload = true;
     resource.meta.resourceSize = size;
@@ -26,44 +26,60 @@ export function checkResourceSize(size: number, limit?: number, resource?: Resou
   return false;
 }
 
-export function checkResourceBody(res: Resource, limit?: number, logger?: Logger): boolean {
-  if (limit === undefined || res.body === undefined) return true;
-  return checkResourceSize(typeof res.body === 'string' ?
-    Buffer.byteLength(res.body, res.encoding ?? 'utf8') : res.body.byteLength, limit, res, logger);
+export function checkResourceSize(size: number, limit?: number, resource?: Resource, logger?: Logger): boolean {
+  if (limit === undefined) return true;
+  validateBytes(limit);
+  validateBytes(size);
+  return size <= limit || discard(size, limit, resource, logger);
 }
 
 export function resourceBodyBytes(body: ResourceBody | undefined, encoding: ResourceEncoding): number {
-  return body === undefined ? 0 : typeof body === 'string' ? Buffer.byteLength(body, encoding ?? 'utf8') :
-    body.byteLength;
+  if (body === undefined) return 0;
+  if (typeof body !== 'string') return body.byteLength;
+  // byteLength assumes valid hex/base64 and overcounts inputs with ignored characters.
+  if (encoding === 'hex' || encoding === 'base64' || encoding === 'base64url') {
+    return Buffer.from(body, encoding).length;
+  }
+  return Buffer.byteLength(body, encoding ?? 'utf8');
 }
 
+export function checkResourceBody(res: Resource, limit?: number, logger?: Logger): boolean {
+  return limit === undefined || checkResourceSize(resourceBodyBytes(res.body, res.encoding), limit, res, logger);
+}
+
+/** Count incoming bytes including any already acquired resume offset. */
 export function limitResourceStream(limit: number, offset = 0, resource?: Resource, logger?: Logger): Transform {
+  if (!checkResourceSize(offset, limit, resource, logger)) throw new ResourceSizeError(limit, offset);
   let size = offset;
   return new Transform({transform(chunk: Buffer, _encoding, callback) {
     size += chunk.byteLength;
-    if (!checkResourceSize(size, limit, resource, logger)) callback(new ResourceSizeError(limit, size));
-    else callback(null, chunk);
+    if (size > limit) {
+      discard(size, limit, resource, logger);
+      callback(new ResourceSizeError(limit, size));
+    } else {
+      callback(null, chunk);
+    }
   }});
 }
 
+/** Return undefined on overflow. Abort and filesystem errors propagate to the caller. */
 export async function readResourceFile(
   source: string, encoding: ResourceEncoding, limit?: number, signal?: AbortSignal, resource?: Resource, logger?: Logger
 ): Promise<string | Buffer | undefined> {
-  if (limit === undefined) {
-    const options = {encoding, signal};
-    return readFile(source, options);
-  }
+  if (limit === undefined) return readFile(source, {encoding, signal});
+  validateBytes(limit);
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const chunk of createReadStream(source, {signal,
-    highWaterMark: Math.min(65536, limit + 1)})) {
+  for await (const chunk of createReadStream(source, {signal, highWaterMark: Math.min(65536, limit + 1)})) {
     size += chunk.length;
-    if (!checkResourceSize(size, limit, resource, logger)) return;
+    if (size > limit) {
+      discard(size, limit, resource, logger);
+      return;
+    }
     chunks.push(chunk);
   }
-  // Reuse an owned single chunk, but compact slices so small files do not retain
-  // a full stream read buffer through processing or worker transfer.
   const only = chunks.length === 1 ? chunks[0] : undefined;
+  // Reuse a complete chunk directly. Copy slices out of the stream read buffer.
   const body = only && only.byteOffset === 0 && only.byteLength === only.buffer.byteLength ?
     only : Buffer.concat(chunks, size);
   return encoding === null ? body : body.toString(encoding);

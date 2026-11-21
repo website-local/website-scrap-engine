@@ -1,4 +1,4 @@
-import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {AsyncResult, DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
@@ -52,14 +52,22 @@ export async function processCssText(
   return parts.join('');
 }
 
-export async function processCss(
+export function processCss(
+  res: DownloadResource,
+  submit: SubmitResourceFunc,
+  options: StaticDownloadOptions,
+  pipeline: PipelineExecutor): AsyncResult<DownloadResource | void> {
+  if (res.type !== ResourceType.Css) {
+    return res;
+  }
+  return processCssResource(res, submit, options, pipeline);
+}
+
+async function processCssResource(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions,
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
-  if (res.type !== ResourceType.Css) {
-    return res;
-  }
   const depth: number = res.depth + 1;
   const resources: Resource[] = [];
   let cssText: string = toString(res.body, res.encoding ??
@@ -67,6 +75,6 @@ export async function processCss(
   cssText = await processCssText(cssText, res, options, pipeline, depth, resources);
   res.body = cssText;
   res.meta.cssProcessed = 1;
-  submit(resources, res, pipeline);
+  submit(resources);
   return res;
 }

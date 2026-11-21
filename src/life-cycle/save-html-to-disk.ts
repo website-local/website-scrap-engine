@@ -1,10 +1,11 @@
 import {disposeHtmlResource} from '../cheerio.js';
-import type {DownloadResource} from './types.js';
+import type {AsyncResult, DownloadResource} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
-import type {ResourceBody, ResourceEncoding} from '../resource.js';
+import type {Resource, ResourceBody, ResourceEncoding} from '../resource.js';
 import {ResourceType, replacementUri} from '../resource.js';
 import {safeJoin, writeFile} from '../io.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
+import {releaseResourceBody} from './save-resource-to-disk.js';
 
 export function getResourceBodyFromHtml(
   res: DownloadResource & { type: ResourceType.Html | ResourceType.Svg },
@@ -33,17 +34,46 @@ export function redirectHtml(relativePath: string, encoding?: ResourceEncoding):
 </html>`;
 }
 
-export async function saveHtmlToDisk(
+/** Redirect helper resources never enter the downloader. */
+function disposeRedirectResource(
+  resource: Resource | undefined,
+  owner: Resource,
+  other?: Resource
+): void | Promise<void> {
+  if (!resource || resource.meta === owner.meta || resource.meta === other?.meta) return;
+  const document = resource.meta.doc;
+  if (document && (document === owner.meta.doc || document === other?.meta.doc)) {
+    const pending = resource.meta.statusChanges;
+    if (pending?.length) return (async () => {
+      for (let index = 0; index < pending.length; index++) await pending[index];
+      resource.meta.statusChanges = undefined;
+      resource.meta.doc = undefined;
+    })();
+    resource.meta.doc = undefined;
+    return;
+  }
+  return disposeHtmlResource(resource);
+}
+
+export function saveHtmlToDisk(
   res: DownloadResource,
   options: StaticDownloadOptions,
-  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
+  pipeline: PipelineExecutor): AsyncResult<DownloadResource | void> {
   if (res.type !== ResourceType.Html) {
     return res;
   }
+  return saveHtmlResourceToDisk(res, options, pipeline);
+}
+
+async function saveHtmlResourceToDisk(
+  res: DownloadResource,
+  options: StaticDownloadOptions,
+  pipeline: PipelineExecutor): Promise<DownloadResource | void> {
+  let redirectResource: Resource | undefined;
+  let redirectedResource: Resource | undefined;
+  let failed = false;
   try {
     const localRoot: string = res.localRoot ?? options.localRoot;
-    // Final HTML can share canonical bytes; redirect stubs keep their original owner.
-    const publicationUrl = res.redirectedUrl || res.url;
     // https://github.com/website-local/website-scrap-engine/issues/174
     let mtime: number | undefined;
     if (options.preferRemoteLastModifiedTime && res.meta?.headers?.['last-modified']) {
@@ -52,44 +82,60 @@ export async function saveHtmlToDisk(
     if (res.redirectedUrl && res.redirectedUrl !== res.url) {
       if (res.redirectedSavePath) {
         if (res.redirectedSavePath !== res.savePath) {
-          const replaceUri = replacementUri(res.redirectedSavePath, res.savePath);
-          const relativePath: string = replaceUri.toString();
+          const relativePath = replacementUri(res.redirectedSavePath, res.savePath).toString();
           await writeFile(safeJoin(localRoot, decodeURI(res.savePath)),
-            redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot, res, pipeline);
+            redirectHtml(relativePath, res.encoding), res.encoding, mtime);
           const body: ResourceBody = getResourceBodyFromHtml(res, options);
           await writeFile(safeJoin(localRoot, decodeURI(res.redirectedSavePath)),
-            body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
+            body, res.encoding, mtime);
         } else {
           const body: ResourceBody = getResourceBodyFromHtml(res, options);
           const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-          await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
+          await writeFile(filePath, body, res.encoding, mtime);
         }
         return;
       }
-      const redirectResource = await pipeline.createResource(ResourceType.Html,
+      redirectResource = await pipeline.createResource(ResourceType.Html,
         res.depth, res.redirectedUrl, res.url, localRoot,
         undefined, res.refSavePath);
-      if (redirectResource?.replacePath) {
+      if (redirectResource.replacePath) {
         const relativePath: string = redirectResource.replacePath;
         const savePath = decodeURI(res.savePath);
         await writeFile(safeJoin(localRoot, savePath),
-          redirectHtml(relativePath, res.encoding), res.encoding, mtime, undefined, localRoot, res, pipeline);
-        const redirectedResource = await pipeline.createResource(ResourceType.Html,
+          redirectHtml(relativePath, res.encoding), res.encoding, mtime);
+        redirectedResource = await pipeline.createResource(ResourceType.Html,
           res.depth, res.redirectedUrl, res.refUrl, res.localRoot,
           res.encoding, undefined, ResourceType.Html);
-        if (!redirectedResource) {
-          return;
-        }
         const redirectedSavePath = decodeURI(redirectedResource.savePath);
         const body: ResourceBody = getResourceBodyFromHtml(res, options);
-        await writeFile(safeJoin(localRoot, redirectedSavePath), body,
-          res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
+        await writeFile(safeJoin(localRoot, redirectedSavePath), body, res.encoding, mtime);
         return;
       }
     }
     const body: ResourceBody = getResourceBodyFromHtml(res, options);
     const filePath: string = safeJoin(localRoot, decodeURI(res.savePath));
-    await writeFile(filePath, body, res.encoding, mtime, undefined, localRoot, res, pipeline, publicationUrl);
+    await writeFile(filePath, body, res.encoding, mtime);
     return;
-  } finally { await disposeHtmlResource(res); }
+  } catch (error) {
+    failed = true;
+    throw error;
+  } finally {
+    try {
+      if (redirectedResource) {
+        const disposing = disposeRedirectResource(redirectedResource, res, redirectResource);
+        if (disposing) await disposing;
+      }
+    } finally {
+      try {
+        if (redirectResource) {
+          const disposing = disposeRedirectResource(redirectResource, res);
+          if (disposing) await disposing;
+        }
+      } finally {
+        const disposing = disposeHtmlResource(res);
+        if (disposing) await disposing;
+      }
+    }
+    if (!failed) releaseResourceBody(res);
+  }
 }

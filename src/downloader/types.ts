@@ -1,4 +1,4 @@
-import type {Transferable, Worker} from 'node:worker_threads';
+import type {MessagePort} from 'node:worker_threads';
 import type {DownloadOptions} from '../options.js';
 import type {WireResource} from '../resource.js';
 
@@ -7,9 +7,10 @@ export interface DownloaderStats {
   lastPeriodTotalCount: number;
   currentPeriodCount: number;
   lastPeriodCount: number;
-  /** Last concurrency measurement, exposed for custom adjustment functions. */
-  lastPeriodTime?: number;
-  lastPeriodRate?: number;
+  /** Allocated only when adaptive concurrency is enabled. */
+  adjustmentTime?: number;
+  adjustmentTotal?: number;
+  adjustmentRate?: number;
 }
 
 export interface DownloaderWithMeta {
@@ -38,7 +39,9 @@ export interface DownloaderWithMeta {
 }
 
 export interface PendingPromise<T = unknown, E = unknown> {
-  resolve: (value: T | PromiseLike<T>) => void;
+  // workaround for typescript 4.1.2
+  resolve: ((value?: T | PromiseLike<T>) => void) |
+    ((value: T | PromiseLike<T>) => void) ;
   reject: (reason?: E) => void;
 }
 
@@ -46,9 +49,8 @@ export interface PendingPromiseWithBody<R = unknown, E = unknown, B = unknown>
   extends PendingPromise<R, E> {
   taskId: number;
   body: B;
-  transferList?: Transferable[];
   workerId?: number;
-  onDispatched?: (worker: Worker) => void;
+  transferList?: Array<ArrayBuffer | MessagePort>;
 }
 
 export enum WorkerMessageType {
@@ -56,60 +58,16 @@ export enum WorkerMessageType {
   Complete
 }
 
-/** @deprecated Protocol versions are no longer sent or checked. */
-export const WORKER_PROTOCOL_VERSION = 1 as const;
-
-export enum WorkerControlMessageType {
-  Ready = 'ready',
-  Failed = 'failed',
-  Close = 'close',
-  Cancel = 'cancel',
-  Closed = 'closed'
-}
-
 export interface WorkerMessage<T = unknown> {
-  /** @deprecated Ignored; workers use the same installed runtime. */
-  version?: number;
   taskId: number;
   type: WorkerMessageType;
   body: T;
   error?: Error | unknown | void;
 }
 
-export interface WorkerControlMessage {
-  /** @deprecated Ignored; workers use the same installed runtime. */
-  version?: number;
-  type: WorkerControlMessageType;
-  error?: string;
-}
-
-export interface WorkerReadyMessage extends WorkerControlMessage {
-  type: WorkerControlMessageType.Ready;
-}
-
-export interface WorkerCloseMessage extends WorkerControlMessage {
-  type: WorkerControlMessageType.Close;
-}
-
-export interface WorkerClosedMessage extends WorkerControlMessage {
-  type: WorkerControlMessageType.Closed;
-}
-
 export interface DownloadWorkerMessage extends WorkerMessage<WireResource[]> {
-  /** Built-in workers report confirmed publications and save-policy skips. */
-  progress?: {publishedFiles: number; skipped: boolean};
   /**
    * Available if processed redirect url differs from url
    */
   redirectedUrl?: string;
-}
-
-/** Last attempt for one canonical admission URL; never retains bodies or DOMs. */
-export interface ResourceOutcome {
-  readonly status: 'queued' | 'running' | 'saved' | 'processed' | 'skipped' | 'failed' | 'cancelled';
-  readonly attempt: number;
-  readonly url: string;
-  /** A body was acquired, including when later processing failed. */
-  readonly downloaded: boolean;
-  readonly publishedFiles: number;
 }

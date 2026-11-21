@@ -80,7 +80,7 @@ export async function processSourceMap(
   } else {
     // we can not process that
     if (resources.length) {
-      submit(resources, res, pipeline);
+      submit(resources);
     }
     return res;
   }
@@ -91,7 +91,7 @@ export async function processSourceMap(
     // we can not process that
     // TODO: UCS-2/UTF-16 encoding
     if (resources.length) {
-      submit(resources, res, pipeline);
+      submit(resources);
     }
     return res;
   }
@@ -163,7 +163,7 @@ export async function processSourceMap(
     }
   }
   if (resources.length) {
-    submit(resources, res, pipeline);
+    submit(resources);
   }
   if (shouldReplaceBody) {
     res.body = body;

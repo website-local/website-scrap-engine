@@ -8,7 +8,9 @@ import type {
 import {
   PipelineExecutorImpl
 } from '../../src/downloader/pipeline-executor-impl.js';
-import type {StaticDownloadOptions} from '../../src/options.js';
+import {AbstractDownloader} from '../../src/downloader/main.js';
+import {defaultDownloadOptions, mergeOverrideOptions} from '../../src/options.js';
+import type {DownloadOptions, StaticDownloadOptions} from '../../src/options.js';
 
 jest.mock('log4js', () => ({
   configure: jest.fn(),
@@ -36,7 +38,6 @@ function makeLifeCycle(
     init,
     linkRedirect: [],
     detectResourceType: [],
-    generateSavePath: [],
     createResource,
     processBeforeDownload: [],
     download: [],
@@ -46,6 +47,64 @@ function makeLifeCycle(
     statusChange: []
   };
 }
+
+function makeInitialDownloader(options: DownloadOptions, accepted: string[]): AbstractDownloader {
+  const downloader = Object.create(AbstractDownloader.prototype) as AbstractDownloader;
+  downloader._options = options;
+  downloader._pipeline = new PipelineExecutorImpl(options, options.req, options);
+  downloader.addProcessedResource = resource => { accepted.push(resource.url); };
+  return downloader;
+}
+
+describe('AbstractDownloader init submissions', () => {
+  test.each(['sequential', 'concurrent'] as const)(
+    'isolates initial URLs for %s downloaders reusing the same options', async mode => {
+      let initialization = 0;
+      const options = defaultDownloadOptions({...fakeOpt,
+        ...makeLifeCycle([async (_pipeline, _downloader, submit) => {
+          const run = ++initialization;
+          submit?.(`https://example.com/run-${run}-before`);
+          await Promise.resolve();
+          submit?.(`https://example.com/run-${run}-after`);
+        }]), initialUrl: ['https://example.com/original']});
+      const initialUrls = options.initialUrl!;
+      const firstAccepted: string[] = [], secondAccepted: string[] = [];
+      const first = makeInitialDownloader(mergeOverrideOptions(options), firstAccepted);
+      const second = makeInitialDownloader(mergeOverrideOptions(options), secondAccepted);
+      expect(first.options).toBe(options);
+      expect(second.options).toBe(options);
+
+      if (mode === 'concurrent') {
+        await Promise.all([first.addInitialResource(initialUrls), second.addInitialResource(initialUrls)]);
+      } else {
+        await first.addInitialResource(initialUrls);
+        await second.addInitialResource(initialUrls);
+      }
+
+      expect(firstAccepted).toEqual(['https://example.com/original',
+        'https://example.com/run-1-before', 'https://example.com/run-1-after']);
+      expect(secondAccepted).toEqual(['https://example.com/original',
+        'https://example.com/run-2-before', 'https://example.com/run-2-after']);
+      expect(options.initialUrl).toBe(initialUrls);
+      expect(initialUrls).toEqual(['https://example.com/original']);
+    });
+
+  test('accepts init submissions without writing to a frozen caller URL array', async () => {
+    const initialUrls = ['https://example.com/original'];
+    Object.freeze(initialUrls);
+    const options = defaultDownloadOptions({...fakeOpt,
+      ...makeLifeCycle([(_pipeline, _downloader, submit) => {
+        submit?.('https://example.com/from-init');
+      }])});
+    const accepted: string[] = [];
+    const downloader = makeInitialDownloader(options, accepted);
+
+    await downloader.addInitialResource(initialUrls);
+
+    expect(accepted).toEqual(['https://example.com/original', 'https://example.com/from-init']);
+    expect(initialUrls).toEqual(['https://example.com/original']);
+  });
+});
 
 describe('PipelineExecutorImpl.init passes submit', () => {
   test('submit is passed to init hooks', async () => {

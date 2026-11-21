@@ -1,49 +1,52 @@
+import {parentPort} from 'node:worker_threads';
 import type {CategoryLogger, Logger, LogType} from './types.js';
+import {NativeUri} from '../uri.js';
 import type {LogWorkerMessage} from '../downloader/worker-type.js';
 import {WorkerMessageType} from '../downloader/types.js';
-import type {MessagePort} from 'node:worker_threads';
 
 export const logLevels = [
   'trace', 'debug', 'info', 'warn', 'error'
 ] as const;
 
-export function createWorkerCategoryLogger(type: LogType, logPort: MessagePort): CategoryLogger {
-
-  function send<T>(level: typeof logLevels[number], content: T[]): void {
-    const msg: LogWorkerMessage<T> = {
-      taskId: -1,
-      type: WorkerMessageType.Log,
-      body: {
-        logType: type,
-        level,
-        content
-      }
-    };
-    logPort.postMessage(msg);
+function send(type: LogType, level: typeof logLevels[number], content: unknown[]): void {
+  for (let i = 0; i < content.length; i++) {
+    const value = content[i];
+    if (value instanceof URL || value instanceof NativeUri) content[i] = value.toString();
   }
+  const message: LogWorkerMessage = {
+    taskId: -1,
+    type: WorkerMessageType.Log,
+    body: {logType: type, level, content}
+  };
+  try {
+    parentPort?.postMessage(message);
+  } catch {
+    // Non-cloneable diagnostic values must not turn a successful task into an error.
+    for (let i = 0; i < content.length; i++) {
+      try { content[i] = String(content[i]); } catch { content[i] = '[unprintable]'; }
+    }
+    try { parentPort?.postMessage(message); } catch { /* worker is closing */ }
+  }
+}
 
+export function createWorkerLogger(): Logger {
   return {
-    trace(...content: unknown[]) { send('trace', content); },
-    debug(...content: unknown[]) { send('debug', content); },
-    info(...content: unknown[]) { send('info', content); },
-    warn(...content: unknown[]) { send('warn', content); },
-    error(...content: unknown[]) { send('error', content); },
+    trace() { /* trace is disabled for relayed logs */ },
+    debug(type, ...content) { send(type, 'debug', content); },
+    info(type, ...content) { send(type, 'info', content); },
+    warn(type, ...content) { send(type, 'warn', content); },
+    error(type, ...content) { send(type, 'error', content); },
     isTraceEnabled() { return false; },
   };
 }
 
-/** Installed by the worker entry point; main-thread logging has no worker imports. */
-export function createWorkerLogger(logPort: MessagePort): Logger {
-  const send = (level: typeof logLevels[number], logType: LogType, content: unknown[]) => {
-    logPort.postMessage({taskId: -1,
-      type: WorkerMessageType.Log, body: {level, logType, content}});
-  };
+export function createWorkerCategoryLogger(type: LogType): CategoryLogger {
   return {
-    trace(type, ...content) { send('trace', type, content); },
-    debug(type, ...content) { send('debug', type, content); },
-    info(type, ...content) { send('info', type, content); },
-    warn(type, ...content) { send('warn', type, content); },
-    error(type, ...content) { send('error', type, content); },
-    isTraceEnabled() { return false; }
+    trace() { /* trace is disabled for relayed logs */ },
+    debug(...content: unknown[]) { send(type, 'debug', content); },
+    info(...content: unknown[]) { send(type, 'info', content); },
+    warn(...content: unknown[]) { send(type, 'warn', content); },
+    error(...content: unknown[]) { send(type, 'error', content); },
+    isTraceEnabled() { return false; },
   };
 }

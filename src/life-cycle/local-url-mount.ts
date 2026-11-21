@@ -10,8 +10,7 @@ import type {
   RequestOptions
 } from './types.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
-import {copyResourceToDisk} from './copy-resource-to-disk.js';
-import {readResourceFile} from '../resource-limits.js';
+import {mkdirRetry, readFile, safeJoin} from '../io.js';
 import {
   escapePath,
   isUrlHttp,
@@ -240,7 +239,7 @@ export function localUrlMounts(
     requestOptions: RequestOptions,
     options: StaticDownloadOptions,
     pipeline: PipelineExecutor
-  ): Promise<DownloadResource | Resource | void> => {
+  ): Promise<DownloadResource | Resource | true | void> => {
     void requestOptions;
     void pipeline;
     if (res.body !== undefined) {
@@ -260,8 +259,6 @@ export function localUrlMounts(
       return res;
     }
     const rawPath = extractRawPath(res.downloadLink);
-    // Native URL resolution removes encoded dot segments. Check the original
-    // absolute source spelling as well before permitting a filesystem lookup.
     const sourcePath = extractRawPath(res.rawUrl);
     if (rawPath && hasUnsafeDecodedPath(rawPath) ||
       sourcePath && hasUnsafeDecodedPath(sourcePath) ||
@@ -298,9 +295,9 @@ export function localUrlMounts(
       );
     }
 
-    await applyLocalFile(res, options, matched.mount, localFile, pipeline);
+    await applyLocalFile(res, options, matched.mount, localFile);
     if (res.type === ResourceType.StreamingBinary) {
-      return undefined;
+      return true;
     }
     return res as DownloadResource;
   };
@@ -465,8 +462,7 @@ function hasUnsafeDecodedPath(pathName: string): boolean {
 }
 
 function hasUnsafeEncodedReference(reference: string): boolean {
-  // Unlike literal ../ links, encoded traversal must not disappear when a
-  // relative source link is resolved by WHATWG URL before reaching this stage.
+  // Encoded traversal must not disappear during native URL resolution.
   const path = extractRawPath(reference.startsWith('//') ? 'https:' + reference : reference) ??
     reference.split(/[?#]/, 1)[0];
   for (const segment of path.split('/')) {
@@ -765,17 +761,20 @@ async function applyLocalFile(
   res: Resource,
   options: StaticDownloadOptions,
   mount: CompiledLocalUrlMount,
-  localFile: LocalFileMatch,
-  pipeline: PipelineExecutor
+  localFile: LocalFileMatch
 ): Promise<void> {
   res.meta.headers = createHeaders(mount, localFile.localPath, localFile.stats);
   res.meta.localUrlMount = createMeta(
     mount, localFile.candidatePaths, localFile.localPath);
   if (res.type === ResourceType.StreamingBinary) {
-    await copyResourceToDisk(localFile.localPath, res, options, pipeline);
+    const fileDestPath = safeJoin(
+      res.localRoot ?? options.localRoot, decodeURI(res.savePath));
+    await mkdirRetry(path.dirname(fileDestPath));
+    await fs.copyFile(localFile.localPath, fileDestPath);
   } else {
-    res.body = await readResourceFile(localFile.localPath, res.encoding, options.maxResourceBytes,
-      pipeline.signal, res, pipeline.logger);
+    res.body = await readFile(localFile.localPath, {
+      encoding: res.encoding
+    });
   }
   res.finishTimestamp = Date.now();
   res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp!;

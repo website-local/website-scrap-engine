@@ -12,7 +12,7 @@ export type LogType =
   | `custom.${string}`;
 
 export interface Logger {
-  /** Recreate this logger in each worker and write locally instead of relaying messages. */
+  /** Recreate this logger from the options module in each worker, avoiding log relay. */
   workerSafe?: boolean;
   trace(type: LogType, ...contents: unknown[]): void;
   debug(type: LogType, ...contents: unknown[]): void;

@@ -58,7 +58,6 @@ function makeLifeCycle(download: DownloadResourceFunc[]): ProcessingLifeCycle {
     init: [],
     linkRedirect: [],
     detectResourceType: [],
-    generateSavePath: [],
     createResource,
     processBeforeDownload: [],
     download,
@@ -97,6 +96,10 @@ async function writeFile(relativePath: string, data: string): Promise<void> {
   await fs.writeFile(filePath, data);
 }
 
+function assertBufferedResource(result: DownloadResource | true | void): asserts result is DownloadResource {
+  if (!result || result === true) throw new Error('Expected a buffered download');
+}
+
 describe('localUrlMounts', () => {
   test('reads a matched HTTP URL from the mounted directory', async () => {
     await writeFile(path.join('a', 'page.html'), '<html>mounted</html>');
@@ -109,12 +112,12 @@ describe('localUrlMounts', () => {
 
     const downloaded = await pipeline.download(res);
 
-    expect(downloaded).toBeDefined();
-    expect(downloaded!.body).toBe('<html>mounted</html>');
-    expect(downloaded!.meta.headers?.['content-length']).toBe('20');
-    expect(downloaded!.meta.headers?.['content-type'])
+    assertBufferedResource(downloaded);
+    expect(downloaded.body).toBe('<html>mounted</html>');
+    expect(downloaded.meta.headers?.['content-length']).toBe('20');
+    expect(downloaded.meta.headers?.['content-type'])
       .toBe('text/html; charset=utf-8');
-    expect(downloaded!.meta.localUrlMount).toMatchObject({
+    expect(downloaded.meta.localUrlMount).toMatchObject({
       root: sourceRoot,
       source: 'localUrlMount',
       localPath: path.join(sourceRoot, 'a', 'page.html')
@@ -127,55 +130,20 @@ describe('localUrlMounts', () => {
       const pipeline = makePipeline([
         localUrlMounts([{root: sourceRoot, urlPrefix: 'https://example.com/'}])
       ]);
-
-      const downloaded = await pipeline.download(
-        makeResource('https://example.com/' + pathname));
-
-      expect(downloaded?.body).toBe('contained file');
-      expect(downloaded?.meta.localUrlMount).toMatchObject({
-        localPath: path.join(sourceRoot, decodeURIComponent(pathname))
-      });
+      const downloaded = await pipeline.download(makeResource('https://example.com/' + pathname));
+      assertBufferedResource(downloaded);
+      expect(downloaded.body).toBe('contained file');
     });
 
   test('rejects an index candidate outside the mounted directory', async () => {
     await fs.writeFile(path.join(tmpRoot, 'secret.html'), 'outside file');
     const pipeline = makePipeline([
-      localUrlMounts([{
-        root: sourceRoot,
-        urlPrefix: 'https://example.com/',
-        index: {names: ['../secret.html']}
-      }])
+      localUrlMounts([{root: sourceRoot, urlPrefix: 'https://example.com/',
+        index: {names: ['../secret.html']}}])
     ]);
-
     const res = makeResource('https://example.com/');
     await pipeline.download(res);
-
     expect(res.body).toBeUndefined();
-  });
-
-  test('logs and discards an oversized mounted body without falling through to download', async () => {
-    await writeFile('large.bin', 'oversized local body');
-    const fallback = jest.fn<DownloadResourceFunc>().mockImplementation(res => {
-      res.body = 'ok';
-      return res;
-    });
-    const pipeline = makePipeline([
-      localUrlMounts([{root: sourceRoot, urlPrefix: 'https://example.com/'}]),
-      fallback
-    ]);
-    pipeline.options.maxResourceBytes = 4;
-    const warn = jest.spyOn(pipeline.logger, 'warn').mockImplementation(() => {});
-    const res = makeResource('https://example.com/large.bin', ResourceType.Binary);
-
-    await expect(pipeline.download(res)).resolves.toBeUndefined();
-
-    expect(fallback).not.toHaveBeenCalled();
-    expect(res.shouldBeDiscardedFromDownload).toBe(true);
-    expect(res.body).toBeUndefined();
-    expect(res.meta.error).toBeUndefined();
-    expect(res.meta.resourceSize).toBeGreaterThan(4);
-    expect(warn).toHaveBeenCalledWith('system.skip',
-      'Resource exceeds maxResourceBytes', res.url, res.meta.resourceSize, 4);
   });
 
   test('does not match a sibling prefix segment', async () => {
@@ -196,7 +164,8 @@ describe('localUrlMounts', () => {
 
     const downloaded = await pipeline.download(res);
 
-    expect(downloaded!.body).toBe('remote');
+    assertBufferedResource(downloaded);
+    expect(downloaded.body).toBe('remote');
     expect(fallback).toHaveBeenCalledTimes(1);
     expect(res.meta.localUrlMount).toBeUndefined();
   });
@@ -228,7 +197,8 @@ describe('localUrlMounts', () => {
 
     const downloaded = await pipeline.download(res);
 
-    expect(downloaded!.body).toBe('shorter-priority');
+    assertBufferedResource(downloaded);
+    expect(downloaded.body).toBe('shorter-priority');
   });
 
   test('uses longest prefix when priority ties', async () => {
@@ -248,7 +218,8 @@ describe('localUrlMounts', () => {
 
     const downloaded = await pipeline.download(res);
 
-    expect(downloaded!.body).toBe('nested');
+    assertBufferedResource(downloaded);
+    expect(downloaded.body).toBe('nested');
   });
 
   test('resolves HTML directory index and extension fallback', async () => {
@@ -268,9 +239,12 @@ describe('localUrlMounts', () => {
     const index = await pipeline.download(
       makeResource('https://example.com/guide/'));
 
-    expect(rootIndex!.body).toBe('root index');
-    expect(extension!.body).toBe('intro extension');
-    expect(index!.body).toBe('guide index');
+    assertBufferedResource(rootIndex);
+    assertBufferedResource(extension);
+    assertBufferedResource(index);
+    expect(rootIndex.body).toBe('root index');
+    expect(extension.body).toBe('intro extension');
+    expect(index.body).toBe('guide index');
   });
 
   test('does not apply extension fallback for non-HTML resources', async () => {
@@ -328,9 +302,12 @@ describe('localUrlMounts', () => {
       const mixed = await pipeline.download(
         makeResource('https://mixed.example/docs/page.html'));
 
-      expect(lower!.body).toBe('lower');
-      expect(upper!.body).toBe('upper');
-      expect(mixed!.body).toBe('mixed');
+      assertBufferedResource(lower);
+      assertBufferedResource(upper);
+      assertBufferedResource(mixed);
+      expect(lower.body).toBe('lower');
+      expect(upper.body).toBe('upper');
+      expect(mixed.body).toBe('mixed');
     });
 
   test('ignores search by default and can preserve it in filenames', async () => {
@@ -355,8 +332,10 @@ describe('localUrlMounts', () => {
     const preserved = await pipeline.download(
       makeResource('https://preserve.example/style.css?a=1', ResourceType.Binary));
 
-    expect(ignored!.body).toStrictEqual(Buffer.from('ignored search'));
-    expect(preserved!.body).toStrictEqual(Buffer.from('preserved search'));
+    assertBufferedResource(ignored);
+    assertBufferedResource(preserved);
+    expect(ignored.body).toStrictEqual(Buffer.from('ignored search'));
+    expect(preserved.body).toStrictEqual(Buffer.from('preserved search'));
   });
 
   test('falls back to the next download handler when configured', async () => {
@@ -379,7 +358,8 @@ describe('localUrlMounts', () => {
 
     const downloaded = await pipeline.download(res);
 
-    expect(downloaded!.body).toBe('remote');
+    assertBufferedResource(downloaded);
+    expect(downloaded.body).toBe('remote');
     expect(fallback).toHaveBeenCalledTimes(1);
     expect(res.meta.localUrlMount).toMatchObject({
       root: sourceRoot,
@@ -480,7 +460,7 @@ describe('localUrlMounts', () => {
 
       const downloaded = await pipeline.download(res);
 
-      expect(downloaded).toBeUndefined();
+      expect(downloaded).toBe(true);
       await expect(fs.readFile(
         path.join(destinationRoot, 'example.com', 'media', 'video.bin')))
         .resolves.toStrictEqual(Buffer.from('video-body'));

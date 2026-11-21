@@ -1,208 +1,158 @@
-import {WorkerPublicationClient} from './worker-publication.js';
-import {disposeHtmlResource} from '../cheerio.js';
-import {checkResourceBody} from '../resource-limits.js';
 import {parentPort, workerData} from 'node:worker_threads';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
-import {mergeOverrideOptions} from '../options.js';
-import type {DownloadResource, SubmitResourceFunc} from '../life-cycle/types.js';
+import {mergeOverrideOptions, selectDownloadHandlers} from '../options.js';
+import type {
+  DownloadResource,
+  SubmitResourceFunc
+} from '../life-cycle/types.js';
 import type {Resource, WireResource} from '../resource.js';
-import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
+import {copyResourceBody, decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
+import {disposeHtmlResource} from '../cheerio.js';
+import {setLogger} from '../logger/logger.js';
 import {importDefaultFromPath} from '../util.js';
 import type {DownloadWorkerMessage} from './types.js';
-import {WorkerControlMessageType, WorkerMessageType} from './types.js';
+import {WorkerMessageType} from './types.js';
 import {completedStatusChange, PipelineExecutorImpl} from './pipeline-executor-impl.js';
 import type {WorkerTaskMessage} from './worker-type.js';
-import {getWorkerChannels} from './worker-channel.js';
-import {createDefaultLogger} from '../logger/default-logger.js';
-import {createWorkerLogger} from '../logger/logger-worker.js';
 
-const {pathToOptions, overrideOptions, workerSafeLogger}: {
+const {pathToOptions, overrideOptions, useWorkerLogger}: {
   pathToOptions: string,
-  workerSafeLogger?: boolean,
-  overrideOptions?: Partial<StaticDownloadOptions>
+  overrideOptions?: Partial<StaticDownloadOptions>,
+  useWorkerLogger?: boolean
 } = workerData;
-const {taskPort, logPort, publicationPort} = getWorkerChannels();
-const publications = publicationPort ? new WorkerPublicationClient(publicationPort) : undefined;
-const controller = new AbortController();
-const active = new Set<Promise<void>>();
-const results: Record<number, DownloadWorkerMessage> = {};
-const emptyChildren: WireResource[] = [];
-let closing = false;
 
 const asyncOptions: Promise<DownloadOptions> = importDefaultFromPath(pathToOptions);
 
-const asyncPipeline = asyncOptions.then(async options => {
+const asyncPipeline = asyncOptions.then(options => {
   options = mergeOverrideOptions(options, overrideOptions);
+  selectDownloadHandlers(options);
+  if (useWorkerLogger && options.createLogger) setLogger(options.createLogger(options));
 
-  const logger = workerSafeLogger ? (options.createLogger ?? createDefaultLogger)(options) : createWorkerLogger(logPort);
-  const pipeline =
-    new PipelineExecutorImpl(options, options.req, options, controller.signal, logger, publications);
+  const pipeline = new PipelineExecutorImpl(options, options.req, options);
 
-  await pipeline.init(pipeline);
+  const init = pipeline.init(pipeline);
+  if (init && (init as Promise<void>).then) {
+    return init.then(() => pipeline);
+  }
   return pipeline;
 });
+void asyncPipeline.catch(() => undefined);
 
-// Retained once per worker. The explicit parent owns all task-specific data.
-function submitToWorker(
-  results: Record<number, DownloadWorkerMessage>,
-  resources: Parameters<SubmitResourceFunc>[0],
-  parent: Resource,
-  pipeline: Parameters<SubmitResourceFunc>[2]
-): void {
-  if (Array.isArray(resources)) {
-    for (const resource of resources) submitToWorker(results, resource, parent, pipeline);
-    return;
-  }
-  pipeline.signal?.throwIfAborted();
-  const count = parent.discoveredCount;
-  if (count === undefined) throw new Error('Resource discovery is closed for this parent');
-  parent.discoveredCount = count + 1;
-  const limit = pipeline.options.maxDiscoveredResources;
-  let notified: Promise<void> | void | undefined;
+const noResources: WireResource[] = [];
+
+function cloneError(error: unknown): unknown {
   try {
-    if (limit !== undefined && count >= limit) {
-      resources.shouldBeDiscardedFromDownload = true;
-      pipeline.logger.warn('system.skip', 'Resource exceeds maxDiscoveredResources', resources.url, count + 1, limit);
-    } else if (checkResourceBody(resources, pipeline.options.maxResourceBytes, pipeline.logger)) {
-      const wire = prepareResourceForClone(resources);
-      const result = results[parent.workerTaskId!];
-      const collected = result.body === emptyChildren ? result.body = [] : result.body;
-      collected.push(wire);
-      return;
-    }
-    notified = pipeline.notifyStatusChange(resources, 'dispose');
-  } finally {
-    // The wire owns serialized data; its source document stays in this worker.
-    const disposing = notified && notified !== completedStatusChange ?
-      notified.finally(() => disposeHtmlResource(resources)) : disposeHtmlResource(resources);
-    if (disposing) {
-      active.add(disposing);
-      void disposing.then(() => active.delete(disposing), () => {
-        active.delete(disposing);
-        parentPort?.postMessage({type: WorkerControlMessageType.Failed, error: 'Submitted resource cleanup failed'});
-      });
-    }
+    return error ? structuredClone(error) : new Error(String(error));
+  } catch {
+    try { return new Error(String(error)); } catch { return new Error('Worker task failed'); }
   }
 }
 
-const submit: SubmitResourceFunc = submitToWorker.bind(undefined, results);
-
-async function processTask(msg: WorkerTaskMessage<WireResource>): Promise<void> {
-  if (!msg || !Number.isSafeInteger(msg.taskId) || msg.taskId <= 0) {
-    parentPort?.postMessage({type: WorkerControlMessageType.Failed, error: 'Invalid worker task envelope'});
-    return;
+function disposeResource(resource: Resource, message: DownloadWorkerMessage): void | Promise<void> {
+  try {
+    const disposing = disposeHtmlResource(resource);
+    if (disposing) return disposing.catch(error => { message.error ??= cloneError(error); });
+  } catch (error) {
+    message.error ??= cloneError(error);
   }
-  let error: unknown;
-  let redirectedUrl: string | undefined;
-  let resource: DownloadResource | undefined;
-  let owned: Resource | undefined;
+}
+
+parentPort?.addListener('message', async (msg: WorkerTaskMessage<WireResource>) => {
   const message: DownloadWorkerMessage = {
-    taskId: msg.taskId, type: WorkerMessageType.Complete, body: emptyChildren,
-    progress: {publishedFiles: 0, skipped: false}
+    taskId: msg.taskId,
+    type: WorkerMessageType.Complete,
+    body: noResources
   };
-  results[msg.taskId] = message;
+  let collectedResources: WireResource[] | undefined;
+  let discoveredUrls: Set<string> | undefined;
+  let submittedOwners: Resource[] | undefined;
+  let downloadResource: DownloadResource | void = undefined;
+  let processedResource: DownloadResource | void = undefined;
+  let savedResource: DownloadResource | void = undefined;
   try {
     const pipeline = await asyncPipeline;
-    controller.signal.throwIfAborted();
-    resource = decodeResourceFromClone(msg.body) as DownloadResource;
-    owned = resource;
-    resource.workerTaskId = msg.taskId;
-    resource.discoveredCount = 0;
-    resource.publishedFiles = 0;
-    resource.shouldBeDiscardedFromDownload = false;
-    const processed = await pipeline.processAfterDownload(resource, submit);
-    if (processed) owned = processed;
-    if (!processed) {
-      await pipeline.notifyStatusChange(resource, 'processAfterDownload');
-    } else if (await pipeline.saveToDisk(processed)) {
-      await pipeline.notifyStatusChange(processed, 'saveToDisk');
-    }
-    if (processed?.redirectedUrl && processed.redirectedUrl !== processed.url) {
-      redirectedUrl = processed.redirectedUrl;
-    }
-  } catch (e) {
-    // handle if object could not be cloned here
-    // https://github.com/website-local/website-scrap-engine/issues/340
-    try {
-      // should always be
-      if (e instanceof Error) {
-        const details = e as Error & {code?: unknown; limit?: unknown; actual?: unknown};
-        error = {name: e.name, message: e.message, stack: e.stack,
-          code: typeof details.code === 'string' ? details.code : undefined,
-          limit: typeof details.limit === 'number' ? details.limit : undefined,
-          actual: typeof details.actual === 'number' ? details.actual : undefined};
-      } else if (e === null || typeof e !== 'object') {
-        error = new Error(String(e));
-      } else {
-        error = structuredClone(e);
+    downloadResource = decodeResourceFromClone(msg.body) as DownloadResource;
+    const collect = (resource: Resource) => {
+      if (resource.meta.doc || resource.meta.statusChanges?.length) {
+        // Ordinary discoveries have no document. Retain only actual owners until
+        // processing ends, so submitting the active resource cannot dispose it early.
+        (submittedOwners ??= []).push(resource);
       }
-    } catch {
-      // can not clone, so no need to get the full error here
-      if (e && typeof e === 'object') {
-        const clone: Record<string, string> = {};
-        for (const k in e) {
-          clone[k] = String((e as Record<string, unknown>)[k]);
+      if (resource.shouldBeDiscardedFromDownload) return;
+      let url: string | undefined;
+      if (resource.body === undefined && resource.depth <= pipeline.options.maxDepth) {
+        // Match parent admission without cloning URI objects. Rejected depths
+        // and already downloaded bodies keep their original submission order.
+        url = resource.uri.toString();
+        const fragment = url.indexOf('#');
+        if (fragment !== -1) url = url.slice(0, fragment);
+        if (pipeline.options.deduplicateStripSearch) {
+          const query = url.indexOf('?');
+          if (query !== -1) url = url.slice(0, query);
         }
-        error = clone;
+        if (discoveredUrls?.has(url)) return;
+      }
+      const wire = prepareResourceForClone(resource);
+      if (wire.body !== undefined && typeof wire.body !== 'string') {
+        wire.body = copyResourceBody(wire.body);
+      }
+      // A caught preparation failure must allow a corrected resubmission.
+      if (url !== undefined) (discoveredUrls ??= new Set<string>()).add(url);
+      (collectedResources ??= []).push(wire);
+    };
+    const submit: SubmitResourceFunc = (resources: Resource | Resource[]) => {
+      if (Array.isArray(resources)) {
+        for (let i = 0; i < resources.length; i++) collect(resources[i]);
       } else {
-        error = String(e);
+        collect(resources);
+      }
+    };
+    processedResource = await pipeline.processAfterDownload(downloadResource, submit);
+    if (!processedResource) {
+      const notified = pipeline.notifyStatusChange(downloadResource, 'processAfterDownload');
+      if (notified !== completedStatusChange) await notified;
+    } else {
+      savedResource = await pipeline.saveToDisk(processedResource);
+      if (savedResource) {
+        const notified = pipeline.notifyStatusChange(savedResource, 'saveToDisk');
+        if (notified !== completedStatusChange) await notified;
       }
     }
-
-  } finally {
-    if (owned) owned.discoveredCount = undefined;
-    if (resource) {
-      resource.discoveredCount = undefined;
+    const result = savedResource || processedResource;
+    if (result?.redirectedUrl && result.redirectedUrl !== result.url) {
+      message.redirectedUrl = result.redirectedUrl;
     }
-    if (owned) {
-      const disposing = disposeHtmlResource(owned);
+  } catch (error) {
+    message.error = cloneError(error);
+  } finally {
+    if (submittedOwners) {
+      for (const resource of submittedOwners) {
+        if (resource === savedResource || resource === processedResource || resource === downloadResource) continue;
+        const disposing = disposeResource(resource, message);
+        if (disposing) await disposing;
+      }
+    }
+    if (savedResource && savedResource !== processedResource && savedResource !== downloadResource) {
+      const disposing = disposeResource(savedResource, message);
       if (disposing) await disposing;
     }
-    message.error = error;
-    message.redirectedUrl = redirectedUrl;
-    message.progress!.publishedFiles = owned?.publishedFiles ?? 0;
-    message.progress!.skipped = owned?.shouldBeDiscardedFromDownload ?? false;
-    delete results[msg.taskId];
-    if (!closing) taskPort.postMessage(message);
-    if (message.body !== emptyChildren) message.body.length = 0;
+    if (processedResource && processedResource !== downloadResource) {
+      const disposing = disposeResource(processedResource, message);
+      if (disposing) await disposing;
+    }
+    if (downloadResource) {
+      const disposing = disposeResource(downloadResource, message);
+      if (disposing) await disposing;
+    }
+    message.body = collectedResources || noResources;
+    try {
+      parentPort?.postMessage(message);
+    } catch (error) {
+      // A non-cloneable child still produces a completion for its owning task.
+      message.body = noResources;
+      message.error = cloneError(error);
+      try { parentPort?.postMessage(message); } catch { /* parent has closed */ }
+    }
   }
-}
 
-taskPort.addListener('message', (msg: WorkerTaskMessage<WireResource>) => {
-  if (closing) return;
-  const task = processTask(msg);
-  active.add(task);
-  void task.then(() => active.delete(task), () => {
-    active.delete(task);
-    parentPort?.postMessage({type: WorkerControlMessageType.Failed, error: 'Worker task response failed'});
-  });
-});
-
-parentPort?.addListener('message', msg => {
-  if (msg?.type !== WorkerControlMessageType.Close &&
-    msg?.type !== WorkerControlMessageType.Cancel) {
-    return;
-  }
-  if (closing) return;
-  closing = true;
-  if (msg.type === WorkerControlMessageType.Cancel) controller.abort(new Error('Worker disposed'));
-  void (async () => {
-    try { await asyncPipeline; } catch { /* Failed initialization still closes channels. */ }
-    await Promise.allSettled(active);
-    publications?.close();
-    taskPort.close();
-    logPort.close();
-    parentPort?.postMessage({type: WorkerControlMessageType.Closed});
-  })();
-});
-
-void asyncPipeline.then(() => {
-  if (closing) return;
-  parentPort?.postMessage({type: WorkerControlMessageType.Ready});
-}, error => {
-  if (closing) return;
-  parentPort?.postMessage({
-    type: WorkerControlMessageType.Failed,
-    error: error instanceof Error ? error.message : String(error)
-  });
 });

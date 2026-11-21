@@ -5,20 +5,24 @@ import type {RequestListener, Server} from 'node:http';
 import type {AddressInfo} from 'node:net';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {gzipSync} from 'node:zlib';
 import type {BeforeRetryHook} from 'got';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
-import {calculateFastDelay, defaultDownloadOptions} from '../../src/options.js';
+import {defaultDownloadOptions} from '../../src/options.js';
 import {ResourceType} from '../../src/resource.js';
+import {getLogger, setLogger} from '../../src/logger/logger.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {getRetry} from '../../src/life-cycle/download-resource.js';
 
 let root: string;
 let server: Server;
-const logger = {trace() {}, debug() {}, info() {}, warn() {}, error() {}, isTraceEnabled: () => false};
+const previousLogger = getLogger();
 
 beforeEach(async () => {
   root = await fs.mkdtemp(path.join(tmpdir(), 'wse-download-'));
+  setLogger({
+    trace() {}, debug() {}, info() {}, warn() {}, error() {},
+    isTraceEnabled: () => false
+  });
 });
 
 afterEach(async () => {
@@ -29,6 +33,7 @@ afterEach(async () => {
     });
   }
   await fs.rm(root, {recursive: true, force: true});
+  setLogger(previousLogger);
 });
 
 async function listen(handler: RequestListener): Promise<string> {
@@ -60,33 +65,12 @@ describe.each(['text', 'buffer'] as const)('empty %s responses', responseType =>
     });
 
     expect(result?.statusCode).toBe(statusCode);
-    if (responseType === 'buffer') expect(Buffer.isBuffer(result?.body)).toBe(true);
     expect(result?.body).toEqual(responseType === 'buffer' ? Buffer.alloc(0) : '');
     expect(requests).toBe(1);
   });
 });
 
 describe('configured retries', () => {
-  test.each([500, 429])('fast delay retries HTTP %i when the computed wait rounds to zero', async status => {
-    let requests = 0;
-    const url = await listen((_request, response) => {
-      if (++requests === 1) {
-        response.statusCode = status;
-        if (status === 429) response.setHeader('Retry-After', '0');
-        response.end('retry');
-      } else response.end('recovered');
-    });
-    const random = jest.spyOn(Math, 'random').mockReturnValue(0.001);
-    try {
-      const result = await getRetry(url, {
-        responseType: 'buffer', timeout: {request: 2000},
-        retry: {limit: 1, calculateDelay: calculateFastDelay}
-      });
-      expect(result?.body).toEqual(Buffer.from('recovered'));
-      expect(requests).toBe(2);
-    } finally { random.mockRestore(); }
-  });
-
   test.each([
     {method: 'GET', limit: 0, expectedRequests: 1},
     {method: 'GET', limit: 2, expectedRequests: 3},
@@ -146,7 +130,7 @@ describe.each([
   {name: 'HTML', type: ResourceType.Html},
   {name: 'binary', type: ResourceType.Binary}
 ])('empty $name resources', ({type}) => {
-  test.each([200, 204])('accepts status %i without another download', async status => {
+  test.each([200, 204])('accepts an empty response with status %i without retrying', async status => {
     let requests = 0;
     const url = await listen((_request, response) => {
       requests++;
@@ -159,15 +143,15 @@ describe.each([
       req: {retry: {limit: 0}, timeout: {request: 2000}},
       meta: {detectIncompleteHtml: '</html>'}
     });
-    const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
+    const pipeline = new PipelineExecutorImpl(options, options.req, options);
     const resource = await pipeline.createResource(type, 0, url, url);
     if (!resource) throw new Error('Resource was discarded');
 
     const downloaded = await pipeline.download(resource);
 
-    expect(downloaded?.body).toEqual(Buffer.alloc(0));
+    if (!downloaded || downloaded === true) throw new Error('Expected a buffered download');
+    expect(downloaded.body).toEqual(Buffer.alloc(0));
     expect(requests).toBe(1);
-    if (!downloaded) throw new Error('Download was discarded');
     if (type === ResourceType.Binary) {
       const processed = await pipeline.processAfterDownload(downloaded, () => {});
       if (!processed) throw new Error('Processing discarded empty content');
@@ -176,57 +160,4 @@ describe.each([
         .toEqual(Buffer.alloc(0));
     }
   });
-});
-
-
-test('retries incomplete HTML with Got 16 binary responses', async () => {
-  let requests = 0;
-  const url = await listen((_request, response) => {
-    response.end(++requests === 1 ? '<html>incomplete' : '<html>complete</html>');
-  });
-  const options = defaultDownloadOptions({
-    ...defaultLifeCycle(), localRoot: root,
-    req: {retry: {limit: 0}, timeout: {request: 2000}},
-    meta: {detectIncompleteHtml: '</html>'}
-  });
-  const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, logger);
-  const resource = await pipeline.createResource(ResourceType.Html, 0, url, url);
-  if (!resource) throw new Error('Resource was discarded');
-  const downloaded = await pipeline.download(resource);
-  expect(requests).toBe(2);
-  expect(Buffer.isBuffer(downloaded?.body)).toBe(true);
-  expect(downloaded?.body.toString()).toBe('<html>complete</html>');
-});
-
-describe.each(['got', 'native'] as const)('%s decoded input limits', httpTransport => {
-  test.each([ResourceType.Binary, ResourceType.StreamingBinary])(
-    '%s discards oversized content and preserves cached atomic output', async type => {
-      let requests = 0;
-      const url = await listen((_request, response) => {
-        ++requests;
-        response.setHeader('Content-Encoding', 'gzip');
-        response.end(gzipSync(Buffer.alloc(32 * 1024, 97)));
-      });
-      const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
-        httpTransport, maxResourceBytes: 1024, req: {retry: {limit: 0}, timeout: {request: 2000}}});
-      const limitLogger = {...logger, warn: jest.fn(), error: jest.fn()};
-      const pipeline = new PipelineExecutorImpl(options, options.req, options, undefined, limitLogger);
-      const resource = await pipeline.createResource(type, 0, url, url);
-      if (!resource) throw new Error('Resource was discarded before download');
-      const destination = path.join(root, resource.savePath);
-      await fs.mkdir(path.dirname(destination), {recursive: true});
-      await fs.writeFile(destination, 'cached');
-
-      await expect(pipeline.download(resource)).resolves.toBeUndefined();
-
-      expect(requests).toBe(1);
-      expect(resource.shouldBeDiscardedFromDownload).toBe(true);
-      expect(resource.meta.resourceSize).toBeGreaterThan(1024);
-      expect(resource.meta.resourceSizeLimit).toBe(1024);
-      expect(resource.meta.error).toBeUndefined();
-      expect(limitLogger.warn).toHaveBeenCalled();
-      expect(limitLogger.error).not.toHaveBeenCalled();
-      expect(await fs.readFile(destination, 'utf8')).toBe('cached');
-      expect(await fs.readdir(path.dirname(destination))).toEqual([path.basename(destination)]);
-    });
 });

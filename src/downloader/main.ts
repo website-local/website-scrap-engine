@@ -1,94 +1,34 @@
-import {disposeHtmlResource} from '../cheerio.js';
-import type {Logger} from '../logger/types.js';
-import {createFilePublication, outputConflict, OutputDirectories, StagingDirectories} from '../output-store.js';
-import type {FilePublication} from '../output-store.js';
-import {checkResourceSize, resourceBodyBytes} from '../resource-limits.js';
-import {adjust, resetAdjustment} from './adjust-concurrency.js';
 import PQueue from 'p-queue';
 import URI from '../uri.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
-import {mergeOverrideOptions} from '../options.js';
+import {mergeOverrideOptions, selectDownloadHandlers} from '../options.js';
 import type {RawResource, Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
+import {disposeHtmlResource} from '../cheerio.js';
+import {skip} from '../logger/logger.js';
+import {setLogger} from '../logger/logger.js';
 import {createDefaultLogger} from '../logger/default-logger.js';
 import {importDefaultFromPath} from '../util.js';
-import type {DownloaderStats, DownloaderWithMeta, ResourceOutcome} from './types.js';
+import type {DownloaderStats, DownloaderWithMeta} from './types.js';
 import {completedStatusChange, PipelineExecutorImpl} from './pipeline-executor-impl.js';
-import type {InitSubmitFunc, ResourceStatus, SubmitResourceFunc} from '../life-cycle/types.js';
-
-export type DownloaderState = 'initializing' | 'ready' | 'running' |
-  'paused' | 'closing' | 'closed' | 'failed';
-
-export interface DisposeOptions {
-  /** Default: cancel accepted work and await cleanup. */
-  drain?: boolean;
-}
+import type {InitSubmitFunc} from '../life-cycle/types.js';
+import {adjust, resetAdjustment} from './adjust-concurrency.js';
 
 export abstract class AbstractDownloader implements DownloaderWithMeta {
   readonly queue: PQueue;
-  _state: DownloaderState = 'initializing';
-  _closing?: Promise<void>;
-  _startGeneration = 0;
-  _admittedCount = 0;
-  readonly resourceOutcomes = new Map<string, ResourceOutcome>();
-  get outcomes(): ReadonlyMap<string, ResourceOutcome> { return this.resourceOutcomes; }
-  readonly notifications = new Set<Promise<void>>();
-  protected readonly abortController = new AbortController();
-  logger: Logger = createDefaultLogger();
-  outputDirectories?: OutputDirectories;
-  readonly stagingDirectories = new StagingDirectories();
-  readonly outputReservations: Record<string, {owner: string; active: number; published: boolean;
-    identity?: string; shared?: boolean; comparing?: boolean; waiters?: Set<() => void>}> = {};
-  /** One handler per downloader; no closure or pending array per parent. */
-  readonly submit: SubmitResourceFunc = (resources, parent) => {
-    if (Array.isArray(resources)) {
-      for (const resource of resources) this.submit(resource, parent, this.pipeline);
-      return;
-    }
-    this.signal.throwIfAborted();
-    const count = parent.discoveredCount;
-    if (count === undefined) throw new Error('Resource discovery is closed for this parent');
-    parent.discoveredCount = count + 1;
-    const limit = this.options.maxDiscoveredResources;
-    if (limit !== undefined && count >= limit) {
-      resources.shouldBeDiscardedFromDownload = true;
-      this.logger.warn('system.skip', 'Resource exceeds maxDiscoveredResources', resources.url, count + 1, limit);
-      this.notifyStatus(resources, 'dispose');
-      return;
-    }
-    this._addProcessedResource(resources);
-  };
-
-  get state(): DownloaderState { return this._state; }
-  get signal(): AbortSignal { return this.abortController.signal; }
+  readonly _asyncOptions: Promise<DownloadOptions>;
   readonly _overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string };
   _options?: DownloadOptions;
+  _isInit: boolean;
   _pipeline?: PipelineExecutorImpl;
-  readonly init: Promise<void>;
+  _initOptions: Promise<void>;
+  protected _isDisposing = false;
+  private _disposePromise?: Promise<void>;
+  private _startRequested = false;
   readonly downloadedUrl: Set<string> = new Set<string>();
   readonly queuedUrl: Set<string> = new Set<string>();
-  // Alias retention is independent of an in-flight reservation. A failing
-  // request must not release another successful request's redirect target.
-  readonly retainedAliases = new Set<string>();
-
-  canonicalUrl(url: string, parsed?: URI): string {
-    if (parsed && !parsed.hash() && (!this.options.deduplicateStripSearch || !parsed.search())) {
-      return parsed.toString();
-    }
-    const uri = (parsed ? parsed.clone() : new URI(url)).hash('');
-    if (this.options.deduplicateStripSearch) uri.search('');
-    return uri.toString();
-  }
-
-  protected retainRedirectAlias(url: string, parsed?: URI): void {
-    const key = this.canonicalUrl(url, parsed);
-    this.retainedAliases.add(key);
-    this.queuedUrl.add(key);
-  }
-
-  releaseFailedReservation(url: string): void {
-    if (!this.retainedAliases.has(url)) this.queuedUrl.delete(url);
-  }
+  /** Created only when a redirect alias collides with another admission. */
+  declare private _retainedRedirectAliases?: Set<string>;
   readonly meta: DownloaderStats = {
     currentPeriodCount: 0,
     firstPeriodCount: 0,
@@ -99,32 +39,33 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
   protected constructor(public pathToOptions: string,
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
+    this._asyncOptions = importDefaultFromPath(pathToOptions);
     this._overrideOptions = overrideOptions;
-    // A safeguard here, concurrency is set later
-    this.queue = new PQueue({concurrency: 2, autoStart: false});
-    this.init = importDefaultFromPath<DownloadOptions>(pathToOptions).then(options => {
+    // Initial concurrency is replaced after configuration. On p-queue upgrades,
+    // check pause/clear/onIdle semantics in p-queue.spec.ts and disposal tests.
+    // Queue 9's backlog win hid extra bounded/yielding work; measure those paths
+    // and complete crawls before replacing the accepted 8.1.1 baseline.
+    this.queue = new PQueue({concurrency: 2});
+    this._isInit = false;
+    this._initOptions = this._asyncOptions.then(options => {
       options = mergeOverrideOptions(options, this._overrideOptions);
+      selectDownloadHandlers(options);
       this._options = options;
-      if (!options.strictOutputChecks) this.outputDirectories = new OutputDirectories();
       // https://github.com/website-local/website-scrap-engine/issues/1113
       this.queue.concurrency = options.concurrency;
-      this.logger = (options.createLogger ?? createDefaultLogger)(options);
-      this._pipeline = new PipelineExecutorImpl(options, options.req, options, this.signal, this.logger, this);
-      return this._internalInit(options).then(() => {
-        if (this._state === 'initializing') this._state = 'ready';
+      this._pipeline = new PipelineExecutorImpl(options, options.req, options);
+      setLogger((options.createLogger ?? createDefaultLogger)(options));
+      const initializing = this._internalInit(options);
+      if (initializing) return initializing.then(() => {
+        this._isInit = true;
       });
-    }).catch(error => {
-      if (this._state !== 'closing' && this._state !== 'closed') this._state = 'failed';
-      throw error;
+      this._isInit = true;
     });
-    // Preserve rejection for callers while avoiding an unhandled rejection when
-    // they choose to dispose a downloader whose initialization failed.
-    void this.init.catch(() => undefined);
+    void this._initOptions.catch(() => undefined);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected _internalInit(options: DownloadOptions): Promise<void> {
-    return Promise.resolve();
+  protected _internalInit(options: DownloadOptions): void | Promise<void> {
   }
 
   get options(): DownloadOptions {
@@ -146,10 +87,7 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
   }
 
   set concurrency(newConcurrency: number) {
-    if (!Number.isSafeInteger(newConcurrency) || newConcurrency < 1) {
-      throw new RangeError('concurrency must be a positive safe integer');
-    }
-    this.queue.concurrency = Math.min(newConcurrency, this._options?.maxConcurrency ?? Infinity);
+    this.queue.concurrency = newConcurrency;
   }
 
   get queueSize(): number {
@@ -162,15 +100,20 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
 
   async addInitialResource(urlArr: string[]): Promise<void> {
     if (!this._pipeline) {
-      // Initialization may itself await addInitialResource.
-      await this.init;
+      // _initOptions could await addInitialResource
+      await this._initOptions;
     }
-    urlArr = urlArr.slice();
     const pipeline = this.pipeline;
-    const submit: InitSubmitFunc = (url: string) => {
-      urlArr.push(url);
-    };
-    await pipeline.init(pipeline, this, submit);
+    if (pipeline.lifeCycle.init?.length) {
+      // Init submissions belong to this call, even when downloaders reuse a
+      // module's options or the caller supplies a shared initial URL array.
+      urlArr = urlArr.slice();
+      const submit: InitSubmitFunc = (url: string) => {
+        urlArr.push(url);
+      };
+      const initializing = pipeline.init(pipeline, this, submit);
+      if (initializing) await initializing;
+    }
     // noinspection DuplicatedCode
     for (let i = 0; i < urlArr.length; i++) {
       let url: string | void = urlArr[i];
@@ -191,93 +134,52 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     }
   }
 
-  protected _addProcessedResource(res: Resource): boolean | void {
-    if (this._state === 'closing' || this._state === 'closed' || this.signal.aborted) {
-      return false;
+  protected canonicalUrl(url: string, parsed?: URI): string {
+    if (parsed && !parsed.hash() &&
+      (!this.options.deduplicateStripSearch || !parsed.search())) {
+      return parsed.toString();
     }
-    // noinspection DuplicatedCode
-    if (res.depth > this.options.maxDepth) {
-      this.logger.info('system.skip', 'skipped max depth', res.url, res.refUrl, res.depth);
-      this.notifyStatus(res, 'dispose');
-      return false;
-    }
-    const resource = res;
-    const resourceLimit = this.options.maxResourceBytes;
-    const checkedBytes = resourceLimit === undefined || resource.body === undefined ? undefined :
-      resourceBodyBytes(resource.body, resource.encoding);
-    if (checkedBytes !== undefined && !checkResourceSize(checkedBytes, resourceLimit, resource, this.logger)) {
-      this.notifyStatus(resource, 'dispose');
-      return false;
-    }
-    const url = this.canonicalUrl(resource.url, resource.uri);
-    if (this.queuedUrl.has(url)) {
-      // Re-submitting the accepted object must not dispose its active document.
-      if (!resource.publicationOwner) this.notifyStatus(resource, 'dispose');
-      return false;
-    }
-    const limit = this.options.maxResources !== undefined &&
-      this._admittedCount >= this.options.maxResources ? 'maxResources' :
-      this.options.maxQueuedResources !== undefined &&
-      this.queue.size >= this.options.maxQueuedResources ? 'maxQueuedResources' : undefined;
-    if (limit) {
-      resource.shouldBeDiscardedFromDownload = true;
-      this.logger.warn('system.skip', 'Crawl admission limit exceeded', limit, resource.url);
-      this.notifyStatus(resource, 'dispose');
-      return false;
-    }
-    delete resource.meta.error;
-    delete resource.meta.errorCause;
-    ++this._admittedCount;
-    this.queuedUrl.add(url);
-    resource.publicationOwner = url;
-    resource.downloaded = false;
-    resource.publishedFiles = 0;
-    resource.shouldBeDiscardedFromDownload = false;
-    const attempt = (this.resourceOutcomes.get(url)?.attempt ?? 0) + 1;
-    const admittedUrl = resource.url;
-    const record = (status: ResourceOutcome['status']) => this.resourceOutcomes.set(url,
-      Object.freeze({status, attempt, url: admittedUrl, downloaded: !!resource.downloaded,
-        publishedFiles: resource.publishedFiles ?? 0}));
-    record('queued');
-    void this.queue.add(async () => {
-      let succeeded = false;
-      record('running');
-      try {
-        this.signal.throwIfAborted();
-        succeeded = await this.downloadAndProcessResource(resource) !== false;
-        if (!succeeded) this.releaseFailedReservation(url);
-        else {
-          this.signal.throwIfAborted();
-          if (resource.downloaded && resource.redirectedUrl) {
-            this.retainRedirectAlias(resource.redirectedUrl,
-              resource.uri.toString() === resource.redirectedUrl ? resource.uri : undefined);
-          }
-        }
-      } catch (error) {
-        succeeded = false;
-        this.releaseFailedReservation(url);
-        throw error;
-      } finally {
-        let status: ResourceOutcome['status'];
-        if (this.signal.aborted) status = 'cancelled';
-        else if (!succeeded) status = 'failed';
-        else if (resource.publishedFiles) status = 'saved';
-        else if (!resource.downloaded || resource.shouldBeDiscardedFromDownload) status = 'skipped';
-        else status = 'processed';
-        if (status !== 'failed' && status !== 'cancelled' && resource.downloaded) {
-          this.downloadedUrl.add(admittedUrl);
-        }
-        if (status === 'cancelled') this.releaseFailedReservation(url);
-        record(status);
-      }
-    }).catch(error => {
-      this.handleError(error, this.signal.aborted ? 'cancelled' : 'processing resource', resource);
-    });
-    return true;
+    const uri = (parsed ? parsed.clone() : URI(url)).hash('');
+    if (this.options.deduplicateStripSearch) uri.search('');
+    return uri.toString();
   }
 
-  abstract downloadAndProcessResource(res: Resource): Promise<boolean | void>;
+  protected retainRedirectAlias(url: string, queuedUrl?: string): void {
+    const alias = this.canonicalUrl(url);
+    if (alias !== queuedUrl && this.queuedUrl.has(alias)) {
+      (this._retainedRedirectAliases ??= new Set<string>()).add(alias);
+    }
+    this.queuedUrl.add(alias);
+  }
 
+  protected releaseFailedAdmission(url: string): void {
+    if (!this._retainedRedirectAliases?.has(url)) this.queuedUrl.delete(url);
+  }
+
+  protected _addProcessedResource(res: Resource): boolean | void {
+    if (this._isDisposing) return false;
+    // noinspection DuplicatedCode
+    if (res.depth > this.options.maxDepth) {
+      skip.info('skipped max depth', res.url, res.refUrl, res.depth);
+      this.pipeline.notifyStatusChange(res, 'dispose');
+      return false;
+    }
+    const url = this.canonicalUrl(res.url, res.uri);
+    if (this.queuedUrl.has(url)) {
+      return false;
+    }
+    this.queuedUrl.add(url);
+    // Reuse admission's key even if a lifecycle hook changes the resource URL.
+    void this.queue.add(() => this.downloadAndProcessResource(res, url))
+      .catch(error => {
+        this.releaseFailedAdmission(url);
+        this.handleError(error, 'processing resource', res);
+      });
+  }
+
+  abstract downloadAndProcessResource(res: Resource, queuedUrl?: string): Promise<boolean | void>;
+
+  /** Submit an already normalized resource from the resource/lifecycle APIs. */
   addProcessedResource(res: Resource): boolean | void {
     try {
       return this._addProcessedResource(res);
@@ -291,138 +193,84 @@ export abstract class AbstractDownloader implements DownloaderWithMeta {
     resource.meta = resource.meta || {};
     resource.meta['error'] = err;
     resource.meta['errorCause'] = cause;
-    this.notifyStatus(resource, 'error');
+    this.pipeline.notifyStatusChange(resource, 'error');
   }
 
-
-  notifyStatus(resource: RawResource, status: ResourceStatus): void {
-    const pipeline = this._pipeline;
-    if (!pipeline) return;
-    const result = pipeline.notifyStatusChange(resource, status);
-    const cleanup = result === completedStatusChange ? disposeHtmlResource(resource) :
-      result.then(() => disposeHtmlResource(resource));
-    if (!cleanup) return;
-    const pending = cleanup;
-    this.notifications.add(pending);
-    const settled = () => { this.notifications.delete(pending); };
-    void pending.then(settled, settled);
+  protected disposeResource(resource: Resource): void | Promise<void> {
+    return disposeHtmlResource(resource);
   }
 
-  claimOutput(destination: string, owner: string, identity?: string, signal?: AbortSignal): boolean | Promise<boolean> {
-    signal?.throwIfAborted();
-    let reservation = this.outputReservations[destination];
-    const sharing = reservation && (reservation.owner !== owner || reservation.shared);
-    if (reservation && (sharing && (!identity || identity !== reservation.identity) ||
-      identity && reservation.identity && identity !== reservation.identity)) {
-      throw outputConflict(destination, reservation.owner);
-    }
-    if (reservation && (reservation.comparing || sharing && reservation.active > 0)) {
-      // A contender must not inspect an earlier direct writer's partial bytes.
-      const waiting = reservation;
-      return new Promise<void>((resolve, reject) => {
-        const cleanup = () => {
-          waiting.waiters!.delete(done);
-          signal?.removeEventListener('abort', aborted);
-        };
-        const done = () => { cleanup(); resolve(); };
-        const aborted = () => { cleanup(); reject(signal!.reason); };
-        (waiting.waiters ??= new Set()).add(done);
-        signal?.addEventListener('abort', aborted, {once: true});
-        if (signal?.aborted) aborted();
-      }).then(() => this.claimOutput(destination, owner, identity, signal));
-    }
-    if (!reservation) this.outputReservations[destination] = reservation = {owner, active: 0, published: false, identity};
-    ++reservation.active;
-    return reservation.comparing = !!sharing && reservation.published;
-  }
-
-  create(destination: string, signal?: AbortSignal, localRoot?: string,
-    writerRejectsSymlinks = false, resource?: Resource, publicationUrl?: string): Promise<FilePublication> {
-    return createFilePublication(destination, signal, localRoot, writerRejectsSymlinks, resource, this, publicationUrl);
-  }
-
-  releaseOutput(destination: string, published: boolean, shared = false): void {
-    const reservation = this.outputReservations[destination];
-    reservation.published ||= published;
-    reservation.shared ||= shared && published;
-    if (--reservation.active === 0) {
-      reservation.comparing = false;
-      if (!reservation.published) delete this.outputReservations[destination];
-      for (const done of reservation.waiters ?? []) done();
-    }
-  }
 
   get downloadedCount(): number {
     return this.downloadedUrl.size;
   }
 
-  async start(): Promise<void> {
-    const generation = ++this._startGeneration;
-    await this.init;
-    if (this._state === 'closing' || this._state === 'closed') {
-      throw new Error('Downloader is closing or closed');
-    }
-    if (generation !== this._startGeneration) return;
-    this._state = 'running';
-    if (typeof this.options.adjustConcurrencyFunc === 'function') {
-      if (this.adjustTimer) clearInterval(this.adjustTimer);
-      if (this.options.adjustConcurrencyFunc === adjust) resetAdjustment(this);
-      this.adjustTimer = setInterval(
-        () => this.options.adjustConcurrencyFunc?.(this, this.logger),
-        this.options.adjustConcurrencyPeriod || 60000);
-      this.adjustTimer.unref();
-    }
-    this.queue.start();
+  start(): void {
+    this._startRequested = true;
+    void this._initOptions.then(() => {
+      if (!this._startRequested || this._isDisposing) return;
+      if (typeof this.options.adjustConcurrencyFunc === 'function') {
+        if (this.adjustTimer) {
+          clearInterval(this.adjustTimer);
+        }
+        if (this.options.adjustConcurrencyFunc === adjust) resetAdjustment(this);
+        this.adjustTimer = setInterval(
+          () => this.options.adjustConcurrencyFunc?.(this),
+          this.options.adjustConcurrencyPeriod || 60000);
+      }
+      this.queue.start();
+    }).catch(() => undefined);
   }
 
   stop(): void {
-    ++this._startGeneration;
-    if (this.adjustTimer) clearInterval(this.adjustTimer);
-    this.adjustTimer = undefined;
+    this._startRequested = false;
+    if (this.adjustTimer) {
+      clearInterval(this.adjustTimer);
+      this.adjustTimer = undefined;
+    }
     this.queue.pause();
-    if (this._state === 'running' || this._state === 'ready') this._state = 'paused';
   }
 
   onIdle(): Promise<void> {
-    return this.init.then(() => this.queue.onIdle());
+    return this._isInit ? this.queue.onIdle() : this._initOptions.then(() => this.queue.onIdle());
   }
 
-  /** Release subclass resources; called once after accepted work has settled. */
-  protected async disposeResources(): Promise<void> {}
+  protected _disposeWorkers(): void | Promise<void> {
+    // Only the multiple-thread downloader owns workers.
+  }
 
-  /** Cancel subclass tasks that cannot observe the main-thread AbortSignal. */
-  protected async cancelActiveWork(): Promise<void> {}
-
-  dispose(options: DisposeOptions = {}): Promise<void> {
-    if (this._closing) return this._closing;
+  dispose(): Promise<void> {
+    if (this._disposePromise) return this._disposePromise;
+    this._isDisposing = true;
     this.stop();
-    this._state = 'closing';
-    if (!options.drain) this.abortController.abort(new Error('Downloader disposed'));
-    this._closing = this.close(options);
-    return this._closing;
+    if (this.queue.size) this.queue.clear();
+    if (this._isInit && !this.queue.pending && !this._pipeline?.lifeCycle.dispose?.length &&
+        this._disposeWorkers === AbstractDownloader.prototype._disposeWorkers &&
+        this._pipeline?.dispose === PipelineExecutorImpl.prototype.dispose) {
+      // An idle ordinary downloader has no remaining work or custom cleanup.
+      return this._disposePromise = completedStatusChange;
+    }
+    this._disposePromise = this.finishDisposal();
+    return this._disposePromise;
   }
 
-  async close(options: DisposeOptions): Promise<void> {
-    const errors: unknown[] = [];
-    try { await this.init; } catch { /* Clean up partial initialization. */ }
-    if (!options.drain) {
-      try { await this.cancelActiveWork(); } catch (error) { errors.push(error); }
+  private async finishDisposal(): Promise<void> {
+    // Publish the shared promise before invoking hooks or overridden cleanup.
+    if (this._isInit) await this._initOptions;
+    else {
+      await this._initOptions.catch(() => undefined);
+      if (this.queue.size) this.queue.clear();
     }
-    // Do not clear PQueue: clear() leaves its accepted task promises unsettled.
-    // Cancelled tasks enter their wrapper, observe the signal, and do no I/O.
-    this.queue.start();
-    await this.queue.onIdle();
-    // A failed notification must not interrupt worker/pipeline cleanup.
-    while (this.notifications.size) {
-      for (const result of await Promise.allSettled(this.notifications)) {
-        if (result.status === 'rejected') errors.push(result.reason);
+    try {
+      const disposing = this._disposeWorkers();
+      if (disposing) await disposing;
+    } finally {
+      if (this.queue.pending) await this.queue.onIdle();
+      if (this._pipeline) {
+        const disposing = this._pipeline.dispose(this._pipeline, this);
+        if (disposing) await disposing;
       }
     }
-    try { await this.disposeResources(); } catch (error) { errors.push(error); }
-    try {
-      await this._pipeline?.dispose(this._pipeline, this);
-    } catch (error) { errors.push(error); }
-    this._state = 'closed';
-    if (errors.length) throw new AggregateError(errors, 'Downloader cleanup failed');
   }
+
 }

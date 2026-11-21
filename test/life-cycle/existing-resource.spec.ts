@@ -11,20 +11,14 @@ import type {
 } from '../../src/life-cycle/types.js';
 import type {StaticDownloadOptions} from '../../src/options.js';
 import type {Stats} from 'node:fs';
-import {constants} from 'node:fs';
 
 const mockStat = jest.fn<(path: string) => Promise<Stats>>();
 
 jest.unstable_mockModule('node:fs', () => {
   const mod = {
-    constants,
     // needed by other transitive imports
     realpath: jest.fn(),
     readFile: jest.fn(),
-    writeFile: jest.fn(),
-    lstat: jest.fn(),
-    createReadStream: jest.fn(),
-    createWriteStream: jest.fn(),
     promises: {
       writeFile: jest.fn(),
       utimes: jest.fn(),
@@ -74,7 +68,6 @@ function makeLifeCycle(
     init: [],
     linkRedirect: [],
     detectResourceType: [],
-    generateSavePath: [],
     createResource,
     processBeforeDownload: [],
     download: [
@@ -118,8 +111,8 @@ describe('existingResource: download stage', () => {
     const res = makeResource();
 
     const result = await pipeline.download(res);
-    expect(result).toBeDefined();
-    expect(result!.body).toBe('<html></html>');
+    if (!result || result === true) throw new Error('Expected a buffered download');
+    expect(result.body).toBe('<html></html>');
     expect(mockStat).not.toHaveBeenCalled();
   });
 
@@ -161,8 +154,8 @@ describe('existingResource: download stage', () => {
     mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.download(res);
-    expect(result).toBeDefined();
-    expect(result!.body).toBe('<html></html>');
+    if (!result || result === true) throw new Error('Expected a buffered download');
+    expect(result.body).toBe('<html></html>');
   });
 
   test('skipSave — treated as overwrite at download stage', async () => {
@@ -174,8 +167,8 @@ describe('existingResource: download stage', () => {
     mockStat.mockResolvedValue(fakeStat);
 
     const result = await pipeline.download(res);
-    expect(result).toBeDefined();
-    expect(result!.body).toBe('<html></html>');
+    if (!result || result === true) throw new Error('Expected a buffered download');
+    expect(result.body).toBe('<html></html>');
   });
 
   test('ifModifiedSince — clones requestOptions with header', async () => {

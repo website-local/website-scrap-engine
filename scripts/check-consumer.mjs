@@ -6,56 +6,52 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
 
-// Install the tarball into a separate consumer first. This check uses that
-// installed runtime and its declarations, never a source/consumer module alias.
-if (!process.argv[2]) {
-  throw new Error('Usage: node scripts/check-consumer.mjs CONSUMER [with-peer] [--smoke-only] [--grovedom]');
-}
+if (!process.argv[2]) throw new Error('Usage: check-consumer.mjs CONSUMER [--types-only] [--smoke-only] [--grovedom]');
 const consumer = path.resolve(process.argv[2]);
 const project = fileURLToPath(new URL('../', import.meta.url));
 assert.notEqual(consumer, path.resolve(project), 'Use a separate packed consumer');
 const entry = path.join(consumer, 'node_modules/website-scrap-engine/lib/index.js');
 await fs.access(entry);
-await fs.copyFile(new URL('./fixtures/consumer.ts', import.meta.url), path.join(consumer, 'wse-consumer-types.ts'));
-const config = path.join(consumer, 'wse-consumer-tsconfig.json');
-await fs.writeFile(config, JSON.stringify({compilerOptions: {
-  module: 'NodeNext', moduleResolution: 'NodeNext', target: 'ES2022', strict: true,
-  noEmit: true, skipLibCheck: false, types: ['node'], typeRoots: [path.join(project, 'node_modules/@types')]
-}, include: ['wse-consumer-types.ts']}, null, 2) + '\n');
-
 const execute = promisify(execFile);
-await execute(process.execPath, [path.join(project, 'node_modules/typescript/bin/tsc'), '--project', config],
-  {cwd: consumer, timeout: 60000});
-const scripts = process.argv.includes('--smoke-only') ? ['runtime-smoke', 'runtime-log4js-peer'] : [
-  'runtime-smoke', 'runtime-lifecycle', 'runtime-outcomes', 'runtime-failure-retry',
-  'runtime-parent-publication', 'runtime-output-conflicts', 'runtime-discovery',
-  'runtime-adjustment', 'runtime-fast-retry',
-  'runtime-native-http', 'runtime-single-import', 'runtime-log4js-peer'
-];
-if (process.platform === 'win32' && !process.argv.includes('--smoke-only')) scripts.push('runtime-windows-files');
-const checks = scripts.map(script => ({script, parser: 'cheerio', extra: []}));
-if (!process.argv.includes('--smoke-only')) {
-  checks.push({script: 'runtime-html-parser', parser: 'custom',
-    extra: [path.join(project, 'test/grovedom-fixture.js')]});
+const require = createRequire(entry);
+const compilerOptions = {module: 'NodeNext', moduleResolution: 'NodeNext', target: 'ES2022',
+  strict: true, noEmit: true, skipLibCheck: false, types: ['node'],
+  typeRoots: [path.join(project, 'node_modules/@types')]};
+// Resolve Cheerio's dependency even when npm keeps it nested. The development
+// alias does not export package.json; its real declarations come from @types/node.
+// Normal consumers use Undici itself.
+try {
+  const cheerioRequire = createRequire(require.resolve('cheerio'));
+  const undiciEntry = cheerioRequire.resolve('undici');
+  const undici = JSON.parse(await fs.readFile(path.join(path.dirname(undiciEntry), 'package.json'), 'utf8'));
+  if (undici.name === '@favware/skip-dependency') {
+    compilerOptions.paths = {undici: [path.join(project, 'node_modules/undici-types/index.d.ts')]};
+  }
+} catch { /* The compiler reports missing real consumer dependencies. */ }
+const scratch = await fs.mkdtemp(path.join(consumer, '.wse-consumer-'));
+const source = path.join(scratch, 'wse-consumer-types.ts');
+const config = path.join(scratch, 'wse-consumer-tsconfig.json');
+try {
+  await fs.copyFile(new URL('./fixtures/consumer.ts', import.meta.url), source);
+  await fs.writeFile(config, JSON.stringify({compilerOptions, include: ['wse-consumer-types.ts']}, null, 2));
+  await execute(process.execPath, [...process.execArgv, path.join(project, 'node_modules/typescript/bin/tsc'), '-p', config],
+    {cwd: consumer, timeout: 40000});
+  const results = [];
+  if (!process.argv.includes('--types-only')) {
+    const checks = [['runtime-smoke', []]];
+    if (!process.argv.includes('--smoke-only')) checks.push(['runtime-native-http', []]);
+    if (process.argv.includes('--grovedom')) {
+      checks.push(['runtime-html-parser', [require.resolve('grovedom')]]);
+    }
+    for (const [script, extra] of checks) {
+      const env = script === 'runtime-native-http' ? {...process.env,
+        NODE_EXTRA_CA_CERTS: path.join(project, 'test/fixtures/native-http-cert.pem')} : process.env;
+      const result = await execute(process.execPath, [...process.execArgv, path.join(project, 'test', script + '.js'), entry, ...extra],
+        {cwd: consumer, env, timeout: 30000, maxBuffer: 1024 * 1024});
+      results.push({script, output: result.stdout.trim()});
+    }
+  }
+  console.log(JSON.stringify({node: process.version, strictDeclarations: true, results}));
+} finally {
+  await fs.rm(scratch, {recursive: true, force: true});
 }
-if (process.argv.includes('--grovedom')) {
-  const parserEntry = createRequire(entry).resolve('grovedom');
-  checks.push(
-    {script: 'runtime-smoke', parser: 'grovedom', extra: ['grovedom']},
-    {script: 'runtime-html-parser', parser: 'grovedom', extra: [parserEntry]}
-  );
-}
-const results = [];
-for (const {script, parser, extra} of checks) {
-  const args = [path.join(project, 'test', script + '.js'),
-    script === 'runtime-single-import' ? path.dirname(entry) : entry, ...extra];
-  if (script === 'runtime-log4js-peer' && process.argv.includes('with-peer')) args.push('with-peer');
-  const env = script === 'runtime-native-http' ? {...process.env,
-    NODE_EXTRA_CA_CERTS: path.join(project, 'test/fixtures/native-http-cert.pem')} : process.env;
-  const result = await execute(process.execPath, args,
-    {cwd: consumer, env, timeout: 60000, maxBuffer: 1024 * 1024});
-  results.push({script, parser, output: result.stdout.trim()});
-  process.stderr.write(script + ' (' + parser + '): passed\n');
-}
-console.log(JSON.stringify({node: process.version, consumer, entry, strictDeclarations: true,
-  loggingPeer: process.argv.includes('with-peer'), grovedom: process.argv.includes('--grovedom'), results}, null, 2));

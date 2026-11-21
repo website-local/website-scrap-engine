@@ -1,6 +1,7 @@
+import {limitResourceStream} from 'website-scrap-engine/lib/resource-limits.js';
 import {resource, downloader, options, lifeCycle, URI, NativeUri, loadHtml, disposeHtmlResource}
   from 'website-scrap-engine';
-import type {HtmlParserOptions, SourceDefinition} from 'website-scrap-engine';
+import type {HtmlParserOptions, SourceDefinition, logger as loggerTypes} from 'website-scrap-engine';
 import type {Dispatcher} from 'undici';
 import {load as cheerioLoad} from 'cheerio';
 
@@ -28,7 +29,13 @@ const realUndici: 0 extends (1 & Dispatcher) ? false : true = true;
 const close: (crawler: downloader.MultiThreadDownloader) => Promise<void> = crawler => crawler.dispose();
 
 const configuration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
-  maxResourceBytes: 1024, maxDiscoveredResources: 16, maxConcurrency: 4});
+  localRoot: 'output', concurrency: 4});
+options.selectDownloadHandlers(configuration);
+const terminalDownload: lifeCycle.types.DownloadResourceFunc = () => true;
+const terminalPipeline: (
+  pipeline: downloader.PipelineExecutorImpl
+) => Promise<lifeCycle.types.DownloadResource | true | void> = pipeline => pipeline.download(res);
+void terminalDownload; void terminalPipeline;
 const parserOptions: HtmlParserOptions = {loadHtml: cheerioLoad};
 // @ts-expect-error Parser selection belongs to the downstream loader.
 parserOptions.htmlParser = 'grovedom';
@@ -41,9 +48,12 @@ const customParserConfiguration = options.defaultDownloadOptions({
 });
 customParserConfiguration.loadHtml = cheerioLoad;
 customParserConfiguration.processAfterDownload.push((res, _submit, currentOptions, pipeline) => {
-  const hookLoader: HtmlParserOptions['loadHtml'] = currentOptions.loadHtml;
-  const pipelineLoader: HtmlParserOptions['loadHtml'] = pipeline.options.loadHtml;
-  void hookLoader; void pipelineLoader;
+  // Hooks receive cloneable settings; loaders stay in the application's configuration.
+  const configuredLoader: HtmlParserOptions['loadHtml'] = customParserConfiguration.loadHtml;
+  const pipelineOptions: NonNullable<Parameters<typeof pipeline.processAfterDownload>[2]> = {
+    ...currentOptions, loadHtml: configuredLoader
+  };
+  void pipelineOptions;
   return res;
 });
 const staticOverrides: Partial<options.StaticDownloadOptions> = {};
@@ -62,22 +72,22 @@ const parsedHtml: Promise<string> = (async () => {
     return $.html();
   } finally { await disposeHtmlResource(res); }
 })();
-declare const crawler: downloader.SingleThreadDownloader;
-const outcome: downloader.types.ResourceOutcome | undefined = crawler.outcomes.get(res.url);
-const progress: NonNullable<downloader.types.DownloadWorkerMessage['progress']> = {
-  publishedFiles: 1, skipped: false
-};
+configuration.generateSavePath = (uri, isHtml, keepSearch, localSrcRoot) =>
+  resource.generateSavePath(uri, isHtml, keepSearch, localSrcRoot);
+const directResource = resource.createResource({type: resource.ResourceType.Html,
+  depth: 0, url: 'https://example.test/', refUrl: 'https://example.test/', localRoot: 'output',
+  generateSavePathFn: configuration.generateSavePath});
 const wire: resource.WireResource = resource.prepareResourceForClone(res);
 
 // @ts-expect-error Runtime URI instances cannot cross the wire boundary.
 wire.uri = res.uri;
 // @ts-expect-error Normalized URI fields are required, not optional.
 res.uri = undefined;
-if (outcome) {
-  // @ts-expect-error Outcome snapshots are readonly.
-  outcome.publishedFiles = 1;
-}
 void host; void realUndici; void close; void configuration;
-void outcome; void progress;
+void directResource;
 void compatibleUri; void nativeUri; void query;
 void parserConfiguration; void parsedHtml;
+
+const logType: loggerTypes.LogType = 'custom.consumer';
+const categoryLogger = (log: loggerTypes.CategoryLogger): boolean => log.isTraceEnabled();
+void logType; void categoryLogger; void limitResourceStream(1024);

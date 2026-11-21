@@ -1,20 +1,11 @@
-import type {Resource} from './resource.js';
-import type {PipelineExecutor} from './life-cycle/pipeline-executor.js';
 import type {ObjectEncodingOptions} from 'node:fs';
 import fs from 'node:fs';
-import {join, resolve, sep} from 'node:path';
+import {dirname, join, resolve, sep} from 'node:path';
+import {promisify} from 'node:util';
 import type {ResourceBody, ResourceEncoding} from './resource.js';
-import {noFollowWriteFlags, publishFile} from './output-store.js';
+import {error as errorLogger} from './logger/logger.js';
 
-const writeFileBytes = (target: string, data: string | Uint8Array,
-  options?: ObjectEncodingOptions & {flag?: number}): Promise<void> =>
-  new Promise((resolve, reject) => {
-    // Node accepts numeric open flags; the Node 22 WriteFileOptions type omits them.
-    fs.writeFile(target, data, (options ?? {}) as fs.WriteFileOptions, error => {
-      if (error?.code === 'ELOOP') error.message = 'Output destination must not be a symlink: ' + target;
-      if (error) reject(error); else resolve();
-    });
-  });
+export const readFile = promisify(fs.readFile);
 
 export const mkdirRetry = async (dir: string): Promise<void> => {
   await fs.promises.mkdir(dir, {recursive: true});
@@ -24,10 +15,9 @@ export const safeJoin = (root: string, relativePath: string): string => {
   const filePath = join(root, relativePath);
   const resolvedRoot = resolve(root);
   const resolvedPath = resolve(filePath);
-  const rootPrefix = resolvedRoot.endsWith(sep) ? resolvedRoot : resolvedRoot + sep;
   // Compare resolved paths so custom save paths cannot traverse outside root.
   if (resolvedPath !== resolvedRoot &&
-    !resolvedPath.startsWith(rootPrefix)) {
+    !resolvedPath.startsWith(resolvedRoot.endsWith(sep) ? resolvedRoot : resolvedRoot + sep)) {
     throw new Error('Resolved path escapes root: ' + relativePath);
   }
   return filePath;
@@ -38,15 +28,10 @@ export const writeFile = async (
   data: ResourceBody,
   encoding: ResourceEncoding,
   mtime?: number | void,
-  atime?: number | void,
-  localRoot?: string,
-  resource?: Resource,
-  pipeline?: PipelineExecutor,
-  publicationUrl?: string
+  atime?: number | void
 ): Promise<void> => {
-  pipeline?.signal?.throwIfAborted();
   let fileData: Uint8Array | string;
-  let options: ObjectEncodingOptions | undefined;
+  let options: ObjectEncodingOptions | void = void 0;
   if (typeof data === 'string') {
     fileData = data;
     options = {encoding};
@@ -60,20 +45,29 @@ export const writeFile = async (
     // not likely happen
     throw new TypeError('Type of data not supported.');
   }
-  await publishFile(filePath, async (stagingPath, direct) => {
-    if (direct && noFollowWriteFlags !== undefined) {
-      await writeFileBytes(stagingPath, fileData, {...options, flag: noFollowWriteFlags});
-    } else if (options) {
-      await writeFileBytes(stagingPath, fileData, options);
-    } else {
-      await writeFileBytes(stagingPath, fileData);
-    }
-    if (typeof mtime === 'number' && Number.isFinite(mtime)) {
-      try {
-        await fs.promises.utimes(stagingPath, atime ?? mtime, mtime);
-      } catch (e) {
-        pipeline?.logger.warn('system.error', 'skipping utimes ' + filePath, e);
+  await new Promise<void>((resolve, reject) => {
+    const complete = (error: NodeJS.ErrnoException | null) => error ? reject(error) : resolve();
+    fs.writeFile(filePath, fileData, options ?? {}, error => {
+      if (error?.code !== 'ENOENT') {
+        complete(error);
+        return;
       }
+      // Existing parents need no separate probe. Retry only the missing-parent
+      // case, and let the second write report any remaining filesystem error.
+      fs.mkdir(dirname(filePath), {recursive: true}, error => {
+        if (error) reject(error);
+        else fs.writeFile(filePath, fileData, options ?? {}, complete);
+      });
+    });
+  });
+  if (typeof mtime === 'number' && Number.isFinite(mtime)) {
+    if (typeof atime !== 'number' || !Number.isFinite(atime)) {
+      atime = mtime;
     }
-  }, pipeline?.signal, localRoot, undefined, noFollowWriteFlags !== undefined, resource, pipeline?.publicationStore, publicationUrl);
+    try {
+      await fs.promises.utimes(filePath, atime, mtime);
+    } catch (e) {
+      errorLogger.warn('skipping utimes ' + filePath, e);
+    }
+  }
 };

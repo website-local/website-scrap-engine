@@ -2,18 +2,17 @@ import type {OptionsInit as GotOptions} from 'got';
 import type {Stats} from 'node:fs';
 import type {
   createResource,
+  GenerateSavePathFn,
   RawResource,
   Resource,
   ResourceBody,
   ResourceType
 } from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
-import type {HtmlParserOptions} from '../cheerio.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio} from '../types.js';
 import type {DownloaderWithMeta} from '../downloader/types.js';
 import type {WorkerInfo} from '../downloader/worker-pool.js';
-import type URI from '../uri.js';
 
 export type AsyncResult<T> = T | Promise<T>;
 
@@ -26,15 +25,10 @@ export type ResourceStatus =
   | 'error'
   | 'dispose';
 
-/**
- * Read-only status observer. Observers start in array order and their
- * asynchronous work runs concurrently. Return all work that must finish
- * before resource cleanup. Listener exceptions and rejections are swallowed.
- */
 export interface StatusChangeFunc {
   (res: Resource | RawResource,
    status: ResourceStatus,
-   options: StaticDownloadOptions & HtmlParserOptions,
+   options: StaticDownloadOptions,
    pipeline: PipelineExecutor): void | Promise<void>;
 }
 
@@ -58,7 +52,7 @@ export interface InitLifeCycleFunc {
    * after logger initialization but before addInitialResource.
    *
    * Each time a worker initialized,
-   * before the worker starts processing task port messages.
+   * before parentPort?.addListener.
    *
    * The init life cycle could be async,
    * in main thread the addInitialResource should wait for init completed,
@@ -88,7 +82,7 @@ export interface LinkRedirectFunc {
    * or void to skip processing and replacing to relative path
    */
   (url: string, element: Cheerio | null, parent: Resource | null,
-   options: StaticDownloadOptions & HtmlParserOptions,
+   options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<string | void>;
 }
 
@@ -106,74 +100,8 @@ export interface DetectResourceTypeFunc {
    */
   (url: string, type: ResourceType, element: Cheerio | null,
    parent: Resource | null,
-   options: StaticDownloadOptions & HtmlParserOptions,
+   options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<ResourceType | void>;
-}
-
-export interface GenerateSavePathContext {
-  readonly pipeline: PipelineExecutor;
-  /**
-   * Resolved absolute URI for the resource being created.
-   */
-  readonly uri: URI;
-  /**
-   * Resource type after detectResourceType has run.
-   */
-  readonly type: ResourceType;
-  /**
-   * Depth from the initial resource.
-   */
-  readonly depth: number;
-  /**
-   * URL after linkRedirect but before URL resolution.
-   */
-  readonly rawUrl: string;
-  /**
-   * Parent resource URL used for URL resolution.
-   */
-  readonly refUrl: string;
-  /**
-   * Effective parent save path used for replacePath calculation.
-   */
-  readonly refSavePath: string;
-  /**
-   * Parent resource type, when known.
-   */
-  readonly refType?: ResourceType;
-  /**
-   * True when URL resolution/checking failed and skipReplacePathError allowed
-   * the resource to be created only for link replacement.
-   */
-  readonly replacePathHasError: boolean;
-  /**
-   * Download and parser options.
-   */
-  readonly options: StaticDownloadOptions & HtmlParserOptions;
-}
-
-export interface GenerateSavePathResult {
-  /**
-   * Save path relative to localRoot.
-   */
-  savePath: string;
-  /**
-   * Optional parent save path override for replacePath calculation.
-   */
-  refSavePath?: string;
-}
-
-export interface GenerateSavePathFunc {
-  /** Complete generators can skip the built-in starting path. */
-  fullSavePath?: boolean;
-  /**
-   * Generate or transform a resource save path.
-   *
-   * The first function receives the built-in save path. Each later function
-   * receives the previous function's save path. Return undefined to discard
-   * the resource.
-   */
-  (savePath: string,
-   context: GenerateSavePathContext): AsyncResult<string | GenerateSavePathResult | void>;
 }
 
 export interface ProcessResourceBeforeDownloadFunc {
@@ -189,7 +117,7 @@ export interface ProcessResourceBeforeDownloadFunc {
    */
   (res: Resource, element: Cheerio | null,
    parent: Resource | null,
-   options: StaticDownloadOptions & HtmlParserOptions,
+   options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<Resource | void>;
 }
 
@@ -204,8 +132,8 @@ export type RequestOptions = GotOptions;
  * to be treated as downloaded, resource
  * which passed the download pipeline without body is discarded.
  *
- * Pure-binary resource, which should never create child resource from,
- * can be saved to disk at here and filtered out.
+ * A terminal streaming acquisition returns true without a buffered body.
+ * Return void to discard a resource or skip its acquisition.
  */
 export interface DownloadResourceFunc {
   /**
@@ -214,24 +142,20 @@ export interface DownloadResourceFunc {
    * @param requestOptions passed to got
    * @param options
    * @param pipeline
-   * @return processed resource, or void to discard resource
+   * @return processed resource, true for terminal streaming completion, or void to discard
    * @throws Error on download failures
    */
-  (res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions & HtmlParserOptions,
-   pipeline: PipelineExecutor): AsyncResult<DownloadResource | Resource | void>;
+  (res: Resource, requestOptions: RequestOptions, options: StaticDownloadOptions,
+   pipeline: PipelineExecutor): AsyncResult<DownloadResource | Resource | true | void>;
 }
 
 export interface SubmitResourceFunc {
   /**
-   * Submit resources synchronously while the parent task is active. Children
-   * submitted before a later parent failure remain eligible for processing.
-   * Counts every submission before filtering; over-limit children are discarded.
-   * Throws on cancellation or late submission.
+   * Submit a child during processing. Byte bodies are snapshotted on submission;
+   * the child must not retain its parent or its document in custom metadata.
    * @param res resource or array
-   * @param parent resource being processed; owns its discovery count
-   * @param pipeline explicit executor for shared worker submission
    */
-  (res: Resource | Resource[], parent: Resource, pipeline: PipelineExecutor): void;
+  (res: Resource | Resource[]): void;
 
 }
 
@@ -249,20 +173,21 @@ export interface ProcessResourceAfterDownloadFunc {
    * @param pipeline
    */
   (res: DownloadResource, submit: SubmitResourceFunc,
-   options: StaticDownloadOptions & HtmlParserOptions,
+   options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<DownloadResource | void>;
 }
 
 export interface SaveToDiskFunc {
   /**
-   * Save to disk
+   * Save to disk. Built-in savers consume the body after successful writes and
+   * pending status work. Copy bytes during processing if they are needed later.
    * @see PipelineExecutor.saveToDisk
    * @param res
    * @param options
    * @param pipeline
    * @return void for saved to disk, Resource for not saved.
    */
-  (res: DownloadResource, options: StaticDownloadOptions & HtmlParserOptions,
+  (res: DownloadResource, options: StaticDownloadOptions,
    pipeline: PipelineExecutor): AsyncResult<DownloadResource | void>;
 }
 
@@ -288,7 +213,7 @@ export interface ProcessingLifeCycle {
   init: InitLifeCycleFunc[];
   linkRedirect: LinkRedirectFunc[];
   detectResourceType: DetectResourceTypeFunc[];
-  generateSavePath: GenerateSavePathFunc[];
+  generateSavePath?: GenerateSavePathFn | void;
   createResource: typeof createResource;
   /**
    * link in parent resource would be replaced after this
@@ -338,7 +263,7 @@ export interface ExistingResourceContext {
   stage: ExistingResourceStage;
   localPath: string;
   stat: Stats;
-  options: StaticDownloadOptions & HtmlParserOptions;
+  options: StaticDownloadOptions;
 }
 
 export interface ExistingResourceFunc {

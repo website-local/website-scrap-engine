@@ -8,13 +8,16 @@ import path from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import got from 'got';
 import type {OptionsInit} from 'got';
-import {getRetry} from '../../src/life-cycle/download-resource.js';
-import {streamingDownloadToFile} from '../../src/life-cycle/download-streaming-resource.js';
+import {downloadResource, downloadResourceDirect, getRetry} from '../../src/life-cycle/download-resource.js';
+import {downloadStreamingResource, downloadStreamingResourceDirect,
+  streamingDownloadToFile} from '../../src/life-cycle/download-streaming-resource.js';
+import {readOrCopyLocalResource} from '../../src/life-cycle/read-or-copy-local-resource.js';
 import {createResource, ResourceType} from '../../src/resource.js';
-import {defaultDownloadOptions} from '../../src/options.js';
+import {defaultDownloadOptions, mergeOverrideOptions, selectDownloadHandlers} from '../../src/options.js';
+import type {DownloadOptions} from '../../src/options.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
-import {withHttpCacheSafety} from '../../src/life-cycle/http-cache-safety.js';
+import {beforeRetryHook, withHttpCacheSafety} from '../../src/life-cycle/retry-hook.js';
 
 let server: Server;
 let root: string;
@@ -62,19 +65,117 @@ async function primeCache(route = '/private'): Promise<void> {
   expect(cache.size).toBe(1);
 }
 
+const guardedDownloadHooks = [downloadResource, downloadStreamingResource, readOrCopyLocalResource];
+const directDownloadHooks = [downloadResourceDirect, downloadStreamingResourceDirect, readOrCopyLocalResource];
+
+test('selects direct handlers for standard uncached options without changing the public lifecycle', () => {
+  const lifeCycle = defaultLifeCycle();
+  const config = defaultDownloadOptions({...lifeCycle, localRoot: root});
+  expect(config.download).toEqual(directDownloadHooks);
+  expect(defaultDownloadOptions(config).download).toEqual(directDownloadHooks);
+  expect(lifeCycle.download).toEqual(guardedDownloadHooks);
+});
+
+test.each([
+  ['cache', () => ({req: {cache}})],
+  ['Got init', () => ({req: {hooks: {init: [() => {}]}}})],
+  ['Got beforeRequest', () => ({req: {hooks: {beforeRequest: [() => {}]}}})],
+  ['Got beforeRedirect', () => ({req: {hooks: {beforeRedirect: [() => {}]}}})],
+  ['Got afterResponse', () => ({req: {hooks: {afterResponse: [response => response]}}})],
+  ['Got beforeRetry', () => ({req: {hooks: {beforeRetry: [beforeRetryHook, () => {}]}}})]
+] satisfies Array<[string, () => Partial<DownloadOptions>]>)('keeps guarded handlers with %s configured',
+  (_name, overrides) => {
+    const config = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root, ...overrides()});
+    expect(config.download).toEqual(guardedDownloadHooks);
+  });
+
+function unexpectedCallback(): never {
+  throw new Error('Handler selection must not execute configured lifecycle callbacks');
+}
+
+test.each([
+  ['init', {init: [unexpectedCallback]}],
+  ['processBeforeDownload', {processBeforeDownload: [unexpectedCallback]}],
+  ['dispose', {dispose: [unexpectedCallback]}],
+  ['linkRedirect', {linkRedirect: [unexpectedCallback]}],
+  ['detectResourceType', {detectResourceType: [unexpectedCallback]}],
+  ['download', {download: [...guardedDownloadHooks, unexpectedCallback]}],
+  ['processAfterDownload', {processAfterDownload: [...defaultLifeCycle().processAfterDownload, unexpectedCallback]}],
+  ['saveToDisk', {saveToDisk: [...defaultLifeCycle().saveToDisk, unexpectedCallback]}],
+  ['statusChange', {statusChange: [unexpectedCallback]}],
+  ['createResource', {createResource: unexpectedCallback}],
+  ['generateSavePath', {generateSavePath: unexpectedCallback}],
+  ['loadHtml', {loadHtml: unexpectedCallback}],
+  ['createLogger', {createLogger: unexpectedCallback}],
+  ['adjustConcurrencyFunc', {adjustConcurrencyFunc: unexpectedCallback}]
+] satisfies Array<[string, Partial<DownloadOptions>]>)('keeps uncached handlers direct with a custom %s callback',
+  (_name, overrides) => {
+    const config = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root, ...overrides});
+    expect(config.req.cache).toBeUndefined();
+    expect(config.download.slice(0, 3)).toEqual(directDownloadHooks);
+  });
+
+test('reordered, duplicate and subset builtins remain direct without mutating frozen caller arrays', () => {
+  const lifeCycle = defaultLifeCycle();
+  lifeCycle.download = [readOrCopyLocalResource, downloadStreamingResource, downloadResource, downloadResource];
+  lifeCycle.processAfterDownload = [lifeCycle.processAfterDownload[5], lifeCycle.processAfterDownload[0],
+    lifeCycle.processAfterDownload[5]];
+  Object.freeze(lifeCycle.download);
+  Object.freeze(lifeCycle.processAfterDownload);
+  const config = defaultDownloadOptions({...lifeCycle, localRoot: root});
+  expect(config.download).toEqual([readOrCopyLocalResource, downloadStreamingResourceDirect,
+    downloadResourceDirect, downloadResourceDirect]);
+  expect(lifeCycle.download[1]).toBe(downloadStreamingResource);
+  expect(lifeCycle.download[2]).toBe(downloadResource);
+});
+
+test('reselects both HTTP handlers when later merges enable, disable and reenable caching', () => {
+  const uncached = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root});
+  const cached = mergeOverrideOptions(uncached, {req: {cache}});
+  const disabled = mergeOverrideOptions(cached, {req: {cache: false}});
+  const enabledAgain = mergeOverrideOptions(disabled, {req: {cache}});
+
+  expect(uncached.download).toEqual(directDownloadHooks);
+  expect(uncached.req.cache).toBeUndefined();
+  expect(cached.download).toEqual(guardedDownloadHooks);
+  expect(cached.req.cache).toBe(cache);
+  expect(disabled.download).toEqual(directDownloadHooks);
+  expect(disabled.req.cache).toBeUndefined();
+  expect(enabledAgain.download).toEqual(guardedDownloadHooks);
+  expect(enabledAgain.req.cache).toBe(cache);
+});
+
+test('preserves custom download handlers and restores direct neighbours after disabling caching', () => {
+  const customDownload: DownloadOptions['download'][number] = resource => resource;
+  const config = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root, req: {cache},
+    download: [downloadResourceDirect, customDownload, downloadStreamingResourceDirect, readOrCopyLocalResource]});
+  const disabled = mergeOverrideOptions(config, {req: {cache: false}});
+
+  expect(disabled.req.cache).toBeUndefined();
+  expect(disabled.download).toEqual([
+    downloadResourceDirect, customDownload, downloadStreamingResourceDirect, readOrCopyLocalResource
+  ]);
+  expect(config.download).toEqual([
+    downloadResource, customDownload, downloadStreamingResource, readOrCopyLocalResource
+  ]);
+});
+
 test('reuses default request options with the retained retry logger and still guards custom retry hooks', () => {
   const config = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root});
   const pipeline = new PipelineExecutorImpl(config, config.req, config);
   expect(pipeline.requestOptions.cache).toBeUndefined();
-  expect(pipeline.requestOptions.hooks?.beforeRetry).toEqual([pipeline.retryLogger]);
-  expect(withHttpCacheSafety(pipeline.requestOptions, pipeline.retryLogger)).toBe(pipeline.requestOptions);
+  expect(pipeline.requestOptions.hooks?.beforeRetry).toEqual([beforeRetryHook]);
+  expect(withHttpCacheSafety(pipeline.requestOptions)).toBe(pipeline.requestOptions);
 
   const custom = {...pipeline.requestOptions, hooks: {...pipeline.requestOptions.hooks,
-    beforeRetry: [pipeline.retryLogger, () => {}]}};
-  const guarded = withHttpCacheSafety(custom, pipeline.retryLogger);
+    beforeRetry: [beforeRetryHook, () => {}]}};
+  const originalBeforeRequest = custom.hooks.beforeRequest;
+  const guarded = withHttpCacheSafety(custom);
   expect(guarded).not.toBe(custom);
+  expect(guarded.hooks).not.toBe(custom.hooks);
   expect(guarded.hooks?.beforeRequest).toHaveLength(1);
-  expect(custom.hooks.beforeRequest).toHaveLength(0);
+  expect(custom.hooks.beforeRequest).toBe(originalBeforeRequest);
+  expect(custom.hooks.beforeRequest ?? []).toEqual([]);
 });
 
 describe.each(['buffered', 'streaming'] as const)('%s HTTP cache safety', mode => {
@@ -86,12 +187,59 @@ describe.each(['buffered', 'streaming'] as const)('%s HTTP cache safety', mode =
       return {body: response?.body?.toString(), headers: response?.headers};
     }
     const resource = {...createResource({type: ResourceType.StreamingBinary,
-      depth: 0, url, refUrl: url, localRoot: root, savePath: 'download'}),
-    downloadStartTimestamp: Date.now()};
+      depth: 0, url, refUrl: url, localRoot: root}),
+    savePath: 'download', downloadStartTimestamp: Date.now()};
     const response = await streamingDownloadToFile(resource, requestOptions);
     return {body: await fs.readFile(path.join(root, 'download'), 'utf8'),
       headers: response?.headers};
   }
+
+  test.each(['init', 'processBeforeDownload'] as const)(
+    'guards private responses when the %s lifecycle enables caching and reselects handlers', async stage => {
+      await primeCache();
+      const headers = Object.freeze({'Cache-Control': 'max-stale=999999'});
+      let hookCalls = 0;
+      const enableCache = () => {
+        ++hookCalls;
+        config.req.cache = cache;
+        config.req.headers = headers;
+        selectDownloadHandlers(config);
+      };
+      const lifeCycle = defaultLifeCycle();
+      if (stage === 'init') lifeCycle.init.push(enableCache);
+      else lifeCycle.processBeforeDownload.push(resource => {
+        enableCache();
+        return resource;
+      });
+      const config = defaultDownloadOptions({...lifeCycle, localRoot: root,
+        req: {retry: {limit: 0}, timeout: {request: 2000}}});
+      expect(config.req.cache).toBeUndefined();
+      expect(config.download).toEqual(directDownloadHooks);
+      const pipeline = new PipelineExecutorImpl(config, config.req, config);
+      await pipeline.init(pipeline);
+      expect(config.req.cache).toBe(stage === 'init' ? cache : undefined);
+
+      const url = origin + '/private';
+      const resource = {...createResource({
+        type: mode === 'buffered' ? ResourceType.Binary : ResourceType.StreamingBinary,
+        depth: 0, url, refUrl: url, localRoot: root
+      }), savePath: 'lifecycle-download'};
+      expect(await pipeline.processBeforeDownload(resource, null, null)).toBe(resource);
+      expect(hookCalls).toBe(1);
+      expect(config.download).toEqual(guardedDownloadHooks);
+      const result = await pipeline.download(resource);
+      if (mode === 'buffered') {
+        expect(result).toBe(resource);
+        expect(resource.body?.toString()).toBe('anonymous');
+      } else {
+        expect(result).toBe(true);
+        expect(await fs.readFile(path.join(root, resource.savePath), 'utf8')).toBe('anonymous');
+      }
+      expect(resource.meta.headers?.['set-cookie']).toEqual(['session=anonymous']);
+      expect(requests).toEqual(['/private', '/private']);
+      expect(config.req.cache).toBe(cache);
+      expect(config.req.headers).toBe(headers);
+    });
 
   test.each(['max-stale', 'max-age=0, max-stale = "999999"',
     'MAX-STALE=999999'])('does not revive a private cookie response with %s', async header => {

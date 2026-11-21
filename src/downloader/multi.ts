@@ -1,74 +1,46 @@
-import {MessageChannel, Worker} from 'node:worker_threads';
-import type {Transferable} from 'node:worker_threads';
-import {WorkerPublicationCoordinator} from './worker-publication.js';
-import {disposeHtmlResource} from '../cheerio.js';
-import type {WorkerChannels} from './worker-channel.js';
+import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import type {WorkerFactory, WorkerPoolOptions} from './worker-pool.js';
+import type {WorkerFactory} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
-import type {WireResource, Resource} from '../resource.js';
+import type {Resource, WireResource} from '../resource.js';
 import {decodeResourceFromClone, prepareResourceForClone} from '../resource.js';
-import type {DownloadWorkerMessage, PendingPromiseWithBody} from './types.js';
+import {getLogger} from '../logger/logger.js';
+import type {DownloadWorkerMessage} from './types.js';
 import type {DownloadOptions, StaticDownloadOptions} from '../options.js';
 import type {DownloadResource} from '../life-cycle/types.js';
 import {AbstractDownloader} from './main.js';
+import {completedStatusChange} from './pipeline-executor-impl.js';
 
 export interface MultiThreadDownloaderOptions extends StaticDownloadOptions {
   pathToWorker?: string;
   maxLoad: number;
-  workerPool?: WorkerPoolOptions;
 }
 
 export class MultiThreadDownloader extends AbstractDownloader {
-  _pool: WorkerPool<WireResource, DownloadWorkerMessage> | undefined;
-  readonly publications = new WorkerPublicationCoordinator(this,
-    (workerId, taskId) => (this._pool?.workingTasks.get(taskId) as PendingPromiseWithBody | undefined)
-      ?.workerId === workerId,
-    (worker, error) => {
-      const info = this._pool?.workers.find(info => info.worker === worker);
-      if (info) this._pool?.rejectWorkerTasks(info, error);
-    });
-  readonly createWorker: WorkerFactory = (filename, workerOptions = {}) => {
-    const channel = new MessageChannel();
-    try {
-      const data = workerOptions.workerData as Record<string, unknown> & {workerChannels: WorkerChannels};
-      const options = {...workerOptions, workerData: {...data,
-        workerChannels: {...data.workerChannels, publicationPort: channel.port2}},
-      transferList: [...(workerOptions.transferList ?? []), channel.port2]};
-      const worker = this._workerFactory ? this._workerFactory(filename, options) : new Worker(filename, options);
-      this.publications.attach(worker, channel.port1);
-      return worker;
-    } catch (error) {
-      channel.port1.close();
-      channel.port2.close();
-      throw error;
-    }
-  };
+  private _pool: WorkerPool<WireResource, DownloadWorkerMessage> | undefined;
+  readonly init: Promise<void>;
   workerDispose: Promise<void>[];
 
   constructor(
-    pathToOptions: string,
+    public pathToOptions: string,
     overrideOptions?: Partial<MultiThreadDownloaderOptions>,
-    public readonly _workerFactory?: WorkerFactory
+    private _workerFactory?: WorkerFactory
   ) {
     super(pathToOptions, overrideOptions);
+    this.init = this._initOptions;
     this.workerDispose = [];
   }
 
-  protected async _internalInit(options: DownloadOptions): Promise<void> {
-    this.signal.throwIfAborted();
-    if (options.waitForWorkers) {
-      const pool = this.pool;
-      const cancelStartup = () => { void pool.dispose().catch(() => undefined); };
-      this.signal.addEventListener('abort', cancelStartup, {once: true});
-      try { await pool.ready; }
-      finally { this.signal.removeEventListener('abort', cancelStartup); }
+  protected _internalInit(options: DownloadOptions): void | Promise<void> {
+    if (options.initialUrl?.length || options.init.length) {
+      return this.addInitialResource(options.initialUrl || []);
     }
-    return this.addInitialResource(options.initialUrl ?? []);
   }
 
-  createPool(options: DownloadOptions): WorkerPool<WireResource, DownloadWorkerMessage> {
-    this.signal.throwIfAborted();
+  get pool(): WorkerPool<WireResource, DownloadWorkerMessage> {
+    if (this._pool) return this._pool;
+    if (this._isDisposing) throw new Error('disposed');
+    const options = this.options;
     let workerCount: number = options.concurrency;
     if (options.workerCount) {
       workerCount = Math.min(options.workerCount, workerCount);
@@ -78,126 +50,105 @@ export class MultiThreadDownloader extends AbstractDownloader {
     }
     const workerOptions = options as Partial<MultiThreadDownloaderOptions>;
     this._pool = new WorkerPool<WireResource, DownloadWorkerMessage>(workerCount,
-      workerOptions.pathToWorker || fileURLToPath(new URL('worker.js', import.meta.url)),
-      {pathToOptions: this.pathToOptions, overrideOptions: this._overrideOptions, workerSafeLogger: this.logger.workerSafe === true},
+      // Resolve the emitted worker next to this ESM module.
+      workerOptions.pathToWorker ||
+        path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'worker.js'),
+      {pathToOptions: this.pathToOptions, overrideOptions: this._overrideOptions,
+        useWorkerLogger: getLogger().workerSafe === true},
       workerOptions.maxLoad || -1,
-      this.createWorker,
-      workerOptions.workerPool,
-      this.logger
+      this._workerFactory
     );
-    for (const info of this.pool.workers) {
-      info.worker.addListener('exit',
-        exitCode => {
-          const disposed = Promise.resolve(this.pipeline.dispose(this.pipeline, this, info, exitCode));
-          void disposed.catch(() => undefined);
-          this.workerDispose.push(disposed);
-        });
+    for (const info of this._pool.workers) {
+      info.worker.on('exit', exitCode => {
+        const disposing = this.pipeline.dispose(this.pipeline, this, info, exitCode);
+        if (disposing) {
+          void disposing.catch(() => undefined);
+          this.workerDispose.push(disposing);
+        }
+      });
     }
     return this._pool;
   }
 
-  get pool(): WorkerPool<WireResource, DownloadWorkerMessage> {
-    // Creation is synchronous and one-shot; submitTask waits for worker readiness.
-    return this._pool ?? this.createPool(this.options);
-  }
-
-  async downloadAndProcessResource(res: Resource): Promise<boolean | void> {
-    let owned: Resource = res;
+  async downloadAndProcessResource(res: Resource, queuedUrl?: string): Promise<boolean | void> {
+    let r: DownloadResource | void = undefined;
+    let msg: DownloadWorkerMessage | undefined;
+    let stage = 'downloading resource';
     try {
-      let r: DownloadResource | void;
       try {
-        r = await this.pipeline.download(res);
-        if (!r) {
-          await this.pipeline.notifyStatusChange(res, 'download');
-          return;
-        }
-        owned = r;
-      } catch (e) {
-        this.handleError(e, 'downloading resource', res);
-        return false;
-      }
-      const submit = async (body: WireResource, transfers?: Transferable[]): Promise<DownloadWorkerMessage> => {
-        let taskId: number | undefined;
-        let completed = false;
-        try {
-          const result = await this.pool.submitTask(body, transfers, id => {
-            taskId = id;
-            this.publications.register(id, r);
-          }, worker => { this.publications.assign(taskId!, worker); });
-          completed = true;
-          return result;
-        } finally {
-          if (taskId !== undefined) await this.publications.finish(taskId, !completed);
-        }
-      };
-      let msg: DownloadWorkerMessage;
-      let children: Resource[];
-      try {
-        const wire = prepareResourceForClone(r);
-        if ((ArrayBuffer.isView(r.body) || Buffer.isBuffer(r.body)) &&
-        r.body.byteOffset === 0 &&
-        r.body.byteLength === r.body.buffer.byteLength &&
-        r.body.buffer instanceof ArrayBuffer) {
-        // the array buffer view fully owns the underlying ArrayBuffer
-          wire.body = r.body.buffer;
-          msg = await submit(wire, [wire.body]);
+        const downloaded = await this.pipeline.download(res);
+        if (downloaded !== res && (!downloaded || downloaded === true)) {
+          const notification = this.pipeline.notifyStatusChange(res, 'download');
+          if (notification !== completedStatusChange) await notification;
+          if (!downloaded) return;
+          // true completes acquisition without starting a processing worker.
         } else {
-        // lets clone and send it.
-          msg = await submit(wire);
-        }
-        if (!Array.isArray(msg.body)) throw new TypeError('Worker result.body must be a resource array');
-        if (this.options.maxDiscoveredResources !== undefined &&
-        msg.body.length > this.options.maxDiscoveredResources) {
-          throw new Error('Worker result exceeds maxDiscoveredResources');
-        }
-        // Validate the whole batch before admitting any children.
-        children = msg.body.map(decodeResourceFromClone);
-        if (msg.progress !== undefined) {
-          if (!msg.progress || !Number.isSafeInteger(msg.progress.publishedFiles) ||
-          msg.progress.publishedFiles < 0 || typeof msg.progress.skipped !== 'boolean') {
-            throw new TypeError('Worker result.progress is invalid');
+          r = downloaded;
+          stage = 'submitting resource to worker';
+          const wire = prepareResourceForClone(r);
+          const body = r.body;
+          if (ArrayBuffer.isView(body) && body.byteOffset === 0 &&
+            body.byteLength === body.buffer.byteLength && body.buffer instanceof ArrayBuffer) {
+            // Transfer the owned buffer without replacing the source resource's wrapper.
+            wire.body = body.buffer;
+            msg = await this.pool.submitTask(wire, [body.buffer]);
+          } else if (body instanceof ArrayBuffer) {
+            msg = await this.pool.submitTask(wire, [body]);
+          } else {
+            msg = await this.pool.submitTask(wire);
           }
-          r.publishedFiles = (r.publishedFiles ?? 0) + msg.progress.publishedFiles;
-          r.shouldBeDiscardedFromDownload ||= msg.progress.skipped;
+          stage = 'post-process';
+          if (msg.body?.length) {
+            for (const child of msg.body) this._addProcessedResource(decodeResourceFromClone(child));
+          }
+          if (msg.error) throw msg.error;
         }
-        if (msg.redirectedUrl !== undefined && typeof msg.redirectedUrl !== 'string') {
-          throw new TypeError('Worker result.redirectedUrl must be a string');
+      } catch (error) {
+        if (queuedUrl !== undefined) {
+          this.releaseFailedAdmission(queuedUrl);
+          queuedUrl = undefined;
         }
-      } catch (e) {
-        this.handleError(e, 'submitting resource to worker', res);
+        this.handleError(error, stage, res);
         return false;
+      } finally {
+        try {
+          if (r && r !== res) {
+            const disposing = this.disposeResource(r);
+            if (disposing) await disposing;
+          }
+        } finally {
+          const disposing = this.disposeResource(res);
+          if (disposing) await disposing;
+        }
       }
-      if (msg.error) {
-        this.handleError(msg.error, 'post-process', res);
+      const redirectedUrl = r ? msg?.redirectedUrl : res.redirectedUrl;
+      if (redirectedUrl && redirectedUrl !== res.url) {
+        this.retainRedirectAlias(redirectedUrl, queuedUrl);
       }
-      for (const resource of children) this._addProcessedResource(resource);
-      if (msg.error) return false;
-      if (msg.redirectedUrl) {
-        res.redirectedUrl = msg.redirectedUrl;
+    } catch (e) {
+      if (queuedUrl !== undefined) {
+        this.releaseFailedAdmission(queuedUrl);
       }
-    } finally {
-      res.downloaded = owned.downloaded;
-      res.publishedFiles = owned.publishedFiles;
-      res.shouldBeDiscardedFromDownload = owned.shouldBeDiscardedFromDownload;
-      const disposing = disposeHtmlResource(owned);
-      if (disposing) await disposing;
-      if (owned !== res) {
-        const original = disposeHtmlResource(res);
-        if (original) await original;
+      this.handleError(e, stage, res);
+      try {
+        const disposing = this.disposeResource(res);
+        if (disposing) await disposing;
+      } catch (cleanupError) {
+        // Never release a newer admission if an error observer's cleanup fails.
+        res.meta.error = new AggregateError([e, cleanupError], 'Resource cleanup failed', {cause: cleanupError});
       }
+      return false;
     }
+    this.downloadedUrl.add(res.url);
   }
 
-  protected async cancelActiveWork(): Promise<void> {
-    await this._pool?.dispose();
-  }
-
-  protected async disposeResources(): Promise<void> {
-    await this._pool?.dispose();
-    const workerDispose = this.workerDispose;
-    this.workerDispose = [];
-    const results = await Promise.allSettled([this.publications.dispose(), ...workerDispose]);
-    const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
-    if (errors.length) throw new AggregateError(errors, 'Worker cleanup failed');
+  protected _disposeWorkers(): void | Promise<void> {
+    if (!this._pool && !this.workerDispose.length) return;
+    return (async () => {
+      if (this._pool) await this._pool.dispose();
+      const workerDispose = this.workerDispose;
+      this.workerDispose = [];
+      if (workerDispose.length) await Promise.all(workerDispose);
+    })();
   }
 }

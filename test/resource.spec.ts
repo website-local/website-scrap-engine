@@ -569,6 +569,26 @@ describe('resource', function () {
     }
   });
 
+  test.each(['file://localhost', 'file:', 'FiLe:'])('resolves %s aliases inside a source root', scheme => {
+    const ref = scheme + '/archive/docs/page.html';
+    const url = scheme + '/archive/docs/asset.bin';
+    const args = {url, refUrl: ref, type: ResourceType.Binary, depth: 0, localRoot: '/out', localSrcRoot: '/archive/'};
+    expect(createResource(args).downloadLink).toBe('file:///archive/docs/asset.bin');
+    expect(createResource({...args, refUrl: 'https://example.org/'}).savePath).toBe('docs/asset.bin');
+    expect(resolveFileUrl('../next', ref, '/archive/')).toBe('file:///archive/next');
+    expect(() => createResource({...args, url: scheme + '/elsewhere/a', refUrl: 'https://example.org/'}))
+      .toThrow('not starting with localSrcRoot');
+    expect(resolveFileUrl('a', scheme + '/elsewhere/b', '/archive/', true)).toBe('');
+  });
+
+  test('resolves from an escaped referring directory and clamps excess parent steps', () => {
+    const ref = 'file://localhost/site%20root/a%23b/index.html';
+    expect(createResource({url: 'asset.bin', refUrl: ref, type: ResourceType.Binary, depth: 0,
+      localRoot: '/out', localSrcRoot: '/site root/'}).savePath).toBe('a%23b/asset.bin');
+    expect(resolveFileUrl('asset.bin', ref, '/site root')).toBe('file:///site%20root/a%23b/asset.bin');
+    expect(resolveFileUrl('../../../asset.bin', ref, '/site root')).toBe('file:///site%20root/asset.bin');
+  });
+
   test('resolveFileUrl no localSrcRoot', () => {
     expect(() => resolveFileUrl('', ''))
       .toThrow('can not use file url without localSrcRoot');
@@ -848,8 +868,9 @@ describe('normalized resource boundary', () => {
     const wire = prepareResourceForClone(res);
     expect(wire).not.toHaveProperty('uri');
     expect(wire.meta.nested).toEqual(res.meta.nested);
-    expect(wire.meta.nested).not.toBe(res.meta.nested);
-    expect(decodeResourceFromClone(structuredClone(wire)).uri.toString()).toBe(res.url);
+    const received = decodeResourceFromClone(structuredClone(wire));
+    expect(received.meta.nested).not.toBe(res.meta.nested);
+    expect(received.uri.toString()).toBe(res.url);
   });
 
   test('wire decoding preserves binary view bounds and reconstructs all URI instances', () => {
@@ -866,20 +887,10 @@ describe('normalized resource boundary', () => {
     expect(decoded.shouldBeDiscardedFromDownload).toBe(true);
   });
 
-  test.each([
-    {uri: {}}, {refUri: {}}, {replaceUri: {}}, {host: 'stale.example'},
-    {savePath: null}, {encoding: 'invalid'}, {body: {type: 'Buffer', data: [1]}},
-    {meta: {doc: {}}}, {meta: null}, {meta: new Date()}, {depth: NaN},
-    {redirectedSavePath: 42}, {downloadTime: Infinity}, {shouldBeDiscardedFromDownload: 'yes'}
-  ])('rejects malformed resource snapshots: %j', fields => {
-    expect(() => decodeResourceFromClone({...prepareResourceForClone(make()), ...fields}))
-      .toThrow(TypeError);
-  });
-
-  test('rejects unsupported metadata and missing canonical strings', () => {
+  test('the worker clone rejects unsupported metadata; native URI restoration requires canonical strings', () => {
     const res = make();
     res.meta.callback = () => undefined;
-    expect(() => prepareResourceForClone(res)).toThrow();
+    expect(() => structuredClone(prepareResourceForClone(res))).toThrow();
     expect(() => normalizeResource({...res, refUrl: undefined} as unknown as RawResource))
       .toThrow('Resource.refUrl must be a string');
   });

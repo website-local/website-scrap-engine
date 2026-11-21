@@ -39,7 +39,7 @@ describe.each(['file', 'mount'])('%s resource encoding', source => {
       const options = defaultDownloadOptions({
         ...lc,
         localRoot: path.join(root, 'output'),
-        localSrcRoot: pathToFileURL(sourceRoot).href.slice('file:///'.length),
+        localSrcRoot: sourceRoot,
         encoding: encodings,
         req: {},
         meta: {}
@@ -51,11 +51,12 @@ describe.each(['file', 'mount'])('%s resource encoding', source => {
       if (!resource) throw new Error('Resource was discarded');
       const downloaded = await pipeline.download(resource);
       expect(downloaded).toBeDefined();
-      if (!downloaded) throw new Error('Resource was not downloaded');
+      if (!downloaded || downloaded === true) throw new Error('Expected a buffered download');
+      expect(Buffer.isBuffer(downloaded.body)).toBe(true);
       await pipeline.saveToDisk(downloaded);
 
       expect(resource.encoding).toBeNull();
-      expect(Buffer.isBuffer(downloaded.body)).toBe(true);
+      expect(downloaded.body).toBeUndefined();
       expect(await fs.readFile(path.join(options.localRoot, resource.savePath)))
         .toEqual(bytes);
     }

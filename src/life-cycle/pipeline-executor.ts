@@ -1,6 +1,3 @@
-import type {Logger} from '../logger/types.js';
-import type {PublicationStore} from '../output-store.js';
-import type {BeforeRetryHook} from 'got';
 import type {RawResource, Resource, ResourceEncoding, ResourceType} from '../resource.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {HtmlParserOptions} from '../cheerio.js';
@@ -17,17 +14,6 @@ import type {DownloaderWithMeta} from '../downloader/types.js';
 import type {WorkerInfo} from '../downloader/worker-pool.js';
 
 export interface PipelineExecutor {
-  readonly logger: Logger;
-  readonly options: StaticDownloadOptions & HtmlParserOptions;
-  readonly publicationStore?: PublicationStore;
-  /** Retained Got callback, also recognized by native transport selection. */
-  readonly retryLogger?: BeforeRetryHook;
-  /** Crawl cancellation, available to cooperative custom hooks. */
-  readonly signal?: AbortSignal;
-  /** Recheck the existing-resource save policy immediately before publication. */
-  shouldSaveResource(res: Resource): Promise<boolean>;
-  /** Transfer task state and dispose or transfer the previous document. */
-  replaceResource(previous: Resource, next: Resource): Promise<void>;
   /**
    * @see InitLifeCycleFunc
    */
@@ -75,7 +61,7 @@ export interface PipelineExecutor {
     encoding?: ResourceEncoding,
     refSavePath?: string,
     refType?: ResourceType
-  ): AsyncResult<Resource | void>;
+  ): AsyncResult<Resource>;
 
   processBeforeDownload(
     res: Resource,
@@ -88,7 +74,7 @@ export interface PipelineExecutor {
     res: Resource,
     requestOptions?: RequestOptions,
     options?: StaticDownloadOptions & HtmlParserOptions
-  ): AsyncResult<DownloadResource | void>;
+  ): AsyncResult<DownloadResource | true | void>;
 
   /**
    * Process resource after download, maybe in worker thread
@@ -107,6 +93,12 @@ export interface PipelineExecutor {
     options?: StaticDownloadOptions & HtmlParserOptions
   ): AsyncResult<DownloadResource | void>;
 
+  /** Check an enabled save policy after response or source metadata is available. */
+  shouldSaveResource(res: Resource, localPath?: string): AsyncResult<boolean>;
+
+  /** Transfer a shared document, or release the previous resource's document. */
+  replaceResource(previous: Resource, next: Resource): AsyncResult<void>;
+
   /**
    * @see DisposeLifeCycle
    */
@@ -120,9 +112,8 @@ export interface PipelineExecutor {
   /**
    * Notify status change listeners.
    *
-   * Read-only listeners start in array order without waiting for earlier
-   * listeners. All listeners run, and exceptions/rejections are swallowed.
-   * The result settles after every listener's returned promise settles.
+   * All listeners always run (void return does not short-circuit),
+   * and thrown errors are swallowed.
    */
   notifyStatusChange(
     res: Resource | RawResource,

@@ -1,7 +1,7 @@
 import URI from './uri.js';
 import type {IncomingHttpHeaders} from 'node:http';
 import * as path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 import {
   escapePath,
   isUrlHttp,
@@ -10,6 +10,8 @@ import {
 } from './util.js';
 import type {CheerioStatic} from './types.js';
 import type {Logger} from './logger/types.js';
+
+const plainAbsolutePath = /^\/(?:[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*\/)*[a-zA-Z0-9_-]*(?:\.[a-zA-Z0-9_-]+)*$/;
 
 export enum ResourceType {
   /**
@@ -50,6 +52,12 @@ export enum ResourceType {
 export type ResourceEncoding = null | BufferEncoding;
 
 export type ResourceBody = Buffer | ArrayBuffer | ArrayBufferView | string;
+
+/** Snapshot submitted bytes so saving another resource cannot detach them. */
+export function copyResourceBody(body: Exclude<ResourceBody, string>): Buffer {
+  return Buffer.from(ArrayBuffer.isView(body) ?
+    new Uint8Array(body.buffer, body.byteOffset, body.byteLength) : new Uint8Array(body));
+}
 
 export interface RawResource {
   /**
@@ -182,13 +190,6 @@ export interface RawResource {
 }
 
 export interface Resource extends RawResource {
-  /** Runtime owners remain in their thread and are omitted from worker messages. */
-  workerTaskId?: number;
-  publicationOwner?: string;
-  downloaded?: boolean;
-  publishedFiles?: number;
-  /** Discovery state belongs to this parent, even when handlers are shared. */
-  discoveredCount?: number;
   /**
    * Normalized {@link URI} instance
    * containing the same content of {@link RawResource.url}
@@ -229,71 +230,19 @@ export interface WireResource extends RawResource {
 }
 
 export function prepareResourceForClone(res: Resource): WireResource {
-  const {uri, refUri, replaceUri, host, workerTaskId,
-    publicationOwner, downloaded, publishedFiles, discoveredCount,
-    ...raw} = res;
-  void uri; void refUri; void replaceUri; void host; void workerTaskId;
-  void publicationOwner; void downloaded; void publishedFiles;
-  void discoveredCount;
+  const {uri, refUri, replaceUri, host, ...raw} = res;
+  void uri; void refUri; void replaceUri; void host;
   const {doc, statusChanges, ...meta} = res.meta;
   void doc; void statusChanges;
-  // Fail explicitly for functions and other non-cloneable metadata.
-  // Keep body ownership intact so the caller can transfer its ArrayBuffer.
-  const wire = {...raw, meta: structuredClone(meta)};
-  assertWireResource(wire);
-  return wire;
+  // postMessage performs the structured clone once, at dispatch. Parsed documents
+  // stay in their owning thread; body ownership stays available for transfer.
+  raw.meta = meta;
+  return raw as WireResource;
 }
 
-/** Validate untrusted message data before introducing runtime URI instances. */
-export function decodeResourceFromClone(value: unknown): Resource {
-  assertWireResource(value);
+/** Restore native URI objects on receipt; transport uses the normal worker channel. */
+export function decodeResourceFromClone(value: WireResource): Resource {
   return normalizeResource(value);
-}
-
-function assertWireResource(value: unknown): asserts value is WireResource {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new TypeError('Worker resource must be an object');
-  }
-  const raw = value as Record<string, unknown>;
-  for (const field of ['uri', 'refUri', 'replaceUri', 'host']) {
-    if (raw[field] !== undefined) throw new TypeError(`Worker resource cannot contain ${field}`);
-  }
-  for (const field of ['url', 'rawUrl', 'downloadLink', 'refUrl', 'savePath',
-    'refSavePath', 'localRoot', 'replacePath']) {
-    if (typeof raw[field] !== 'string') throw new TypeError(`Worker resource.${field} must be a string`);
-  }
-  for (const field of ['type', 'depth', 'createTimestamp']) {
-    if (typeof raw[field] !== 'number' || !Number.isFinite(raw[field])) {
-      throw new TypeError(`Worker resource.${field} must be a finite number`);
-    }
-  }
-  for (const field of ['downloadStartTimestamp', 'waitTime', 'finishTimestamp', 'downloadTime']) {
-    if (raw[field] !== undefined &&
-      (typeof raw[field] !== 'number' || !Number.isFinite(raw[field]))) {
-      throw new TypeError(`Worker resource.${field} must be a finite number`);
-    }
-  }
-  if (raw.shouldBeDiscardedFromDownload !== undefined &&
-    typeof raw.shouldBeDiscardedFromDownload !== 'boolean') {
-    throw new TypeError('Worker resource.shouldBeDiscardedFromDownload must be a boolean');
-  }
-  if (raw.encoding !== null &&
-    (typeof raw.encoding !== 'string' || !Buffer.isEncoding(raw.encoding))) {
-    throw new TypeError('Worker resource.encoding must be null or a Buffer encoding');
-  }
-  if (!raw.meta || Object.prototype.toString.call(raw.meta) !== '[object Object]' ||
-    (raw.meta as RawResource['meta']).doc !== undefined) {
-    throw new TypeError('Worker resource.meta must be an object without a DOM');
-  }
-  if (raw.body !== undefined && typeof raw.body !== 'string' &&
-    !(raw.body instanceof ArrayBuffer) && !ArrayBuffer.isView(raw.body)) {
-    throw new TypeError('Worker resource.body must be text or binary data');
-  }
-  for (const field of ['redirectedUrl', 'redirectedSavePath']) {
-    if (raw[field] !== undefined && typeof raw[field] !== 'string') {
-      throw new TypeError(`Worker resource.${field} must be a string`);
-    }
-  }
 }
 
 /**
@@ -374,6 +323,8 @@ export interface CreateResourceArgument {
    * True if URL resolution failed and skipReplacePathError allowed creation.
    */
   replacePathHasError?: boolean;
+  /** Optional legacy save-path generator; the built-in pipeline may precompute savePath. */
+  generateSavePathFn?: GenerateSavePathFn;
 }
 
 /**
@@ -402,7 +353,10 @@ export function generateSavePath(
       throw new Error('generateSavePath: using file protocol without localSrcRoot'
         + uri.toString());
     }
-    if (process.platform === 'win32' &&
+    if (/[^a-zA-Z0-9_./:-]/.test(localSrcRoot)) {
+      const windows = process.platform === 'win32' || /^[a-z]:/i.test(localSrcRoot);
+      savePath = uri.pathname().slice(pathToFileURL(localSrcRoot, {windows}).pathname.length);
+    } else if (process.platform === 'win32' &&
       localSrcRoot.match(/^[a-z]:\//i)) {
       // windows absolute fix
       savePath = uri.pathname().slice(localSrcRoot.length + 1);
@@ -415,21 +369,25 @@ export function generateSavePath(
   } else {
     const host: string = uri.hostname();
     const uriPath = uri.path();
-    const segments = uriPath.split('/');
-    for (let index = 0; index < segments.length; index++) {
-      const segment = segments[index];
-      // Normalize encoded dot segments before the final localRoot containment check.
-      let decodedSegment: string;
-      try {
-        decodedSegment = segment.includes('%') ? decodeURIComponent(segment) : segment;
-      } catch {
-        decodedSegment = segment;
+    if (path.sep === '/' && host && host !== '.' && plainAbsolutePath.test(uriPath)) {
+      savePath = host + uriPath;
+    } else {
+      const segments = uriPath.split('/');
+      for (let index = 0; index < segments.length; index++) {
+        const segment = segments[index];
+        // Normalize encoded dot segments before the final localRoot containment check.
+        let decodedSegment: string;
+        try {
+          decodedSegment = segment.includes('%') ? decodeURIComponent(segment) : segment;
+        } catch {
+          decodedSegment = segment;
+        }
+        segments[index] = decodedSegment === '.' || decodedSegment === '..' ? '_' : escapePath(segment);
       }
-      segments[index] = decodedSegment === '.' || decodedSegment === '..' ? '_' : escapePath(segment);
-    }
-    savePath = path.join(host || '', ...segments);
-    if (uriPath.endsWith('/')) {
-      savePath += path.sep;
+      savePath = path.join(host || '', ...segments);
+      if (uriPath.endsWith('/')) {
+        savePath += path.sep;
+      }
     }
   }
 
@@ -467,6 +425,8 @@ export function generateSavePath(
   }
   return savePath;
 }
+
+export type GenerateSavePathFn = typeof generateSavePath;
 
 export const urlOfSavePath = (savePath: string): string => {
   // Writers use decodeURI, which preserves escapes for reserved characters.
@@ -555,63 +515,54 @@ export function resolveFileUrl(
   if (isUrlHttp(url)) {
     return url;
   }
-  let error: string | undefined;
-  if (!localSrcRoot) {
-    error = 'can not use file url without localSrcRoot';
-  }
-  if (localSrcRoot) {
+  try {
+    if (!localSrcRoot) throw new Error('can not use file url without localSrcRoot');
+    if (localSrcRoot.startsWith('/') && process.platform !== 'win32' && plainAbsolutePath.test(localSrcRoot)) {
+      const prefix = 'file://' + (localSrcRoot.endsWith('/') ? localSrcRoot : localSrcRoot + '/');
+      if (refUrl.startsWith(prefix) && plainAbsolutePath.test(refUrl.slice(7))) {
+        if (url.startsWith(prefix) && plainAbsolutePath.test(url.slice(7))) return url;
+        if (/^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/.test(url)) {
+          return refUrl.slice(0, refUrl.lastIndexOf('/') + 1) + url;
+        }
+      }
+    }
     const windows = process.platform === 'win32' || /^[a-z]:[\\/]/i.test(localSrcRoot);
     const paths = windows ? path.win32 : path.posix;
     const root = windows ? paths.resolve(localSrcRoot) : paths.resolve('/', localSrcRoot);
-    try {
-      // Explicit file URLs must stay inside the source root after URL decoding
-      // and dot-segment normalization, including the referring document.
-      for (let index = 0; index < 2; index++) {
-        const source = index === 0 ? url : refUrl;
-        if (!source.startsWith(FILE_PROTOCOL_PREFIX)) continue;
-        const relative = paths.relative(root, fileURLToPath(source, {windows}));
-        if (relative === '..' || relative.startsWith('..' + paths.sep) || paths.isAbsolute(relative)) {
-          error = (index === 0 ? 'file url' : 'file refUrl') +
-            ' not starting with localSrcRoot is forbidden';
-          break;
-        }
+    const inspect = (source: string, label: string) => {
+      const parsed = new URL(source);
+      const decoded = fileURLToPath(parsed, {windows});
+      // POSIX file URL paths are absolute and URL parsing has resolved dot segments.
+      if (!windows && (root === '/' || decoded === root || decoded.startsWith(root + '/'))) return parsed;
+      const relative = paths.relative(root, decoded);
+      if (relative === '..' || relative.startsWith('..' + paths.sep) || paths.isAbsolute(relative)) {
+        throw new Error(label + ' not starting with localSrcRoot is forbidden');
       }
-    } catch (e) {
-      if (!skipReplacePathError) throw e;
-      error = 'invalid file url';
+      return parsed;
+    };
+    const target = /^file:/i.test(url) ? inspect(url, 'file url') : undefined;
+    const ref = url === refUrl ? target : /^file:/i.test(refUrl) ? inspect(refUrl, 'file refUrl') : undefined;
+    if (target) return url.startsWith(FILE_PROTOCOL_PREFIX) ? url : target.href;
+
+    const prefix = pathToFileURL(root, {windows}).href.replace(/\/$/, '');
+    // Use a virtual root so excess parent references stop at the source directory.
+    let base = 'file:///';
+    if (ref) {
+      const relative = paths.relative(root, fileURLToPath(ref, {windows}));
+      base += relative.split(paths.sep).map(encodeURIComponent).join('/');
+      if (ref.pathname.endsWith('/') && !base.endsWith('/')) base += '/';
     }
-  }
-  // unix absolute path
-  if (localSrcRoot && localSrcRoot[0] === '/') {
-    localSrcRoot = localSrcRoot.slice(1);
-  }
-  if (!error && localSrcRoot) {
-    if (localSrcRoot.endsWith('/')) {
-      localSrcRoot = localSrcRoot.slice(0, -1);
-    }
-    if (url.startsWith('//')) {
-      url = FILE_PROTOCOL_PREFIX + localSrcRoot + url.slice(1);
-    } else if (url.startsWith('/')) {
-      url = FILE_PROTOCOL_PREFIX + localSrcRoot + url;
-    } else if (!url.startsWith(FILE_PROTOCOL_PREFIX)) {
-      // relative url
-      const absoluteRefUri = URI(FILE_PROTOCOL_PREFIX +
-        refUrl.slice(FILE_PROTOCOL_PREFIX.length + localSrcRoot.length).replace(/^\/+/, ''));
-      const uri = URI(url).absoluteTo(absoluteRefUri);
-      url = FILE_PROTOCOL_PREFIX + localSrcRoot + uri.pathname() + uri.hash();
-    }
-  }
-  if (error) {
-    if (skipReplacePathError) {
-      logger?.warn('system.error', error, url, refUrl, localSrcRoot);
-      return '';
-    } else {
-      logger?.warn('system.error', error, url, refUrl, localSrcRoot);
-      throw new Error(error);
-    }
+    const relativeUrl = new URL(url.replace(/^[/\\]+/, '/'), base);
+    if (relativeUrl.protocol !== 'file:' || relativeUrl.host) throw new Error('invalid relative file url');
+    const result = prefix + relativeUrl.pathname + relativeUrl.hash;
+    inspect(result, 'file url');
+    return result;
+  } catch (error) {
+    logger?.warn('system.error', error, url, refUrl, localSrcRoot);
+    if (skipReplacePathError) return '';
+    throw error;
   }
 
-  return url;
 }
 
 /**
@@ -648,15 +599,16 @@ export function createResourceWithUris({
   encoding,
   keepSearch,
   savePath,
+  generateSavePathFn,
   skipReplacePathError,
   replacePathHasError = false
 }: CreateResourceArgument, resolvedUri?: URI, resolvedRefUri?: URI, logger?: Logger): Resource {
   rawUrl ??= url;
+  const generate = generateSavePathFn ?? generateSavePath;
   const refUri: URI = resolvedRefUri ?? URI(refUrl);
   refUrl = refUri.toString();
   if (savePath === undefined) {
-    if (url.startsWith(FILE_PROTOCOL_PREFIX) ||
-      refUrl.startsWith(FILE_PROTOCOL_PREFIX)) {
+    if (refUri.protocol() === 'file' || /^file:/i.test(url)) {
       // file url should never have search
       keepSearch = false;
       url = resolveFileUrl(url, refUrl, localSrcRoot, skipReplacePathError, logger);
@@ -685,12 +637,12 @@ export function createResourceWithUris({
       checkAbsoluteUri(uri, refUri, skipReplacePathError, url, refUrl, type, logger)) {
       replacePathHasError = true;
     }
-    savePath = replacePathHasError ? rawUrl : generateSavePath(
+    savePath = replacePathHasError ? rawUrl : generate(
       uri, type === ResourceType.Html, keepSearch, localSrcRoot, logger);
   }
 
   if (!refSavePath) {
-    refSavePath = generateSavePath(refUri, refType === ResourceType.Html,
+    refSavePath = generate(refUri, refType === ResourceType.Html,
       false, localSrcRoot, logger);
   }
 

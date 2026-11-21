@@ -22,7 +22,6 @@ const testLifeCycle = (): ProcessingLifeCycle => ({
   init: [],
   linkRedirect: [],
   detectResourceType: [],
-  generateSavePath: [],
   createResource,
   processBeforeDownload: [],
   download: [

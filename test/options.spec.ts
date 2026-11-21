@@ -3,10 +3,12 @@ import type {BeforeRequestHook, RequestError, RetryObject} from 'got';
 // noinspection ES6PreferShortImport
 import {
   calculateFastDelay,
+  checkDownloadOptions,
   defaultDownloadOptions,
   mergeOverrideOptions
 } from '../src/options.js';
 import {defaultLifeCycle} from '../src/life-cycle/default-life-cycle.js';
+import {getRetry} from '../src/life-cycle/download-resource.js';
 
 jest.mock('log4js', () => ({
   configure: jest.fn(),
@@ -195,6 +197,26 @@ describe('calculateFastDelay', function () {
 });
 
 describe('configuration ownership', () => {
+  test('clones nested request settings while preserving opaque services and safe own keys', () => {
+    const agent = new Map([['marker', true]]);
+    const nested = Object.freeze({value: ['original']});
+    const context = Object.freeze(JSON.parse('{"__proto__":{"value":"owned"}}') as Record<string, unknown>);
+    const values = ['one'];
+    Object.freeze(values);
+    const input = Object.freeze({headers: Object.freeze({'x-values': values}),
+      context: Object.freeze({...context, nested, agent})});
+    const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: input});
+    const copied = options.req.context!;
+    expect(Object.getPrototypeOf(copied)).toBe(Object.prototype);
+    expect(Object.hasOwn(copied, '__proto__')).toBe(true);
+    expect(copied.agent).toBe(agent);
+    expect(copied.nested).toEqual(nested);
+    expect(copied.nested).not.toBe(nested);
+    expect(options.req.headers?.['x-values']).not.toBe(input.headers['x-values']);
+    (copied.nested as {value: string[]}).value.push('changed');
+    expect(nested.value).toEqual(['original']);
+  });
+
   test('allocates independent nested defaults and hook arrays', () => {
     const lifecycle = defaultLifeCycle();
     const first = defaultDownloadOptions({...lifecycle, localRoot: 'one'});
@@ -202,7 +224,7 @@ describe('configuration ownership', () => {
     first.req.headers = {...first.req.headers, 'x-first': 'yes'};
     first.meta.custom = true;
     first.init.push(() => undefined);
-    expect(second.req.headers).not.toHaveProperty('x-first');
+    expect(second.req.headers).toBeUndefined();
     expect(second.meta).not.toHaveProperty('custom');
     expect(second.init).toHaveLength(lifecycle.init.length);
   });
@@ -222,6 +244,16 @@ describe('configuration ownership', () => {
   });
 });
 
+test('array mapper arguments cannot suppress request initialization', () => {
+  const init = jest.fn((_raw: unknown, normalized: {http2?: boolean}) => { normalized.http2 = true; });
+  const inputs = [0, 1].map(() => ({...defaultLifeCycle(), localRoot: 'output',
+    req: {hooks: {init: [init]}}}));
+  const results = inputs.map(defaultDownloadOptions);
+  expect(init).toHaveBeenCalledTimes(2);
+  expect(results.map(options => options.req.http2)).toEqual([true, true]);
+  expect(inputs.map(options => Object.hasOwn(options.req, 'http2'))).toEqual([false, false]);
+});
+
 test('compact request snapshots retain explicit defaults and changes from init hooks', () => {
   const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: {
     decompress: true,
@@ -235,15 +267,28 @@ test('compact request snapshots retain explicit defaults and changes from init h
   expect(merged.req.headers?.['x-probe']).toBe('value');
 });
 
-test('reusing normalized options detects nested mutations and reruns init hooks', () => {
-  const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: {retry: {limit: 0}}});
+test('reuse preserves live settings and validates them at an explicit check or actual request', async () => {
+  const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: {headers: {}, retry: {limit: 0}}});
   options.req.headers!['x-changed'] = 'yes';
+  expect(mergeOverrideOptions(options)).toBe(options);
   expect(mergeOverrideOptions(options).req.headers?.['x-changed']).toBe('yes');
   Reflect.set(options.req.retry!, 'limit', 'invalid');
-  expect(() => mergeOverrideOptions(options)).toThrow();
+  expect(() => checkDownloadOptions(options)).toThrow();
+  await expect(getRetry('http://127.0.0.1:1/', mergeOverrideOptions(options).req))
+    .rejects.toThrow('retry.limit');
   const init = jest.fn();
   const hooked = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output', req: {hooks: {init: [init]}}});
   const before = init.mock.calls.length;
   mergeOverrideOptions(hooked);
+  expect(init.mock.calls).toHaveLength(before);
+  checkDownloadOptions(hooked);
   expect(init.mock.calls.length).toBeGreaterThan(before);
+});
+
+test('an override hook list does not hide settings changed by inherited init hooks', () => {
+  const base = defaultDownloadOptions({...defaultLifeCycle(), localRoot: 'output',
+    req: {hooks: {init: [(_raw, normalized) => { normalized.http2 = true; }]}}});
+  delete base.req.http2;
+  const merged = mergeOverrideOptions(base, {req: {hooks: {beforeRequest: [() => {}]}}});
+  expect(merged.req.http2).toBe(true);
 });

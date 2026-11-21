@@ -1,12 +1,11 @@
-import type {Logger} from '../logger/types.js';
-import {load} from '../cheerio.js';
+import {disposeHtmlResource, load} from '../cheerio.js';
+import type {HtmlParserOptions} from '../cheerio.js';
 import type {Resource, ResourceEncoding} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {
   AsyncResult,
   DownloadResource,
   ExistingResourceFunc,
-  GenerateSavePathFunc,
   LinkRedirectFunc,
   ProcessResourceAfterDownloadFunc,
   ProcessResourceBeforeDownloadFunc,
@@ -14,10 +13,8 @@ import type {
 } from './types.js';
 import {toString} from '../util.js';
 import type {StaticDownloadOptions} from '../options.js';
-import type {HtmlParserOptions} from '../cheerio.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Cheerio, CheerioStatic} from '../types.js';
-import type URI from '../uri.js';
 
 export {
   LocalUrlMountFileSizeError,
@@ -38,19 +35,19 @@ export type {
 } from './local-url-mount.js';
 
 export interface SkipProcessFunc {
-  (url: string, element: Cheerio | null, parent: Resource | null, pipeline: PipelineExecutor): boolean;
+  (url: string, element: Cheerio | null, parent: Resource | null): boolean;
 }
 
 export const skipProcess = (fn: SkipProcessFunc): LinkRedirectFunc =>
-  (url, element, parent, _options, pipeline) => fn(url, element, parent, pipeline) ? undefined : url;
+  (url, element, parent) => fn(url, element, parent) ? undefined : url;
 
 export interface DropResourceFunc {
-  (res: Resource, pipeline: PipelineExecutor): boolean;
+  (res: Resource): boolean;
 }
 
 export const dropResource = (fn: DropResourceFunc): ProcessResourceBeforeDownloadFunc =>
-  (res, _element, _parent, _options, pipeline) => {
-    if (fn(res, pipeline)) {
+  res => {
+    if (fn(res)) {
       res.shouldBeDiscardedFromDownload = true;
     }
     return res;
@@ -58,23 +55,23 @@ export const dropResource = (fn: DropResourceFunc): ProcessResourceBeforeDownloa
 
 
 export interface PreProcessResourceFunc {
-  (url: string, element: Cheerio | null, res: Resource, parent: Resource | null, pipeline: PipelineExecutor): void;
+  (url: string, element: Cheerio | null, res: Resource, parent: Resource | null): void;
 }
 
 export const preProcess = (fn: PreProcessResourceFunc): ProcessResourceBeforeDownloadFunc =>
-  (res, element, parent, _options, pipeline) => {
-    fn(res.url, element, res, parent, pipeline);
+  (res, element, parent) => {
+    fn(res.url, element, res, parent);
     return res;
   };
 
 export interface RequestRedirectFunc {
-  (url: string, res: Resource, pipeline: PipelineExecutor): string | void;
+  (url: string, res: Resource): string | void;
 }
 
 export const requestRedirect = (fn: RequestRedirectFunc): ProcessResourceBeforeDownloadFunc =>
-  (res, _element, _parent, _options, pipeline) => {
+  res => {
     if (res.downloadLink) {
-      const downloadLink: string | void = fn(res.downloadLink, res, pipeline) || undefined;
+      const downloadLink: string | void = fn(res.downloadLink, res) || undefined;
       if (!downloadLink) {
         return;
       }
@@ -84,36 +81,50 @@ export const requestRedirect = (fn: RequestRedirectFunc): ProcessResourceBeforeD
   };
 
 export const redirectFilter = (fn: RequestRedirectFunc): ProcessResourceAfterDownloadFunc =>
-  (res, _submit, _options, pipeline) => {
+  res => {
     if (res.redirectedUrl) {
-      res.redirectedUrl = fn(res.redirectedUrl, res, pipeline) || undefined;
+      res.redirectedUrl = fn(res.redirectedUrl, res) || undefined;
     }
     return res;
   };
 
-export async function processRedirectedUrl(
+export function processRedirectedUrl(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions,
   pipeline: PipelineExecutor
-): Promise<DownloadResource | void> {
+): AsyncResult<DownloadResource | void> {
   if (res.redirectedUrl && res.redirectedUrl !== res.url) {
-    const redirectedRes: Resource | void = await pipeline.createAndProcessResource(
-      res.redirectedUrl, res.type, res.depth, null, res);
-    if (redirectedRes) {
-      res.redirectedUrl = redirectedRes.url;
-      // https://github.com/website-local/website-scrap-engine/issues/385
-      // 2011/11/15
-      if (redirectedRes.savePath) {
-        res.redirectedSavePath = redirectedRes.savePath;
-      }
+    return processRedirectedResource(res, pipeline, res.redirectedUrl);
+  }
+  return res;
+}
+
+async function processRedirectedResource(
+  res: DownloadResource,
+  pipeline: PipelineExecutor,
+  redirectedUrl: string
+): Promise<DownloadResource | void> {
+  const redirectedRes: Resource | void = await pipeline.createAndProcessResource(
+    redirectedUrl, res.type, res.depth, null, res);
+  if (redirectedRes) {
+    res.redirectedUrl = redirectedRes.url;
+    // https://github.com/website-local/website-scrap-engine/issues/385
+    // 2011/11/15
+    if (redirectedRes.savePath) {
+      res.redirectedSavePath = redirectedRes.savePath;
+    }
+    // This resource only supplies redirect metadata; it is never submitted.
+    if (redirectedRes !== res && redirectedRes.meta.doc && redirectedRes.meta.doc !== res.meta.doc) {
+      const disposing = disposeHtmlResource(redirectedRes);
+      if (disposing) await disposing;
     }
   }
   return res;
 }
 
 export interface HtmlProcessFunc {
-  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }, pipeline: PipelineExecutor): CheerioStatic;
+  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): CheerioStatic;
 }
 
 export const parseHtml = (
@@ -126,28 +137,32 @@ export const parseHtml = (
 };
 
 export const processHtml = (fn: HtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
-  (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions & HtmlParserOptions,
-    pipeline: PipelineExecutor) => {
+  (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions & HtmlParserOptions) => {
     if (res.type === ResourceType.Html) {
       const previous = res.meta.doc ?? parseHtml(res, options);
-      res.meta.doc = fn(previous, res, pipeline);
-      if (previous !== res.meta.doc) (previous as CheerioStatic & {dispose?: () => void}).dispose?.();
+      res.meta.doc = fn(previous, res);
+      if (previous !== res.meta.doc) {
+        const disposing = disposeHtmlResource({meta: {doc: previous, statusChanges: res.meta.statusChanges}});
+        if (disposing) return disposing.then(() => res);
+      }
     }
     return res;
   };
 
 
 export interface AsyncHtmlProcessFunc {
-  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }, pipeline: PipelineExecutor): AsyncResult<CheerioStatic>;
+  ($: CheerioStatic, res: Resource & { type: ResourceType.Html }): AsyncResult<CheerioStatic>;
 }
 
 export const processHtmlAsync = (fn: AsyncHtmlProcessFunc): ProcessResourceAfterDownloadFunc =>
-  async (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions & HtmlParserOptions,
-    pipeline: PipelineExecutor) => {
+  async (res: DownloadResource, submit: SubmitResourceFunc, options: StaticDownloadOptions & HtmlParserOptions) => {
     if (res.type === ResourceType.Html) {
       const previous = res.meta.doc ?? parseHtml(res, options);
-      res.meta.doc = await fn(previous, res, pipeline);
-      if (previous !== res.meta.doc) (previous as CheerioStatic & {dispose?: () => void}).dispose?.();
+      res.meta.doc = await fn(previous, res);
+      if (previous !== res.meta.doc) {
+        const disposing = disposeHtmlResource({meta: {doc: previous, statusChanges: res.meta.statusChanges}});
+        if (disposing) await disposing;
+      }
     }
     return res;
   };
@@ -163,24 +178,3 @@ export const preferNewerRemote = (): ExistingResourceFunc =>
 /** Always overwrite (current default behavior, explicit) */
 export const alwaysOverwrite = (): ExistingResourceFunc =>
   () => 'overwrite';
-
-/**
- * Wrap a legacy full save-path generator as a generateSavePath hook.
- *
- * @deprecated Prefer GenerateSavePathFunc hooks that transform the incoming
- * savePath.
- */
-export function wrapLegacyGenerateSavePath(
-  legacyFn: (uri: URI, isHtml?: boolean, keepSearch?: boolean,
-    localSrcRoot?: string, logger?: Logger) => string
-): GenerateSavePathFunc {
-  const hook: GenerateSavePathFunc = (_savePath, ctx) => legacyFn(
-    ctx.uri,
-    ctx.type === ResourceType.Html,
-    !ctx.options.deduplicateStripSearch,
-    ctx.options.localSrcRoot,
-    ctx.pipeline.logger
-  );
-  hook.fullSavePath = true;
-  return hook;
-}

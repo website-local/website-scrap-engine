@@ -1,9 +1,10 @@
+import {error, skip} from '../logger/logger.js';
 import type {SrcSetDefinition} from 'srcset';
 import {parseSrcset, stringifySrcset} from 'srcset';
 import {load} from '../cheerio.js';
 import type {HtmlParserOptions} from '../cheerio.js';
 import {sources as defaultSources} from '../sources.js';
-import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {AsyncResult, DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
@@ -78,7 +79,7 @@ async function processHtmlDoc(
         try {
           replaceValue = parseSrcset(attrValue);
         } catch (e) {
-          pipeline.logger.info('system.error', 'skipping invalid srcset', attrValue, e);
+          error.info('skipping invalid srcset', attrValue, e);
           // should invalid srcset being removed?
           continue;
         }
@@ -96,16 +97,16 @@ async function processHtmlDoc(
         const redirected = pipeline.linkRedirect(originalLink, elem, res);
         const link = isPromiseLike(redirected) ? await redirected : redirected;
         if (!link) {
-          if (pipeline.logger.isTraceEnabled()) {
-            pipeline.logger.trace('system.skip', 'skip linkRedirect', originalLink, refUrl);
+          if (skip.isTraceEnabled()) {
+            skip.trace('skip linkRedirect', originalLink, refUrl);
           }
           continue;
         }
         const detected = pipeline.detectResourceType(link, type, elem, res);
         const linkType = isPromiseLike(detected) ? await detected : detected;
         if (!linkType) {
-          if (pipeline.logger.isTraceEnabled()) {
-            pipeline.logger.trace('system.skip', 'skip detectResourceType',
+          if (skip.isTraceEnabled()) {
+            skip.trace('skip detectResourceType',
               originalLink, link, refUrl);
           }
           continue;
@@ -114,10 +115,10 @@ async function processHtmlDoc(
           linkType, depth, link, refUrl,
           res.localRoot, options.encoding[linkType],
           savePath, res.type);
-        let resource = isPromiseLike(created) ? await created : created;
+        let resource: Resource | void = isPromiseLike(created) ? await created : created;
         if (!resource) {
-          if (pipeline.logger.isTraceEnabled()) {
-            pipeline.logger.trace('system.skip', 'skip generateSavePath',
+          if (skip.isTraceEnabled()) {
+            skip.trace('skip generateSavePath',
               originalLink, link, linkType, refUrl);
           }
           continue;
@@ -125,19 +126,19 @@ async function processHtmlDoc(
         const processed = pipeline.processBeforeDownload(resource, elem, res, options);
         resource = isPromiseLike(processed) ? await processed : processed;
         if (!resource) {
-          if (pipeline.logger.isTraceEnabled()) {
-            pipeline.logger.trace('system.skip', 'skip processBeforeDownload',
+          if (skip.isTraceEnabled()) {
+            skip.trace('skip processBeforeDownload',
               originalLink, link, linkType, refUrl);
           }
           continue;
         }
         if (!resource.shouldBeDiscardedFromDownload) {
-          submit(resource, res, pipeline);
+          submit(resource);
         }
         if (attr === 'srcset') {
-          // 20241005: It's ok to do this
-          // I've looked into the source code of srcset 5.0.1
-          // and there is nothing preventing the return value to change
+          // srcset 5 returns mutable entries despite its readonly types. On
+          // upgrades, verify in-place URL changes still serialize descriptors
+          // correctly in process-html.spec.ts before retaining this cast.
           (replaceValue as WriteableSrcSet[])[linkIndex].url = resource.replacePath;
         } else {
           replaceValue = resource.replacePath;
@@ -170,20 +171,29 @@ async function processHtmlDoc(
         iframeDoc.html(options.cheerioSerialize) : iframeDoc.html();
       elem.attr('srcdoc', html);
     } catch (e) {
-      pipeline.logger.info('system.error', 'can not parse iframe srcdoc', res.url, res.rawUrl, e);
+      error.info('can not parse iframe srcdoc', res.url, res.rawUrl, e);
     } finally { iframeDoc?.dispose?.(); }
   }
 }
 
-export async function processHtml(
+export function processHtml(
+  res: DownloadResource,
+  submit: SubmitResourceFunc,
+  options: StaticDownloadOptions & HtmlParserOptions,
+  pipeline: PipelineExecutor
+): AsyncResult<DownloadResource | void> {
+  if (res.type !== ResourceType.Html) {
+    return res;
+  }
+  return processHtmlResource(res, submit, options, pipeline);
+}
+
+async function processHtmlResource(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions & HtmlParserOptions,
   pipeline: PipelineExecutor
 ): Promise<DownloadResource | void> {
-  if (res.type !== ResourceType.Html) {
-    return res;
-  }
   const refUrl: string = res.redirectedUrl || res.url;
   const savePath = refUrl === res.url ? res.savePath : undefined;
 
@@ -193,7 +203,7 @@ export async function processHtml(
   const resources: Resource[] = [];
   await processHtmlDoc(options, doc, res, pipeline, depth, resources, refUrl, savePath, submit);
   if (resources.length) {
-    submit(resources, res, pipeline);
+    submit(resources);
   }
   return res;
 }

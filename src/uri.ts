@@ -192,6 +192,9 @@ export class NativeUri {
   hostname(value?: string): string | this {
     if (value === undefined) return this._hostname;
     if (value === this._hostname) return this;
+    // Numeric and xn-- names stay on Node's native validation path. On Node
+    // upgrades use that runtime's URL result as the oracle for IDNA edge cases;
+    // uri-compat.spec.ts must not freeze another Node version's acceptance.
     if (this._authority && typeof defaultPorts[this._protocol] === 'string' &&
       simpleHostname.test(value) && !nativeHostname.test(value)) {
       this._hostname = value.toLowerCase();

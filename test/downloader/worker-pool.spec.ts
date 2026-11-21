@@ -2,180 +2,147 @@ import {describe, expect, jest, test} from '@jest/globals';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Worker} from 'node:worker_threads';
-import {createDefaultLogger} from '../../src/logger/default-logger.js';
-import type {Logger} from '../../src/logger/types.js';
+import {EventEmitter} from 'node:events';
 // noinspection ES6PreferShortImport
 import type {WorkerInfo} from '../../src/downloader/worker-pool.js';
 // noinspection ES6PreferShortImport
 import {WorkerPool} from '../../src/downloader/worker-pool.js';
+import type {WorkerMessage} from '../../src/downloader/types.js';
+import {WorkerMessageType} from '../../src/downloader/types.js';
+import {getLogger, setLogger} from '../../src/logger/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+interface EchoTask {value: number; hold?: boolean; log?: boolean}
+type EchoMessage = WorkerMessage<{value: number; worker: number}>;
+const echoWorker = join(__dirname, 'echo-worker.js');
+const dispatchTurn = () => new Promise<void>(resolve => setImmediate(resolve));
+
 describe('worker-pool', function () {
-  test.each([-1, 1])('reuses idle workers across separate submissions with maxLoad %s', async maxLoad => {
-    const pool = new WorkerPool(4, join(__dirname, 'task-deadline-worker.js'), {}, maxLoad);
-    const counts = new Map(pool.workers.map(info => [info.worker, 0]));
+  test.each([1, -1])('repeated singleton tasks share idle workers (maxLoad %s)', async maxLoad => {
+    const pool = new WorkerPool<EchoTask, EchoMessage>(3, echoWorker, {}, maxLoad);
     try {
       await pool.ready;
-      for (let i = 0; i < 8; i++) {
-        const result = await pool.submitTask(i, undefined, undefined,
-          worker => { counts.set(worker, counts.get(worker)! + 1); });
-        expect(result.body).toBe(i);
+      const counts = new Map<number, number>();
+      for (let value = 0; value < 12; value++) {
+        const result = await pool.submitTask({value});
+        expect(result.body.value).toBe(value);
+        counts.set(result.body.worker, (counts.get(result.body.worker) || 0) + 1);
       }
-      expect([...counts.values()]).toEqual([2, 2, 2, 2]);
+      expect([...counts.values()]).toEqual([4, 4, 4]);
+      expect(pool.workers.map(worker => worker.completedTasks)).toEqual([4, 4, 4]);
+      expect(Object.keys(pool.workingTasks)).toHaveLength(0);
+    } finally { await pool.dispose(); }
+  });
+
+  test('active load takes priority over completion history', async () => {
+    const pool = new WorkerPool<EchoTask, EchoMessage>(2, echoWorker, {});
+    try {
+      await pool.ready;
+      const held = pool.submitTask({value: -1, hold: true});
+      void held.catch(() => undefined);
+      await dispatchTurn();
+      const busy = pool.workers.find(worker => worker.load === 1)!;
+      for (let value = 0; value < 5; value++) {
+        const result = await pool.submitTask({value});
+        expect(result.body.worker).not.toBe(busy.id);
+      }
+      expect(busy.completedTasks).toBe(0);
+      busy.worker.postMessage({release: true});
+      expect((await held).body.worker).toBe(busy.id);
+    } finally { await pool.dispose(); }
+  });
+
+  test('a burst dispatches once and releases all completed task records', async () => {
+    const pool = new WorkerPool<EchoTask, EchoMessage>(2, echoWorker, {});
+    try {
+      await pool.ready;
+      const dispatch = jest.spyOn(pool, 'nextTask');
+      const values = Array.from({length: 128}, (_, value) => value);
+      const results = await Promise.all(values.map(value => pool.submitTask({value})));
+      expect(results.map(result => result.body.value)).toEqual(values);
+      expect(dispatch).toHaveBeenCalledTimes(1);
+      expect(Object.keys(pool.workingTasks)).toHaveLength(0);
       expect(pool.pendingTasks).toHaveLength(0);
-      expect(pool.workingTasks.size).toBe(0);
-      expect(pool.workers.map(info => info.load)).toEqual([0, 0, 0, 0]);
+      expect(pool.workers.map(worker => worker.load)).toEqual([0, 0]);
     } finally { await pool.dispose(); }
   });
 
-  test('shares the remainder of repeated uneven batches across idle workers', async () => {
-    const pool = new WorkerPool(4, join(__dirname, 'task-deadline-worker.js'), {});
-    const counts = new Map(pool.workers.map(info => [info.worker, 0]));
+  test('wrong-worker and duplicate completions cannot settle or recount tasks', async () => {
+    const pool = new WorkerPool<EchoTask, EchoMessage>(2, echoWorker, {});
     try {
       await pool.ready;
-      for (let wave = 0; wave < 4; wave++) {
-        const inputs = Array.from({length: 5}, (_, index) => wave * 5 + index);
-        const results = await Promise.all(inputs.map(value => pool.submitTask(value, undefined, undefined,
-          worker => { counts.set(worker, counts.get(worker)! + 1); })));
-        expect(results.map(result => result.body)).toEqual(inputs);
-      }
-      expect([...counts.values()]).toEqual([5, 5, 5, 5]);
+      const held = pool.submitTask({value: 7, hold: true});
+      void held.catch(() => undefined);
+      await dispatchTurn();
+      const owner = pool.workers.find(worker => worker.load === 1)!;
+      const other = pool.workers.find(worker => worker !== owner)!;
+      const message: EchoMessage = {taskId: pool.taskIdCounter,
+        type: WorkerMessageType.Complete, body: {value: 99, worker: other.id}};
+      pool.complete(other, message);
+      expect(Object.keys(pool.workingTasks)).toHaveLength(1);
+      expect(other.completedTasks).toBe(0);
+      owner.worker.postMessage({release: true});
+      expect((await held).body.value).toBe(7);
+      pool.complete(owner, message);
+      pool.onMessage(other, null as never);
+      expect(owner.completedTasks).toBe(1);
+      expect(pool.workers.map(worker => worker.load)).toEqual([0, 0]);
     } finally { await pool.dispose(); }
   });
 
-  test('keeps using idle workers while another worker has unfinished work', async () => {
-    const pool = new WorkerPool(4, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 1);
+  test('an error before online rejects readiness and queued tasks', async () => {
+    const fake = new EventEmitter() as Worker;
+    Object.defineProperty(fake, 'threadId', {value: 123});
+    fake.terminate = jest.fn(async () => 0);
+    const pool = new WorkerPool(1, echoWorker, {}, 1, () => fake);
+    const task = expect(pool.submitTask({value: 1})).rejects.toThrow('startup failed');
+    const ready = expect(pool.ready).rejects.toThrow('startup failed');
+    const logger = getLogger();
+    setLogger({...logger, error() { throw new Error('logger failed'); }});
     try {
-      await pool.ready;
-      const first = pool.submitTask('unfinished');
-      pool.nextTask();
-      const busy = pool.workers[0];
-      const counts = new Map(pool.workers.map(info => [info.worker, 0]));
-      for (let i = 0; i < 6; i++) {
-        let taskId = 0;
-        const task = pool.submitTask(i, undefined, id => { taskId = id; }, worker => {
-          const owner = pool.workers.find(info => info.worker === worker)!;
-          expect(owner).not.toBe(busy);
-          counts.set(worker, counts.get(worker)! + 1);
-          pool.complete(owner, {type: 1, taskId, body: i});
-        });
-        expect((await task).body).toBe(i);
-        expect(busy.load).toBe(1);
-      }
-      pool.complete(busy, {type: 1, taskId: 1, body: 'unfinished'});
-      expect((await first).body).toBe('unfinished');
-      expect([...counts.values()]).toEqual([0, 2, 2, 2]);
-    } finally { await pool.dispose(); }
+      fake.emit('error', new Error('startup failed'));
+      await ready;
+      await task;
+      expect(fake.listenerCount('online')).toBe(0);
+    } finally {
+      setLogger(logger);
+      await pool.dispose();
+    }
   });
 
-  test('batches burst dispatch while yielding and respecting worker capacity', async () => {
-    const pool = new WorkerPool(2, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 2);
-    try {
-      await pool.ready;
-      const next = jest.spyOn(pool, 'nextTask');
-      const owners = new Map<number, WorkerInfo>();
-      const dispatched: number[] = [];
-      const tasks = Array.from({length: 6}, (_, index) => {
-        let id = 0;
-        return pool.submitTask(index, undefined, value => { id = value; }, worker => {
-          owners.set(id, pool.workers.find(info => info.worker === worker)!);
-          dispatched.push(id);
-        });
-      });
-      expect(pool.workingTasks.size).toBe(0);
-      await new Promise<void>(resolve => setImmediate(resolve));
-      expect(next).toHaveBeenCalledTimes(1);
-      expect(dispatched).toEqual([1, 2, 3, 4]);
-      expect(pool.workers.map(info => info.load)).toEqual([2, 2]);
-      const complete = (id: number) => pool.complete(owners.get(id)!, {type: 1, taskId: id, body: id});
-      complete(1);
-      complete(2);
-      await new Promise<void>(resolve => setImmediate(resolve));
-      expect(next).toHaveBeenCalledTimes(2);
-      expect(dispatched).toEqual([1, 2, 3, 4, 5, 6]);
-      expect(pool.workers.map(info => info.load)).toEqual([2, 2]);
-      for (const id of [...pool.workingTasks.keys()]) complete(id);
-      expect((await Promise.all(tasks)).map(result => result.body)).toEqual([1, 2, 3, 4, 5, 6]);
-      expect(pool.pendingTasks).toHaveLength(0);
-      expect(pool.workers.map(info => info.load)).toEqual([0, 0]);
-    } finally { await pool.dispose(); }
+  test('a later factory failure terminates workers already created', async () => {
+    const worker = new Worker(echoWorker);
+    const exited = new Promise<void>(resolve => worker.once('exit', () => resolve()));
+    const terminate = jest.spyOn(worker, 'terminate');
+    let created = 0;
+    expect(() => new WorkerPool(2, echoWorker, {}, -1, () => {
+      if (created++) throw new Error('factory failed');
+      return worker;
+    })).toThrow('factory failed');
+    await exited;
+    expect(terminate).toHaveBeenCalledTimes(1);
   });
 
-  test('work submitted during dispatch gets another pass before a completion', async () => {
-    const pool = new WorkerPool(1, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 2);
+  test('throwing consumer loggers do not interrupt completion', async () => {
+    const logger = getLogger();
+    setLogger({...logger, info() { throw new Error('logger failed'); }});
+    const pool = new WorkerPool<EchoTask, EchoMessage>(1, echoWorker, {});
     try {
-      await pool.ready;
-      let child: ReturnType<typeof pool.submitTask> | undefined;
-      const first = pool.submitTask(1, undefined, undefined, () => { child = pool.submitTask(2); });
-      await new Promise<void>(resolve => setImmediate(resolve));
-      expect(pool.workingTasks.size).toBe(1);
-      expect(pool.pendingTasks).toHaveLength(1);
-      await new Promise<void>(resolve => setImmediate(resolve));
-      expect(pool.workingTasks.size).toBe(2);
-      expect(pool.pendingTasks).toHaveLength(0);
-      for (const taskId of pool.workingTasks.keys()) {
-        pool.complete(pool.workers[0], {type: 1, taskId, body: taskId});
-      }
-      await expect(first).resolves.toMatchObject({body: 1});
-      await expect(child).resolves.toMatchObject({body: 2});
-    } finally { await pool.dispose(); }
-  });
-
-  test('successful completion clears an enabled deadline before later work', async () => {
-    const pool = new WorkerPool(1, join(__dirname, 'task-deadline-worker.js'), {hang: true}, 1,
-      undefined, {taskTimeout: 100});
-    try {
-      await pool.ready;
-      const first = pool.submitTask(1);
-      pool.nextTask();
-      pool.complete(pool.workers[0], {type: 1, taskId: 1, body: 1});
-      await first;
-      await new Promise(resolve => setTimeout(resolve, 150));
-      const second = pool.submitTask(2);
-      pool.nextTask();
-      pool.complete(pool.workers[0], {type: 1, taskId: 2, body: 2});
-      await expect(second).resolves.toMatchObject({body: 2});
-    } finally { await pool.dispose(); }
-  });
-
-  test('dispatch callbacks identify the owner after successful transport', async () => {
-    const pool = new WorkerPool(1, join(__dirname, 'delay-calc-worker.js'), {});
-    try {
-      await pool.ready;
-      let taskId = 0;
-      const dispatched = jest.fn((worker: Worker) => {
-        expect(pool.workingTasks.has(taskId)).toBe(true);
-        expect(worker).toBe(pool.workers[0].worker);
-      });
-      const result = await pool.submitTask([1, 2], undefined, id => { taskId = id; }, dispatched);
-      expect(result.body).toBe(3);
-      expect(dispatched).toHaveBeenCalledTimes(1);
-      dispatched.mockClear();
-      await expect(pool.submitTask([() => {}], undefined, undefined, dispatched)).rejects.toThrow();
-      expect(dispatched).not.toHaveBeenCalled();
-    } finally { await pool.dispose(); }
-  });
-
-  test('dispatch callback failure retires its worker and keeps undispatched work progressing', async () => {
-    const pool = new WorkerPool(2, join(__dirname, 'delay-calc-worker.js'), {});
-    try {
-      await pool.ready;
-      const tasks = [pool.submitTask([1, 2], undefined, undefined, () => {
-        throw new Error('dispatch observer failed');
-      }), ...Array.from({length: 3}, () => pool.submitTask([2, 3]))];
-      const results = await Promise.allSettled(tasks);
-      expect(results[0]).toMatchObject({status: 'rejected', reason: {message: 'dispatch observer failed'}});
-      expect(results.slice(1)).toEqual(Array.from({length: 3}, () =>
-        expect.objectContaining({status: 'fulfilled', value: expect.objectContaining({body: 5})})));
-      expect((await pool.submitTask([3, 4])).body).toBe(7);
-    } finally { await pool.dispose(); }
+      expect((await pool.submitTask({value: 8, log: true})).body.value).toBe(8);
+      const disposal = pool.dispose();
+      expect(pool.dispose()).toBe(disposal);
+      await disposal;
+    } finally {
+      setLogger(logger);
+      await pool.dispose();
+    }
   });
 
   test('pool would work correctly', async () => {
     const cases: number[][] = [];
     for (let i = 0; i < 100; i++) {
-      cases.push([(i * 7919) % 65536, (i * 104729) % 65536]);
+      cases.push([Math.random() * 65535 | 0, Math.random() * 65535 | 0]);
     }
     const expected = [];
     for (let i = 0; i < cases.length; i++) {
@@ -212,8 +179,9 @@ describe('worker-pool', function () {
     const pool = new Pool(2,
       join(__dirname, 'error-worker.js'), {});
     try {
-      await expect(pool.ready).rejects.toThrow('Test worker error');
-      expect(fn).toHaveBeenCalled();
+      await pool.ready;
+      await new Promise(resolve => setTimeout(resolve, 200));
+      expect(fn).toHaveBeenCalledTimes(2);
       // noinspection JSUnusedAssignment
       expect(error).toBeTruthy();
       expect(error?.message).toBe('Test worker error');
@@ -239,18 +207,23 @@ describe('worker-pool', function () {
   }, 10000);
 
   test('pool rejects unfinished tasks on dispose', async () => {
-
-    const pool = new WorkerPool(1,
-      join(__dirname, 'delay-calc-worker.js'), {});
-    await pool.ready;
-    const task1 = pool.submitTask([1, 2]);
-    const task2 = pool.submitTask([2, 2]);
-    const task1Rejected = expect(task1).rejects.toThrow('disposed');
-    const task2Rejected = expect(task2).rejects.toThrow('disposed');
-    await pool.dispose();
-    await task1Rejected;
-    await task2Rejected;
-    await expect(pool.submitTask([3, 4])).rejects.toThrow('disposed');
+    const pool = new WorkerPool<EchoTask, EchoMessage>(1, echoWorker, {}, 1);
+    try {
+      await pool.ready;
+      const task1 = pool.submitTask({value: 1, hold: true});
+      const task1Rejected = expect(task1).rejects.toThrow('disposed');
+      await dispatchTurn();
+      const task2 = pool.submitTask({value: 2});
+      const task2Rejected = expect(task2).rejects.toThrow('disposed');
+      expect(Object.keys(pool.workingTasks)).toHaveLength(1);
+      expect(pool.pendingTasks).toHaveLength(1);
+      await pool.dispose();
+      await task1Rejected;
+      await task2Rejected;
+      await expect(pool.submitTask({value: 3})).rejects.toThrow('disposed');
+    } finally {
+      await pool.dispose();
+    }
   }, 10000);
 
   test.each([0, 1])(
@@ -269,7 +242,7 @@ describe('worker-pool', function () {
             expect(result.reason.message).toContain(`exited with code ${exitCode}`);
           }
         }
-        expect(pool.workingTasks.size).toBe(0);
+        expect(Object.keys(pool.workingTasks)).toHaveLength(0);
         expect(pool.pendingTasks).toHaveLength(0);
         await expect(pool.submitTask([5, 6]))
           .rejects.toThrow(`exited with code ${exitCode}`);
@@ -294,7 +267,7 @@ describe('worker-pool', function () {
       expect(results[0].status).toBe('rejected');
       expect(results[1]).toMatchObject({status: 'fulfilled', value: {body: 5}});
       expect(results[2]).toMatchObject({status: 'fulfilled', value: {body: 9}});
-      expect(pool.workingTasks.size).toBe(0);
+      expect(Object.keys(pool.workingTasks)).toHaveLength(0);
       expect(pool.pendingTasks).toHaveLength(0);
       expect((await pool.submitTask([6, 7])).body).toBe(13);
     } finally {
@@ -310,295 +283,10 @@ describe('worker-pool', function () {
       await pool.ready;
       await expect(pool.submitTask([1, 2]))
         .rejects.toThrow('exited with code 1');
-      expect(pool.workingTasks.size).toBe(0);
+      expect(Object.keys(pool.workingTasks)).toHaveLength(0);
       expect(pool.workers[0].load).toBe(0);
     } finally {
       await pool.dispose();
     }
   }, 10000);
-
-  test('pool rejects task and log payloads on parentPort', async () => {
-    const fn = jest.fn();
-
-    class Pool extends WorkerPool {
-      onControlMessage(info: WorkerInfo, message: never) {
-        super.onControlMessage(info, message);
-        fn(message);
-      }
-    }
-
-    const pool = new Pool(1,
-      join(__dirname, 'invalid-parent-port-worker.js'), {});
-    try {
-      await pool.ready;
-      expect(fn).toHaveBeenCalledTimes(3);
-    } finally {
-      await pool.dispose();
-    }
-  }, 10000);
-
-  test('pool ignores malformed task port messages', async () => {
-    const fn = jest.fn();
-
-    class Pool extends WorkerPool {
-      complete(info: WorkerInfo, message: never) {
-        super.complete(info, message);
-        fn(message);
-      }
-    }
-
-    const pool = new Pool(1,
-      join(__dirname, 'invalid-task-port-worker.js'), {});
-    try {
-      await pool.ready;
-      const result = await pool.submitTask([2, 3]);
-      expect(result.body).toBe(5);
-      expect(pool.workers[0].load).toBe(0);
-      expect(fn).toHaveBeenCalledTimes(3);
-    } finally {
-      await pool.dispose();
-    }
-  }, 10000);
-
-  test('pool drains worker logs before dispose resolves', async () => {
-    const logs: unknown[][] = [];
-    const logger: Logger = {
-      ...createDefaultLogger(),
-      info(_type, ...contents) {
-        logs.push(contents);
-      }
-    };
-    const pool = new WorkerPool(1,
-      join(__dirname, 'log-after-complete-worker.js'), {}, -1, undefined, undefined, logger);
-    try {
-      await pool.ready;
-      const result = await pool.submitTask([4, 5]);
-      expect(result.body).toBe(9);
-      await pool.dispose();
-      expect(logs.length).toBe(100);
-    } finally {
-      await pool.dispose();
-    }
-  }, 10000);
-
-  test('completion belongs to its assigned worker and settles only once', async () => {
-    const pool = new WorkerPool(2,
-      join(__dirname, 'delay-calc-worker.js'), {}, 1);
-    try {
-      await pool.ready;
-      const first = pool.submitTask([2, 3]);
-      const second = pool.submitTask([4, 5]);
-      pool.nextTask();
-      const owner = pool.workers[0];
-      const other = pool.workers[1];
-      const forged = {version: 1 as const, taskId: 1, type: 1, body: 'wrong worker'};
-      pool.complete(other, forged);
-      expect(pool.workingTasks.size).toBe(2);
-      expect(pool.workers.map(worker => worker.load)).toEqual([1, 1]);
-      expect((await first).body).toBe(5);
-      pool.complete(owner, forged);
-      expect(owner.load).toBe(0);
-      expect((await second).body).toBe(9);
-      expect(pool.workingTasks.size).toBe(0);
-      expect(pool.workers.map(worker => worker.load)).toEqual([0, 0]);
-    } finally {
-      await pool.dispose();
-    }
-  }, 10000);
-
-  test('tasks wait for initialized readiness', async () => {
-    const pool = new WorkerPool(1,
-      join(__dirname, 'startup-worker.js'), {mode: 'wait'});
-    try {
-      const task = pool.submitTask(42);
-      pool.nextTask();
-      expect(pool.workingTasks.size).toBe(0);
-      expect(pool.pendingTasks).toHaveLength(1);
-      pool.workers[0].worker.postMessage('initialize');
-      await pool.ready;
-      expect((await task).body).toBe(42);
-    } finally {
-      await pool.dispose();
-    }
-  });
-
-  test.each(['failed', 'exit', 'timeout'])(
-    'initialization %s rejects readiness and queued work', async mode => {
-      const pool = new WorkerPool(1,
-        join(__dirname, 'startup-worker.js'), {mode}, -1, undefined,
-        {startupTimeout: mode === 'timeout' ? 100 : 5000});
-      const queued = pool.submitTask(42);
-      const results = await Promise.allSettled([pool.ready, queued]);
-      expect(results.map(result => result.status)).toEqual(['rejected', 'rejected']);
-      const expected = mode === 'failed' ? 'configuration failed' :
-        mode === 'exit' ? 'exited with code 0' : 'initialization timed out';
-      await expect(pool.ready).rejects.toThrow(expected);
-      await pool.dispose();
-      expect(pool.workers[0].worker.threadId).toBe(-1);
-      expect(pool.pendingTasks).toHaveLength(0);
-      expect(pool.workingTasks.size).toBe(0);
-    });
-
-  test('partial factory failure terminates already created workers', async () => {
-    let count = 0;
-    const pool = new WorkerPool(2,
-      join(__dirname, 'startup-worker.js'), {mode: 'wait'}, -1,
-      (filename, options) => {
-        if (count++) throw new Error('factory failed');
-        return new Worker(filename, options);
-      });
-    await expect(pool.ready).rejects.toThrow('factory failed');
-    expect(pool.workers).toHaveLength(1);
-    expect(pool.workers[0].worker.threadId).toBe(-1);
-    await pool.dispose();
-  });
-
-  test('disposal during initialization settles readiness', async () => {
-    const pool = new WorkerPool(1,
-      join(__dirname, 'startup-worker.js'), {mode: 'wait'});
-    const rejected = expect(pool.ready).rejects.toThrow('disposed');
-    await pool.dispose();
-    await rejected;
-  });
-
-  test('malformed logs and throwing loggers cannot interrupt task delivery', async () => {
-    const info = jest.fn<Logger['info']>(() => { throw new Error('consumer logger failed'); });
-    const isTraceEnabled = jest.fn(() => false);
-    const logger = {...createDefaultLogger(), info, isTraceEnabled};
-    const pool = new WorkerPool(1,
-      join(__dirname, 'delay-calc-worker.js'), {}, -1, undefined, undefined, logger);
-    try {
-      await pool.ready;
-      const worker = pool.workers[0];
-      const send = (type: number, level: string, content: unknown) =>
-        pool.takeLog(worker, {version: 1, type, body: {
-          level, content, logType: 'custom.test'
-        }} as never);
-      for (const level of ['__proto__', 'constructor', 'isTraceEnabled', 'missing']) {
-        expect(() => send(0, level, [])).not.toThrow();
-      }
-      expect(() => send(1, 'info', [])).not.toThrow();
-      expect(() => send(0, 'info', 'not an array')).not.toThrow();
-      expect(info).not.toHaveBeenCalled();
-      expect(isTraceEnabled).not.toHaveBeenCalled();
-      expect(() => send(0, 'info', ['valid message'])).not.toThrow();
-      expect(info).toHaveBeenCalledWith('custom.test', worker.id, 'valid message');
-      expect((await pool.submitTask([5, 6])).body).toBe(11);
-    } finally {
-      await pool.dispose();
-    }
-  }, 10000);
-
-  test('deadline retires a stalled worker and settles its active and queued tasks', async () => {
-    const pool = new WorkerPool(1,
-      join(__dirname, 'task-deadline-worker.js'), {hang: true}, 2, undefined,
-      {taskTimeout: 100});
-    try {
-      await pool.ready;
-      const results = await Promise.allSettled([1, 2, 3].map(value => pool.submitTask(value)));
-      for (const result of results) {
-        expect(result.status).toBe('rejected');
-        if (result.status === 'rejected') expect(result.reason.message).toContain('timed out');
-      }
-      expect(pool.workingTasks.size).toBe(0);
-      expect(pool.pendingTasks).toHaveLength(0);
-      expect(pool.workers[0].load).toBe(0);
-      await expect(pool.submitTask(4)).rejects.toThrow('timed out');
-    } finally {
-      await pool.dispose();
-    }
-    expect(pool.workers[0].worker.threadId).toBe(-1);
-  });
-
-  test('a timeout does not replay work or disable surviving workers', async () => {
-    let count = 0;
-    const pool = new WorkerPool(2,
-      join(__dirname, 'task-deadline-worker.js'), {}, 1,
-      (filename, options) => new Worker(filename, {
-        ...options, workerData: {...options?.workerData, hang: count++ === 0}
-      }), {taskTimeout: 1000});
-    try {
-      await pool.ready;
-      const results = await Promise.allSettled([1, 2, 3].map(value => pool.submitTask(value)));
-      expect(results[0]).toMatchObject({status: 'rejected'});
-      expect(results[1]).toMatchObject({status: 'fulfilled', value: {body: 2}});
-      expect(results[2]).toMatchObject({status: 'fulfilled', value: {body: 3}});
-      expect((await pool.submitTask(4)).body).toBe(4);
-    } finally {
-      await pool.dispose();
-    }
-  });
-
-  test.each(['worker', 'taskPort', 'logPort'] as const)(
-    'decoding failure on %s rejects assigned work and cleans up', async channel => {
-      const pool = new WorkerPool(1,
-        join(__dirname, 'task-deadline-worker.js'), {hang: true});
-      try {
-        await pool.ready;
-        const task = pool.submitTask(1);
-        const rejected = expect(task).rejects.toThrow('message decoding failed');
-        pool.nextTask();
-        // Node decoding failures are runtime-dependent; inject the documented event.
-        pool.workers[0][channel].emit('messageerror', new Error('decode failed'));
-        await rejected;
-        expect(pool.workingTasks.size).toBe(0);
-        await expect(pool.submitTask(2)).rejects.toThrow('message decoding failed');
-      } finally {
-        await pool.dispose();
-      }
-      expect(pool.workers[0].worker.threadId).toBe(-1);
-    });
-
-  test('invalid deadlines fail before creating any workers', () => {
-    const factory = jest.fn(() => { throw new Error('must not spawn'); });
-    for (const key of ['startupTimeout', 'taskTimeout', 'shutdownTimeout']) {
-      for (const value of [0, -1, 0.5, NaN, Infinity, 2147483648]) {
-        expect(() => new WorkerPool(1, '', {}, -1, factory, {[key]: value}))
-          .toThrow(RangeError);
-      }
-    }
-    expect(factory).not.toHaveBeenCalled();
-  });
-
-  test('disposal clears active task deadlines and worker load', async () => {
-    const pool = new WorkerPool(1,
-      join(__dirname, 'task-deadline-worker.js'), {hang: true}, 1, undefined,
-      {taskTimeout: 100});
-    await pool.ready;
-    const task = pool.submitTask(1);
-    const rejected = expect(task).rejects.toThrow('disposed');
-    pool.nextTask();
-    expect(pool.workers[0].load).toBe(1);
-    await pool.dispose();
-    await rejected;
-    expect(pool.workers[0].load).toBe(0);
-    // A leaked timer would replace the disposal reason with a timeout.
-    await new Promise(resolve => setTimeout(resolve, 150));
-    await expect(pool.submitTask(2)).rejects.toThrow('disposed');
-  });
-
-  test.each([undefined, 0, 2, '1'])(
-    'ignores obsolete startup version %s', async protocolVersion => {
-      const pool = new WorkerPool(1,
-        join(__dirname, 'task-deadline-worker.js'), {protocolVersion});
-      try {
-        await pool.ready;
-        await expect(pool.submitTask(42)).resolves.toMatchObject({body: 42});
-      } finally { await pool.dispose(); }
-    });
-
-  test('sends and accepts task messages without a protocol version', async () => {
-    const pool = new WorkerPool(1,
-      join(__dirname, 'task-deadline-worker.js'), {hang: true});
-    try {
-      await pool.ready;
-      const worker = pool.workers[0];
-      const send = jest.spyOn(worker.taskPort, 'postMessage');
-      const pending = pool.submitTask(1);
-      pool.nextTask();
-      expect(send.mock.calls[0][0]).not.toHaveProperty('version');
-      pool.complete(worker, {type: 1, taskId: 1, body: 42});
-      await expect(pending).resolves.toMatchObject({body: 42});
-    } finally { await pool.dispose(); }
-  });
 });

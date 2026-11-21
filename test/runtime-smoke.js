@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import {promises as fs} from 'node:fs';
 import {createServer} from 'node:http';
-import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -9,8 +8,6 @@ import {pathToFileURL} from 'node:url';
 const entryUrl = process.argv[2] ?
   pathToFileURL(path.resolve(process.argv[2])).href :
   new URL('../lib/index.js', import.meta.url).href;
-const htmlParser = process.argv[3] ?? 'cheerio';
-assert.ok(htmlParser === 'cheerio' || htmlParser === 'grovedom', 'Unknown HTML parser');
 const {downloader, io} = await import(entryUrl);
 const root = await fs.mkdtemp(path.join(tmpdir(), 'wse-runtime-'));
 const bytes = Buffer.from([0xff, 0x00, 0x80, 0x42]);
@@ -34,38 +31,21 @@ const deadline = setTimeout(() => {
 deadline.unref();
 
 try {
-  const loaderPath = path.join(root, 'html-loader.mjs');
-  if (htmlParser === 'grovedom') {
-    const parserUrl = pathToFileURL(createRequire(entryUrl).resolve('grovedom')).href;
-    await fs.writeFile(loaderPath, `
-import {init, load} from ${JSON.stringify(parserUrl)};
-init({heap: 'pool', poolSize: 8, poolMaxBytes: 16 * 1024 * 1024});
-export {load};
-`);
-  }
   await io.mkdirRetry(path.join(root, 'custom-workers'));
-  const workerPath = path.join(root, 'custom-workers', 'channels.mjs');
+  const workerPath = path.join(root, 'custom-workers', 'legacy.mjs');
   await fs.writeFile(workerPath, `
-import {parentPort, workerData} from 'node:worker_threads';
-const {taskPort, logPort} = workerData.workerChannels;
-taskPort.on('message', ({taskId, body}) => {
-  taskPort.postMessage({taskId, type: 1, body: body + 1});
+import {parentPort} from 'node:worker_threads';
+parentPort.on('message', ({taskId, body}) => {
+  parentPort.postMessage({taskId, type: 1, body: body + 1});
 });
-parentPort.on('message', ({type}) => {
-  if (type === 'close') {
-    taskPort.close();
-    logPort.close();
-    parentPort.postMessage({type: 'closed'});
-  }
-});
-parentPort.postMessage({type: 'ready'});
 `);
   const pool = new downloader.WorkerPool(1, workerPath, {});
   try {
     await pool.ready;
-    assert.equal(pool.workingTasks instanceof Map, true);
+    assert.equal(typeof pool.onMessage, 'function');
+    assert.equal(pool.workingTasks instanceof Map, false);
     assert.equal((await pool.submitTask(41)).body, 42);
-    assert.equal(pool.workingTasks.size, 0);
+    assert.deepEqual(Object.keys(pool.workingTasks), []);
   } finally {
     await pool.dispose();
   }
@@ -83,14 +63,11 @@ parentPort.postMessage({type: 'ready'});
 import {isMainThread} from 'node:worker_threads';
 import path from 'node:path';
 import {lifeCycle, options, resource} from ${JSON.stringify(entryUrl)};
-${htmlParser === 'grovedom' ? `import {load} from ${JSON.stringify(pathToFileURL(loaderPath).href)};` : ''}
 const lc = lifeCycle.defaultLifeCycle();
-lc.generateSavePath.push(savePath => path.join('hooks', savePath));
+lc.generateSavePath = (...args) =>
+  path.join('legacy', resource.generateSavePath(...args));
 lc.processAfterDownload.push(res => {
   if (res.type === resource.ResourceType.Html) {
-    if (${JSON.stringify(htmlParser)} === 'grovedom' && typeof res.meta.doc.dispose !== 'function') {
-      throw new Error('The consumer-installed GroveDOM parser was not selected');
-    }
     res.meta.doc('body').attr('data-executor', isMainThread ? 'main' : 'worker');
   }
   return res;
@@ -101,7 +78,7 @@ export default options.defaultDownloadOptions({
   initialUrl: [${JSON.stringify(url)}],
   concurrency: 1,
   workerCount: 1,
-  ${htmlParser === 'grovedom' ? 'loadHtml: load,' : ''}
+  waitForInitBeforeIdle: true,
   req: {retry: {limit: 0}, timeout: {request: 2000}},
   createLogger: () => ({
     trace() {}, debug() {}, info() {}, warn() {}, error() {},
@@ -122,12 +99,12 @@ export default options.defaultDownloadOptions({
       assert.equal(crawler.downloadedCount, 2);
       assert.equal(requests.length, 2);
       assert.ok(requests.every(request => request.header === 'compatibility'));
-      const savedRoot = path.join(outputRoot, 'hooks', '127.0.0.1');
+      const savedRoot = path.join(outputRoot, 'legacy', '127.0.0.1');
       const html = await fs.readFile(path.join(savedRoot, 'index.html'), 'utf8');
       assert.ok(html.includes(`data-executor="${mode}"`));
       assert.deepEqual(await fs.readFile(path.join(savedRoot, 'image.bin')), bytes);
       assert.deepEqual(overrides, before);
-      console.log(`${process.version}: ${mode} downloader and save-path hooks passed (${htmlParser})`);
+      console.log(`${process.version}: ${mode} downloader and legacy paths passed`);
     } finally {
       await crawler.dispose();
     }

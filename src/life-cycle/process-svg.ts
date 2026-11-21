@@ -1,7 +1,9 @@
+import {skip} from '../logger/logger.js';
 import type {SourceDefinition} from '../sources.js';
-import type {DownloadResource, SubmitResourceFunc} from './types.js';
+import type {AsyncResult, DownloadResource, SubmitResourceFunc} from './types.js';
 import type {StaticDownloadOptions} from '../options.js';
 import type {HtmlParserOptions} from '../cheerio.js';
+import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import {parseHtml} from './adapters.js';
@@ -14,14 +16,22 @@ const svgSelectors: SourceDefinition[] = [
   {selector: '*[href]', attr: 'href', type: ResourceType.Binary},
 ];
 
-export async function processSvg(
+export function processSvg(
+  res: DownloadResource,
+  submit: SubmitResourceFunc,
+  options: StaticDownloadOptions & HtmlParserOptions,
+  pipeline: PipelineExecutor): AsyncResult<DownloadResource | void> {
+  if (res.type !== ResourceType.Svg) {
+    return res;
+  }
+  return processSvgResource(res, submit, options, pipeline);
+}
+
+async function processSvgResource(
   res: DownloadResource,
   submit: SubmitResourceFunc,
   options: StaticDownloadOptions & HtmlParserOptions,
   pipeline: PipelineExecutor): Promise<DownloadResource | void> {
-  if (res.type !== ResourceType.Svg) {
-    return res;
-  }
   const refUrl: string = res.redirectedUrl || res.url;
   const savePath = refUrl === res.url ? res.savePath : undefined;
 
@@ -38,16 +48,16 @@ export async function processSvg(
       const redirected = pipeline.linkRedirect(originalLink, elem, res);
       const link = isPromiseLike(redirected) ? await redirected : redirected;
       if (!link) {
-        if (pipeline.logger.isTraceEnabled()) {
-          pipeline.logger.trace('system.skip', 'skip linkRedirect', originalLink, refUrl);
+        if (skip.isTraceEnabled()) {
+          skip.trace('skip linkRedirect', originalLink, refUrl);
         }
         continue;
       }
       const detected = pipeline.detectResourceType(link, type, elem, res);
       const linkType = isPromiseLike(detected) ? await detected : detected;
       if (!linkType) {
-        if (pipeline.logger.isTraceEnabled()) {
-          pipeline.logger.trace('system.skip', 'skip detectResourceType',
+        if (skip.isTraceEnabled()) {
+          skip.trace('skip detectResourceType',
             originalLink, link, refUrl);
         }
         continue;
@@ -56,10 +66,10 @@ export async function processSvg(
         linkType, depth, link, refUrl,
         res.localRoot, options.encoding[linkType],
         savePath, res.type);
-      let resource = isPromiseLike(created) ? await created : created;
+      let resource: Resource | void = isPromiseLike(created) ? await created : created;
       if (!resource) {
-        if (pipeline.logger.isTraceEnabled()) {
-          pipeline.logger.trace('system.skip', 'skip generateSavePath',
+        if (skip.isTraceEnabled()) {
+          skip.trace('skip generateSavePath',
             originalLink, link, linkType, refUrl);
         }
         continue;
@@ -67,14 +77,14 @@ export async function processSvg(
       const processed = pipeline.processBeforeDownload(resource, elem, res, options);
       resource = isPromiseLike(processed) ? await processed : processed;
       if (!resource) {
-        if (pipeline.logger.isTraceEnabled()) {
-          pipeline.logger.trace('system.skip', 'skip processBeforeDownload',
+        if (skip.isTraceEnabled()) {
+          skip.trace('skip processBeforeDownload',
             originalLink, link, linkType, refUrl);
         }
         continue;
       }
       if (!resource.shouldBeDiscardedFromDownload) {
-        submit(resource, res, pipeline);
+        submit(resource);
       }
       let replaceValue = resource.replacePath;
       // historical workaround here
