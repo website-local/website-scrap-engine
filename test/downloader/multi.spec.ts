@@ -811,6 +811,8 @@ describe('MultiThreadDownloader', () => {
     const caseRoot = await fs.mkdtemp(path.join(root, 'dispose-replaced-'));
     const options = await writeOptions(caseRoot, []);
     const downloader = new SingleDownloader(options);
+    let notifyStarted!: () => void;
+    const started = new Promise<void>(resolve => { notifyStarted = resolve; });
     let release!: () => void;
     const waiting = new Promise<void>(resolve => { release = resolve; });
     const error = new Error('replacement cleanup failed');
@@ -823,13 +825,17 @@ describe('MultiThreadDownloader', () => {
         calls++;
         repeated = downloader.dispose();
         void repeated.catch(() => undefined);
+        notifyStarted();
         await waiting;
         if (failure) throw error;
       };
       const disposal = downloader.dispose();
       let settled = false;
       void disposal.then(() => { settled = true; }, () => { settled = true; });
-      await Promise.resolve();
+      // Wait for cleanup itself, without assuming a fixed microtask count.
+      await started;
+      // Drain continuations so failing to await cleanup cannot pass this check.
+      await new Promise<void>(resolve => setImmediate(resolve));
       expect(calls).toBe(1);
       expect(repeated).toBe(disposal);
       expect(settled).toBe(false);

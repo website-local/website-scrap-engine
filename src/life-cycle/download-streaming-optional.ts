@@ -10,6 +10,7 @@ import type {DownloadResource, DownloadResourceFunc, RequestOptions} from './typ
 import type {StaticDownloadOptions} from '../options.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
 import type {NativeHttpResponse, withNativeHttp} from './native-http.js';
+import type * as NativeHttpModule from './native-http.js';
 import type {StreamingBeforeDownloadHook, StreamingAfterDownloadHook, StreamingDownloadErrorHook} from './download-streaming-resource.js';
 import {streamingDownloadToFile, isBytesAccepted, isSameRangeStart, shouldWaitForRequestError,
   optionallySetLastModifiedTime, createStreamingDownloader, downloadStreamingResource} from './download-streaming-resource.js';
@@ -19,7 +20,7 @@ import {isUrlHttp} from '../util.js';
 import {withHttpCacheSafety} from './retry-hook.js';
 import {disposeHtmlResource} from '../cheerio.js';
 
-let nativeHttp: typeof import('./native-http.js') | undefined;
+let nativeHttp: typeof NativeHttpModule | undefined;
 
 export async function nativeStreamingDownloadToFile(
   res: Resource & { downloadStartTimestamp: number },
