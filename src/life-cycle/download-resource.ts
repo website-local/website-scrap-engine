@@ -204,14 +204,13 @@ function createResourceDownloader(request: typeof gotRequestForResource) {
             downloadedResource.downloadLink);
           downloadedResource = await request(
             res as (Resource & { downloadStartTimestamp: number }), requestOptions, options);
-        }
-        // probably more retries here?
-        if (!downloadedResource ||
-          (typeof downloadedResource.body === 'string' ||
-            Buffer.isBuffer(downloadedResource.body)) &&
-          !downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
-          logger.error.warn('Detected incomplete html twice', res.downloadLink);
-          return downloadedResource;
+          if (!downloadedResource ||
+            (typeof downloadedResource.body === 'string' ||
+              Buffer.isBuffer(downloadedResource.body)) &&
+            !downloadedResource.body.includes(options.meta.detectIncompleteHtml)) {
+            logger.error.warn('Detected incomplete html twice', res.downloadLink);
+            return downloadedResource;
+          }
         }
       }
       downloadedResource.finishTimestamp = Date.now();

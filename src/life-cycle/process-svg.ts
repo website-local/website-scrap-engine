@@ -86,12 +86,7 @@ async function processSvgResource(
       if (!resource.shouldBeDiscardedFromDownload) {
         submit(resource);
       }
-      let replaceValue = resource.replacePath;
-      // historical workaround here
-      if (replaceValue === '.html' || replaceValue === '/.html') {
-        replaceValue = '';
-      }
-      elem.attr(attr, replaceValue);
+      elem.attr(attr, resource.replacePath);
     }
   }
   res.body = getResourceBodyFromHtml(res, options);

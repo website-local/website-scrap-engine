@@ -41,7 +41,7 @@ export async function processCssText(
   let lastEnd = 0;
   for (const {url, start, end} of cssUrls) {
     const replacePath = replacements.get(url);
-    if (!replacePath) {
+    if (replacePath === undefined) {
       continue;
     }
     parts.push(cssText.slice(lastEnd, start));

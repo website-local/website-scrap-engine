@@ -436,7 +436,6 @@ export class NativeUri {
     if (typeof index === 'number') {
       if (!Number.isInteger(index)) throw new TypeError('Segment index must be an integer');
       const at = index < 0 ? Math.max(0, parts.length + index) : index;
-      if (value === undefined) return parts[at];
       if (at >= parts.length) {
         if (value) { if (parts.at(-1) === '') parts.pop(); parts.push(trimSegmentSlashes(value)); }
       } else if (!value) parts.splice(at, 1);

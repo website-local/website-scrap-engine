@@ -36,7 +36,7 @@ export async function nativeStreamingDownloadToFile(
   return nativeStreamToFile(res, requestOptions, savePath, native.withNativeHttp);
 }
 
-async function nativeStreamToFile(
+function nativeStreamToFile(
   res: Resource,
   requestOptions: RequestOptions,
   savePath: string,

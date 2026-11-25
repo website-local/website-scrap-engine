@@ -30,17 +30,14 @@ async function processSiteMapResource(
   const locations = $('urlset url loc');
   for (let index = 0; index < locations.length; index++) {
     let url = locations.eq(index).text();
-    if (url && (url = url.trim()) && !urlSet.has(url)) {
+    if (url && (url = url.trim())) {
       urlSet.add(url);
     }
   }
-  const urls: string[] = Array.from(urlSet);
   const resources: Resource[] = [];
-  let url: string | void, r: Resource | void;
   // noinspection DuplicatedCode
-  for (let i = 0, l = urls.length; i < l; i++) {
-    url = urls[i];
-    r = await pipeline.createAndProcessResource(
+  for (const url of urlSet) {
+    const r = await pipeline.createAndProcessResource(
       url, ResourceType.Html, depth, null, res);
     if (!r) continue;
     if (!r.shouldBeDiscardedFromDownload) {

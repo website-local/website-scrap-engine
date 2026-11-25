@@ -1,5 +1,6 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {isMarkedAsUntransferable} from 'node:worker_threads';
 import type {WorkerFactory} from './worker-pool.js';
 import {WorkerPool} from './worker-pool.js';
 import type {Resource, WireResource} from '../resource.js';
@@ -22,7 +23,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
   workerDispose: Promise<void>[];
 
   constructor(
-    public pathToOptions: string,
+    pathToOptions: string,
     overrideOptions?: Partial<MultiThreadDownloaderOptions>,
     private _workerFactory?: WorkerFactory
   ) {
@@ -77,7 +78,7 @@ export class MultiThreadDownloader extends AbstractDownloader {
     try {
       try {
         const downloaded = await this.pipeline.download(res);
-        if (downloaded !== res && (!downloaded || downloaded === true)) {
+        if (!downloaded || downloaded === true) {
           const notification = this.pipeline.notifyStatusChange(res, 'download');
           if (notification !== completedStatusChange) await notification;
           if (!downloaded) return;
@@ -88,13 +89,17 @@ export class MultiThreadDownloader extends AbstractDownloader {
           const wire = prepareResourceForClone(r);
           const body = r.body;
           if (ArrayBuffer.isView(body) && body.byteOffset === 0 &&
-            body.byteLength === body.buffer.byteLength && body.buffer instanceof ArrayBuffer) {
+            body.byteLength === body.buffer.byteLength && body.buffer instanceof ArrayBuffer &&
+            !isMarkedAsUntransferable(body.buffer)) {
             // Transfer the owned buffer without replacing the source resource's wrapper.
             wire.body = body.buffer;
             msg = await this.pool.submitTask(wire, [body.buffer]);
-          } else if (body instanceof ArrayBuffer) {
+          } else if (body instanceof ArrayBuffer && !isMarkedAsUntransferable(body)) {
             msg = await this.pool.submitTask(wire, [body]);
           } else {
+            // Honor Node's explicit clone-only marker (including pooled stores).
+            // Callers must mark host-owned buffers before submission; Node has
+            // no general detachability query. Recheck multi.spec.ts on upgrades.
             msg = await this.pool.submitTask(wire);
           }
           stage = 'post-process';

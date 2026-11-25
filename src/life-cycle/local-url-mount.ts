@@ -241,7 +241,6 @@ export function localUrlMounts(
     pipeline: PipelineExecutor
   ): Promise<DownloadResource | Resource | true | void> => {
     void requestOptions;
-    void pipeline;
     if (res.body !== undefined) {
       return res as DownloadResource;
     }
@@ -295,7 +294,7 @@ export function localUrlMounts(
       );
     }
 
-    await applyLocalFile(res, options, matched.mount, localFile);
+    if (!await applyLocalFile(res, options, matched.mount, localFile, pipeline)) return;
     if (res.type === ResourceType.StreamingBinary) {
       return true;
     }
@@ -761,14 +760,20 @@ async function applyLocalFile(
   res: Resource,
   options: StaticDownloadOptions,
   mount: CompiledLocalUrlMount,
-  localFile: LocalFileMatch
-): Promise<void> {
+  localFile: LocalFileMatch,
+  pipeline: PipelineExecutor
+): Promise<boolean> {
   res.meta.headers = createHeaders(mount, localFile.localPath, localFile.stats);
   res.meta.localUrlMount = createMeta(
     mount, localFile.candidatePaths, localFile.localPath);
   if (res.type === ResourceType.StreamingBinary) {
     const fileDestPath = safeJoin(
       res.localRoot ?? options.localRoot, decodeURI(res.savePath));
+    if (!await pipeline.shouldSaveResource(res, fileDestPath)) {
+      res.finishTimestamp = Date.now();
+      res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp!;
+      return false;
+    }
     await mkdirRetry(path.dirname(fileDestPath));
     await fs.copyFile(localFile.localPath, fileDestPath);
   } else {
@@ -778,6 +783,7 @@ async function applyLocalFile(
   }
   res.finishTimestamp = Date.now();
   res.downloadTime = res.finishTimestamp - res.downloadStartTimestamp!;
+  return true;
 }
 
 function createHeaders(

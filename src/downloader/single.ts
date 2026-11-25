@@ -20,7 +20,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
     }
   };
 
-  constructor(public pathToOptions: string,
+  constructor(pathToOptions: string,
     overrideOptions?: Partial<StaticDownloadOptions> & { pathToWorker?: string }) {
     super(pathToOptions, overrideOptions);
     this.init = this._initOptions;
@@ -40,7 +40,7 @@ export class SingleThreadDownloader extends AbstractDownloader {
     try {
       try {
         const downloaded = await this.pipeline.download(res);
-        if (downloaded !== res && (!downloaded || downloaded === true)) {
+        if (!downloaded || downloaded === true) {
           const notification = this.pipeline.notifyStatusChange(res, 'download');
           if (notification !== completedStatusChange) await notification;
           if (!downloaded) return;

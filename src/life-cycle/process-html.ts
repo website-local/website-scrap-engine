@@ -141,11 +141,9 @@ async function processHtmlDoc(
           // correctly in process-html.spec.ts before retaining this cast.
           (replaceValue as WriteableSrcSet[])[linkIndex].url = resource.replacePath;
         } else {
+          // A literal .html can be a real target; output-link-boundaries.spec.ts
+          // checks it and self links against the files actually written.
           replaceValue = resource.replacePath;
-          // historical workaround here
-          if (replaceValue === '.html' || replaceValue === '/.html') {
-            replaceValue = '';
-          }
         }
       }
       if (attr === 'srcset') {

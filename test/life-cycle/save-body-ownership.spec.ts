@@ -7,7 +7,7 @@ import {markAsUntransferable} from 'node:worker_threads';
 import {saveResourceToDisk} from '../../src/life-cycle/save-resource-to-disk.js';
 import {saveHtmlToDisk} from '../../src/life-cycle/save-html-to-disk.js';
 import {createResource, ResourceType} from '../../src/resource.js';
-import type {ResourceBody} from '../../src/resource.js';
+import type {Resource, ResourceBody} from '../../src/resource.js';
 import type {DownloadResource} from '../../src/life-cycle/types.js';
 import {defaultDownloadOptions} from '../../src/options.js';
 import {defaultLifeCycle} from '../../src/life-cycle/default-life-cycle.js';
@@ -79,6 +79,68 @@ test.each([false, true])('releases after every redirect write (explicit path %s)
   expect(await readFile(join(dir, explicit ? 'target' : 'example.org/target')))
     .toEqual(Buffer.from([4, 5, 6]));
   expect(bytes.byteLength).toBe(0);
+});
+
+test.each(['independent', 'shared-helper-doc', 'shared-owner-doc', 'shared-helper-meta', 'shared-owner-meta'])(
+  'binary redirects dispose %s documents after pending observers', async kind => {
+    const bytes = new Uint8Array([4, 5, 6]);
+    const {resource, options, pipeline} = setup(bytes);
+    resource.redirectedUrl = 'https://example.org/target';
+    const disposed: number[] = [];
+    const observed: number[] = [];
+    const document = (id: number) => Object.assign(load('<p>managed</p>'), {
+      dispose() { disposed.push(id); }
+    });
+    resource.meta.doc = document(0);
+    const helpers: Resource[] = [];
+    options.createResource = arg => {
+      const helper = createResource(arg);
+      helpers.push(helper);
+      const id = helpers.length;
+      if (kind === 'shared-owner-meta') helper.meta = resource.meta;
+      else if (kind === 'shared-helper-meta' && id === 2) helper.meta = helpers[0].meta;
+      else helper.meta.doc = kind === 'shared-owner-doc' ? resource.meta.doc :
+        kind === 'shared-helper-doc' && id === 2 ? helpers[0].meta.doc : document(id);
+      (helper.meta.statusChanges ??= []).push(new Promise<void>(resolve => setTimeout(() => {
+        expect(helper.meta.doc).toBeDefined();
+        expect(bytes[0]).toBe(4);
+        observed.push(id);
+        resolve();
+      }, 10)));
+      return helper;
+    };
+    await saveResourceToDisk(resource, options, pipeline);
+    expect(observed).toEqual([1, 2]);
+    expect(disposed.sort()).toEqual(kind.startsWith('shared-owner') ? [0] :
+      kind.startsWith('shared-helper') ? [0, 1] : [0, 1, 2]);
+    for (const res of [resource, ...helpers]) expect(res.meta.doc).toBeUndefined();
+    expect(await readFile(join(dir, 'asset'))).toEqual(Buffer.from([4, 5, 6]));
+    expect(await readFile(join(dir, 'example.org/target'))).toEqual(Buffer.from([4, 5, 6]));
+    expect(bytes.byteLength).toBe(0);
+  });
+
+test.each(['write', 'dispose'])('binary redirect %s failure still releases every document and retains the body', async failure => {
+  const bytes = new Uint8Array([5]);
+  const {resource, options, pipeline} = setup(bytes);
+  resource.redirectedUrl = 'https://example.org/target';
+  const disposed: number[] = [];
+  resource.meta.doc = Object.assign(load('owner'), {dispose() { disposed.push(0); }});
+  let created = 0;
+  options.createResource = arg => {
+    const helper = createResource(arg);
+    const id = ++created;
+    helper.meta.doc = Object.assign(load('helper'), {dispose() {
+      disposed.push(id);
+      if (failure === 'dispose' && id === 2) throw new Error('helper disposal failed');
+    }});
+    if (failure === 'write' && id === 2) helper.savePath = '../outside';
+    return helper;
+  };
+  await expect(saveResourceToDisk(resource, options, pipeline))
+    .rejects.toThrow(failure === 'write' ? 'escapes root' : 'helper disposal failed');
+  expect(disposed).toEqual([2, 1, 0]);
+  expect(resource.body).toBe(bytes);
+  expect(bytes[0]).toBe(5);
 });
 
 test('retains bytes if a later redirect write fails', async () => {

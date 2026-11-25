@@ -63,7 +63,9 @@ export async function readOrCopyLocalResource(
     }
   };
   if (res.type === ResourceType.StreamingBinary) {
-    const fileDestPath = safeJoin(res.localRoot ?? options.localRoot, res.savePath);
+    // downloadLink resolves the source; savePath remains encoded for the destination.
+    // Keep one destination decode, as checked in output-link-boundaries.spec.ts.
+    const fileDestPath = safeJoin(res.localRoot ?? options.localRoot, decodeURI(res.savePath));
     await mkdirRetry(path.dirname(fileDestPath));
     await promises.copyFile(fileSrcPath, fileDestPath);
     await readStats();
@@ -110,12 +112,13 @@ export async function readOrCopyLocalResourceWithSavePolicy(
   }
   if (!fileSrcPath) return;
 
-  const fileDestPath = safeJoin(res.localRoot ?? options.localRoot, res.savePath);
+  const fileDestPath = safeJoin(res.localRoot ?? options.localRoot, decodeURI(res.savePath));
   const stats = await promises.stat(fileSrcPath);
   res.meta.headers = {
     'last-modified': stats.mtime.toISOString(),
     'content-length': stats.size.toString()
   };
+  // The explicit filesystem path bypasses shouldSaveResource's default decode.
   const saveAllowed = await pipeline.shouldSaveResource(res, fileDestPath);
   if (saveAllowed) {
     await mkdirRetry(path.dirname(fileDestPath));

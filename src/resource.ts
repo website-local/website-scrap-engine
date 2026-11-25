@@ -103,7 +103,9 @@ export interface RawResource {
   refUrl: string;
 
   /**
-   * The relative path where this resource should be saved to
+   * The relative output path, decoded once with decodeURI by writers.
+   * Use %2520 for a literal %20 filename, including in custom generators/hooks.
+   * See output-link-boundaries.spec.ts for literal percent-escape filenames.
    */
   savePath: string;
 
@@ -264,8 +266,7 @@ export interface CreateResourceArgument {
   /**
    * {@link RawResource.rawUrl}.
    *
-   * The pipeline passes this explicitly after resolving {@link .url}. Direct
-   * callers may omit it and use {@link .url} as the raw URL.
+   * Defaults to {@link .url} before resolution when omitted.
    */
   rawUrl?: string;
   /**
@@ -279,8 +280,7 @@ export interface CreateResourceArgument {
   /**
    * The {@link type} of the {@link RawResource} creating this resource.
    *
-   * Only used when {@link .refSavePath} is omitted by direct createResource
-   * callers. The pipeline computes refSavePath before resource creation.
+   * Used to generate {@link .refSavePath} when it is omitted.
    */
   refType?: ResourceType;
   /**
@@ -291,8 +291,7 @@ export interface CreateResourceArgument {
   /**
    * Local source path to download from.
    *
-   * Only used by direct createResource callers. The pipeline resolves file
-   * URLs before resource creation.
+   * Used to resolve file URLs and generate paths relative to the source root.
    */
   localSrcRoot?: string;
 
@@ -310,9 +309,6 @@ export interface CreateResourceArgument {
    * true to skip replacePath processing
    * in case of parser error
    * https://github.com/website-local/website-scrap-engine/issues/107
-   *
-   * Only used by direct createResource callers. The pipeline checks this
-   * before resource creation.
    */
   skipReplacePathError?: boolean;
   /**
@@ -323,7 +319,7 @@ export interface CreateResourceArgument {
    * True if URL resolution failed and skipReplacePathError allowed creation.
    */
   replacePathHasError?: boolean;
-  /** Optional legacy save-path generator; the built-in pipeline may precompute savePath. */
+  /** Optional save-path generator used when savePath or refSavePath is omitted. */
   generateSavePathFn?: GenerateSavePathFn;
 }
 
@@ -360,12 +356,11 @@ export function generateSavePath(
       localSrcRoot.match(/^[a-z]:\//i)) {
       // windows absolute fix
       savePath = uri.pathname().slice(localSrcRoot.length + 1);
-      if (savePath[0] === '/') {
-        savePath = savePath.slice(1);
-      }
     } else {
       savePath = uri.pathname().slice(localSrcRoot.length);
     }
+    // A root without a trailing separator still produces a relative output path.
+    if (savePath[0] === '/') savePath = savePath.slice(1);
   } else {
     const host: string = uri.hostname();
     const uriPath = uri.path();

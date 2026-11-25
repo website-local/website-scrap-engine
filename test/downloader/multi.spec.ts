@@ -7,6 +7,7 @@ import type {AddressInfo} from 'node:net';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {promisify} from 'node:util';
+import {markAsUntransferable} from 'node:worker_threads';
 import type {MultiThreadDownloader} from '../../src/downloader/multi.js';
 import type {SingleThreadDownloader} from '../../src/downloader/single.js';
 import type {DownloadOptions} from '../../src/options.js';
@@ -919,6 +920,62 @@ describe('MultiThreadDownloader', () => {
         expect(resource.body).toBe(body);
         expect(events.find(event => event.url === resource.url)).toEqual({url: resource.url, bytes, buffer: true});
       }
+    } finally { await downloader.dispose(); }
+  });
+
+  test.each([false, true])('saves protected, shared, pooled and explicitly protected host bodies (workers %s)', async workers => {
+    const caseRoot = await fs.mkdtemp(path.join(root, 'protected-buffers-'));
+    const options = await writeOptions(caseRoot, ['download: [res => res],']);
+    const downloader = workers ? new Downloader(options) : new SingleDownloader(options);
+    const handleError = jest.spyOn(downloader, 'handleError');
+    const protectedStore = new Uint8Array([1, 2, 3]).buffer;
+    markAsUntransferable(protectedStore);
+    const protectedView = new Uint8Array([4, 5, 6]);
+    markAsUntransferable(protectedView.buffer);
+    const hostBody = new Uint8Array(new WebAssembly.Memory({initial: 1}).buffer).fill(11);
+    markAsUntransferable(hostBody.buffer);
+    const bodies = [protectedStore, protectedView, Buffer.from([7, 8, 9]),
+      new Uint8Array(new SharedArrayBuffer(4)).fill(10),
+      hostBody];
+    try {
+      await downloader.init;
+      const resources = bodies.map((body, index) => {
+        const url = 'https://example.test/protected-' + index + '.bin';
+        const res = downloader.pipeline.createResource(ResourceType.Binary, 0, url, url);
+        res.body = body;
+        const bytes = Buffer.from(body instanceof ArrayBuffer ? new Uint8Array(body) : body);
+        downloader.addProcessedResource(res);
+        return {res, body, bytes};
+      });
+      await downloader.onIdle();
+      expect(handleError).not.toHaveBeenCalled();
+      expect(downloader.downloadedCount).toBe(bodies.length);
+      for (const {res, body, bytes} of resources) {
+        expect(await fs.readFile(path.join(res.localRoot, decodeURI(res.savePath)))).toEqual(bytes);
+        expect(Buffer.from(body instanceof ArrayBuffer ? new Uint8Array(body) : body)).toEqual(bytes);
+      }
+    } finally { await downloader.dispose(); }
+  });
+
+  test('uncloneable metadata fails one submission without retrying the worker message', async () => {
+    const caseRoot = await fs.mkdtemp(path.join(root, 'clone-failure-'));
+    const options = await writeOptions(caseRoot, ['download: [res => res],']);
+    const downloader = new Downloader(options);
+    const handleError = jest.spyOn(downloader, 'handleError');
+    try {
+      await downloader.init;
+      const url = 'https://example.test/clone.bin';
+      const res = downloader.pipeline.createResource(ResourceType.Binary, 0, url, url);
+      res.body = Buffer.alloc(16);
+      res.meta.uncloneable = () => undefined;
+      const post = jest.spyOn(downloader.pool.workers[0].worker, 'postMessage');
+      downloader.addProcessedResource(res);
+      await downloader.onIdle();
+      expect(post).toHaveBeenCalledTimes(1);
+      expect(handleError).toHaveBeenCalledTimes(1);
+      expect(handleError.mock.calls[0][0]).toMatchObject({name: 'DataCloneError'});
+      expect(downloader.downloadedCount).toBe(0);
+      expect(downloader.queuedUrl.has(url)).toBe(false);
     } finally { await downloader.dispose(); }
   });
 

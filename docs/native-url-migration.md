@@ -210,9 +210,9 @@ The October 6 complexity work preserved 124,500 selected differential outcomes.
 Its historical `withinString` observer estimates were about 22–23% slower,
 with failed identical-code controls; replacement was +5.6% in the primary
 comparison while the duplicate-baseline comparison included parity. This
-public helper is outside the default crawl, and its performance remains an
-open target. Those results are neither a universal regression estimate nor a
-non-regression pass. Indexed-read and other component gains with failed controls
+public helper is outside the default crawl. Keep these observations archived
+until a reliable paired reproduction. Those results are neither a universal
+regression estimate nor a non-regression pass. Indexed-read and other component gains with failed controls
 also remain provisional. Whole-engine qualification is summarized in the
 [0.10 design guide](0.10-design.md#performance-qualification).
 

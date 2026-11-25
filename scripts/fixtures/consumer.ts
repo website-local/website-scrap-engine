@@ -27,6 +27,12 @@ void encodedSegment; void encodedParameter; void observedText;
 void hasValue; void decodedSegment; void built;
 const realUndici: 0 extends (1 & Dispatcher) ? false : true = true;
 const close: (crawler: downloader.MultiThreadDownloader) => Promise<void> = crawler => crawler.dispose();
+const optionsPath = (crawler: downloader.SingleThreadDownloader | downloader.MultiThreadDownloader): string => {
+  const path: string = crawler.pathToOptions;
+  crawler.pathToOptions = path;
+  return path;
+};
+void optionsPath;
 
 const configuration = options.defaultDownloadOptions({...lifeCycle.defaultLifeCycle(),
   localRoot: 'output', concurrency: 4});

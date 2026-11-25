@@ -89,6 +89,7 @@ export default options.defaultDownloadOptions({
     const overrides = {req: {headers: {'x-runtime': 'compatibility'}}};
     const before = structuredClone(overrides);
     const crawler = new Downloader(pathToFileURL(optionsPath).href, overrides);
+    assert.equal(crawler.pathToOptions, pathToFileURL(optionsPath).href);
     const errors = [];
     crawler.handleError = (...args) => errors.push(args);
     try {

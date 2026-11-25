@@ -168,7 +168,7 @@ describe('local streaming save policies', () => {
     expect(res.meta.headers?.['content-length']).toBe(String(Buffer.byteLength('new local bytes')));
   });
 
-  test('uses the exact copy destination when the save path contains encoded characters', async () => {
+  test('checks the decoded copy destination when the save path contains encoded characters', async () => {
     const source = path.join(tmpRoot, 'source.bin');
     await fs.writeFile(source, 'source body');
     const res = sourceResource(source);
@@ -179,7 +179,7 @@ describe('local streaming save policies', () => {
     await fs.writeFile(decoded, 'decoded sibling');
     const policy = jest.fn<ExistingResourceFunc>().mockImplementation(context => {
       expect(context.stage).toBe('saveToDisk');
-      expect(context.localPath).toBe(destination);
+      expect(context.localPath).toBe(decoded);
       return 'skipSave';
     });
     const executor = pipelineWith(policy);

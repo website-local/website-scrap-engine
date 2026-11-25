@@ -6,6 +6,7 @@ import type {PipelineExecutor} from './pipeline-executor.js';
 import type {Resource} from '../resource.js';
 import {ResourceType} from '../resource.js';
 import {parseHtml} from './adapters.js';
+import {isPromiseLike} from '../util.js';
 
 /**
  * Preserve extraction from stevenvachon/http-equiv-refresh (MIT) without its
@@ -68,14 +69,14 @@ async function processHtmlMetaRefreshResource(
       if (!originalLink) {
         continue;
       }
-      const link: string | void =
-        await pipeline.linkRedirect(originalLink, elem, res);
+      const redirected = pipeline.linkRedirect(originalLink, elem, res);
+      const link = isPromiseLike(redirected) ? await redirected : redirected;
       if (!link) {
         continue;
       }
 
-      const linkType: ResourceType | void =
-        await pipeline.detectResourceType(link, ResourceType.Html, elem, res);
+      const detected = pipeline.detectResourceType(link, ResourceType.Html, elem, res);
+      const linkType = isPromiseLike(detected) ? await detected : detected;
       if (!linkType) {
         if (skip.isTraceEnabled()) {
           skip.trace('skip detectResourceType',
@@ -83,10 +84,11 @@ async function processHtmlMetaRefreshResource(
         }
         continue;
       }
-      let resource: Resource | void = await pipeline.createResource(
+      const created = pipeline.createResource(
         linkType, depth, link, refUrl,
         res.localRoot, options.encoding[linkType],
         savePath, res.type);
+      let resource: Resource | void = isPromiseLike(created) ? await created : created;
       if (!resource) {
         if (skip.isTraceEnabled()) {
           skip.trace('skip generateSavePath',
@@ -94,7 +96,8 @@ async function processHtmlMetaRefreshResource(
         }
         continue;
       }
-      resource = await pipeline.processBeforeDownload(resource, elem, res, options);
+      const processed = pipeline.processBeforeDownload(resource, elem, res, options);
+      resource = isPromiseLike(processed) ? await processed : processed;
       if (!resource) {
         if (skip.isTraceEnabled()) {
           skip.trace('skip processBeforeDownload',

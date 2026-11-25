@@ -5,7 +5,7 @@ import type {Resource, ResourceBody, ResourceEncoding} from '../resource.js';
 import {ResourceType, replacementUri} from '../resource.js';
 import {safeJoin, writeFile} from '../io.js';
 import type {PipelineExecutor} from './pipeline-executor.js';
-import {releaseResourceBody} from './save-resource-to-disk.js';
+import {disposeRedirectResource, releaseResourceBody} from './save-resource-to-disk.js';
 
 export function getResourceBodyFromHtml(
   res: DownloadResource & { type: ResourceType.Html | ResourceType.Svg },
@@ -32,27 +32,6 @@ export function redirectHtml(relativePath: string, encoding?: ResourceEncoding):
 <title>Redirecting</title>
 </head>
 </html>`;
-}
-
-/** Redirect helper resources never enter the downloader. */
-function disposeRedirectResource(
-  resource: Resource | undefined,
-  owner: Resource,
-  other?: Resource
-): void | Promise<void> {
-  if (!resource || resource.meta === owner.meta || resource.meta === other?.meta) return;
-  const document = resource.meta.doc;
-  if (document && (document === owner.meta.doc || document === other?.meta.doc)) {
-    const pending = resource.meta.statusChanges;
-    if (pending?.length) return (async () => {
-      for (let index = 0; index < pending.length; index++) await pending[index];
-      resource.meta.statusChanges = undefined;
-      resource.meta.doc = undefined;
-    })();
-    resource.meta.doc = undefined;
-    return;
-  }
-  return disposeHtmlResource(resource);
 }
 
 export function saveHtmlToDisk(

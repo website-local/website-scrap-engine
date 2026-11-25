@@ -12,6 +12,7 @@ import type {LocalUrlMountMeta} from '../../src/life-cycle/local-url-mount.js';
 import type {
   DownloadResource,
   DownloadResourceFunc,
+  ExistingResourceFunc,
   ProcessingLifeCycle
 } from '../../src/life-cycle/types.js';
 import {PipelineExecutorImpl} from '../../src/downloader/pipeline-executor-impl.js';
@@ -101,6 +102,34 @@ function assertBufferedResource(result: DownloadResource | true | void): asserts
 }
 
 describe('localUrlMounts', () => {
+  test.each(['skipSave', 'skip', 'ifModifiedSince', 'overwrite'] as const)(
+    'applies %s to streaming output after loading mount metadata', async action => {
+      await writeFile('space name.bin', 'mounted bytes');
+      await fs.utimes(path.join(sourceRoot, 'space name.bin'), 1000000, 1000000);
+      const res = makeResource('https://example.com/space%20name.bin', ResourceType.StreamingBinary);
+      const destination = path.join(destinationRoot, decodeURI(res.savePath));
+      await fs.mkdir(path.dirname(destination), {recursive: true});
+      await fs.writeFile(destination, 'cached bytes');
+      await fs.utimes(destination, 2000000, 2000000);
+      const cached = await fs.stat(destination);
+      const policy = jest.fn<ExistingResourceFunc>(context => {
+        if (context.stage === 'download') return 'overwrite';
+        expect(context.localPath).toBe(destination);
+        expect(context.res.meta.headers?.['content-length']).toBe('13');
+        expect(context.res.meta.localUrlMount).toMatchObject({localPath: path.join(sourceRoot, 'space name.bin')});
+        return action;
+      });
+      const opt = {...fakeOpt(), existingResource: policy};
+      const pipeline = new PipelineExecutorImpl({...makeLifeCycle([
+        localUrlMounts([{root: sourceRoot, urlPrefix: 'https://example.com/'}])
+      ]), existingResource: policy}, {}, opt);
+
+      expect(await pipeline.download(res)).toBe(action === 'overwrite' ? true : undefined);
+      expect(policy.mock.calls.map(([context]) => context.stage)).toEqual(['download', 'saveToDisk']);
+      expect(await fs.readFile(destination, 'utf8')).toBe(action === 'overwrite' ? 'mounted bytes' : 'cached bytes');
+      if (action !== 'overwrite') expect((await fs.stat(destination)).mtimeMs).toBe(cached.mtimeMs);
+    });
+
   test('reads a matched HTTP URL from the mounted directory', async () => {
     await writeFile(path.join('a', 'page.html'), '<html>mounted</html>');
     const pipeline = makePipeline([

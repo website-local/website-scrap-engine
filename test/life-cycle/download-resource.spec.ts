@@ -72,6 +72,27 @@ describe.each(['text', 'buffer'] as const)('empty %s responses', responseType =>
 
 describe('configured retries', () => {
   test.each([
+    {bodies: ['<html>complete</html>'], expected: '<html>complete</html>'},
+    {bodies: ['<html>partial', '<html>complete</html>'], expected: '<html>complete</html>'},
+    {bodies: ['<html>partial', '<html>still partial'], expected: '<html>still partial'},
+    {bodies: ['<html>partial', ''], expected: ''}
+  ])('limits incomplete HTML retries: $bodies', async ({bodies, expected}) => {
+    let requests = 0;
+    const url = await listen((_request, response) => {
+      response.end(bodies[Math.min(requests++, bodies.length - 1)]);
+    });
+    const options = defaultDownloadOptions({...defaultLifeCycle(), localRoot: root,
+      req: {retry: {limit: 0}, timeout: {request: 2000}},
+      meta: {detectIncompleteHtml: '</html>'}});
+    const pipeline = new PipelineExecutorImpl(options, options.req, options);
+    const res = pipeline.createResource(ResourceType.Html, 0, url, url);
+    const downloaded = await pipeline.download(res);
+    if (!downloaded || downloaded === true) throw new Error('Expected a downloaded body');
+    expect(downloaded.body.toString()).toBe(expected);
+    expect(requests).toBe(bodies.length);
+  });
+
+  test.each([
     {method: 'GET', limit: 0, expectedRequests: 1},
     {method: 'GET', limit: 2, expectedRequests: 3},
     {method: 'POST', limit: 2, expectedRequests: 1}

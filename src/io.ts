@@ -37,7 +37,7 @@ export const writeFile = async (
     options = {encoding};
   } else if (data instanceof ArrayBuffer) {
     fileData = Buffer.from(data);
-  } else if (data instanceof Uint8Array || Buffer.isBuffer(data)) {
+  } else if (data instanceof Uint8Array) {
     fileData = data;
   } else if (ArrayBuffer.isView(data)) {
     fileData = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
